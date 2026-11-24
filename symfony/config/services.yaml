@@ -2857,6 +2857,7 @@ services:
       $connection: '@cos.database.pdo'
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyNestedConnectionReader: ~
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyCatalogPullService: ~
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyOrderReadbackService: ~
 
   productManagementNavigationContributor:
     alias: App\Web\Experience\Extension\Provider\ProductManagementWebProvider

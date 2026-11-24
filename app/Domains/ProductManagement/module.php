@@ -35,6 +35,7 @@ return [
             'app/migrations/20261119_000160_product_management_shopify_approved_apply.sql',
             'app/migrations/20261120_000161_product_management_shopify_identity_claim.sql',
             'app/migrations/20261124_000162_product_management_reservations.sql',
+            'app/migrations/20261124_000162_product_management_shopify_order_pointer.sql',
             'app/migrations/20261124_000190_product_management_price_lists.sql',
             'app/migrations/20261124_000191_product_management_price_list_lifecycle.sql',
             'app/migrations/20261124_000192_product_management_price_tiers.sql',
