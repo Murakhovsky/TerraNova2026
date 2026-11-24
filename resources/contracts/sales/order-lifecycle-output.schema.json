@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "order_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "placed",
+        "confirmed",
+        "cancelled",
+        "completed"
+      ]
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "inventory_authority": {
+      "type": "string",
+      "enum": [
+        "local",
+        "external_review"
+      ]
+    },
+    "ordered_quantity": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "allocated_pending_quantity": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "fulfilled_quantity": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "returned_quantity": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "cancelled_quantity": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "unallocated_quantity": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "fulfillment_state": {
+      "type": "string",
+      "enum": [
+        "unfulfilled",
+        "partial",
+        "fulfilled",
+        "external_review"
+      ]
+    },
+    "return_state": {
+      "type": "string",
+      "enum": [
+        "none",
+        "partial",
+        "returned"
+      ]
+    },
+    "allocations": {
+      "type": "array",
+      "maxItems": 1000,
+      "items": {
+        "type": "object",
+        "properties": {
+          "allocation_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "line_no": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "location_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "reservation_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "stock_mode": {
+            "type": "string",
+            "enum": [
+              "local",
+              "nonstock"
+            ]
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000
+          },
+          "fulfilled": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "cancelled": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "returned": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "allocation_id",
+          "line_no",
+          "location_id",
+          "reservation_id",
+          "stock_mode",
+          "quantity",
+          "fulfilled",
+          "cancelled",
+          "returned"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "replayed": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "order_id",
+    "status",
+    "revision",
+    "inventory_authority",
+    "ordered_quantity",
+    "allocated_pending_quantity",
+    "fulfilled_quantity",
+    "returned_quantity",
+    "cancelled_quantity",
+    "unallocated_quantity",
+    "fulfillment_state",
+    "return_state",
+    "allocations",
+    "replayed"
+  ],
+  "additionalProperties": false
+}
