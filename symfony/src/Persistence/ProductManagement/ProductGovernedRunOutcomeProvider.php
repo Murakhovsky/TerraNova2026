@@ -96,6 +96,29 @@ final readonly class ProductGovernedRunOutcomeProvider implements RunScopedGoalO
                     &&$m['quantity_delta']===self::decimal($delta,6)&&$m['movement_type']===$kind&&$m['source_ref']===$p['source_ref']&&$m['actor_ref']===$actor,'immutable movement');
                 $ids=['product_management:stock_movement:'.$m['movement_id']];
                 break;
+            case 'stock.transfer':
+                $this->require(($r['variant_id']??null)===$p['variant_id']&&($r['from_location_id']??null)===$p['from_location_id']
+                    &&($r['to_location_id']??null)===$p['to_location_id']&&($r['source_ref']??null)===$p['source_ref']
+                    &&($r['quantity']??null)===$p['quantity']&&$p['from_location_id']!==$p['to_location_id'],'transfer receipt');
+                $digest=hash('sha256',$org.':'.$key);
+                foreach([['out','issue','-'.$p['quantity'],$p['from_location_id']],['in','receipt',$p['quantity'],$p['to_location_id']]] as [$direction,$kind,$delta,$location]){
+                    $m=$this->db->fetchAssociative('SELECT movement_id,variant_id,location_id,quantity_delta,movement_type,source_ref,actor_ref FROM pm_stock_movements WHERE organization_id=? AND idempotency_key=?',[$org,'pm-xfer-'.$direction.':'.$digest]);
+                    $this->require($m!==false&&$m['movement_id']===($r[$direction.'_movement_id']??null)&&$m['variant_id']===$p['variant_id']
+                        &&$m['location_id']===$location&&$m['quantity_delta']===self::decimal($delta,6)&&$m['movement_type']===$kind
+                        &&$m['source_ref']===$p['source_ref']&&$m['actor_ref']===$actor,'paired transfer ledger '.$direction);
+                    $ids[]='product_management:stock_movement:'.$m['movement_id'];
+                }
+                $this->require($ids[0]!==$ids[1],'distinct transfer movements');
+                break;
+            case 'price.list.entry.set':
+                $fresh=$this->prices->getListPrice($org,$p['list_id'],$p['variant_id']);
+                $revision=$p['expected_revision']+1;
+                $amount=self::decimal($p['amount'],4);
+                $history=$this->db->fetchAssociative('SELECT new_amount,actor_ref FROM pm_price_list_history WHERE organization_id=? AND list_id=? AND variant_id=? AND revision=?',[$org,$p['list_id'],$p['variant_id'],$revision]);
+                $this->require($fresh['found']&&$fresh['revision']===$revision&&$fresh['price']===$amount&&$fresh==$r
+                    &&$history!==false&&$history['new_amount']===$amount&&$history['actor_ref']===$actor,'list price revision and history');
+                $ids=['product_management:list_price:'.$p['list_id'].':'.$p['variant_id'].':'.$revision];
+                break;
             case 'stock.reserve':
             case 'stock.release':
                 $id=$r['reservation_id']??null;

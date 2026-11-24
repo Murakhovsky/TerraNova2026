@@ -28,6 +28,8 @@ final readonly class ProductGovernedOperationHandler implements IdempotentExtern
         'stock.issue'=>'stock.movement',
         'stock.reserve'=>'stock.reserve',
         'stock.release'=>'stock.release',
+        'stock.transfer'=>'stock.transfer',
+        'price.list.entry.set'=>'price.list.entry.set',
     ];
     public function __construct(private ProductManagementService $products,private PricingService $prices,
         private ActiveModuleResolver $modules,private CanonicalCapabilityCatalog $catalog){}
@@ -57,6 +59,8 @@ final readonly class ProductGovernedOperationHandler implements IdempotentExtern
                 'stock.receive','stock.issue'=>$this->products->recordMovement($org,$p['variant_id'],$p['location_id'],($op==='stock.issue'?'-':'').$p['quantity'],$op==='stock.issue'?'issue':'receipt',$p['source_ref'],$key,$actor,$trace),
                 'stock.reserve'=>$this->products->reserveStock($org,$p['variant_id'],$p['location_id'],$p['quantity'],$p['source_ref'],$key,$actor,$trace),
                 'stock.release'=>$this->products->releaseStock($org,$p['reservation_id'],$p['reason'],$key,$actor,$trace),
+                'stock.transfer'=>$this->products->transferStock($org,$p['variant_id'],$p['from_location_id'],$p['to_location_id'],$p['quantity'],$p['source_ref'],$key,$actor,$trace),
+                'price.list.entry.set'=>$this->prices->setListPrice($org,$p['list_id'],$p['variant_id'],$p['amount'],$p['expected_revision'],$key,$actor,$trace),
             };
             return ExecutionResult::success($result);
         }catch(Throwable){
