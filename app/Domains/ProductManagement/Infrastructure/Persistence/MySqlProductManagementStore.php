@@ -610,22 +610,42 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
     public function setAttributes(string $org,string $product,array $changes,int $revision,string $key,string $actor,string $trace):array
     {
         return $this->mutate($org,'attribute.product.set',$key,[$product,$changes,$revision],$actor,$trace,function()use($org,$product,$changes,$revision):array{
-            $this->lockAttributeProduct($org,$product,$revision);
-            $defs=$this->applicableAttributes($org,$product);
-            foreach($changes as $code=>$value){
-                if(!isset($defs[$code]))throw new DomainException('Attribute not in assigned category set.');
-                if($value===null){
-                    if($defs[$code]['is_required'])throw new DomainException('Required value cannot be removed.');
-                    $this->execute('DELETE FROM pm_product_attribute_values WHERE organization_id=? AND product_id=? AND code=?',[$org,$product,$code]);
-                }else{
-                    $value=AttributeRules::value($defs[$code],$value);
-                    $this->execute('INSERT INTO pm_product_attribute_values (organization_id,product_id,code,value_json) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE value_json=VALUES(value_json)',[$org,$product,$code,json_encode($value,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE)]);
-                }
-            }
-            $this->execute('UPDATE pm_products SET revision=revision+1 WHERE organization_id=? AND product_id=?',[$org,$product]);
+            $this->applyAttributePatch($org,$product,$changes,$revision);
             return $this->productAttributes($org,$product);
         },'product_management.attribute.product_set','Product');
     }
+    private function applyAttributePatch(string $org,string $product,array $changes,int $revision):void
+    {
+    $this->lockAttributeProduct($org,$product,$revision);
+    $defs=$this->applicableAttributes($org,$product);
+    foreach($changes as $code=>$value){
+        if(!isset($defs[$code]))throw new DomainException('Attribute not in assigned category set.');
+        if($value===null){
+            if($defs[$code]['is_required'])throw new DomainException('Required value cannot be removed.');
+            $this->execute('DELETE FROM pm_product_attribute_values WHERE organization_id=? AND product_id=? AND code=?',[$org,$product,$code]);
+        }else{
+            $value=AttributeRules::value($defs[$code],$value);
+            $this->execute('INSERT INTO pm_product_attribute_values (organization_id,product_id,code,value_json) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE value_json=VALUES(value_json)',[$org,$product,$code,json_encode($value,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE)]);
+        }
+    }
+    $this->execute('UPDATE pm_products SET revision=revision+1 WHERE organization_id=? AND product_id=?',[$org,$product]);
+    }
+
+    public function bulkSetAttributes(string $org,array $products,array $changes,string $key,string $actor,string $trace):array
+    {
+        return $this->mutate($org,'attribute.product.bulk_set',$key,[$products,$changes],$actor,$trace,function()use($org,$products,$changes):array{
+            $items=[];
+            foreach($products as $id=>$revision){
+                $this->applyAttributePatch($org,(string)$id,$changes,$revision);
+                $after=$this->productAttributes($org,(string)$id);
+                $values=[];foreach($after['items'] as $row)if(array_key_exists($row['code'],$changes))$values[]=['code'=>$row['code'],'value'=>$row['value']];
+                if(count($values)!==count($changes))throw new DomainException('Bulk attribute evidence missing.');
+                $items[]=['product_id'=>(string)$id,'revision'=>$revision+1,'values'=>$values];
+            }
+            return ['items'=>$items];
+        },'product_management.attribute.bulk_set','ProductAttributeBatch');
+    }
+
     public function productAttributes(string $org,string $product):array
     {
         $p=$this->one('SELECT revision FROM pm_products WHERE organization_id=? AND product_id=?',[$org,$product]);
@@ -637,9 +657,9 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
     public function filterAttributes(string $org,string $code,mixed $value,int $limit,int $offset):array
     {
         $value=AttributeRules::value($this->attributeDefinition($org,$code),$value);
-        $stmt=$this->connection->prepare("SELECT p.product_id,p.name,p.status FROM pm_product_attribute_values a JOIN pm_products p ON p.organization_id=a.organization_id AND p.product_id=a.product_id WHERE a.organization_id=:org AND a.code=:code AND JSON_CONTAINS(a.value_json,CAST(:value AS JSON)) AND p.status<>'archived' ORDER BY p.product_id LIMIT :lim OFFSET :off");
+        $stmt=$this->connection->prepare("SELECT p.product_id,p.name,p.status,p.revision FROM pm_product_attribute_values a JOIN pm_products p ON p.organization_id=a.organization_id AND p.product_id=a.product_id WHERE a.organization_id=:org AND a.code=:code AND JSON_CONTAINS(a.value_json,CAST(:value AS JSON)) AND p.status<>'archived' ORDER BY p.product_id LIMIT :lim OFFSET :off");
         $stmt->bindValue(':org',$org);$stmt->bindValue(':code',$code);$stmt->bindValue(':value',json_encode($value,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE));$stmt->bindValue(':lim',$limit,PDO::PARAM_INT);$stmt->bindValue(':off',$offset,PDO::PARAM_INT);$stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return array_map(static function(array $row):array{$row['revision']=(int)$row['revision'];return $row;},$stmt->fetchAll(PDO::FETCH_ASSOC));
     }
     public function variantMatrix(string $org,string $product,array $matrix):array
     {
