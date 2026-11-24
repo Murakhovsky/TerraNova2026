@@ -32,7 +32,7 @@ final readonly class AssignDealOwner
         string $actorId,
     ): OperationResult {
         return $this->transactions->transactional(function () use ($organizationId, $dealId, $ownerId, $correlationId, $actorType, $actorId): OperationResult {
-            $this->authority?->assertCanAssign($organizationId, $actorType, $actorId, $ownerId);
+            $this->authority?->assertCanAssign($organizationId, $actorType, $actorId, $ownerId,$dealId);
 
             $result = $this->deals->assignOwner($organizationId, $dealId, $ownerId);
             if (!$result->successful || ($result->data['changed'] ?? false) !== true) {

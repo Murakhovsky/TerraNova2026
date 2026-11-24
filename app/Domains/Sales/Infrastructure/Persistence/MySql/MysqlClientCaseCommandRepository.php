@@ -127,6 +127,7 @@ final readonly class MysqlClientCaseCommandRepository implements ClientCaseComma
 
     public function createCase(string $organizationId, int $personId, array $case): int
     {
+        if (($case['status']??null)!=='active' || ($case['closed_at']??null)!==null) throw new \DomainException('New deals must begin in the active initial stage.');
         $initial = $this->initialStage($organizationId);
         $statement = $this->connection->prepare('INSERT INTO tn_client_cases
             (organization_id,public_id,person_id,type,title,status,stage,pipeline_id,stage_id,probability,priority,assigned_user_id,source,
@@ -153,10 +154,10 @@ final readonly class MysqlClientCaseCommandRepository implements ClientCaseComma
         $statement = $this->connection->prepare('UPDATE tn_client_cases SET
             title=:title,type=:type,priority=:priority,
             source=:source,property_type_id=:property_type_id,location_id=:location_id,budget_min=:budget_min,
-            budget_max=:budget_max,currency=:currency,area_min=:area_min,area_max=:area_max,description=:description,
+            budget_max=:budget_max,area_min=:area_min,area_max=:area_max,description=:description,
             parameters_json=:parameters_json,next_contact_at=:next_contact_at,updated_at=NOW()
             WHERE id=:id AND organization_id=:organization_id');
-        $statement->execute(['id' => $caseId, 'organization_id' => $organizationId] + array_diff_key($case, array_flip(['stage','stage_id','pipeline_id','status','closed_at','assigned_user_id'])));
+        $statement->execute(['id' => $caseId, 'organization_id' => $organizationId] + array_diff_key($case, array_flip(['stage','stage_id','pipeline_id','status','closed_at','assigned_user_id','currency'])));
         return $this->exists('tn_client_cases', $organizationId, $caseId);
     }
 

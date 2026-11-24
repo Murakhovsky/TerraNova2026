@@ -12,7 +12,7 @@ final readonly class MysqlSalesAssignmentAuthority implements SalesAssignmentAut
 {
     public function __construct(private PDO $connection) {}
 
-    public function assertCanAssign(string $organizationId, string $actorType, string $actorId, int $ownerId): void
+    public function assertCanAssign(string $organizationId, string $actorType, string $actorId, int $ownerId, ?string $dealId=null): void
     {
         if (!$this->isAssignable($organizationId, $ownerId)) {
             throw new DomainException('Target owner is not an active assignable Sales team member.');
@@ -23,7 +23,7 @@ final readonly class MysqlSalesAssignmentAuthority implements SalesAssignmentAut
         }
 
         $actor = (int) $actorId;
-        if ($actor <= 0) {
+        if ($actor <= 0 || !$this->activeUser($organizationId,$actor)) {
             throw new DomainException('A valid user actor is required for manual assignment.');
         }
 
@@ -58,6 +58,25 @@ final readonly class MysqlSalesAssignmentAuthority implements SalesAssignmentAut
         if ($statement->fetchColumn() === false) {
             throw new DomainException('User does not have authority to assign this Sales owner.');
         }
+        if ($dealId!==null) {
+            $scope=$this->connection->prepare('SELECT 1 FROM tn_client_cases d
+                WHERE d.organization_id=:org AND d.id=:deal AND (d.assigned_user_id IS NULL OR EXISTS (
+                    SELECT 1 FROM sales_team_members a INNER JOIN sales_teams t ON t.id=a.team_id AND t.organization_id=a.organization_id AND t.status="ACTIVE"
+                    INNER JOIN sales_team_members c ON c.team_id=a.team_id AND c.organization_id=a.organization_id AND c.user_id=d.assigned_user_id AND c.status="ACTIVE"
+                    WHERE a.organization_id=d.organization_id AND a.user_id=:actor AND a.status="ACTIVE" AND a.role="LEAD"
+                )) LIMIT 1');
+            $scope->execute(['org'=>$organizationId,'deal'=>$dealId,'actor'=>$actor]);
+            if ($scope->fetchColumn()===false) throw new DomainException('Deal is outside the current Sales team scope.');
+        }
+    }
+
+    private function activeUser(string $organizationId,int $userId):bool
+    {
+        $q=$this->connection->prepare('SELECT 1 FROM tn_users u INNER JOIN cos_organization_memberships m
+            ON m.organization_id=u.organization_id AND m.user_id=u.id AND m.status="ACTIVE"
+            WHERE u.organization_id=? AND u.id=? AND u.status="active" LIMIT 1');
+        $q->execute([$organizationId,$userId]);
+        return $q->fetchColumn()!==false;
     }
 
     private function isAssignable(string $organizationId, int $userId): bool

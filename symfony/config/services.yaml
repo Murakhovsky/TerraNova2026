@@ -1947,6 +1947,16 @@ services:
   Domains\Sales\Application\Contract\DealRepositoryInterface:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlDealRepository
 
+  Domains\Sales\Application\Contract\DealStageRepositoryInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlDealRepository
+
+  Domains\Sales\Application\UseCase\SetDealCommercialTerms:
+    arguments:
+      $deals: '@Domains\Sales\Application\Contract\DealRepositoryInterface'
+      $state: '@Domains\Sales\Application\Contract\DealStageRepositoryInterface'
+      $events: '@Kernel\Event\EventBus'
+      $transactions: '@Kernel\Transaction\Contract\TransactionManagerInterface'
+
   Domains\Sales\Infrastructure\Persistence\MySql\MysqlPipelineRepository:
     arguments:
       $connection: '@cos.database.pdo'
@@ -1995,6 +2005,7 @@ services:
       $deals: '@Domains\Sales\Application\Contract\DealRepositoryInterface'
       $events: '@Kernel\Event\EventBus'
       $transactions: '@Kernel\Transaction\Contract\TransactionManagerInterface'
+      $authority: '@Domains\Sales\Application\Contract\SalesAssignmentAuthorityInterface'
 
   Domains\Sales\Application\Service\SalesOperationService:
     arguments:

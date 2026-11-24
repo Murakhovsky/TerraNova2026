@@ -10,5 +10,6 @@ interface SalesAssignmentAuthorityInterface
         string $actorType,
         string $actorId,
         int $ownerId,
+        ?string $dealId = null,
     ): void;
 }
