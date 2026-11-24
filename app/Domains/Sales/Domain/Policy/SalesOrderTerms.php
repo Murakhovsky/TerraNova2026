@@ -10,7 +10,7 @@ final class SalesOrderTerms
     private const MAX=99999999999999; // DECIMAL(14,2)
     public static function normalize(array $input):array
     {
-        if (array_diff(array_keys($input),['currency','lines','discount','tax','shipping','total','deal_id','owner_id','attribution'])!==[])
+        if (array_diff(array_keys($input),['currency','lines','discount','tax','tax_included','shipping','total','deal_id','owner_id','attribution'])!==[])
             throw new DomainException('Unknown order field.');
         $currency=$input['currency']??null;
         if (!in_array($currency,['USD','EUR','UAH'],true)) throw new DomainException('Unsupported order currency.');
@@ -31,8 +31,10 @@ final class SalesOrderTerms
                 'product_id'=>$product,'variant_id'=>$variant,'quantity'=>$qty,'unit_price'=>self::decimal($price),'subtotal'=>self::decimal($sum)];
         }
         $discount=self::minor($input['discount']??'0.00');$tax=self::minor($input['tax']??'0.00');$shipping=self::minor($input['shipping']??'0.00');
-        $total=$subtotal-$discount+$tax+$shipping;
-        if ($discount>$subtotal||$total>self::MAX||self::minor($input['total']??null)!==$total) throw new DomainException('Order totals do not reconcile.');
+        $taxIncluded=$input['tax_included']??false;
+        if(!is_bool($taxIncluded))throw new DomainException('Invalid tax inclusion flag.');
+        $total=$subtotal-$discount+($taxIncluded?0:$tax)+$shipping;
+        if ($discount>$subtotal||($taxIncluded&&$tax>$total)||$total>self::MAX||self::minor($input['total']??null)!==$total) throw new DomainException('Order totals do not reconcile.');
         $attrs=$input['attribution']??[];
         if (!is_array($attrs)||($attrs!==[]&&array_is_list($attrs))||array_diff(array_keys($attrs),['touchpoint_id','campaign_id','utm_source','utm_medium','utm_campaign','utm_content','utm_term','click_id'])!==[])
             throw new DomainException('Invalid order attribution observations.');
@@ -44,7 +46,7 @@ final class SalesOrderTerms
         }
         ksort($observations);
         return ['currency'=>$currency,'subtotal'=>self::decimal($subtotal),'discount'=>self::decimal($discount),
-            'tax'=>self::decimal($tax),'shipping'=>self::decimal($shipping),'total'=>self::decimal($total),'lines'=>$lines,'attribution'=>$observations];
+            'tax'=>self::decimal($tax),'tax_included'=>$taxIncluded,'shipping'=>self::decimal($shipping),'total'=>self::decimal($total),'lines'=>$lines,'attribution'=>$observations];
     }
 
     private static function minor(mixed $value):int
