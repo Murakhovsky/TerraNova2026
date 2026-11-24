@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "source_domain",
+    "product_ref",
+    "variant_ref",
+    "currency",
+    "product_status",
+    "variant_status",
+    "product_revision",
+    "variant_revision",
+    "base_price_decimal",
+    "can_reference_in_draft",
+    "launch_eligible",
+    "inventory_verified",
+    "external_destination_verified",
+    "provider_ad_policy_verified",
+    "pending_checks",
+    "source_readback"
+  ],
+  "properties": {
+    "source_domain": {
+      "type": "string",
+      "const": "product_management"
+    },
+    "product_ref": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "variant_ref": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "product_status": {
+      "type": "string",
+      "enum": [
+        "ACTIVE",
+        "NOT_ACTIVE",
+        "NOT_FOUND"
+      ]
+    },
+    "variant_status": {
+      "type": "string",
+      "enum": [
+        "ACTIVE",
+        "NOT_ACTIVE",
+        "NOT_SELECTED",
+        "NOT_FOUND"
+      ]
+    },
+    "product_revision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "variant_revision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "base_price_decimal": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "can_reference_in_draft": {
+      "type": "boolean"
+    },
+    "launch_eligible": {
+      "type": "boolean",
+      "const": false
+    },
+    "inventory_verified": {
+      "type": "boolean",
+      "const": false
+    },
+    "external_destination_verified": {
+      "type": "boolean",
+      "const": false
+    },
+    "provider_ad_policy_verified": {
+      "type": "boolean",
+      "const": false
+    },
+    "pending_checks": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "source_readback": {
+      "type": "string",
+      "const": "PRODUCT_DOMAIN_CURRENT_READ"
+    }
+  },
+  "additionalProperties": false
+}

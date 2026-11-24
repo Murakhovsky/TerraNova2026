@@ -2690,6 +2690,10 @@ services:
   Domains\Marketing\Application\Contract\MarketingPlanningRepository:
     alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPlanningRepository
   Domains\Marketing\Application\Service\MarketingPlanningService: ~
+  # Marketing M2b only reads native ProductManagement application models.
+  Domains\Marketing\Application\Contract\MarketingProductDraftReadPort:
+    alias: App\Infrastructure\Marketing\ProductManagementDraftReadAdapter
+  Domains\Marketing\Application\Service\MarketingProductDraftCheckService: ~
   Domains\Marketing\Infrastructure\Meta\CurlMetaHttpTransport: ~
   Domains\Marketing\Infrastructure\Meta\MetaHttpTransport:
     alias: Domains\Marketing\Infrastructure\Meta\CurlMetaHttpTransport

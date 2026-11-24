@@ -8,8 +8,8 @@ declare(strict_types=1);
 $manifest = [
     'id' => 'marketing',
     'name' => 'Marketing',
-    'version' => '0.2.2',
-    'schema_version' => '0.2.2',
+    'version' => '0.2.3',
+    'schema_version' => '0.2.3',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
     'description' => 'Marketing M2 creative drafts/analyst review and Meta read-only evidence; Finance owns budgets and paid mutations remain blocked.',
     'icon' => 'megaphone',
@@ -36,6 +36,7 @@ $manifest = [
             'marketing.paid.sync.history',
             'marketing.paid.spend.evidence.get',
             'marketing.paid.insights.query',
+            'marketing.product.draft_check.get',
             'marketing.creative.create',
             'marketing.creative.revise',
             'marketing.creative.list',
@@ -84,6 +85,25 @@ foreach ([
         'documentation' => 'docs/04-domains/marketing/overview.md',
     ];
 }
+
+$contracts[] = [
+    'id' => 'marketing.product.draft_check.get',
+    'version' => '1.0.0',
+    'owner_domain' => 'marketing',
+    'kind' => 'query',
+    'input_schema' => 'resources/contracts/marketing/product-draft-check-input.schema.json',
+    'output_schema' => 'resources/contracts/marketing/product-draft-check-output.schema.json',
+    'execution_binding' => 'query:marketing.product.draft_check.get',
+    'side_effect_level' => 'none',
+    'permission' => 'cos.tenant.manage',
+    'approval_policy' => 'none',
+    'idempotency' => 'none',
+    'lifecycle' => 'experimental',
+    'failure_contract' => 'Product source is re-read per request; Product module disabled or missing tenant evidence fails closed, and no advertising launch authorization is implied.',
+    'tests' => ['tests/unit/marketing_product_draft_check.php'],
+    'documentation' => 'docs/04-domains/marketing/overview.md',
+];
+
 foreach ([
     'marketing.creative.create' => ['command','internal','marketing/creative-create'],
     'marketing.creative.revise' => ['command','internal','marketing/creative-revise'],
