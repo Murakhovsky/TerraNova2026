@@ -45,4 +45,17 @@ foreach([
 ] as $name) $assert(str_contains($routes,$name),'Missing explicit route: '.$name);
 $assert(str_contains($workflow,'php tests/architecture/product_management_workspace_contract.php'),
     'PM Workspace architecture gate must run in CI.');
+foreach(['product.archive','variant.update','variant.archive','findVariant(','confirm_archive','lifecycle_readback_uncertain'] as $required) {
+    $assert(str_contains($controller,$required),'Missing lifecycle guard/readback: '.$required);
+}
+foreach(['cos_product_management_product_archive:','cos_product_management_variant_update:','cos_product_management_variant_archive:'] as $name) {
+    $assert(str_contains($routes,$name),'Missing lifecycle route: '.$name);
+}
+$assert(substr_count($twig,'name="confirm_archive"')===2 && str_contains($twig,'name="expected_revision"'),
+    'Archive confirmation and revision fences required.');
+$store=$read('app/Domains/ProductManagement/Infrastructure/Persistence/MySqlProductManagementStore.php');
+$assert(str_contains($store,"WHERE v.organization_id=? AND v.variant_id=? FOR UPDATE', [".'$organizationId,$variantId]'),
+    'Stock posting must lock Product/Variant before checking lifecycle.');
+$assert(str_contains($store,'(b.on_hand<>0 OR b.reserved<>0) LIMIT 1 FOR UPDATE'),
+    'Product archive must use current locking balance read.');
 echo "Product Management E7/P0 catalog workspace architecture passed.\n";
