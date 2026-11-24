@@ -200,6 +200,11 @@ cos_automation_intents_submit:
   controller: App\Http\Api\V1\Controller\CanonicalAutomationIntentController::submit
   methods: [POST]
 
+cos_automation_intents_product_submit:
+  path: /api/v1/capability-intents/product-business
+  controller: App\Http\Api\V1\Controller\CanonicalAutomationIntentController::submitProduct
+  methods: [POST]
+
 cos_automation_intents_workspace:
   path: /workspace/capabilities/intents
   controller: App\Web\Capability\AutomationIntentReviewController::index
