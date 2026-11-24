@@ -24,6 +24,7 @@ domain_id: product_management
         "product_management.attribute.category.bind",
         "product_management.attribute.category.get",
         "product_management.attribute.product.set",
+        "product_management.attribute.product.bulk_set",
         "product_management.attribute.product.get",
         "product_management.attribute.product.filter",
         "product_management.variant.matrix.preview",
