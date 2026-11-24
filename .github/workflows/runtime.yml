@@ -107,6 +107,10 @@ jobs:
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
         run: php tests/integration/sales_client_case_create_mysql.php
+      - name: Sales CRM Inbox two-connection lease and atomic processing acceptance
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/integration/sales_crm_inbox_mysql.php
       - name: Shopify supervised GitHub operator architecture gate
         run: php tests/architecture/product_management_shopify_operator_workflow.php
       - name: Product Management E0-E4 native MySQL acceptance
