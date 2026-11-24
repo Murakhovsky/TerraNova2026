@@ -470,7 +470,9 @@ Manifest capabilities не задекларовані.
 - `sales.lead.qualify`;
 - `sales.lead.state.manage`;
 - `sales.pipeline.stage.manage`;
-- `sales.workspace.use`.
+- `sales.team.manage`;
+- `sales.team.read`;
+- `sales.workspace.use`;
 
 ## Service (`service`)
 

@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "sales.team.read output v1",
+  "type": "object",
+  "properties": {
+    "found": {
+      "type": "boolean"
+    },
+    "team": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "team_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{8,40}$"
+        },
+        "code": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "ACTIVE",
+            "DISABLED",
+            "ARCHIVED"
+          ]
+        },
+        "assignment_mode": {
+          "type": "string",
+          "enum": [
+            "MANUAL",
+            "ROUND_ROBIN"
+          ]
+        },
+        "configuration_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "user_id": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "LEAD",
+                  "MEMBER"
+                ]
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "ACTIVE",
+                  "INACTIVE"
+                ]
+              },
+              "assignment_enabled": {
+                "type": "boolean"
+              },
+              "approval_enabled": {
+                "type": "boolean"
+              },
+              "assignment_weight": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              }
+            },
+            "required": [
+              "user_id",
+              "role",
+              "status",
+              "assignment_enabled",
+              "approval_enabled",
+              "assignment_weight"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "team_id",
+        "code",
+        "name",
+        "status",
+        "assignment_mode",
+        "configuration_version",
+        "members"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "found",
+    "team"
+  ],
+  "additionalProperties": false
+}

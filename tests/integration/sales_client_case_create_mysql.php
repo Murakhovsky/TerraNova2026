@@ -12,6 +12,13 @@ use App\Application\Sales\Command\ManageSalesLeadStateCommand;
 use App\Application\Sales\Command\ManageSalesLeadStateCommandHandler;
 use App\Application\Sales\Command\ManageSalesDealCommand;
 use App\Application\Sales\Command\ManageSalesDealCommandHandler;
+use App\Application\Sales\Command\ManageSalesTeamCommand;
+use App\Application\Sales\Command\ManageSalesTeamCommandHandler;
+use App\Application\Sales\Admin\SalesAdminAuthorization;
+use App\Infrastructure\Capability\SalesTeamManageAdapter;
+use App\Infrastructure\Capability\SalesTeamReadAdapter;
+use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesTeamAdministration;
+use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAccessControl;
 use App\Infrastructure\Capability\SalesLeadStateManageAdapter;
 use App\Infrastructure\Capability\SalesDealStateReadAdapter;
 use App\Infrastructure\Capability\SalesDealOwnerAssignAdapter;
@@ -88,6 +95,7 @@ try {
     $owners=new AssignDealOwner($deals,$events,$tx,new MysqlSalesAssignmentAuthority($db));
     $stages=new ChangeDealStage($deals,$pipelines,new StageTransitionPolicy(),$events,$tx);
     $commercial=new SetDealCommercialTerms($deals,$deals,$events,$tx);
+    $teams=new MysqlSalesTeamAdministration($db);$teamAuth=new SalesAdminAuthorization(new MysqlSalesAccessControl($db));
     $handler = new ConvertSalesLeadToOpportunityCommandHandler($factory);
     $bus = new SymfonyCommandBus(new MessageBus([new HandleMessageMiddleware(new HandlersLocator([
         ConvertSalesLeadToOpportunityCommand::class => [$handler],
@@ -96,6 +104,7 @@ try {
         UpdateSalesLeadCommand::class => [new UpdateSalesLeadCommandHandler($factory)],
         ManageSalesLeadStateCommand::class => [new ManageSalesLeadStateCommandHandler($factory,$read,$receipts,$tx)],
         ManageSalesDealCommand::class => [new ManageSalesDealCommandHandler($deals,$owners,$stages,$commercial,$receipts,$tx)],
+        ManageSalesTeamCommand::class => [new ManageSalesTeamCommandHandler($teams,$teamAuth,$receipts,$tx)],
     ]))]));
     $module = new ModuleCatalog([ModuleDefinition::fromArray(require $root.'/app/Domains/Sales/module.php')]);
     $catalog = new CanonicalCapabilityCatalog($module);
@@ -106,7 +115,7 @@ try {
     $active = new ActiveModuleResolver($module,$state);
     $resolver = new FederationCapabilityBindingResolver($catalog,new DomainModuleRegistry([]),$active);
     $read = new MysqlSalesWorkspaceReadModel($db);
-    $gateway = new CanonicalCapabilityGateway($catalog,$active,$resolver,[new SalesClientCaseCreateAdapter($bus,$read),new SalesLeadCreateAdapter($bus,$read),new SalesLeadQualificationAdapter($bus,$read),new SalesLeadStateManageAdapter($bus),new SalesDealStateReadAdapter($deals),new SalesDealOwnerAssignAdapter($bus),new SalesDealCommercialSetAdapter($bus),new SalesPipelineStageManageAdapter($bus),new SalesDealOutcomeRecordAdapter($bus)]);
+    $gateway = new CanonicalCapabilityGateway($catalog,$active,$resolver,[new SalesClientCaseCreateAdapter($bus,$read),new SalesLeadCreateAdapter($bus,$read),new SalesLeadQualificationAdapter($bus,$read),new SalesLeadStateManageAdapter($bus),new SalesDealStateReadAdapter($deals),new SalesDealOwnerAssignAdapter($bus),new SalesDealCommercialSetAdapter($bus),new SalesPipelineStageManageAdapter($bus),new SalesDealOutcomeRecordAdapter($bus),new SalesTeamManageAdapter($bus),new SalesTeamReadAdapter($teams,$teamAuth)]);
     $actor = static fn(string $tenant,string $role='manager') => new TenantContext(
         UserId::fromString((string)$userId),OrganizationId::fromString($tenant),OrganizationRole::fromString($role),
         [Permission::fromString(TenantPermissions::ACCESS),Permission::fromString(TenantPermissions::MANAGE)],
@@ -256,7 +265,26 @@ try {
         }else{$check($invoke('sales.pipeline.stage.manage',$payload,'stage-'.$index)['state']['stage_id']===$next,'Nonterminal stage transition failed.');}
     }
     $q->execute([$org,(string)$wonCase,'sales.deal.won']);$check((int)$q->fetchColumn()===1,'WON event/outbox missing or duplicated.');
-    echo "Sales canonical intake, lifecycle, ownership, commercial terms, pipeline and WON/LOST native state and outbox PASS.\n";
+    $teamInput=['operation'=>'create','name'=>'CI Sales team','code'=>'CI_'.strtoupper($token)];
+    $reject(fn()=>$invoke('sales.team.manage',$teamInput,'no-permission'));
+    $db->prepare("INSERT INTO sales_user_capabilities(organization_id,user_id,capability,status,granted_by,created_at,updated_at) VALUES (?,?,'sales.admin.teams.manage','ACTIVE',?,NOW(6),NOW(6))")->execute([$org,$userId,(string)$userId]);
+    $newTeam=$invoke('sales.team.manage',$teamInput,'new-team');
+    $newTeamId=$newTeam['team']['team_id'];
+    $check($newTeam['team']['configuration_version']===1 && !$newTeam['replayed'],'Team creation receipt invalid.');
+    $check($invoke('sales.team.manage',$teamInput,'new-team')['replayed'],'Team create replay failed.');
+    $member=['operation'=>'member_set','team_id'=>$newTeamId,'configuration_version'=>1,'user_id'=>$targetOwner,'role'=>'MEMBER',
+        'member_status'=>'ACTIVE','assignment_enabled'=>true,'approval_enabled'=>false,'assignment_weight'=>3];
+    $memberResult=$invoke('sales.team.manage',$member,'team-member');
+    $check($memberResult['team']['configuration_version']===2 && count($memberResult['team']['members'])===1 && !isset($memberResult['team']['members'][0]['email']),'Team member or redaction failed.');
+    $check($invoke('sales.team.manage',$member,'team-member')['replayed'],'Team member replay failed.');
+    $reject(fn()=>$invoke('sales.team.manage',[...$member,'assignment_weight'=>4],'stale-team'));
+    $reject(fn()=>$invoke('sales.team.manage',[...$member,'assignment_weight'=>4],'team-member'));
+    $disable=['operation'=>'update','team_id'=>$newTeamId,'configuration_version'=>2,'name'=>'CI Sales team','status'=>'DISABLED'];
+    $check($invoke('sales.team.manage',$disable,'disable')['team']['status']==='DISABLED','Disable team failed.');
+    $reject(fn()=>$invoke('sales.team.manage',[...$member,'configuration_version'=>3],'disabled-member'));
+    $teamRead=$gateway->invoke($manager,'sales.team.read',['team_id'=>$newTeamId],'trusted_read','','trace-team');
+    $check($teamRead['found'] && $teamRead['team']['configuration_version']===3,'Team readback failed.');
+    echo "Sales canonical intake, lifecycle, teams, ownership, commercial terms, pipeline and WON/LOST native state and outbox PASS.\n";
 } finally {
     if ($db->inTransaction()) $db->rollBack();
 }

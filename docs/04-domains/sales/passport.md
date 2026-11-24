@@ -46,6 +46,13 @@ domain_id: sales
       ]
     },
     {
+      "id": "teams",
+      "capability_ids": [
+        "sales.team.read",
+        "sales.team.manage"
+      ]
+    },
+    {
       "id": "activities",
       "capability_ids": [
         "sales.create_task"
@@ -84,6 +91,7 @@ COS-DOMAIN-PASSPORT-DATA -->
 | `crm_inbox` | Durable CRM intake, processing observation and operator recovery | UNKNOWN |
 | `leads` | Функціональний розділ `sales`; деталізація capabilities потребує owner review | UNKNOWN |
 | `deals` | Функціональний розділ `sales`; деталізація capabilities потребує owner review | UNKNOWN |
+| `teams` | Sales team configuration and membership | UNKNOWN |
 | `activities` | Функціональний розділ `sales`; деталізація capabilities потребує owner review | UNKNOWN |
 
 Компоненти не можуть незалежно активуватися без окремо підтвердженого ModuleLifecycle contract.
