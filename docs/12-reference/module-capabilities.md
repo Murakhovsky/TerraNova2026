@@ -496,6 +496,9 @@ Manifest capabilities не задекларовані.
 - `sales.property_match.record`;
 - `sales.team.manage`;
 - `sales.team.read`;
+- `sales.workspace.deal.timeline.read`;
+- `sales.workspace.deals.list`;
+- `sales.workspace.leads.list`;
 - `sales.workspace.summary.read`;
 - `sales.workspace.use`;
 

@@ -27,7 +27,7 @@ generated: true
 | `product_management` | `0.1.0` | — | 28 |
 | `property` | `1.0.0` | `propertyModuleConfigurationProvisioner` | 25 |
 | `real_estate` | `1.0.0` | — | 6 |
-| `sales` | `1.0.0` | `salesModuleConfigurationProvisioner` | 51 |
+| `sales` | `1.0.0` | `salesModuleConfigurationProvisioner` | 54 |
 | `service` | `1.0.0` | — | 7 |
 
 ## `capital_markets`
@@ -112,7 +112,7 @@ generated: true
 
 - manifest: `app/Domains/Sales/module.php`;
 - configuration provisioners: `salesModuleConfigurationProvisioner`;
-- capabilities: `sales.workspace.summary.read`, `sales.offer.document.render`, `sales.offer.delivery.status`, `sales.offer.delivery.queue`, `sales.activity.reminder.queue`, `sales.crm.reconciliation.read`, `sales.lead.followup.schedule`, `sales.lead.activity.complete`, `sales.lead.activity.reschedule`, `sales.lead.activity.cancel`, `sales.activity.cancel`, `sales.activity.overdue.read`, `sales.lead.intake`, `sales.offer.create`, `sales.offer.revise`, `sales.offer.transition`, `sales.negotiation.record`, `sales.offer.read`, `sales.offer.list`, `sales.activity.record`, `sales.activity.complete`, `sales.activity.reschedule`, `sales.followup.schedule`, `sales.property_match.record`, `sales.team.read`, `sales.team.manage`, `sales.lead.state.manage`, `sales.deal.state.read`, `sales.deal.owner.assign`, `sales.deal.commercial.set`, `sales.pipeline.stage.manage`, `sales.deal.outcome.record`, `sales.lead.qualify`, `sales.crm.inbox.process`, `sales.crm.inbox.status`, `sales.crm.inbox.recover`, `sales.lead.create`, `sales.client_case.create`, `sales.create_task`, `sales.deal.won.observation`, `sales.inbound.request.read`, `sales.workspace.use`, `sales.director.view`, `sales.admin.view`, `sales.admin.pipeline.manage`, `sales.admin.rules.manage`, `sales.admin.agents.manage`, `sales.admin.policies.manage`, `sales.admin.teams.manage`, `sales.admin.integrations.manage`, `sales.admin.audit.view`.
+- capabilities: `sales.workspace.leads.list`, `sales.workspace.deals.list`, `sales.workspace.deal.timeline.read`, `sales.workspace.summary.read`, `sales.offer.document.render`, `sales.offer.delivery.status`, `sales.offer.delivery.queue`, `sales.activity.reminder.queue`, `sales.crm.reconciliation.read`, `sales.lead.followup.schedule`, `sales.lead.activity.complete`, `sales.lead.activity.reschedule`, `sales.lead.activity.cancel`, `sales.activity.cancel`, `sales.activity.overdue.read`, `sales.lead.intake`, `sales.offer.create`, `sales.offer.revise`, `sales.offer.transition`, `sales.negotiation.record`, `sales.offer.read`, `sales.offer.list`, `sales.activity.record`, `sales.activity.complete`, `sales.activity.reschedule`, `sales.followup.schedule`, `sales.property_match.record`, `sales.team.read`, `sales.team.manage`, `sales.lead.state.manage`, `sales.deal.state.read`, `sales.deal.owner.assign`, `sales.deal.commercial.set`, `sales.pipeline.stage.manage`, `sales.deal.outcome.record`, `sales.lead.qualify`, `sales.crm.inbox.process`, `sales.crm.inbox.status`, `sales.crm.inbox.recover`, `sales.lead.create`, `sales.client_case.create`, `sales.create_task`, `sales.deal.won.observation`, `sales.inbound.request.read`, `sales.workspace.use`, `sales.director.view`, `sales.admin.view`, `sales.admin.pipeline.manage`, `sales.admin.rules.manage`, `sales.admin.agents.manage`, `sales.admin.policies.manage`, `sales.admin.teams.manage`, `sales.admin.integrations.manage`, `sales.admin.audit.view`.
 
 ## `service`
 
