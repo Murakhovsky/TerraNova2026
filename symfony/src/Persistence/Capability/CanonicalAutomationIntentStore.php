@@ -24,7 +24,7 @@ final readonly class CanonicalAutomationIntentStore
     public function __construct(
         private Connection $db,
         private AutomationIntentSignatureVerifier $signatures,
-        private PropertyBulkIntakeService $property,
+        private ?PropertyBulkIntakeService $property=null,
         private ?ProductGovernedPlanProposalService $productPlans=null,
         private ?CanonicalCapabilityCatalog $catalog=null,
     ) {}
@@ -210,6 +210,7 @@ final readonly class CanonicalAutomationIntentStore
                 return ['intent_id'=>$id,'plan_id'=>$plan['plan_id'],'goal_id'=>$plan['goal_id'],'state'=>'adopted',
                     'next'=>'independent_plan_approval'];
             }
+            if($this->property===null)throw new DomainException('Property intake unavailable.');
             $batch=$this->property->stage($actor,$items);
             $this->db->executeStatement('UPDATE cos_capability_automation_intents
                 SET state=:state,adopted_batch_id=:batch,reviewed_at=UTC_TIMESTAMP(6)
