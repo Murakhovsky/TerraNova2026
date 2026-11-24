@@ -31,6 +31,11 @@ cos_product_management_location_create:
   controller: App\Web\ProductManagement\ProductInventoryController::createLocation
   methods: [POST]
 
+cos_product_management_stock_count_propose:
+  path: /product-management/stock/count/propose
+  controller: App\Web\ProductManagement\ProductInventoryController::proposeCount
+  methods: [POST]
+
 cos_product_management_stock_reservation:
   path: /product-management/stock/reservation
   controller: App\Web\ProductManagement\ProductInventoryController::reservation
