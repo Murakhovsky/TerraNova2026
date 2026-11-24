@@ -46,6 +46,7 @@ domain_id: product_management
         "product_management.stock.count.get",
         "product_management.stock.count.session.apply",
         "product_management.stock.count.session.get",
+        "product_management.stock.count.session.candidates",
         "product_management.stock.reservation.search",
         "product_management.stock.release",
         "product_management.stock.balance.get"
