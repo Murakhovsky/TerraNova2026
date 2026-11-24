@@ -26,7 +26,15 @@ $manifest = [
             'web.commands' => ['marketingNavigationContributor'],
             'web.workspace' => ['marketingNavigationContributor'],
         ],
-        'cross_domain_contracts' => [], // Finance F1 remains a future port, not a falsely wired dependency.
+        'cross_domain_contracts' => [
+            [
+                'contract' => 'Domains\\Marketing\\Application\\Contract\\MarketingProductDraftReadPort',
+                'role' => 'requires',
+                'counterpart' => 'product_management',
+                'kind' => 'synchronous_port',
+                'purpose' => 'Read current tenant-scoped Product and base price facts for Marketing draft planning, without Product SQL or launch authorization.',
+            ],
+        ],
         'migration_files' => ['app/migrations/20261119_000152_marketing_foundation.sql','app/migrations/20261119_000154_marketing_planning_m2.sql'],
         'capabilities' => [
             'marketing.campaign.search',
