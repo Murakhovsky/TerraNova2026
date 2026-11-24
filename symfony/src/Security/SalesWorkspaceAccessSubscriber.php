@@ -110,14 +110,15 @@ final readonly class SalesWorkspaceAccessSubscriber implements EventSubscriberIn
             // These commands now enter the native transactional write facade.
             if ($mutation&&($name==='SalesWriteController'
                 ||($name==='ClientCaseMutationController'&&!in_array($method,['create','update'],true))
-                ||($name==='SalesFrontendController'&&in_array($method,['quickUpdate','owner'],true)))) return;
+                ||($name==='SalesFrontendController'&&in_array($method,['quickUpdate','owner','meeting','completeActivity','rescheduleActivity','leadFollowup'],true)))) return;
             if ($mutation) {
                 // Existing legacy write handlers do not uniformly lock/recheck owner authorization.
                 // Until migrated, only an explicitly authorized live administrator may use these routes.
                 if (!$tenant->isAdmin()||!$require(SalesCapability::DealAssign)||!$require(SalesCapability::DirectorView)) throw new DomainException('Denied.');
                 return;
             }
-            // Complex legacy projections include tenant-level owner lists, approvals, search, or linked cases.
+            if (!$mutation&&$name==='SalesFrontendController'&&in_array($method,['search','intelligence'],true)) return;
+            // Complex legacy projections include tenant-level owner lists, approvals, or linked cases.
             // Fail closed instead of filtering after an unsafe query.
             $this->scope->resolve($org,$actor,'tenant');
         } catch (NotFoundHttpException $e) {throw $e;}
