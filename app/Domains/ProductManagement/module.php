@@ -5,7 +5,7 @@ return [
     'id' => 'product_management',
     'name' => 'Product Management',
     'version' => '0.1.0',
-    'schema_version' => '0.8.0',
+    'schema_version' => '0.8.1',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
     'description' => 'Tenant-scoped goods catalog, stock ledger, base prices and channel observations.',
     'icon' => 'package',
@@ -29,6 +29,7 @@ return [
             'app/migrations/20261119_000159_product_management_shopify_import_preview.sql',
             'app/migrations/20261119_000160_product_management_shopify_approved_apply.sql',
             'app/migrations/20261120_000161_product_management_shopify_identity_claim.sql',
+            'app/migrations/20261124_000162_product_management_shopify_order_pointer.sql',
         ],
         // Expose only implemented bindings, never aspirational commands.
         'capability_contracts' => [

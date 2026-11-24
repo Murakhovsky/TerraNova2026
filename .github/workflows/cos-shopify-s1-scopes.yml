@@ -1,0 +1,74 @@
+name: COS Shopify S1 scopes audit (read-only)
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/cos-shopify-s1-scopes.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-scopes:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    environment: AWS TN2026
+    env:
+      DEV_HOST: ${{ secrets.DEV_HOST }}
+      DEV_USER: ${{ secrets.DEV_USER }}
+      DEV_PORT: ${{ secrets.DEV_PORT }}
+      DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+    steps:
+      - name: Configure protected SSH
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          for name in DEV_HOST DEV_USER DEV_PORT DEV_SSH_KEY; do
+            [[ -n "${!name:-}" ]] || { echo "::error::Missing $name"; exit 1; }
+          done
+          [[ "$DEV_PORT" =~ ^[0-9]{1,5}$ ]] || exit 1
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$DEV_SSH_KEY" > "$HOME/.ssh/shopify_audit_key"
+          chmod 600 "$HOME/.ssh/shopify_audit_key"
+          ssh-keyscan -T 10 -p "$DEV_PORT" -H "$DEV_HOST" > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test -s "$HOME/.ssh/known_hosts"
+      - name: Inspect granted app scopes without logging credentials
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          ssh -T -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes \
+            -i "$HOME/.ssh/shopify_audit_key" -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            sudo -n bash -s <<'REMOTE'
+          set -Eeuo pipefail
+          cfg=/etc/cos/shopify.env
+          [[ -f "$cfg" ]] || { echo SHOPIFY_CONFIG_MISSING; exit 10; }
+          [[ "$(stat -c '%a' "$cfg")" == 600 ]] || { echo SHOPIFY_CONFIG_PERMISSIONS_INVALID; exit 11; }
+          set -a
+          source "$cfg"
+          set +a
+          [[ "${SHOPIFY_SHOP_DOMAIN:-}" == "e2rnbw-mr.myshopify.com" ]] || { echo SHOPIFY_WRONG_STORE; exit 12; }
+          [[ -n "${SHOPIFY_CLIENT_ID:-}" && -n "${SHOPIFY_CLIENT_SECRET:-}" ]] || exit 13
+          token_response=$(curl -fsS --max-time 20 -X POST "https://$SHOPIFY_SHOP_DOMAIN/admin/oauth/access_token" \
+            --data-urlencode 'grant_type=client_credentials' \
+            --data-urlencode "client_id=$SHOPIFY_CLIENT_ID" \
+            --data-urlencode "client_secret=$SHOPIFY_CLIENT_SECRET") || { echo SHOPIFY_OAUTH_FAILED; exit 14; }
+          unset SHOPIFY_CLIENT_ID SHOPIFY_CLIENT_SECRET
+          token=$(printf '%s' "$token_response" | python3 -c 'import json,sys;print(json.load(sys.stdin).get("access_token",""))')
+          unset token_response
+          [[ -n "$token" ]] || exit 15
+          response=$(curl -fsS --max-time 20 -X POST "https://$SHOPIFY_SHOP_DOMAIN/admin/api/2026-10/graphql.json" \
+            -H 'Content-Type: application/json' -H "X-Shopify-Access-Token: $token" \
+            --data '{"query":"query COSScopeAudit { currentAppInstallation { accessScopes { handle } } shop { name } }"}') || { echo SHOPIFY_SCOPES_HTTP_FAILED; exit 16; }
+          unset token
+          printf '%s' "$response" | python3 -c '
+          import json,sys
+          obj=json.load(sys.stdin)
+          data=obj.get("data") or {}
+          installation=data.get("currentAppInstallation")
+          if obj.get("errors") or not isinstance(installation,dict):
+              print("SHOPIFY_SCOPES_REJECTED");sys.exit(17)
+          granted={str(x.get("handle","")) for x in installation.get("accessScopes",[])}
+          required=["read_products","write_products","read_inventory","write_inventory","read_locations","read_orders","write_orders","read_customers","write_files","write_publications"]
+          for scope in required:
+              print("SHOPIFY_"+scope.upper()+"="+("YES" if scope in granted else "NO"))
+          print("SHOPIFY_SCOPE_AUDIT_COMPLETE")
+          '
+          REMOTE
