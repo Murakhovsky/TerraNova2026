@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "order": {
+      "type": "object",
+      "properties": {
+        "order_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        },
+        "owner_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "deal_id": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "customer_id": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "channel": {
+          "type": "string",
+          "enum": [
+            "native"
+          ]
+        },
+        "store_reference": {
+          "type": "string"
+        },
+        "external_order_id": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "placed",
+            "confirmed",
+            "cancelled",
+            "completed"
+          ]
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "currency": {
+          "type": "string",
+          "enum": [
+            "USD",
+            "EUR",
+            "UAH"
+          ]
+        },
+        "subtotal": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,11})\\.[0-9]{2}$"
+        },
+        "discount": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,11})\\.[0-9]{2}$"
+        },
+        "tax": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,11})\\.[0-9]{2}$"
+        },
+        "shipping": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,11})\\.[0-9]{2}$"
+        },
+        "total": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,11})\\.[0-9]{2}$"
+        },
+        "placed_at": {
+          "type": "string"
+        },
+        "lines": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "properties": {
+              "sku": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 180
+              },
+              "quantity": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100000
+              },
+              "unit_price": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,11})\\.[0-9]{2}$"
+              },
+              "product_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,79}$"
+              },
+              "variant_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,79}$"
+              },
+              "line_no": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "subtotal": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,11})\\.[0-9]{2}$"
+              }
+            },
+            "required": [
+              "sku",
+              "title",
+              "quantity",
+              "unit_price",
+              "product_id",
+              "variant_id",
+              "line_no",
+              "subtotal"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "order_id",
+        "owner_id",
+        "deal_id",
+        "customer_id",
+        "channel",
+        "store_reference",
+        "external_order_id",
+        "status",
+        "revision",
+        "currency",
+        "subtotal",
+        "discount",
+        "tax",
+        "shipping",
+        "total",
+        "placed_at",
+        "lines"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "order"
+  ],
+  "additionalProperties": false
+}
