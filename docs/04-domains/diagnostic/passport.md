@@ -39,7 +39,8 @@ domain_id: diagnostic
       "id": "evaluation",
       "capability_ids": [
         "diagnostic.traceability",
-        "diagnostic.report.summary.get"
+        "diagnostic.report.summary.get",
+        "diagnostic.recommendation.accept"
       ]
     }
   ],

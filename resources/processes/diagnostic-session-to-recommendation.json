@@ -132,17 +132,21 @@
     },
     {
       "id": "decision",
-      "label": "Review / accept recommendation",
+      "label": "Accept recommendation and propose approval-required Action",
       "kind": "decision",
       "owner": "reviewer / decision maker",
       "domain": "diagnostic",
-      "capability": null,
-      "capability_gap": "missing-domain-capability",
+      "capability": "diagnostic.recommendation.accept",
       "critical": true,
       "runtime": [
         {
           "type": "use_case",
           "ref": "AcceptDiagnosticRecommendation"
+        },
+        {
+          "type": "source",
+          "path": "symfony/src/Infrastructure/Capability/DiagnosticRecommendationAcceptAdapter.php",
+          "symbol": "DiagnosticRecommendationAcceptAdapter"
         }
       ]
     }

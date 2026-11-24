@@ -16,6 +16,7 @@ final readonly class AcceptDiagnosticRecommendationCommandHandler implements Com
     public function __construct(
         private DiagnosticRuntimeService $runtime,
         private DiagnosticMutationAudit $audit,
+        private IdentityResolverInterface $identities,
 
         private TransactionManagerInterface $transactions,
     ) {}
@@ -25,7 +26,7 @@ final readonly class AcceptDiagnosticRecommendationCommandHandler implements Com
         return $this->transactions->transactional(function () use ($command): array {
             $org=$command->organizationId->value();
             $owner=$this->identities->resolve(UserId::fromString((string)$command->ownerId),$command->organizationId);
-            if($owner===null){
+            if($owner===null || $owner->organizationId()->value()!==$org || $owner->userId()->value()!==(string)$command->ownerId){
                 throw new DomainException('Recommendation action owner is not an active member of this organization.');
             }
 

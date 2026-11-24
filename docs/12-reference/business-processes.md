@@ -21,7 +21,7 @@ generated: true
 | Market Source → Trusted Market State | `capital_markets` | `as-is` | `source-verified` | 5 | 0 | 5/5 | 5/5 | 5/5 | 5/5 | 0/5 | [Відкрити workflow](../02-workflows/capital-markets-market-data-to-trusted-state.md) |
 | Trusted Market State → Tokenized Equity Paper Result | `capital_markets` | `as-is` | `source-verified` | 7 | 0 | 7/7 | 7/7 | 7/7 | 7/7 | 0/7 | [Відкрити workflow](../02-workflows/capital-markets-tokenized-equity-paper-cycle.md) |
 | Лабораторія досліджень і стратегій Capital Markets | `capital_markets` | `as-is` | `source-verified` | 7 | 0 | 7/7 | 7/7 | 7/7 | 7/7 | 0/7 | [Відкрити workflow](../02-workflows/capital-markets-research-strategy-lab.md) |
-| Diagnostic Session → Recommendation | `diagnostic` | `as-is` | `source-verified` | 6 | 0 | 6/6 | 4/6 | 6/6 | 6/6 | 0/6 | [Відкрити workflow](../02-workflows/diagnostic-session-to-recommendation.md) |
+| Diagnostic Session → Recommendation | `diagnostic` | `as-is` | `source-verified` | 6 | 0 | 6/6 | 5/6 | 6/6 | 6/6 | 0/6 | [Відкрити workflow](../02-workflows/diagnostic-session-to-recommendation.md) |
 | Federation Goal Plan Approval | `federation` | `as-is` | `documented` | 1 | 0 | 1/1 | 1/1 | 0/1 | 0/0 | 0/0 | [Відкрити workflow](../02-workflows/federation-goal-plan-approval.md) |
 | Signal → Qualified Opportunity Handoff | `growth` | `to-be` | `source-verified` | 6 | 0 | 6/6 | 6/6 | 6/6 | 5/5 | 0/5 | [Відкрити workflow](../02-workflows/growth-opportunity-candidate-to-handoff.md) |
 | Property Submission → Publication | `property` | `as-is` | `source-verified` | 6 | 0 | 6/6 | 6/6 | 6/6 | 6/6 | 0/6 | [Відкрити workflow](../02-workflows/property-submission-to-publication.md) |
@@ -44,7 +44,7 @@ generated: true
 | Market Source → Trusted Market State | 5/5 | 5/5 | 0/5 | 0/5 | 5/5 | 5/5 | 0/5 | 5/5 | 0/5 |
 | Trusted Market State → Tokenized Equity Paper Result | 7/7 | 7/7 | 0/7 | 0/7 | 7/7 | 7/7 | 0/7 | 7/7 | 0/7 |
 | Лабораторія досліджень і стратегій Capital Markets | 7/7 | 7/7 | 0/7 | 0/7 | 7/7 | 7/7 | 0/7 | 7/7 | 0/7 |
-| Diagnostic Session → Recommendation | 6/6 | 4/6 | 2/6 | 0/6 | 6/6 | 6/6 | 0/6 | 6/6 | 0/6 |
+| Diagnostic Session → Recommendation | 6/6 | 5/6 | 1/6 | 0/6 | 6/6 | 6/6 | 0/6 | 6/6 | 0/6 |
 | Federation Goal Plan Approval | 1/1 | 1/1 | 0/1 | 0/1 | 0/1 | 0/1 | 0/1 | 0/0 | 0/0 |
 | Signal → Qualified Opportunity Handoff | 6/6 | 6/6 | 0/6 | 0/6 | 6/6 | 6/6 | 0/6 | 5/5 | 0/5 |
 | Property Submission → Publication | 6/6 | 6/6 | 0/6 | 0/6 | 6/6 | 6/6 | 0/6 | 6/6 | 0/6 |
@@ -156,7 +156,7 @@ generated: true
 - **Schema:** `v4`
 - **Domain:** `diagnostic`
 - **Бізнес-стан:** `as-is`
-- **Покриття capabilities:** 4/6 кроків
+- **Покриття capabilities:** 5/6 кроків
 - **Cross-domain кроки:** 0/6
 - **Derived verification:** `source-verified`
 - **Тригер:** A published methodology version is selected for a diagnostic target
@@ -177,7 +177,7 @@ generated: true
 | Capture evidence | diagnostic operator / interviewer | `diagnostic` | `diagnostic.evidence.capture` | `operation` | так | use_case `CaptureDiagnosticEvidence` [source]<br>source `symfony/src/Infrastructure/Capability/DiagnosticEvidenceCaptureAdapter.php` · `DiagnosticEvidenceCaptureAdapter` [source] |
 | Evaluate evidence, persist report and complete session atomically | diagnostic operator / interviewer | `diagnostic` | `diagnostic.session.complete` | `operation` | так | use_case `EvaluateDiagnosticSession` [source]<br>source `app/Domains/Diagnostic/Application/Service/DiagnosticRuntimeService.php` · `function complete(` [source]<br>use_case `CompleteDiagnosticSession` [source]<br>source `symfony/src/Infrastructure/Capability/DiagnosticSessionCompleteAdapter.php` · `DiagnosticSessionCompleteAdapter` [source] |
 | Verify persisted Diagnostic report | diagnostic operator / interviewer | `diagnostic` | `diagnostic.report.summary.get` | `operation` | так | source `symfony/src/Infrastructure/Capability/DiagnosticReportSummaryAdapter.php` · `DiagnosticReportSummaryAdapter` [source]<br>source `app/Domains/Diagnostic/Infrastructure/Persistence/MySql/MysqlDiagnosticRuntimeRepository.php` · `function report(` [source] |
-| Review / accept recommendation | reviewer / decision maker | `diagnostic` | gap: `missing-domain-capability` | `decision` | так | use_case `AcceptDiagnosticRecommendation` [source] |
+| Accept recommendation and propose approval-required Action | reviewer / decision maker | `diagnostic` | `diagnostic.recommendation.accept` | `decision` | так | use_case `AcceptDiagnosticRecommendation` [source]<br>source `symfony/src/Infrastructure/Capability/DiagnosticRecommendationAcceptAdapter.php` · `DiagnosticRecommendationAcceptAdapter` [source] |
 
 ## Federation Goal Plan Approval
 

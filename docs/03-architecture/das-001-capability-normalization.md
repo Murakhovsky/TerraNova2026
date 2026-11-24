@@ -38,3 +38,7 @@ Gap закривається лише в **одному атомарному PR*
 ### Канонічне завершення Diagnostic
 
 `diagnostic.session.complete` делегує наявному CompleteDiagnosticCommand і транзакційному DiagnosticRuntimeService. Ідемпотентність природна: одна terminal completion на tenant/session, незалежно від request key; інша сесія є іншим бізнесовим наміром. Публічний receipt містить лише session ID, status, report version та replay flag, звірені з native runtime/report readback. Evaluation і result recording всередині completion не оголошуються окремими callable capabilities. Process Registry відображає одну атомарну completion та окреме незалежне читання persisted report metadata через `diagnostic.report.summary.get`. Дві попередні прогалини відокремлених команд погашено через корекцію процесної моделі, а не через додавання фіктивних mutation handlers. D3–D5 не встановлено.
+
+### Прийняття рекомендації
+
+`diagnostic.recommendation.accept` є human-only внутрішньою командою. Native recommendation та Kernel Action перевіряються незалежним читанням. Ідемпотентність визначається tenant/session/recommendation та незмінним assignment (owner, due date, workflow). Створення approval-required Action не означає його approval, execution чи успішний бізнесовий результат. Автономний виклик заборонено.
