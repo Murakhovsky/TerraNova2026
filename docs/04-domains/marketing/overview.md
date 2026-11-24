@@ -159,6 +159,10 @@ Finance реалізує one-shot exposure claim під тими самими lo
 
 Campaign Workspace дозволяє створити funding candidate, вибрати Finance references, переглянути журнал, подати окремі Goal/Plan proposals для create_paused, activate, pause та порівняти source spend. Ніякого direct provider write. Run-scoped Goal outcome provider перевіряє canonical Action attestation, exact plan/request hash та native historical command receipt. Це доказ recorded configured state, не результат реклами. Live activation disabled by default; unknown result вимагає operator reconciliation; якщо конфігурація недоступна або минула acceptance expiry, аварійна pause виконується уповноваженим оператором в Ads Manager. Незалежне staging acceptance та реальні billing documents ще відсутні.
 
+## Повторний контроль перед активацією
+
+Finance повторно перевіряє активний exposure під власними locks безпосередньо перед parent activation. Provider readback порівнює країни, optimization, billing, bid і destination. Freeze після останньої локальної перевірки не гарантує скасування вже відправленого HTTP-запиту. Аварійне призупинення й незалежне staging acceptance обов'язкові.
+
 ## Надійність імпорту та операційна черга
 
 Meta read-only sync об'єднує імпорт Campaign/AdSet/Ad, Insights, `last_synced_at` і запис `SUCCEEDED` в **одну MySQL-транзакцію**. Невалідний рядок Insights або помилка посеред import викликає rollback без часткових campaign/metrics; окремий `tests/integration/marketing_meta_atomic_mysql.php` перевіряє це на справжній MySQL.

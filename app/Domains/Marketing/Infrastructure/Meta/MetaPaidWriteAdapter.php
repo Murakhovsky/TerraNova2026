@@ -59,7 +59,7 @@ final readonly class MetaPaidWriteAdapter
         $this->id($id);
         $fields=match($kind){
             'campaign'=>'id,account_id,configured_status,effective_status,objective,special_ad_categories,lifetime_budget,daily_budget',
-            'adset'=>'id,account_id,campaign_id,configured_status,effective_status,lifetime_budget,daily_budget,start_time,end_time',
+            'adset'=>'id,account_id,campaign_id,configured_status,effective_status,lifetime_budget,daily_budget,start_time,end_time,targeting,optimization_goal,billing_event,bid_strategy,destination_type',
             'ad'=>'id,account_id,adset_id,configured_status,effective_status,creative{id}',
             'creative'=>'id,account_id',
             default=>throw new DomainException('Unknown Meta readback kind.')

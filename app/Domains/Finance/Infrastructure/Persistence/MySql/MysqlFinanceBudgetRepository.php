@@ -157,6 +157,20 @@ final readonly class MysqlFinanceBudgetRepository implements FinanceBudgetReposi
         });
     }
 
+    public function assertActiveExposure(string $org,string $envelopeId,string $reservationId,string $action):void
+    {
+        $this->transaction(function()use($org,$envelopeId,$reservationId,$action):void{
+            $e=$this->lockedEnvelope($org,$envelopeId);$r=$this->lockedReservation($org,$reservationId);
+            $claim=$this->readExposure($org,$reservationId,true);$today=self::utcToday();
+            if($claim===null||$claim['action_id']!==$action||$claim['envelope_id']!==$envelopeId
+                ||$r['envelope_id']!==$envelopeId||$e['state']!=='ACTIVE'||$r['state']!=='RESERVED'
+                ||$e['period_start']>$today||$e['period_end']<$today||$claim['amount_minor']!==(int)$r['amount_minor']
+                ||(int)$e['reserved_minor']<$claim['amount_minor']){
+                throw new DomainException('Finance exposure no longer active.');
+            }
+        });
+    }
+
     public function exposure(string $org,string $reservationId):?array{return $this->readExposure($org,$reservationId,false);}
 
     private function readExposure(string $org,string $reservationId,bool $locked):?array

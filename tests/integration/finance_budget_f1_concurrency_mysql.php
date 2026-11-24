@@ -125,7 +125,10 @@ foreach([
 ] as $unsafe){
     $denied=false;try{$unsafe();}catch(DomainException){$denied=true;}$check($denied,'Unsafe exposure or release accepted.');
 }
+$repoB->assertActiveExposure($org,$ex['id'],$hold['id'],'claim-1');
 $repoA->freeze($org,$ex['id'],'304','freeze-claimed','trace','Emergency freeze',4,'exposure-freeze-01');
 $check($repoB->envelope($org,$ex['id'])['state']==='FROZEN'&&$repoB->envelope($org,$ex['id'])['reserved_minor']===5000,
     'Freeze released potentially exposed funds.');
+$denied=false;try{$repoB->assertActiveExposure($org,$ex['id'],$hold['id'],'claim-1');}
+catch(DomainException){$denied=true;}$check($denied,'Frozen exposure passed last-moment activation check.');
 echo "Finance F1 MySQL two-connection lock wait, rollback, oversubscription and idempotent retry PASS\n";

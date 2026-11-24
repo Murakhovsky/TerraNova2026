@@ -16,6 +16,15 @@ final readonly class ApprovedFinancePaidExposureService
     public function __construct(private FinancePaidExposureClaimStore $claims,private WorkflowActionWorkerAdmissionInterface $admission,
         private ActiveModuleResolver $modules,private BudgetControlPolicy $policy){}
 
+    public function assertActive(Action $action):void
+    {
+        if($action->type!=='marketing.paid.meta.campaign.activate'||$action->status!==ActionStatus::Running
+            ||!$this->modules->isEnabled($action->organizationId,'finance'))throw new DomainException('Active Finance exposure required.');
+        $this->admission->assertAuthorized($action);
+        $this->claims->assertActiveExposure($action->organizationId,
+            BudgetControlPolicy::id($action->parameters['envelope_id']),BudgetControlPolicy::id($action->parameters['reservation_id'],'finr-'),$action->id);
+    }
+
     public function claim(Action $action,array $funding):array
     {
         if($action->type!=='marketing.paid.meta.campaign.activate'||$action->status!==ActionStatus::Running

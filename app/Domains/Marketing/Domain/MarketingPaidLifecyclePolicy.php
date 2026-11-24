@@ -46,6 +46,19 @@ final class MarketingPaidLifecyclePolicy
         }
     }
 
+    public static function assertDeliveryScope(array $adset,array $countries):void
+    {
+        $remote=$adset['targeting']['geo_locations']['countries']??null;
+        if(!is_array($remote)||!array_is_list($remote)||count($remote)!==count($countries))throw new DomainException('Provider countries not verified.');
+        sort($remote,SORT_STRING);sort($countries,SORT_STRING);
+        if($remote!==$countries||($adset['optimization_goal']??null)!=='LINK_CLICKS'
+            ||($adset['billing_event']??null)!=='IMPRESSIONS'||($adset['bid_strategy']??null)!=='LOWEST_COST_WITHOUT_CAP'
+            ||($adset['destination_type']??null)!=='WEBSITE'||!empty($adset['targeting']['custom_audiences'])
+            ||!empty($adset['targeting']['excluded_custom_audiences'])){
+            throw new DomainException('Provider delivery scope differs from accepted P0 plan.');
+        }
+    }
+
     /** Exact imported source evidence compared with a known native binding; not final settlement. */
     public static function spendComparison(array $plan,string $campaignId,array $snapshot):array
     {

@@ -7,5 +7,6 @@ interface FinancePaidExposureClaimStore
 {
     public function claimExposure(string $org,string $envelopeId,string $reservationId,string $actor,string $action,
         string $trace,array $input):array;
+    public function assertActiveExposure(string $org,string $envelopeId,string $reservationId,string $action):void;
     public function exposure(string $org,string $reservationId):?array;
 }

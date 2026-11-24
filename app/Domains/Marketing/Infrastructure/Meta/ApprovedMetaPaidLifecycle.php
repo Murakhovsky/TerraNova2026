@@ -51,12 +51,12 @@ final readonly class ApprovedMetaPaidLifecycle
                     fn(string $remote)=>$this->verify($org,$account,$ref,'adset',$remote,'PAUSED'));
                 $ad=$this->stage($org,$id,$action,'CREATE_AD',fn()=>$this->meta->ad($org,$account,$ref,$adset,$profile['creative_id'],'COS ad '.$id),
                     fn(string $remote)=>$this->verify($org,$account,$ref,'ad',$remote,'PAUSED'));
-                $this->hierarchy($org,$plan,$profile,$campaign,$adset,$ad,false);
+                $this->hierarchy($org,$plan,$profile,$campaign,$adset,$ad,false,$ctx['countries']);
                 $this->plans->deploymentContext($actor,$id);
                 $state='PAUSED';
             }elseif($operation==='ACTIVATE'){
                 $campaign=$this->confirmed($org,$id,'CREATE_CAMPAIGN');$adset=$this->confirmed($org,$id,'CREATE_ADSET');$ad=$this->confirmed($org,$id,'CREATE_AD');
-                $this->hierarchy($org,$plan,$profile,$campaign,$adset,$ad,false);
+                $this->hierarchy($org,$plan,$profile,$campaign,$adset,$ad,false,$ctx['countries']);
                 $funding=$this->plans->funding($actor,$id,$p['envelope_id'],$p['reservation_id']);
                 if(!$funding['funding_observed']||$funding['finance_revision']!==$p['finance_revision'])throw new DomainException('Pinned Finance reservation not current.');
                 $claim=$this->finance->claim($action,[...$plan,...$funding]);
@@ -66,8 +66,9 @@ final readonly class ApprovedMetaPaidLifecycle
                     fn(string $remote)=>$this->verify($org,$account,$ref,'ad',$remote,'ACTIVE'));
                 $this->stage($org,$id,$action,'ACTIVATE_ADSET',fn()=>$this->set($org,$account,$ref,'adset',$adset,'ACTIVE'),
                     fn(string $remote)=>$this->verify($org,$account,$ref,'adset',$remote,'ACTIVE'));
-                $this->hierarchy($org,$plan,$profile,$campaign,$adset,$ad,true);
+                $this->hierarchy($org,$plan,$profile,$campaign,$adset,$ad,true,$ctx['countries']);
                 $this->plans->deploymentContext($actor,$id);
+                $this->finance->assertActive($action);
                 $this->stage($org,$id,$action,'ACTIVATE_CAMPAIGN',fn()=>$this->set($org,$account,$ref,'campaign',$campaign,'ACTIVE'),
                     fn(string $remote)=>$this->verify($org,$account,$ref,'campaign',$remote,'ACTIVE'));
                 $state='ACTIVE_CONFIGURED';
@@ -124,14 +125,16 @@ final readonly class ApprovedMetaPaidLifecycle
     {
         $this->meta->status($org,$account,$ref,$kind,$id,$status);return $id;
     }
-    private function hierarchy(string $org,array $plan,array $profile,string $campaign,string $adset,string $ad,bool $active):void
+    private function hierarchy(string $org,array $plan,array $profile,string $campaign,string $adset,string $ad,bool $active,array $countries):void
     {
         $account=$profile['provider_account_id'];$ref=$profile['credential_ref'];
         if($this->meta->children($org,$account,$ref,$campaign,'adsets')!==[$adset]
             ||$this->meta->children($org,$account,$ref,$campaign,'ads')!==[$ad]
             ||$this->meta->children($org,$account,$ref,$adset,'ads')!==[$ad])throw new DomainException('Unexpected provider hierarchy members.');
+        $adsetRead=$this->meta->read($org,$account,$ref,'adset',$adset);
+        MarketingPaidLifecyclePolicy::assertDeliveryScope($adsetRead,$countries);
         MarketingPaidLifecyclePolicy::assertPausedHierarchy($plan,$account,$campaign,$adset,$ad,$profile['creative_id'],
-            $this->meta->read($org,$account,$ref,'campaign',$campaign),$this->meta->read($org,$account,$ref,'adset',$adset),
+            $this->meta->read($org,$account,$ref,'campaign',$campaign),$adsetRead,
             $this->meta->read($org,$account,$ref,'ad',$ad),$active);
     }
 }

@@ -7,5 +7,6 @@ use Kernel\Action\Action;
 final readonly class FinancePaidExposureClaimAdapter implements MarketingPaidExposureClaimPort
 {
     public function __construct(private ApprovedFinancePaidExposureService $finance){}
+    public function assertActive(Action $action):void{$this->finance->assertActive($action);}
     public function claim(Action $action,array $funding):array{return $this->finance->claim($action,$funding);}
 }
