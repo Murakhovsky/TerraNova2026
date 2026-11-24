@@ -5,6 +5,7 @@ umask 077
 
 usage() {
   printf '%s\n' \
+    'sudo bash bin/shopify-lamps-operator.sh ORGANIZATION preflight' \
     'sudo bash bin/shopify-lamps-operator.sh ORGANIZATION provision' \
     'sudo bash bin/shopify-lamps-operator.sh ORGANIZATION pull CONNECTION_ID' \
     'sudo bash bin/shopify-lamps-operator.sh ORGANIZATION candidates CONNECTION_ID' \
@@ -17,6 +18,14 @@ usage() {
 [[ "$(id -u)" == 0 ]] || { echo 'Run as root for root-owned secrets.' >&2; exit 2; }
 ORGANIZATION="$1"; ACTION="$2"; shift 2
 [[ "$ORGANIZATION" =~ ^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,39}$ ]] || { echo 'Invalid organization ID.' >&2; exit 2; }
+# Module-only health check needs no Shopify secrets or provider network.
+if [[ "$ACTION" == preflight ]]; then
+  [[ "$#" -eq 0 ]] || usage
+  cd /opt/cos
+  docker compose exec -T -e COS_SHOPIFY_OPERATOR_ENABLED=1 php \
+    php bin/console cos:product:shopify preflight --organization="$ORGANIZATION"
+  exit $?
+fi
 CONFIG=/etc/cos/shopify-lamps.env
 [[ -f "$CONFIG" ]] || { echo 'Lamps secret file missing.' >&2; exit 2; }
 [[ "$(stat -c '%u:%a' "$CONFIG")" == '0:600' ]] || { echo 'Lamps secret file must be root-owned with mode 600.' >&2; exit 2; }

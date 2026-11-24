@@ -1,0 +1,88 @@
+name: COS Shopify Lamps supervised operator (read-only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      organization:
+        description: 'Exact COS test tenant organization ID'
+        required: true
+        type: string
+      operation:
+        description: 'Supervised operator action'
+        required: true
+        default: preflight
+        type: choice
+        options:
+          - preflight
+          - provision
+          - pull
+          - candidates
+          - status
+      connection_id:
+        description: 'Existing 32-char connection ID (required for pull/candidates/status)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: shopify-lamps-operator-${{ inputs.organization }}
+  cancel-in-progress: false
+
+jobs:
+  operator:
+    name: Shopify Lamps supervised operator on COS VPS
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    environment: AWS TN2026
+    env:
+      ORG: ${{ inputs.organization }}
+      ACTION: ${{ inputs.operation }}
+      CONNECTION: ${{ inputs.connection_id }}
+      DEV_HOST: ${{ secrets.DEV_HOST }}
+      DEV_USER: ${{ secrets.DEV_USER }}
+      DEV_PORT: ${{ secrets.DEV_PORT }}
+      DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+    steps:
+      - name: Validate exact tenant and action inputs
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$ORG" =~ ^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,39}$ ]] || { echo "::error::Invalid organization ID"; exit 2; }
+          case "$ACTION" in
+            preflight|provision)
+              [[ -z "$CONNECTION" ]] || { echo "::error::Connection must be empty"; exit 2; }
+              ;;
+            pull|candidates|status)
+              [[ "$CONNECTION" =~ ^[a-f0-9]{32}$ ]] || { echo "::error::Expected an existing 32-character connection ID"; exit 2; }
+              ;;
+            *) echo "::error::Unsupported read-only operator action"; exit 2;;
+          esac
+          for name in DEV_HOST DEV_USER DEV_PORT DEV_SSH_KEY; do
+            [[ -n "${!name:-}" ]] || { echo "::error::Missing $name"; exit 2; }
+          done
+          [[ "$DEV_PORT" =~ ^[0-9]{1,5}$ ]] || exit 2
+
+      - name: Set up VPS SSH
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$DEV_SSH_KEY" > "$HOME/.ssh/cos_shopify_key"
+          chmod 600 "$HOME/.ssh/cos_shopify_key"
+          ssh-keyscan -T 10 -p "$DEV_PORT" -H "$DEV_HOST" > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test -s "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+
+      - name: Run the bounded supervised operator on VPS
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          cmd=(sudo -n bash /opt/cos/bin/shopify-lamps-operator.sh "$ORG" "$ACTION")
+          if [[ -n "$CONNECTION" ]]; then cmd+=("$CONNECTION"); fi
+          printf -v remote_command '%q ' "${cmd[@]}"
+          ssh -T -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes \
+            -i "$HOME/.ssh/cos_shopify_key" -p "$DEV_PORT" \
+            "$DEV_USER@$DEV_HOST" "$remote_command"
