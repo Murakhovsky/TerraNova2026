@@ -17,6 +17,12 @@ process_id: product_management.physical-count-to-correction
 - Correction and count receipt are atomic
 - Native ledger and count outcome are verified
 
+## Учасники
+
+- Warehouse manager
+- Approved Product Action worker
+- Independent reviewer
+
 ## Тригер
 
 A physical count document identifies discrepancies for tracked SKU.
@@ -36,3 +42,8 @@ A physical count document identifies discrepancies for tracked SKU.
 ## Контроль і recovery
 
 Модель описує один допустимий бізнес-сценарій, не новий виконавчий рушій. Tenant і capability contract перевіряються до кожної операції. Для action-bound кроків незалежні Plan та Action approvals і Platform Workflow обов'язкові. При невідомому результаті — native readback та контрольоване врегулювання, не сліпий повтор. Послідовність не є однією глобальною транзакцією. Source verification не підтверджує production acceptance. Shopify не потрібний.
+
+## Карта коду
+
+- `app/Domains/ProductManagement/Application/Service/ProductManagementService.php`
+- `app/Domains/ProductManagement/Infrastructure/Persistence/MySqlProductAnalytics.php`
