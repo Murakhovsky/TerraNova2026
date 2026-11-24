@@ -188,4 +188,47 @@ $assert($report['state']==='blocked'&&($report['counts']['failed']??0)===1,
     'Ambiguous CSV import must quarantine failed row');
 $assert(!$handler->execute($collisionAction)->successful,
     'Blocked CSV must not automatically replay after ambiguity');
+
+// SERIES01 S2: the *actual* pinned nine-SKU CSV must pass the same approved
+// Action worker boundary on a disposable MySQL tenant, not a parallel importer.
+$pilotOrg='pm-series01-'.$token;
+$pilotSource=file_get_contents($root.'/resources/pilots/series01/approved-import-candidate.csv');
+$assert(is_string($pilotSource)&&$pilotSource!=='','SERIES01 fixture missing');
+$pilotBatch=$csv->preview($pilotOrg,$pilotSource,'42','series01-fixture-'.$token);
+$assert(($pilotBatch['counts']['ready']??0)===9
+    &&($pilotBatch['state']??null)==='staged','SERIES01 nine-SKU immutable staging failed');
+$pilotSkus=[];
+foreach(array_slice(preg_split('/\r?\n/',$pilotSource)?:[],1) as $row) {
+    if($row==='')continue;
+    $fields=str_getcsv($row);
+    $assert(count($fields)===5,'SERIES01 malformed CSV row');
+    $pilotSkus[]=$fields[0];
+    $assert($products->searchProducts($pilotOrg,$fields[0])===[],
+        'SERIES01 preview wrote Product before approved Action');
+}
+$assert(count($pilotSkus)===9&&count(array_unique($pilotSkus))===9,'SERIES01 fixture duplicate SKU');
+$moduleState->setEnabled($pilotOrg,'product_management',true);
+$pilotAction=new Action(bin2hex(random_bytes(16)),$pilotOrg,ProductImportApplyHandler::TYPE,
+    'product_import_batch',$pilotBatch['batch_id'],
+    ['batch_digest'=>$pilotBatch['digest'],'rows_digest'=>$pilotBatch['rows_digest']],
+    'USER','42','APPROVAL_REQUIRED','HIGH',
+    'wf:'.hash('sha256',$pilotOrg.':'.$pilotBatch['batch_id']),
+    new DateTimeImmutable(),ActionStatus::Running,'series01-ci-approval-fixture');
+$pilotApplied=$handler->execute($pilotAction);
+$assert($pilotApplied->successful,'SERIES01 nine-SKU native apply failed: '.($pilotApplied->error??''));
+$pilotIds=$pilotApplied->data['product_ids']??[];
+$assert(($pilotApplied->data['verified_count']??0)===9
+    &&count($pilotIds)===9&&count(array_unique($pilotIds))===9,
+    'SERIES01 nine unique canonical Product IDs missing');
+foreach($pilotSkus as $sku) {
+    $records=$products->searchProducts($pilotOrg,$sku);
+    $assert(count($records)===1,'SERIES01 canonical product missing or duplicated: '.$sku);
+}
+$pilotAgain=$handler->execute($pilotAction);
+$assert($pilotAgain->successful &&($pilotAgain->data['product_ids']??null)===$pilotIds,
+    'SERIES01 approved Action replay produced different canonical IDs');
+$pilotCount=$pdo->prepare('SELECT COUNT(*) FROM pm_products WHERE organization_id=?');
+$pilotCount->execute([$pilotOrg]);
+$assert((int)$pilotCount->fetchColumn()===9,'SERIES01 replay duplicated native products');
+
 echo "Product Management approved CSV Action native MySQL acceptance passed.\n";
