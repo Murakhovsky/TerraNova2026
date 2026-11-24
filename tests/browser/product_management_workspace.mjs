@@ -115,12 +115,23 @@ try {
   const matrix=page.locator('form[action="'+attrPath+'"]').filter({has:page.locator('[name=action][value=preview]')});
   await matrix.locator('[name=sku_prefix]').fill('QAM'+tag);
   await matrix.locator('[name=axes]').fill(JSON.stringify([{code:attrCode,choices:['oak','walnut']}]));
-  await Promise.all([page.waitForNavigation({waitUntil:'domcontentloaded'}),matrix.locator('button[type=submit]').click()]);
+  const originalVariants=await page.locator('#matrix-existing-variants tbody tr').allTextContents();
+  const [previewResponse]=await Promise.all([
+    page.waitForResponse(r=>new URL(r.url()).pathname===attrPath && r.request().method()==='POST'),
+    matrix.locator('button[type=submit]').click()
+  ]);
+  check(previewResponse.status()===200,'Matrix preview expected HTTP 200, got '+previewResponse.status()+' '+(await previewResponse.text().catch(()=>'' )).slice(0,500));
+  const previewRows=page.locator('#matrix-preview tbody tr');
+  await previewRows.first().waitFor({state:'visible'});
+  check(await previewRows.count()===2,'Expected two matrix preview combinations');
+  check((await previewRows.allTextContents()).every(row=>row.includes('ready')&&row.includes('QAM'+tag)),'Preview SKU/status mismatch');
+  check(JSON.stringify(await page.locator('#matrix-existing-variants tbody tr').allTextContents())===JSON.stringify(originalVariants),'Preview mutated native variants');
   const apply=page.locator('form[action="'+attrPath+'"]').filter({has:page.locator('[name=action][value=matrix]')});
   await apply.locator('[name=confirm_matrix]').check();
   await submit(apply,attrPath);
   await page.waitForURL(u=>u.searchParams.get('notice')==='updated');
-  check((await page.locator('#variant-matrix').innerText()).includes('QAM'+tag),'Matrix created SKU not visible');
+  const createdRows=await page.locator('#matrix-existing-variants tbody tr').allTextContents();
+  check(createdRows.filter(row=>row.includes('QAM'+tag)).length===2,'Expected two persisted matrix SKUs');
   await page.screenshot({path:dir+'/attributes-desktop.png',fullPage:true});
   await go('/product-management/attributes?filter_code='+attrCode+'&filter_value='+encodeURIComponent('"oak"'));
   check(await page.locator('input[name="selected[]"][value="'+attrProduct.productId+'"]').count()===1,'Typed filter result missing');

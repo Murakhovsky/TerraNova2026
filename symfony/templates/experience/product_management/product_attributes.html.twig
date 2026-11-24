@@ -21,7 +21,7 @@
     <h2>Матриця варіацій</h2>
     <p>До чотирьох enum-вісей і 50 комбінацій. Існуючі SKU не змінюються. Спочатку перегляньте комбінації.</p>
     {% if product.status != 'archived' %}
-      <form method="post" action="/product-management/products/{{ product.product_id }}/attributes" class="cos-page__stack">
+      <form method="post" action="/product-management/products/{{ product.product_id }}/attributes" class="cos-page__stack" data-turbo="false">
         <input type="hidden" name="csrf_token" value="{{ csrfToken }}"><input type="hidden" name="action" value="preview">
         <label>Префікс SKU <input name="sku_prefix" class="form-control" required maxlength="60" value="{{ matrixInput.sku_prefix ?? '' }}"></label>
         <label>Вісі та вибрані значення (JSON)
@@ -30,7 +30,7 @@
         <button type="submit" class="btn btn-outline-primary">Попередній перегляд</button>
       </form>
       {% if preview %}
-        <div class="table-responsive"><table class="table"><thead><tr><th>SKU</th><th>Комбінація</th><th>Статус</th></tr></thead><tbody>
+        <div class="table-responsive" id="matrix-preview"><table class="table"><thead><tr><th>SKU</th><th>Комбінація</th><th>Статус</th></tr></thead><tbody>
           {% set blocked = false %}{% for r in preview.items %}<tr><td>{{ r.sku }}</td><td>{{ r.options|json_encode }}</td><td>{{ r.status }}</td></tr>{% if r.status != 'ready' %}{% set blocked = true %}{% endif %}{% endfor %}
         </tbody></table></div>
         {% if not blocked %}
@@ -46,5 +46,5 @@
       {% endif %}
     {% endif %}
     <h3>Наявні варіанти</h3>
-    <table class="table"><thead><tr><th>SKU</th><th>Опції</th><th>Статус</th></tr></thead><tbody>{% for v in product.variants %}<tr><td>{{ v.sku }}</td><td>{{ v.options_json ?? '—' }}</td><td>{{ v.status }}</td></tr>{% endfor %}</tbody></table>
+    <table class="table" id="matrix-existing-variants"><thead><tr><th>SKU</th><th>Опції</th><th>Статус</th></tr></thead><tbody>{% for v in product.variants %}<tr><td>{{ v.sku }}</td><td>{{ v.options_json ?? '—' }}</td><td>{{ v.status }}</td></tr>{% endfor %}</tbody></table>
 </section>

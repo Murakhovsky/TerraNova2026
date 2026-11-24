@@ -2,7 +2,7 @@
 title: Огляд домену управління товарами
 description: Призначення, межі, дані та обмеження пілотної реалізації домену Product Management у COS.
 status: active
-updated: 2026-11-19
+updated: 2026-11-24
 kind: domain
 contract: domain-v1
 ---
@@ -28,17 +28,17 @@ contract: domain-v1
 ```text
 id: product_management
 version: 0.1.0
-schema_version: 0.9.0
+schema_version: 0.15.0
 runtime: tenant-disabled by default
-persistence: E1–E4 migrations proposed, not production-verified
-capabilities: 30 manifest declarations; approved Shopify Action includes native MySQL E2E
+persistence: 17 registered migrations; production acceptance pending
+capabilities: 73 typed contracts (31 queries, 30 direct human commands, 12 approved Actions)
 Shopify: read-only; no outbound writes
-process model: canonical Goal/Plan Approval Workflow Action and Goal outcome MySQL E2E passed
+process model: six canonical Process Registry models; independent release acceptance pending
 ```
 
-Код E0–E4 у чернетці PR, не вважається завершеним або перевіреним
-у production. Підтвердження результату потребує MySQL integration,
-Symfony container, capability invocation і Shopify sandbox smoke.
+Нативний реліз E5–E7 у консолідованій гілці; production readiness UNKNOWN.
+Потрібні Runtime та Browser CI на точному SHA, незалежні D3–D5 і live AI/LLM acceptance.
+Shopify sandbox smoke є окремим прийманням необов'язкового адаптера.
 
 ## Межі відповідальності
 
@@ -86,8 +86,7 @@ activate the module explicitly.
 перевіряється повторним native balance read. Показуються on_hand,
 reserved та available із COS ledger, не як Shopify live availability.
 
-Резервування, stock count/adjustments, Sales/Procurement ports, експорт,
-bulk/reconciliation та повний UI acceptance ще не входять у цей блок.
+Реалізовані ручні резервування, погоджені фізичні перерахунки та атомарні сесії до 50 SKU, коригування і read-only reconciliation. Sales/Procurement order-driven reservations, автоматичне expiry, partial release та повне UI acceptance не підтверджені.
 
 ## E7/P0: робочий простір CSV-імпорту
 
@@ -118,3 +117,11 @@ CSRF, окремі idempotency keys і native readback.
 файлів і генерація thumbnails залишаються в Documents. Візуальний
 file-picker, previews, масштабна галерея та повне E7 UX acceptance
 ще потребують реалізації.
+
+## Розширений нативний функціонал та приймання
+
+Прайс-листи retail/wholesale/partner, історія, quantity tiers та explicit quote resolution доступні через нативні контракти. Типізовані атрибути, категорійні набори, bulk patches і матриці SKU використовують ревізії, перевірку ownership та незалежний readback. Dashboard читає асортимент, склад, рухи, якість і reconciliation без Shopify.
+
+AI/CRON подає підписаний intent без execution authority. Незалежне review та Plan/Action Approval передують канонічному Workflow. Вісім спеціальних governed operations і чотири інші approved Actions не покривають усіх 30 human commands. Динамічна підстановка вихідних даних між кроками не підтримана. Наявність контрактів не підтверджує live AI acceptance.
+
+Докази та обмеження: [паспорт](./passport.md), [DAS-001 acceptance](../../10-operations/das-001-domain-acceptance.md).
