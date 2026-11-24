@@ -3735,6 +3735,18 @@ cos_marketing_creative_revise:
   methods: [POST]
   requirements: { id: 'mkt-[a-f0-9]{24}', creativeId: 'mkcr-[a-f0-9]{24}' }
 
+cos_marketing_analyst_run_review:
+  path: /marketing/campaigns/{id}/analyst-runs/{runId}/review
+  controller: App\Web\Marketing\MarketingPageController::reviewAnalystRun
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}', runId: 'mkar-[a-f0-9]{24}' }
+
+cos_marketing_analyst_run_recover:
+  path: /marketing/campaigns/{id}/analyst-runs/{runId}/recover
+  controller: App\Web\Marketing\MarketingPageController::recoverAnalystRun
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}', runId: 'mkar-[a-f0-9]{24}' }
+
 cos_marketing_analyst_propose:
   path: /marketing/campaigns/{id}/proposals
   controller: App\Web\Marketing\MarketingPageController::propose

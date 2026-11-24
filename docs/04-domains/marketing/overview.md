@@ -25,7 +25,7 @@ Marketing — окремий bounded context, що володіє рекламн
 
 ## Фактично додані можливості
 
-Двадцять typed capabilities, включно з шістьма M2a, Product draft-check і Finance-facing source Query: `marketing.campaign.search`, `marketing.campaign.get`, `marketing.campaign.create`, `marketing.paid.account.list`, `marketing.paid.insights.query`, `marketing.paid.sync.history`. Для них діють Canonical Capability Gateway і перевірка tenant менеджера. Нових універсальних executor або CommandBus не створено.
+Двадцять три typed capabilities, включно з шістьма M2a, Product draft-check і Finance-facing source Query: `marketing.campaign.search`, `marketing.campaign.get`, `marketing.campaign.create`, `marketing.paid.account.list`, `marketing.paid.insights.query`, `marketing.paid.sync.history`. Для них діють Canonical Capability Gateway і перевірка tenant менеджера. Нових універсальних executor або CommandBus не створено.
 
 На UI передбачено Overview, Campaigns, Campaign Workspace, Paid Media Accounts, Performance та Action Queue. Менеджер може створити внутрішню чернетку, під'єднати read-only Meta Ad Account через opaque Vault reference, імпортувати і переглядати provider observations.
 
@@ -97,9 +97,15 @@ Adapter повторно збирає authoritative scoped context до і пі�
 
 `MarketingAnalystExecutionService` перевіряє tenant manager, module activation і operator-provisioned admission policy (disabled by default). Для дозволеного профілю обов'язкове посилання на прийнятий зовнішній cost-control policy; це не підтвердження фінансового бюджету або фактичної витрати. Реальний hard monetary cap і незалежна перевірка конфігурації Hermes залишаються gate до live binding.
 
-Native MySQL admission counter серіалізує запуски на tenant і лімітує 1–100 admitted runs за UTC-добу. До remote call атомарно записуються STARTED, idempotency key, request/context hash, actor, profile, source revision pins і quota slot. Транзакція не утримується під час remote turn. Replay повертає той самий receipt без нового зовнішнього запиту; конфлікт ключа блокується. Незавершений STARTED блокує нові admission до контрольованого reconciliation (operator interface ще відсутній). Timeout, invalid response або stale context зберігаються як UNCERTAIN без raw error та без повернення quota slot. SUCCEEDED містить validated durable advice, runtime response ID і source evidence, відновлене з native context. Стан SUCCEEDED означає тільки завершення advisory turn, не approval. Review та recovery ще не реалізовані; немає автоматичного retry.
+Native MySQL admission counter серіалізує запуски на tenant і лімітує 1–100 admitted runs за UTC-добу. До remote call атомарно записуються STARTED, idempotency key, request/context hash, actor, profile, source revision pins і quota slot. Транзакція не утримується під час remote turn. Replay повертає той самий receipt без нового зовнішнього запиту; конфлікт ключа блокується. Незавершений STARTED блокує нові admission до контрольованого reconciliation (operator interface ще відсутній). Timeout, invalid response або stale context зберігаються як UNCERTAIN без raw error та без повернення quota slot. SUCCEEDED містить validated durable advice, runtime response ID і source evidence, відновлене з native context. Стан SUCCEEDED означає тільки завершення advisory turn, не approval. Review та recovery реалізовані в M2c.5d; немає автоматичного retry.
 
 Service, runtime та policy не зареєстровані як live endpoint/Capability. Нова таблиця не замінює Platform Workflow, Kernel LLM governance або Finance ledger. Unit та native MySQL fixture tests перевіряють admission, replay, quota, uncertain outcomes, tenant boundaries і durable receipts.
+
+## M2c.5d: Незалежний перегляд і ручне відновлення
+
+`marketing.analyst.run.list/review/recover` — typed native Query та human-only internal Commands. Campaign Workspace відображає paginated журнал, source pins, advice, receipt та незмінне рішення незалежного менеджера. ACCEPT повторно перевіряє context hash, блокує Marketing-owned source revisions на час транзакції; Product facts є поточним спостереженням, не гарантією майбутнього стану. REJECT дозволяє відхилити застарілу пораду. Рішення не запускає Workflow, Meta або Finance.
+
+STARTED та UNCERTAIN без рішення recovery блокують нові admission. Через 15 хвилин незалежний менеджер може зафіксувати ручне відновлення тільки після перевірки зупинки локального worker та remote Hermes process, із reason та зовнішнім evidence reference. Це operator attestation, не автоматичний доказ remote termination. Результат залишається UNCERTAIN, слот квоти не повертається, пізня відповідь не може перезаписати receipt. Повторний той самий decision key повертає існуюче рішення; інша дія блокується. Live запуск Hermes залишено неввімкненим до реального приймання і cost cap. Додано unit та MySQL tests.
 
 ## Надійність імпорту та операційна черга
 

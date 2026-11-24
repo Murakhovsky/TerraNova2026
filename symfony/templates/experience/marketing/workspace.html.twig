@@ -109,6 +109,11 @@
                 csrfToken: csrfToken, planningKey: planningKey
             } only %}
 
+            {% include 'experience/marketing/analyst_run_journal.html.twig' with {
+                campaign: c, runs: analystRuns, offset: analystOffset, currentUserId: currentUserId,
+                csrfToken: csrfToken, planningKey: planningKey
+            } only %}
+
             <h3>Creative drafts</h3>
             <p>Planning records only. Product availability, landing URL, regulatory compliance and media ownership have NOT been verified. Nothing here creates or activates an ad.</p>
             <form method="post" action="/marketing/campaigns/{{ c.id|url_encode }}/creatives" class="cos-page__stack">

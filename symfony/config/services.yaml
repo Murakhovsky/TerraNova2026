@@ -2691,6 +2691,12 @@ services:
     alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPlanningRepository
   Domains\Marketing\Application\Service\MarketingPlanningService: ~
   Domains\Marketing\Application\Service\MarketingAnalystContextService: ~
+  Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingAnalystRunStore:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Marketing\Application\Contract\MarketingAnalystRunStore:
+    alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingAnalystRunStore
+  Domains\Marketing\Application\Service\MarketingAnalystReviewService: ~
   # Marketing M2b only reads native ProductManagement application models.
   Domains\Marketing\Application\Contract\MarketingProductDraftReadPort:
     alias: App\Infrastructure\Marketing\ProductManagementDraftReadAdapter

@@ -11,6 +11,7 @@ use DateTimeZone;
 use DomainException;
 use Domains\Marketing\Application\Service\MarketingCampaignService;
 use Domains\Marketing\Application\Service\MarketingPlanningService;
+use Domains\Marketing\Application\Service\MarketingAnalystReviewService;
 use Domains\Marketing\Application\Service\MarketingProductDraftCheckService;
 use Domains\Marketing\Application\Service\MarketingPaidReadService;
 use Kernel\Module\ActiveModuleResolver;
@@ -35,6 +36,7 @@ final readonly class MarketingPageController
         private MarketingPlanningService $planning,
         private MarketingProductDraftCheckService $productChecks,
         private MarketingPaidReadService $paid,
+        private MarketingAnalystReviewService $analystReviews,
     ){}
 
     public function overview(Request $request):Response {return $this->render($request,'overview');}
@@ -158,6 +160,36 @@ final readonly class MarketingPageController
         catch(Throwable $e){error_log('marketing.workspace.proposal_failed '.$e::class);return new Response('Proposal creation uncertain; check receipt.',503);}
     }
 
+    public function reviewAnalystRun(Request $request,string $id,string $runId):Response
+    {
+        $actor=$this->manager();
+        if($actor instanceof Response)return $actor;
+        if(!$this->csrf->isValid($request))return new Response('CSRF validation failed',400);
+        try{
+            $form=$request->request->all();
+            $this->analystReviews->review($actor,$id,$runId,MarketingWorkspacePlanningInput::field($form,'decision'),
+                MarketingWorkspacePlanningInput::field($form,'reason'),MarketingWorkspacePlanningInput::field($form,'idempotency_key'));
+            return new RedirectResponse('/marketing/campaigns/'.$id,303);
+        }catch(DomainException $e){return new Response('Analyst review denied: '.$e->getMessage(),422);}
+        catch(Throwable $e){error_log('marketing.workspace.analyst_review_failed '.$e::class);return new Response('Review uncertain; inspect receipt.',503);}
+    }
+
+    public function recoverAnalystRun(Request $request,string $id,string $runId):Response
+    {
+        $actor=$this->manager();
+        if($actor instanceof Response)return $actor;
+        if(!$this->csrf->isValid($request))return new Response('CSRF validation failed',400);
+        try{
+            $form=$request->request->all();
+            $this->analystReviews->recover($actor,$id,$runId,MarketingWorkspacePlanningInput::field($form,'reason'),
+                MarketingWorkspacePlanningInput::field($form,'evidence_ref'),
+                MarketingWorkspacePlanningInput::field($form,'local_and_remote_stopped')==='1',
+                MarketingWorkspacePlanningInput::field($form,'idempotency_key'));
+            return new RedirectResponse('/marketing/campaigns/'.$id,303);
+        }catch(DomainException $e){return new Response('Analyst recovery denied: '.$e->getMessage(),422);}
+        catch(Throwable $e){error_log('marketing.workspace.analyst_recovery_failed '.$e::class);return new Response('Recovery uncertain; inspect receipt.',503);}
+    }
+
     public function review(Request $request,string $id,string $proposalId):Response
     {
         $actor=$this->manager();
@@ -239,12 +271,14 @@ final readonly class MarketingPageController
         $actor=$this->manager();
         if($actor instanceof Response)return $actor;
         try {
-            $creatives=[];$proposals=[];$audiences=[];$adsets=[];$productCheck=null;$productCheckError=null;$productPage=null;$productSearchError=null;
+            $creatives=[];$proposals=[];$audiences=[];$adsets=[];$analystRuns=[];$analystOffset=0;$productCheck=null;$productCheckError=null;$productPage=null;$productSearchError=null;
             if($section==='campaign'&&is_array($selected)&&is_string($selected['id']??null)){
                 $creatives=$this->planning->creatives($actor,$selected['id']);
                 $proposals=$this->planning->proposals($actor,$selected['id']);
                 $audiences=$this->planning->audiences($actor);
                 $adsets=$this->planning->adsets($actor,$selected['id']);
+                $analystOffset=max(0,min(1000000,$request->query->getInt('analyst_offset',0)));
+                $analystRuns=$this->analystReviews->listRuns($actor,$selected['id'],50,$analystOffset);
                 if($request->query->has('product_q')){
                     try{
                         $productPage=$this->productChecks->search($actor,(string)$request->query->get('product_q',''),20,
@@ -329,6 +363,7 @@ final readonly class MarketingPageController
                 'observations'=>$observations,'selectedCampaign'=>$selected,'accountId'=>$accountId,
                 'from'=>$from,'to'=>$to,'csrfToken'=>$this->csrf->token($request),
                 'creatives'=>$creatives,'proposals'=>$proposals,'audiences'=>$audiences,'adsets'=>$adsets,
+                'analystRuns'=>$analystRuns,'analystOffset'=>$analystOffset,
                 'productCheck'=>$productCheck,'productCheckError'=>$productCheckError,
                 'productPage'=>$productPage,'productSearchError'=>$productSearchError,
                 'currentUserId'=>$actor->userId()->value(),

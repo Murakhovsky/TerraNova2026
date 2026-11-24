@@ -223,6 +223,25 @@ $again=$execution->request($actor,$campaignId,1,$creativeId,3,$set['id'],2,'herm
 $assert($again['state']==='UNCERTAIN'&&$transport->posts===$beforePosts+2,'Uncertain outcome was retried.');
 $denied(static fn()=> $execution->request($actor,$campaignId,1,$creativeId,3,$set['id'],2,'hermes-run-03'),'Daily quota bypassed.');
 $assert($runStore->byKey($orgB,'hermes-run-01')===null,'Cross-tenant run receipt leaked.');
+$reviews=new \Domains\Marketing\Application\Service\MarketingAnalystReviewService($runStore,$contexts,
+    new \Domains\Marketing\Application\Service\MarketingCampaignService($campaigns,new MarketingDraftPolicy()),$policy,$modules);
+$reviewer=new \Kernel\Tenant\Model\TenantContext(\Kernel\Shared\Domain\UserId::fromString('202'),
+    \Kernel\Shared\Domain\OrganizationId::fromString($orgA),\Kernel\Identity\Model\OrganizationRole::fromString('manager'),[
+    \Kernel\Tenant\Model\Permission::fromString(\Kernel\Tenant\Model\TenantPermissions::ACCESS),
+    \Kernel\Tenant\Model\Permission::fromString(\Kernel\Tenant\Model\TenantPermissions::MANAGE)]);
+$denied(static fn()=> $reviews->review($actor,$campaignId,$run['id'],'ACCEPT','Self review denied','self-review-01'),'Requester reviewed own advice.');
+$approved=$reviews->review($reviewer,$campaignId,$run['id'],'ACCEPT','Useful planning recommendation','review-ai-01');
+$assert($approved['decision']==='ACCEPT'&&!$approved['paid_activation_approved']&&!$approved['finance_cost_confirmed'],'Review granted external authority.');
+$again=$reviews->review($reviewer,$campaignId,$run['id'],'ACCEPT','Useful planning recommendation','review-ai-01');
+$assert($again['decision']==='ACCEPT','Independent review replay lost.');
+$denied(static fn()=> $reviews->review($reviewer,$campaignId,$run['id'],'REJECT','Different decision','review-ai-01'),'Decision replay conflict accepted.');
+$denied(static fn()=> $reviews->recover($reviewer,$campaignId,$uncertain['id'],'Verified termination','operator-check-01',true,'recover-ai-01'),'Early recovery allowed.');
+$age=$db->prepare('UPDATE marketing_analyst_runs SET created_at=CURRENT_TIMESTAMP(6)-INTERVAL 16 MINUTE WHERE organization_id=? AND id=?');
+$age->execute([$orgA,$uncertain['id']]);
+$denied(static fn()=> $reviews->recover($reviewer,$campaignId,$uncertain['id'],'Missing termination','operator-check-01',false,'recover-ai-01'),'Missing stop attestation accepted.');
+$recovered=$reviews->recover($reviewer,$campaignId,$uncertain['id'],'Verified termination','operator-check-01',true,'recover-ai-01');
+$assert($recovered['state']==='UNCERTAIN'&&$recovered['decision']==='RECOVERED_UNCERTAIN'&&$recovered['advice']===null,'Recovery falsely completed advice.');
+$denied(static fn()=> $execution->request($actor,$campaignId,1,$creativeId,3,$set['id'],2,'hermes-run-03'),'Recovery restored consumed quota.');
 $pending=$runStore->claim($orgA,'fixture-interrupted-01',[
     'request_hash'=>str_repeat('a',64),'requested_by'=>'101','profile_ref'=>'hermes-fixture','cost_control_ref'=>'fixture-cap',
     'campaign_id'=>$campaignId,'context_hash'=>$envelope['context_hash'],'source_pins'=>$envelope['context']['sources']
@@ -232,7 +251,22 @@ $denied(static fn()=> $runStore->claim($orgA,'fixture-interrupted-02',[
     'request_hash'=>str_repeat('b',64),'requested_by'=>'101','profile_ref'=>'hermes-fixture','cost_control_ref'=>'fixture-cap',
     'campaign_id'=>$campaignId,'context_hash'=>$envelope['context_hash'],'source_pins'=>$envelope['context']['sources']
 ],4),'Unresolved STARTED admission allowed another execution.');
-$runStore->finish($orgA,$pending['run']['id'],null);
-$denied(static fn()=> $runStore->finish($orgA,$pending['run']['id'],null),'Completed receipt was overwritten.');
+$denied(static fn()=> $runStore->finish($orgA,$uncertain['id'],null),'Completed receipt was overwritten.');
+$age->execute([$orgA,$pending['run']['id']]);
+$recovered=$reviews->recover($reviewer,$campaignId,$pending['run']['id'],'Worker and profile stopped','operator-check-02',true,'recover-ai-02');
+$assert($recovered['state']==='UNCERTAIN'&&$recovered['failure_code']==='OPERATOR_RECOVERED_UNCERTAIN','STARTED recovery failed.');
+$denied(static fn()=> $runStore->finish($orgA,$pending['run']['id'],$advice),'Late runtime completion overwrote recovery.');
+$transport->incomplete=false;
+$extended=new \Domains\Marketing\Application\Service\MarketingAnalystExecutionService($contexts,$runtime,$runStore,
+    new \Domains\Marketing\Domain\MarketingAnalystAdmissionPolicy($orgA,'hermes-fixture',4,'fixture-provider-cap',true),
+    new \Domains\Marketing\Domain\MarketingAnalystRecommendationPolicy(),$modules);
+$staleRun=$extended->request($actor,$campaignId,1,$creativeId,3,$set['id'],2,'hermes-run-stale');
+$assert($staleRun['state']==='SUCCEEDED','Recovery failed to unblock new admission.');
+$repo->reviseCreative($orgA,$creativeId,'101',3,[...$creativeData,'headline'=>'Revised after analyst run'],'after-analyst-01');
+$denied(static fn()=> $reviews->review($reviewer,$campaignId,$staleRun['id'],'ACCEPT','Stale advice test','review-stale-ai'),'Stale AI advice accepted.');
+$rejected=$reviews->review($reviewer,$campaignId,$staleRun['id'],'REJECT','Dismiss stale advice','review-stale-ai');
+$assert($rejected['decision']==='REJECT','Stale advice cannot be dismissed.');
+$assert(count($reviews->listRuns($reviewer,$campaignId))===4,'Journal count mismatch.');
+$denied(static fn()=> $reviews->listRuns($contextActor($orgB),$campaignId),'Foreign journal exposed.');
 echo "Marketing M2 real MySQL two-person review, tenant fence, immutable Creative revisions, stale gate PASS\n";
 

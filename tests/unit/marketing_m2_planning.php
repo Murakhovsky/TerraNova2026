@@ -97,7 +97,7 @@ foreach($manifest['contributions']['capability_contracts'] as $raw){
     $c=CapabilityContract::fromArray($raw);
     $contracts[$c->id]=$c;
 }
-$expect(count($contracts)===20,'Marketing M0/M1 seven, six M2a and two Product Queries expected.');
+$expect(count($contracts)===23,'Marketing M0/M1 seven, six M2a and two Product Queries expected.');
 $validator=new CapabilityJsonInputValidator();
 $validator->validate($contracts['marketing.audience.save'],['name'=>'Broad local market','target_spec'=>$target]);
 $validator->validate($contracts['marketing.adset.save'],['campaign_id'=>'mkt-'.str_repeat('a',24),'campaign_revision'=>1,...$ad]);
@@ -197,5 +197,11 @@ $admitted->assertAllowed('tenant-a');
 $blocked(static fn()=> $admitted->assertAllowed('tenant-b'),'Foreign tenant admission accepted.');
 $blocked(static fn()=> new $admissionClass('tenant-a','profile-ref',101,'cost-control-ref',true),'Unbounded quota accepted.');
 $expect(!str_contains($services,'MarketingAnalystExecutionService'),'Unaccepted live admission exposed in composition.');
+$validator->validate($contracts['marketing.analyst.run.list'],['campaign_id'=>'mkt-'.str_repeat('a',24),'limit'=>50]);
+$recoverInput=['campaign_id'=>'mkt-'.str_repeat('a',24),'run_id'=>'mkar-'.str_repeat('b',24),
+    'reason'=>'Verified external termination','evidence_ref'=>'operator-check-01','local_and_remote_stopped'=>true];
+$validator->validate($contracts['marketing.analyst.run.recover'],$recoverInput);
+$blocked(static fn()=> $validator->validate($contracts['marketing.analyst.run.recover'],[...$recoverInput,'paid_activation_approved'=>true]),'Recovery injected paid authority.');
+$expect(str_contains($controller,'$this->analystReviews->review(')&&str_contains($controller,'$this->analystReviews->recover('),'Analyst journal decisions not wired.');
 echo "Marketing M2 typed planning policy, provenance, CSRF and boundary PASS\n";
 

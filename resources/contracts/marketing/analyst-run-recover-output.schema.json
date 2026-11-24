@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^mkar-[a-f0-9]{24}$"
+    },
+    "requested_by": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 190
+    },
+    "campaign_id": {
+      "type": "string",
+      "pattern": "^mkt-[a-f0-9]{24}$"
+    },
+    "context_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "source_pins": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "STARTED",
+        "SUCCEEDED",
+        "UNCERTAIN"
+      ]
+    },
+    "advice": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "failure_code": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "quota_day": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "completed_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "recovery_age_met": {
+      "type": "boolean"
+    },
+    "decision": {
+      "enum": [
+        null,
+        "ACCEPT",
+        "REJECT",
+        "RECOVERED_UNCERTAIN"
+      ]
+    },
+    "decision_actor_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "decision_reason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "recovery_evidence_ref": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "decision_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "finance_cost_confirmed": {
+      "type": "boolean",
+      "const": false
+    },
+    "paid_activation_approved": {
+      "type": "boolean",
+      "const": false
+    }
+  },
+  "required": [
+    "id",
+    "requested_by",
+    "campaign_id",
+    "context_hash",
+    "source_pins",
+    "state",
+    "advice",
+    "failure_code",
+    "quota_day",
+    "created_at",
+    "completed_at",
+    "recovery_age_met",
+    "decision",
+    "decision_actor_id",
+    "decision_reason",
+    "recovery_evidence_ref",
+    "decision_at",
+    "finance_cost_confirmed",
+    "paid_activation_approved"
+  ],
+  "additionalProperties": false
+}
