@@ -307,7 +307,7 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
             ),
             'meetings' => $activities('meeting', 'a.due_at BETWEEN CURRENT_DATE() AND CURRENT_DATE()+INTERVAL 1 DAY'),
             'followups' => $activities('followup', 'a.due_at <= CURRENT_DATE()+INTERVAL 1 DAY'),
-            'ai_recommended' => $this->safeAll(
+            'ai_recommended' => $ownerId > 0 ? [] : $this->safeAll(
                 'SELECT a.id action_id, a.type, a.target_id deal_id, a.status, a.risk_level, a.parameters, d.reason, d.confidence '
                 . 'FROM cos_actions a LEFT JOIN cos_decisions d ON d.source_id = a.source_id '
                 . 'WHERE a.organization_id = :organization_id AND a.target_type IN ("deal", "client_case") '
