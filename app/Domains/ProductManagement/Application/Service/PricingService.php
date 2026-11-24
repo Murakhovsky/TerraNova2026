@@ -53,24 +53,7 @@ final readonly class PricingService
                 $this->connection->commit();
                 return json_decode($existing['result_json'],true,flags:JSON_THROW_ON_ERROR);
             }
-            // Serialize price writers and lifecycle changes using the existing native rows.
-            $variant=$this->query('SELECT v.status,p.status AS product_status FROM pm_variants v JOIN pm_products p ON p.organization_id=v.organization_id AND p.product_id=v.product_id WHERE v.organization_id=? AND v.variant_id=? FOR UPDATE',[$org,$variantId])->fetch(PDO::FETCH_ASSOC);
-            if ($variant===false || $variant['status']!=='active' || $variant['product_status']==='archived')
-                throw new DomainException('Active tenant Variant and Product required for pricing.');
-            $owned=$this->query("SELECT m.canonical_id FROM pm_variants v
-                INNER JOIN pm_external_mappings m
-                    ON m.organization_id=v.organization_id
-                    AND (
-                        (m.entity_type='variant' AND m.canonical_id=v.variant_id)
-                        OR (m.entity_type='product' AND m.canonical_id=v.product_id)
-                    )
-                INNER JOIN pm_external_connections c
-                    ON c.organization_id=m.organization_id AND c.connection_id=m.connection_id
-                WHERE v.organization_id=? AND v.variant_id=?
-                  AND c.provider='shopify' AND c.mode='shopify_authoritative' AND c.status='ready'
-                LIMIT 1",[$org,$variantId])->fetch(PDO::FETCH_ASSOC);
-            if($owned!==false)
-                throw new DomainException('Shopify-authoritative Price requires controlled owner cutover.');
+            $this->lockPriceableVariant($org,$variantId);
             $old=$this->query('SELECT amount,revision FROM pm_base_prices WHERE organization_id=? AND variant_id=? AND currency=? FOR UPDATE',[$org,$variantId,$currency])->fetch(PDO::FETCH_ASSOC);
             $currentRevision=$old===false?0:(int)$old['revision'];
             if ($expectedRevision!==null && $expectedRevision!==$currentRevision)
@@ -115,6 +98,124 @@ final readonly class PricingService
         $stmt->bindValue(':off',$offset,PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /** Create an explicit, tenant-owned single-currency price list. */
+    public function createList(string $org,string $code,string $name,string $kind,string $currency,string $key,string $actor,string $correlation):array
+    {
+        $code=ProductRules::code($code);$name=ProductRules::name($name);$currency=$this->currency($currency);
+        if(!in_array($kind,['retail','wholesale','partner'],true))throw new DomainException('Invalid price list kind.');
+        return $this->listMutation($org,'price.list.create',[$code,$name,$kind,$currency],$key,$actor,$correlation,
+            'product_management.price_list.created',function()use($org,$code,$name,$kind,$currency):array{
+                $id=bin2hex(random_bytes(16));
+                $this->query('INSERT INTO pm_price_lists (organization_id,list_id,code,name,kind,currency) VALUES (?,?,?,?,?,?)',[$org,$id,$code,$name,$kind,$currency]);
+                return ['list_id'=>$id,'code'=>$code,'name'=>$name,'kind'=>$kind,'currency'=>$currency];
+            });
+    }
+
+    public function searchLists(string $org,?string $code=null,int $limit=30,int $offset=0):array
+    {
+        if($org===''||strlen($org)>40||$limit<1||$limit>100||$offset<0||$offset>10000000)
+            throw new DomainException('Invalid price list scope or pagination.');
+        $sql='SELECT list_id,code,name,kind,currency FROM pm_price_lists WHERE organization_id=:org';
+        if($code!==null)$sql.=' AND code=:code';
+        $stmt=$this->connection->prepare($sql.' ORDER BY code,list_id LIMIT :lim OFFSET :off');
+        $stmt->bindValue(':org',$org);
+        if($code!==null)$stmt->bindValue(':code',ProductRules::code($code));
+        $stmt->bindValue(':lim',$limit,PDO::PARAM_INT);$stmt->bindValue(':off',$offset,PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /** No implicit fallback, FX conversion or inferred customer eligibility. */
+    public function getListPrice(string $org,string $listId,string $variantId):array
+    {
+        $this->listScope($org,$listId,$variantId);
+        $row=$this->query('SELECT l.currency,e.amount,e.revision FROM pm_price_lists l
+            JOIN pm_variants v ON v.organization_id=l.organization_id AND v.variant_id=?
+            LEFT JOIN pm_price_list_entries e ON e.organization_id=l.organization_id AND e.list_id=l.list_id AND e.variant_id=v.variant_id
+            WHERE l.organization_id=? AND l.list_id=?',[$variantId,$org,$listId])->fetch(PDO::FETCH_ASSOC);
+        return ['list_id'=>$listId,'variant_id'=>$variantId,'found'=>$row!==false,'currency'=>$row===false?null:$row['currency'],
+            'price'=>$row===false?null:$row['amount'],'revision'=>$row===false?0:(int)($row['revision']??0)];
+    }
+
+    public function setListPrice(string $org,string $listId,string $variantId,string $amount,int $expectedRevision,string $key,string $actor,string $correlation):array
+    {
+        $this->listScope($org,$listId,$variantId);$amount=ProductRules::money($amount);
+        if($expectedRevision<0)throw new DomainException('Invalid price list revision.');
+        return $this->listMutation($org,'price.list.entry.set',[$listId,$variantId,$amount,$expectedRevision],$key,$actor,$correlation,
+            'product_management.price_list.entry_updated',function()use($org,$listId,$variantId,$amount,$expectedRevision,$actor):array{
+                $this->lockPriceableVariant($org,$variantId);
+                $list=$this->query('SELECT currency FROM pm_price_lists WHERE organization_id=? AND list_id=? FOR UPDATE',[$org,$listId])->fetch(PDO::FETCH_ASSOC);
+                if($list===false)throw new DomainException('Unknown tenant price list.');
+                $old=$this->query('SELECT amount,revision FROM pm_price_list_entries WHERE organization_id=? AND list_id=? AND variant_id=? FOR UPDATE',[$org,$listId,$variantId])->fetch(PDO::FETCH_ASSOC);
+                if(($old===false?0:(int)$old['revision'])!==$expectedRevision)throw new DomainException('Price list entry revision conflict.');
+                if($old===false){
+                    $this->query('INSERT INTO pm_price_list_entries (organization_id,list_id,variant_id,amount) VALUES (?,?,?,?)',[$org,$listId,$variantId,$amount]);
+                }else{
+                    $this->query('UPDATE pm_price_list_entries SET amount=?,revision=revision+1 WHERE organization_id=? AND list_id=? AND variant_id=?',[$amount,$org,$listId,$variantId]);
+                }
+                $result=$this->getListPrice($org,$listId,$variantId);
+                $this->query('INSERT INTO pm_price_list_history (organization_id,list_id,variant_id,revision,old_amount,new_amount,actor_ref) VALUES (?,?,?,?,?,?,?)',
+                    [$org,$listId,$variantId,$result['revision'],$old===false?null:$old['amount'],$result['price'],$actor]);
+                return $result;
+            });
+    }
+
+    private function listScope(string $org,string $listId,string $variantId):void
+    {
+        if($org===''||strlen($org)>40||!preg_match('/^[a-f0-9]{32}$/D',$listId)||!preg_match('/^[a-f0-9]{32}$/D',$variantId))
+            throw new DomainException('Invalid tenant price list or Variant reference.');
+    }
+
+    private function listMutation(string $org,string $operation,array $identity,string $key,string $actor,string $correlation,string $event,callable $apply):array
+    {
+        if($org===''||strlen($org)>40||$key===''||strlen($key)>191||$actor===''||strlen($actor)>100||$correlation===''||strlen($correlation)>191)
+            throw new DomainException('Trusted tenant, actor and receipt key required.');
+        $hash=hash('sha256',json_encode([$operation,$identity],JSON_THROW_ON_ERROR));
+        $this->connection->beginTransaction();
+        try{
+            try{
+                $this->query('INSERT INTO pm_operation_receipts (organization_id,idempotency_key,operation,payload_hash) VALUES (?,?,?,?)',[$org,$key,$operation,$hash]);
+            }catch(PDOException $e){
+                if($e->getCode()!=='23000')throw $e;
+                $old=$this->query('SELECT operation,payload_hash,result_json FROM pm_operation_receipts WHERE organization_id=? AND idempotency_key=?',[$org,$key])->fetch(PDO::FETCH_ASSOC);
+                if($old===false||$old['operation']!==$operation||!hash_equals($old['payload_hash'],$hash)||$old['result_json']===null)throw new DomainException('Price list idempotency conflict.');
+                $this->connection->commit();
+                return json_decode($old['result_json'],true,flags:JSON_THROW_ON_ERROR);
+            }
+            $result=$apply();
+            $this->events->append(new DomainEvent(bin2hex(random_bytes(16)),$org,$event,'PriceList',$result['list_id'],$result,
+                new EventMetadata(strlen($correlation)<=40?$correlation:substr(hash('sha256',$correlation),0,40),null,'USER',$actor),new \DateTimeImmutable('now',new \DateTimeZone('UTC'))));
+            $this->query('UPDATE pm_operation_receipts SET result_json=? WHERE organization_id=? AND idempotency_key=?',[json_encode($result,JSON_THROW_ON_ERROR),$org,$key]);
+            $this->connection->commit();
+            return $result;
+        }catch(Throwable $e){
+            if($this->connection->inTransaction())$this->connection->rollBack();
+            throw $e;
+        }
+    }
+
+    private function lockPriceableVariant(string $org,string $variantId):void
+    {
+            // Serialize price writers and lifecycle changes using the existing native rows.
+            $variant=$this->query('SELECT v.status,p.status AS product_status FROM pm_variants v JOIN pm_products p ON p.organization_id=v.organization_id AND p.product_id=v.product_id WHERE v.organization_id=? AND v.variant_id=? FOR UPDATE',[$org,$variantId])->fetch(PDO::FETCH_ASSOC);
+            if ($variant===false || $variant['status']!=='active' || $variant['product_status']==='archived')
+                throw new DomainException('Active tenant Variant and Product required for pricing.');
+            $owned=$this->query("SELECT m.canonical_id FROM pm_variants v
+                INNER JOIN pm_external_mappings m
+                    ON m.organization_id=v.organization_id
+                    AND (
+                        (m.entity_type='variant' AND m.canonical_id=v.variant_id)
+                        OR (m.entity_type='product' AND m.canonical_id=v.product_id)
+                    )
+                INNER JOIN pm_external_connections c
+                    ON c.organization_id=m.organization_id AND c.connection_id=m.connection_id
+                WHERE v.organization_id=? AND v.variant_id=?
+                  AND c.provider='shopify' AND c.mode='shopify_authoritative' AND c.status='ready'
+                LIMIT 1",[$org,$variantId])->fetch(PDO::FETCH_ASSOC);
+            if($owned!==false)
+                throw new DomainException('Shopify-authoritative Price requires controlled owner cutover.');
     }
 
     private function currency(string $currency): string
