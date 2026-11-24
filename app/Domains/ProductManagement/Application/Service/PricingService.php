@@ -249,13 +249,16 @@ final readonly class PricingService
             });
     }
 
-    public function tiers(string $org,string $listId,string $variantId,int $limit=30,int $offset=0):array
+    public function tiers(string $org,string $listId,string $variantId,int $limit=30,int $offset=0,?string $minimum=null):array
     {
         $this->listScope($org,$listId,$variantId);
         if($limit<1||$limit>100||$offset<0||$offset>10000000)throw new DomainException('Invalid tier pagination.');
-        $stmt=$this->connection->prepare('SELECT t.list_id,t.variant_id,l.currency,t.min_quantity,t.amount AS price,t.revision FROM pm_price_list_tiers t
+        $sql='SELECT t.list_id,t.variant_id,l.currency,t.min_quantity,t.amount AS price,t.revision FROM pm_price_list_tiers t
             JOIN pm_price_lists l ON l.organization_id=t.organization_id AND l.list_id=t.list_id
-            WHERE t.organization_id=:org AND t.list_id=:list AND t.variant_id=:variant ORDER BY t.min_quantity LIMIT :lim OFFSET :off');
+            WHERE t.organization_id=:org AND t.list_id=:list AND t.variant_id=:variant';
+        if($minimum!==null)$sql.=' AND t.min_quantity=CAST(:min AS DECIMAL(20,6))';
+        $stmt=$this->connection->prepare($sql.' ORDER BY t.min_quantity LIMIT :lim OFFSET :off');
+        if($minimum!==null)$stmt->bindValue(':min',ProductRules::quantity($minimum));
         $stmt->bindValue(':org',$org);$stmt->bindValue(':list',$listId);$stmt->bindValue(':variant',$variantId);
         $stmt->bindValue(':lim',$limit,PDO::PARAM_INT);$stmt->bindValue(':off',$offset,PDO::PARAM_INT);$stmt->execute();
         return array_map(static function(array $row):array{$row['revision']=(int)$row['revision'];return $row;},$stmt->fetchAll(PDO::FETCH_ASSOC));
