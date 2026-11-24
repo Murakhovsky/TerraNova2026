@@ -10,7 +10,7 @@ use Domains\Sales\Infrastructure\Property\SalesPropertyReference;
 use InvalidArgumentException;
 use PDO;
 
-final readonly class MysqlClientCaseReadModelFactory implements ClientCaseReadModelFactoryInterface
+final readonly class MysqlClientCaseReadModelFactory implements ClientCaseReadModelFactoryInterface, \Domains\Sales\Application\Contract\ScopedClientCaseReadModelFactoryInterface
 {
     public function __construct(
         private PDO $connection,
@@ -20,6 +20,12 @@ final readonly class MysqlClientCaseReadModelFactory implements ClientCaseReadMo
 
     public function forOrganization(string $organizationId): ClientCaseReadModelInterface
     {
+        return $this->forOwner($organizationId,null);
+    }
+
+    public function forOwner(string $organizationId,?int $ownerId):ClientCaseReadModelInterface
+    {
+        if ($ownerId!==null&&$ownerId<1) throw new InvalidArgumentException('Invalid owner scope.');
         $organizationId = trim($organizationId);
         if ($organizationId === '') {
             throw new InvalidArgumentException('organizationId is required.');
@@ -29,6 +35,7 @@ final readonly class MysqlClientCaseReadModelFactory implements ClientCaseReadMo
             $this->connection,
             $organizationId,
             new SalesPropertyReference($this->properties, $organizationId),
+            $ownerId,
         );
     }
 }
