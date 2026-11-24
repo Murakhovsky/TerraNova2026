@@ -90,7 +90,9 @@ final readonly class ProductManagementPageController
             }
             $listCode=strtoupper(trim((string)$request->query->get('list_code','')));
             $listVariantId=trim((string)$request->query->get('list_variant',''));
-            $list=null;$listPrice=null;$listVariant=null;
+            $list=null;$listPrice=null;$listVariant=null;$listHistory=null;
+            $listHistoryPage=filter_var($request->query->get('list_history_page','1'),FILTER_VALIDATE_INT);
+            if ($listHistoryPage===false||$listHistoryPage<1||$listHistoryPage>333334) return new Response('Invalid list history page.',422);
             if ($listCode!==''||$listVariantId!=='') {
                 if (!preg_match('/^[A-Z0-9][A-Z0-9_-]{0,63}$/D',$listCode)) return new Response('Invalid price list code.',422);
                 $listVariant=$this->findVariant($product,$listVariantId);
@@ -100,13 +102,14 @@ final readonly class ProductManagementPageController
                 if ($list===null) return new Response('Price list not found.',404);
                 $listPrice=$this->read($actor,'price.list.entry.get',['list_id'=>$list['list_id'],'variant_id'=>$listVariantId]);
                 if (($listPrice['found']??false)!==true) return new Response('Price list or Variant not found.',404);
+                $listHistory=$this->read($actor,'price.list.history.search',['list_id'=>$list['list_id'],'variant_id'=>$listVariantId,'limit'=>30,'offset'=>($listHistoryPage-1)*30]);
             }
             return $this->render($request,$actor,'product',[
                 'product'=>$product,'categories'=>$categories['items']??[], 'prices'=>$prices,
                 'priceCurrency'=>$currency,'pricePage'=>$pricePage,
                 'priceHasNext'=>count($product['variants']??[])>$pricePage*30,
                 'priceHistory'=>$history,'historyVariant'=>$historyVariant,'historyPage'=>$historyPage,
-                'selectedList'=>$list,'listPrice'=>$listPrice,'listVariant'=>$listVariant,
+                'selectedList'=>$list,'listPrice'=>$listPrice,'listVariant'=>$listVariant,'listHistory'=>$listHistory,'listHistoryPage'=>$listHistoryPage,
             ]);
         } catch (Throwable $e) {
             error_log('product_management.workspace.detail_unavailable '.$e::class);
@@ -161,6 +164,45 @@ final readonly class ProductManagementPageController
         }
     }
 
+    public function changePriceList(Request $request,string $id):Response
+    {
+        $actor=$this->guardWrite($request);
+        if ($actor instanceof Response) return $actor;
+        $revision=filter_var($request->request->get('expected_revision'),FILTER_VALIDATE_INT);
+        $action=(string)$request->request->get('action','');
+        $code=strtoupper(trim((string)$request->request->get('code','')));
+        if ($revision===false||$revision<1||!in_array($action,['update','archive'],true)||!preg_match('/^[A-Z0-9][A-Z0-9_-]{0,63}$/D',$code))
+            return new Response('Invalid lifecycle request.',422);
+        if ($action==='archive'&&$request->request->get('confirm_archive')!=='yes') return new Response('Archive confirmation required.',422);
+        try {
+            $before=$this->read($actor,'price.list.search',['code'=>$code,'limit'=>1])['items'][0]??null;
+            if ($before===null||$before['list_id']!==$id) return new Response('Price list not found.',404);
+        } catch (Throwable $e) {
+            return new Response('Price list temporarily unavailable.',503);
+        }
+        $input=['list_id'=>$id,'expected_revision'=>$revision];
+        if ($action==='update') $input['name']=trim((string)$request->request->get('name',''));
+        try {
+            $receipt=$this->write($actor,'price.list.'.$action,$input,$request);
+        } catch (DomainException|\InvalidArgumentException) {
+            return new Response('Price list change blocked. Reload revision.',422);
+        } catch (Throwable $e) {
+            return new Response('List change outcome uncertain. Reload before retrying.',503);
+        }
+        try {
+            $after=$this->read($actor,'price.list.search',['code'=>$code,'limit'=>1])['items'][0]??[];
+            $expected=['list_id'=>$id,'code'=>$code,'kind'=>$before['kind'],'currency'=>$before['currency'],
+                'name'=>$action==='update'?$input['name']:$before['name'],'status'=>$action==='archive'?'archived':'active','revision'=>$revision+1];
+            foreach ($expected as $field=>$value) {
+                if (($receipt[$field]??null)!==$value||($after[$field]??null)!==$value) throw new \RuntimeException('List lifecycle readback mismatch.');
+            }
+            return $this->go('/product-management/price-lists?notice=updated');
+        } catch (Throwable $e) {
+            error_log('product_management.workspace.list_lifecycle_readback_uncertain '.$e::class);
+            return new Response('List change receipt obtained; current state unverified.',503);
+        }
+    }
+
     public function setListPrice(Request $request,string $id):Response
     {
         $actor=$this->guardWrite($request);
@@ -180,6 +222,7 @@ final readonly class ProductManagementPageController
             $list=$lists['items'][0]??null;
             if ($list===null||($list['list_id']??null)!==$request->request->get('list_id'))
                 return new Response('Price list not found.',404);
+            if (($list['status']??null)!=='active') return new Response('Archived price list.',422);
         } catch (Throwable $e) {
             return new Response('Price list temporarily unavailable.',503);
         }
