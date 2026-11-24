@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SalesLeadCreateOutputV1",
+  "type": "object",
+  "required": [
+    "lead_id",
+    "replayed"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "lead_id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "replayed": {
+      "type": "boolean"
+    }
+  }
+}

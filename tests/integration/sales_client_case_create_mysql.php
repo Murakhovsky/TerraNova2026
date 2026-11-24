@@ -3,6 +3,9 @@ declare(strict_types=1);
 
 use App\Application\Capability\CanonicalCapabilityGateway;
 use App\Application\Sales\Command\ConvertSalesLeadToOpportunityCommand;
+use App\Application\Sales\Command\CreateSalesLeadCommand;
+use App\Application\Sales\Command\CreateSalesLeadCommandHandler;
+use App\Infrastructure\Capability\SalesLeadCreateAdapter;
 use App\Application\Sales\Command\ConvertSalesLeadToOpportunityCommandHandler;
 use App\Infrastructure\Capability\SalesClientCaseCreateAdapter;
 use App\Infrastructure\Messenger\SymfonyCommandBus;
@@ -57,6 +60,7 @@ try {
     $handler = new ConvertSalesLeadToOpportunityCommandHandler($factory);
     $bus = new SymfonyCommandBus(new MessageBus([new HandleMessageMiddleware(new HandlersLocator([
         ConvertSalesLeadToOpportunityCommand::class => [$handler],
+        CreateSalesLeadCommand::class => [new CreateSalesLeadCommandHandler($factory)],
     ]))]));
     $module = new ModuleCatalog([ModuleDefinition::fromArray(require $root.'/app/Domains/Sales/module.php')]);
     $catalog = new CanonicalCapabilityCatalog($module);
@@ -67,7 +71,7 @@ try {
     $active = new ActiveModuleResolver($module,$state);
     $resolver = new FederationCapabilityBindingResolver($catalog,new DomainModuleRegistry([]),$active);
     $read = new MysqlSalesWorkspaceReadModel($db);
-    $gateway = new CanonicalCapabilityGateway($catalog,$active,$resolver,[new SalesClientCaseCreateAdapter($bus,$read)]);
+    $gateway = new CanonicalCapabilityGateway($catalog,$active,$resolver,[new SalesClientCaseCreateAdapter($bus,$read),new SalesLeadCreateAdapter($bus,$read)]);
     $actor = static fn(string $tenant,string $role='manager') => new TenantContext(
         UserId::fromString((string)$userId),OrganizationId::fromString($tenant),OrganizationRole::fromString($role),
         [Permission::fromString(TenantPermissions::ACCESS),Permission::fromString(TenantPermissions::MANAGE)],
@@ -93,7 +97,25 @@ try {
     $q = $db->prepare('SELECT COUNT(*) FROM cos_events e INNER JOIN cos_event_outbox o ON o.event_id=e.id AND o.organization_id=e.organization_id WHERE e.organization_id=? AND e.aggregate_id=? AND e.type=?');
     $q->execute([$org,(string)$caseId,'sales.client_case.created']);
     $check((int)$q->fetchColumn()===1,'Expected exactly one case-created Event/Outbox.');
-    echo "Sales canonical conversion Gateway, Messenger, native state and outbox PASS.\n";
+    $intake = ['full_name'=>'Intake '.$token,'email'=>'intake-'.$token.'@example.test'];
+    $intakeKey = 'intake-'.$token;
+    $new = $gateway->invoke($manager,'sales.lead.create',$intake,'human_api',$intakeKey,'trace-intake');
+    $newId = $new['lead_id'];
+    $check($new===['lead_id'=>$newId,'replayed'=>false] && $newId>0,'Intake failed.');
+    $check($gateway->invoke($manager,'sales.lead.create',array_reverse($intake,true),'human_ui',$intakeKey,'trace-replay')===[...$new,'replayed'=>true],'Equivalent intake did not replay.');
+    $reject(fn()=>$gateway->invoke($manager,'sales.lead.create',[...$intake,'full_name'=>'Changed'],'human_api',$intakeKey,'trace-conflict'));
+    $reject(fn()=>$gateway->invoke($manager,'sales.lead.create',$intake,'ai','other-key','trace'));
+    $reject(fn()=>$gateway->invoke($actor($org,'viewer'),'sales.lead.create',$intake,'human_api','other-key','trace'));
+    $q=$db->prepare('SELECT COUNT(*) FROM tn_leads WHERE organization_id=? AND email=?');
+    $q->execute([$org,$intake['email']]);
+    $check((int)$q->fetchColumn()===1,'Intake replay or conflict duplicated native lead.');
+    $q=$db->prepare('SELECT COUNT(*) FROM cos_events e INNER JOIN cos_event_outbox o ON o.event_id=e.id WHERE e.organization_id=? AND e.aggregate_id=? AND e.type=?');
+    $q->execute([$org,(string)$newId,'sales.lead.created']);
+    $check((int)$q->fetchColumn()===1,'Intake replay duplicated event/outbox.');
+    $legacyKey='legacy-'.$token;
+    $db->prepare('INSERT INTO sales_operation_receipts(organization_id,operation_type,idempotency_key,mutation_id) VALUES(?,?,?,?)')->execute([$org,'api.lead.create',$legacyKey,(string)$newId]);
+    $reject(fn()=>$gateway->invoke($manager,'sales.lead.create',$intake,'human_api',$legacyKey,'trace-legacy'));
+    echo "Sales canonical conversion and authenticated intake Gateway, Messenger, native state and outbox PASS.\n";
 } finally {
     if ($db->inTransaction()) $db->rollBack();
 }

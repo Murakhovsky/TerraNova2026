@@ -459,6 +459,7 @@ Manifest capabilities не задекларовані.
 - `sales.deal.won.observation`;
 - `sales.director.view`;
 - `sales.inbound.request.read`;
+- `sales.lead.create`;
 - `sales.workspace.use`;
 
 ## Service (`service`)

@@ -163,7 +163,7 @@ final readonly class SalesWriteService implements SalesWriteServiceInterface
             return ClientCaseCommandResult::failure('idempotency_conflict');
         }
         $leadId = (int)$matches[2];
-        $row = $this->commands->inboundRequest($this->organizationId, $leadId);
+        $row = $this->commands->lockInboundRequest($this->organizationId, $leadId);
         if ($row === null || ($row['organization_id'] ?? null) !== $this->organizationId
             || !in_array($row['id'] ?? null, [$leadId, (string)$leadId], true)) {
             return ClientCaseCommandResult::failure('idempotency_conflict');

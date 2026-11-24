@@ -19,7 +19,8 @@ domain_id: sales
     {
       "id": "leads",
       "capability_ids": [
-        "sales.inbound.request.read"
+        "sales.inbound.request.read",
+        "sales.lead.create"
       ]
     },
     {
