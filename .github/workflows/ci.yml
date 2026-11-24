@@ -76,6 +76,10 @@ jobs:
         run: php tests/unit/sales_inbound_request_capability.php
       - name: DAS-001 direct Capability binding source coverage
         run: php tests/architecture/das_001_direct_binding_coverage.php
+      - name: DAS-001 Domain ownership and cross-domain boundaries
+        run: |
+          php tests/architecture/das_001_domain_boundaries.php
+          php tests/architecture/das_001_domain_boundaries.php --self-test
       - name: Diagnostic canonical session start capability
         run: php tests/unit/diagnostic_session_start_capability.php
       - name: Diagnostic canonical evidence capture capability
