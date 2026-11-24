@@ -29,7 +29,8 @@ domain_id: marketing
       "capability_ids": [
         "marketing.paid.account.list",
         "marketing.paid.insights.query",
-        "marketing.paid.sync.history"
+        "marketing.paid.sync.history",
+        "marketing.paid.spend.evidence.get"
       ]
     }
   ],

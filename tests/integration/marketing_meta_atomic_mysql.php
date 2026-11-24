@@ -104,4 +104,46 @@ $assert($denyAlien,'Other tenant must not read Meta operator history.');
 $assert($repo->account($org,$id)['last_synced_at']!==null,'A failure receipt must not reset last success.');
 $assert($repo->insights($org,$id,'campaign',$from,$to)[0]['revision']===$beforeRevision,
     'A failed operator attempt must not change committed provider metrics.');
+$source=$repo->spendEvidence($org,$id,$insights[0]['id']);
+$expectedFields=[
+    'ad_account_ref','source_snapshot_ref','grain','external_id','window_start','window_end',
+    'timezone','currency','attribution_hash','source_hash','source_revision','source_status',
+    'reported_spend_decimal'
+];
+$assert(array_keys($source)===$expectedFields,'Finance-facing evidence must have exact supported fields.');
+$assert($source['ad_account_ref']===$id&&$source['source_snapshot_ref']===$insights[0]['id']
+    &&$source['grain']==='campaign'&&$source['external_id']==='61000001'
+    &&$source['timezone']==='Europe/Kyiv'&&$source['currency']==='USD'
+    &&$source['reported_spend_decimal']==='12.340000'
+    &&$source['source_status']==='PROVISIONAL'&&$source['source_revision']===1,
+    'Source identity, amount, provenance or reporting fields mismatch.');
+$assert($source['attribution_hash']===hash('sha256','meta-default-adset-attribution-v1'),
+    'Attribution hash from persisted provider snapshot missing.');
+$assert($source['source_hash']===hash('sha256',json_encode($valid[0],JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE)),
+    'Meta payload hash differs from the committed snapshot provenance.');
+$assert(!str_contains(json_encode($source,JSON_THROW_ON_ERROR),'META_READ_ATOMIC_TEST'),
+    'Spend evidence leaked the protected Vault ref.');
+$unavailable=static function(string $tenant,string $account,string $snapshot)use($repo):bool{
+    try{$repo->spendEvidence($tenant,$account,$snapshot);}
+    catch(DomainException){return true;}
+    return false;
+};
+$assert($unavailable($alien,$id,$source['source_snapshot_ref']),
+    'Cross-tenant evidence readback escaped the Marketing source fence.');
+$assert($unavailable($org,'mads-'.str_repeat('f',24),$source['source_snapshot_ref']),
+    'Source snapshot can be rebound to a different ad account.');
+$assert($unavailable($org,$id,'mis-'.str_repeat('0',24)),
+    'Unknown source snapshot was promoted as a financial fact.');
+$assert($unavailable($org,$id,'mis-../bad'),
+    'Malformed source ref bypassed account fence.');
+
+$revisedInsight=[...$valid[0],'spend'=>'13.750000'];
+$repo->importInsights($org,$id,'campaign',$from,$to,[$revisedInsight]);
+$revisedEvidence=$repo->spendEvidence($org,$id,$source['source_snapshot_ref']);
+$assert($revisedEvidence['source_snapshot_ref']===$source['source_snapshot_ref']
+    &&$revisedEvidence['source_revision']===2
+    &&$revisedEvidence['source_status']==='REVISED'
+    &&$revisedEvidence['source_hash']!==$source['source_hash']
+    &&$revisedEvidence['reported_spend_decimal']==='13.750000',
+    'Marketing revision update must be visible to Finance evidence consumers without another source ID.');
 echo "Marketing Meta real MySQL atomic sync, rollback, replay, tenant and provider evidence PASS\n";

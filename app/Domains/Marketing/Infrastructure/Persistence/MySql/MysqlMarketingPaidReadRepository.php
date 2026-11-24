@@ -213,6 +213,63 @@ final readonly class MysqlMarketingPaidReadRepository implements MarketingPaidRe
         },$stmt->fetchAll(PDO::FETCH_ASSOC));
     }
 
+    /**
+     * Read back a single stable source snapshot by tenant + account + source ID.
+     * No provider credentials, private metrics or accepted financial authority are returned.
+     * @return array<string,mixed>
+     */
+    public function spendEvidence(string $organizationId,string $accountId,string $snapshotId):array
+    {
+        if(!preg_match('/^mads-[a-f0-9]{24}$/D',$accountId)
+            ||!preg_match('/^mis-[a-f0-9]{24}$/D',$snapshotId)){
+            throw new DomainException('Malformed Marketing spend evidence reference.');
+        }
+        $stmt=$this->connection->prepare("SELECT
+            s.id AS source_snapshot_ref,
+            s.grain,
+            s.external_id,
+            s.window_start,
+            s.window_end,
+            s.timezone,
+            s.currency,
+            s.attribution_hash,
+            s.source_hash,
+            s.revision AS source_revision,
+            s.source_status,
+            s.spend_decimal AS reported_spend_decimal
+            FROM marketing_paid_insight_snapshots s
+            JOIN marketing_paid_accounts a ON a.organization_id=s.organization_id
+                AND a.id=s.account_id AND a.provider='meta'
+                AND a.connection_status='READ_ONLY'
+                AND a.currency=s.currency AND a.timezone=s.timezone
+            WHERE s.organization_id=? AND s.account_id=? AND s.id=?
+                AND s.provider='meta' AND s.grain='campaign' LIMIT 1");
+        $stmt->execute([$organizationId,$accountId,$snapshotId]);
+        $row=$stmt->fetch(PDO::FETCH_ASSOC);
+        if(!is_array($row)){
+            throw new DomainException('Campaign-grain Marketing spend evidence unavailable for this tenant/account.');
+        }
+        $row['ad_account_ref']=$accountId;
+        $row['source_revision']=(int)$row['source_revision'];
+        // Source reference hashes attest only to the stored imported provider snapshot,
+        // not a verified invoice, payment or external financial settlement.
+        return [
+            'ad_account_ref'=>$row['ad_account_ref'],
+            'source_snapshot_ref'=>$row['source_snapshot_ref'],
+            'grain'=>$row['grain'],
+            'external_id'=>$row['external_id'],
+            'window_start'=>$row['window_start'],
+            'window_end'=>$row['window_end'],
+            'timezone'=>$row['timezone'],
+            'currency'=>$row['currency'],
+            'attribution_hash'=>$row['attribution_hash'],
+            'source_hash'=>$row['source_hash'],
+            'source_revision'=>$row['source_revision'],
+            'source_status'=>$row['source_status'],
+            'reported_spend_decimal'=>(string)$row['reported_spend_decimal'],
+        ];
+    }
+
     public function campaigns(string $organizationId,string $accountId,int $limit=100):array
     {
         $limit=max(1,min($limit,100));

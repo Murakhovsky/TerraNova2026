@@ -24,6 +24,11 @@ interface MarketingPaidReadRepository
     public function recordSyncFailure(string $organizationId,string $accountId,string $requestedBy,string $errorCode):void;
     /** @return list<array<string,mixed>> */
     public function syncHistory(string $organizationId,string $accountId,int $limit=20):array;
+    /**
+     * Authoritative tenant-owned Marketing DB readback only, no claim of external Meta verification.
+     * @return array<string,mixed>
+     */
+    public function spendEvidence(string $organizationId,string $accountId,string $snapshotId):array;
     /** @return list<array<string,mixed>> */
     public function campaigns(string $organizationId,string $accountId,int $limit=100):array;
 }

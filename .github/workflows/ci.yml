@@ -80,6 +80,8 @@ jobs:
         run: |
           php tests/architecture/das_001_domain_boundaries.php
           php tests/architecture/das_001_domain_boundaries.php --self-test
+      - name: Marketing tenant-safe spend evidence capability
+        run: php tests/unit/marketing_spend_evidence_contract.php
       - name: Diagnostic canonical session start capability
         run: php tests/unit/diagnostic_session_start_capability.php
       - name: Diagnostic canonical evidence capture capability
