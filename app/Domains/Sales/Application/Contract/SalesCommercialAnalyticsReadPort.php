@@ -8,4 +8,6 @@ interface SalesCommercialAnalyticsReadPort
 {
     public function outcomes(string $org, ?int $owner, ?string $pipeline, string $from, string $to): array;
     public function forecast(string $org, ?int $owner, ?string $pipeline, string $from, string $to): array;
+    public function conversion(string $org, ?int $owner, ?string $pipeline, string $from, string $to): array;
+    public function stages(string $org, ?int $owner, ?string $pipeline, string $from, string $to): array;
 }
