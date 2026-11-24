@@ -32,16 +32,6 @@
       "target_capability": "diagnostic.result.record"
     },
     {
-      "id": "diagnostic.session-to-recommendation:complete",
-      "process_id": "diagnostic.session-to-recommendation",
-      "step_id": "complete",
-      "gap_type": "missing-domain-capability",
-      "owner_domain": "diagnostic",
-      "severity": "high",
-      "resolution": "declare-domain-capability",
-      "target_capability": "diagnostic.session.complete"
-    },
-    {
       "id": "diagnostic.session-to-recommendation:decision",
       "process_id": "diagnostic.session-to-recommendation",
       "step_id": "decision",
