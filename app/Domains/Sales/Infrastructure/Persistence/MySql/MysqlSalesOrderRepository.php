@@ -6,7 +6,7 @@ use Domains\Sales\Application\Contract\SalesOrderRepositoryInterface;
 use PDO;
 use LogicException;
 
-final readonly class MysqlSalesOrderRepository implements SalesOrderRepositoryInterface, \Domains\Sales\Application\Contract\SalesCommerceOrderEvidencePort
+final readonly class MysqlSalesOrderRepository implements SalesOrderRepositoryInterface, \Domains\Sales\Application\Contract\SalesOrderLifecycleRepositoryInterface, \Domains\Sales\Application\Contract\SalesCommerceOrderEvidencePort
 {
     public function __construct(private PDO $connection){}
     public function create(string $org,array $order,array $lines,array $evidence):void
@@ -53,6 +53,35 @@ final readonly class MysqlSalesOrderRepository implements SalesOrderRepositoryIn
         $this->transaction();
         $q=$this->connection->prepare('SELECT person_id FROM tn_client_cases WHERE organization_id=? AND id=? FOR UPDATE');
         $q->execute([$org,$deal]);$id=(int)$q->fetchColumn();return $id>0?$id:null;
+    }
+    public function allocations(string $org,string $order):array
+    {
+        $q=$this->connection->prepare('SELECT allocation_id,line_no,location_id,reservation_id,stock_mode,quantity,fulfilled,cancelled,returned FROM sales_order_allocations WHERE organization_id=? AND order_id=? ORDER BY line_no,allocation_id');
+        $q->execute([$org,$order]);$rows=$q->fetchAll(PDO::FETCH_ASSOC);
+        foreach($rows as &$r)foreach(['line_no','quantity','fulfilled','cancelled','returned'] as $field)$r[$field]=(int)$r[$field];unset($r);
+        return $rows;
+    }
+    public function addAllocation(string $org,string $order,array $a):void
+    {
+        $this->transaction();
+        $this->connection->prepare('INSERT INTO sales_order_allocations(organization_id,order_id,allocation_id,line_no,location_id,reservation_id,stock_mode,quantity) VALUES(?,?,?,?,?,?,?,?)')
+            ->execute([$org,$order,$a['allocation_id'],$a['line_no'],$a['location_id'],$a['reservation_id'],$a['stock_mode'],$a['quantity']]);
+    }
+    public function updateAllocation(string $org,string $order,array $a):void
+    {
+        $this->transaction();
+        $q=$this->connection->prepare('UPDATE sales_order_allocations SET fulfilled=?,cancelled=?,returned=? WHERE organization_id=? AND order_id=? AND allocation_id=?');
+        $q->execute([$a['fulfilled'],$a['cancelled'],$a['returned'],$org,$order,$a['allocation_id']]);
+        if($q->rowCount()!==1)throw new LogicException('Order allocation write failed.');
+    }
+    public function transition(string $org,string $order,int $revision,string $status,array $evidence):void
+    {
+        $this->transaction();
+        $q=$this->connection->prepare('UPDATE sales_orders SET status=?,revision=revision+1 WHERE organization_id=? AND order_id=? AND revision=?');
+        $q->execute([$status,$org,$order,$revision]);
+        if($q->rowCount()!==1)throw new \DomainException('Order revision changed.');
+        $this->connection->prepare('INSERT INTO sales_order_evidence(organization_id,event_id,order_id,revision,event_type,occurred_at,payload) VALUES(?,?,?,?,?,UTC_TIMESTAMP(6),?)')
+            ->execute([$org,$evidence['event_id'],$order,$revision+1,$evidence['event_type'],json_encode($evidence,JSON_THROW_ON_ERROR)]);
     }
     private function transaction():void
     {
