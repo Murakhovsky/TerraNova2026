@@ -47,3 +47,16 @@ idempotency, permission і rollback/compensation semantics. Жодного
 прямого SQL між Sales і Product Management. Можливість автоматично
 резервувати за customer order залишається заблокованою до формального
 рішення про Order ownership.
+
+## Перевірка інваріантів E5 P2
+
+Конкурентні запити з окремих MySQL-підключень мають підтверджувати
+`reserved <= on_hand`, єдиний результат повторного idempotency key та
+єдиний release для незмінного Reservation ID. Тест використовує
+синхронізований старт двох PHP-процесів із незалежними PDO.
+
+Read-only `cos:product:stock:audit` порівнює snapshot балансу із сумою
+фізичних рухів та сумою активних резервів. `DRIFT` і `INCOMPLETE`
+блокують зелену readiness оцінку. Автоматичне виправлення ledger/balance
+заборонене; потрібне розслідування оператора, і тільки нове схвалене
+джерельне коригування може змінити склад.

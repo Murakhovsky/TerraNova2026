@@ -425,3 +425,35 @@ idempotency key повертає початковий receipt. У першому
 не існує як підтверджений зовнішній контракт, і автоматичне резервування
 від Sales/OMS, automatic expiry та partial release **не дозволені**.
 Рішення описане в ADR-0017.
+
+## E5 P2 — concurrent reservation + read-only stock reconciliation
+
+Two independent MySQL/PHP workers simultaneously compete for the last
+available Stock. The CI gate
+`tests/integration/product_management_stock_concurrency_mysql.php`
+requires that only one overcommitting writer wins, concurrent identical
+idempotency keys yield one Reservation receipt, and concurrent distinct
+release keys release a Reservation only once. All paths must preserve
+same-transaction Event/Outbox and the immutable movement ledger.
+
+`MySqlStockReconciliationAudit` reads a **single consistent SQL statement**
+over all tenant Stock balances, movement sums and active reservations. It
+reports `DRIFT` when either `on_hand != SUM(movements)` or
+`reserved != SUM(active reservations)`, including missing projection rows.
+It reports `INCOMPLETE` when limited output excludes unscanned pairs;
+neither status is accepted as healthy. No repair or implicit stock posting
+is allowed.
+
+Server operator only (read-only and fail-closed):
+
+```sh
+docker compose exec -T -e COS_PRODUCT_STOCK_AUDIT_ENABLED=1 php \
+  php bin/console cos:product:stock:audit --organization=TENANT_ID --limit=100
+```
+
+The operator must be explicitly run by an authorized server administrator
+on a deployed tenant with the Product Management module enabled. The command
+does not expose a new AI/CRON or public API mutation path and does not
+auto-reconcile any conflict. A full clean audit requires `status=OK` and
+`complete=true`. High-cardinality tenants require an explicit larger
+limit or a future paginated read audit; a truncated response is not evidence.
