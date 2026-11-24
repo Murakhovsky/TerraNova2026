@@ -257,5 +257,24 @@ $launchInput=['campaign_id'=>'mkt-'.str_repeat('a',24),'campaign_revision'=>1,'a
     'adset_revision'=>1,'account_id'=>'mads-'.str_repeat('c',24),'account_revision'=>1,'period_start'=>'2026-12-01','period_end'=>'2026-12-03'];
 $validator->validate($contracts['marketing.paid.launch_plan.create'],$launchInput);
 $blocked(static fn()=> $validator->validate($contracts['marketing.paid.launch_plan.create'],[...$launchInput,'lifetime_minor'=>1]),'Caller overrode derived funding.');
+$lifecycle=\Domains\Marketing\Domain\MarketingPaidLifecyclePolicy::class;
+$expect($lifecycle::prerequisites('ACTIVATE_CAMPAIGN')===['ACTIVATE_AD','ACTIVATE_ADSET'],'Activation order invalid.');
+$fixturePlan=['account_id'=>'mads-'.str_repeat('a',24),'account_timezone'=>'UTC','currency'=>'USD',
+    'period_start'=>'2026-12-01','period_end'=>'2026-12-03','lifetime_minor'=>3750];
+$campaignReceipt=['id'=>'100','account_id'=>'10','configured_status'=>'PAUSED','objective'=>'OUTCOME_TRAFFIC','special_ad_categories'=>[]];
+$adsetReceipt=['id'=>'200','account_id'=>'10','campaign_id'=>'100','configured_status'=>'PAUSED','lifetime_budget'=>'3750',
+    'start_time'=>'2026-12-01T00:00:00Z','end_time'=>'2026-12-04T00:00:00Z'];
+$adReceipt=['id'=>'300','account_id'=>'10','adset_id'=>'200','configured_status'=>'PAUSED','creative'=>['id'=>'400']];
+$lifecycle::assertPausedHierarchy($fixturePlan,'act_10','100','200','300','400',$campaignReceipt,$adsetReceipt,$adReceipt);
+$blocked(static fn()=> $lifecycle::assertPausedHierarchy($fixturePlan,'act_10','100','200','300','400',$campaignReceipt,
+    [...$adsetReceipt,'lifetime_budget'=>'3751'],$adReceipt),'Wrong provider cap accepted.');
+$blocked(static fn()=> $lifecycle::assertPausedHierarchy($fixturePlan,'act_10','100','200','300','400',$campaignReceipt,
+    $adsetReceipt,[...$adReceipt,'configured_status'=>'ACTIVE']),'Active ad accepted as paused.');
+$snapshot=['ad_account_ref'=>$fixturePlan['account_id'],'external_id'=>'100','grain'=>'campaign','currency'=>'USD',
+    'timezone'=>'UTC','window_start'=>'2026-12-01','window_end'=>'2026-12-03','reported_spend_decimal'=>'37.500001',
+    'source_snapshot_ref'=>'mis-'.str_repeat('a',24),'source_revision'=>1];
+$comparison=$lifecycle::spendComparison($fixturePlan,'100',$snapshot);
+$expect($comparison['status']==='SOURCE_EXCEEDS_PLANNED_CAP'&&!$comparison['finance_settled'],'Exact source overage not detected.');
+$blocked(static fn()=> $lifecycle::spendComparison($fixturePlan,'100',[...$snapshot,'timezone'=>'Europe/Kyiv']),'Mixed timezone source accepted.');
 echo "Marketing M2 typed planning policy, provenance, CSRF and boundary PASS\n";
 

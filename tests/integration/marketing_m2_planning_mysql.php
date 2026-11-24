@@ -338,5 +338,16 @@ $financeOps->release($orgA,$reservation['id'],'202',str_repeat('c',32),'m3-trace
 $assert(!$fundPlans->funding($actor,$fundPlan['id'],$budgetDraft['id'],$reservation['id'])['funding_observed'],'Released reservation remained funded.');
 $repo->reviseCreative($orgA,$creativeId,'101',4,[...$creativeData,'headline'=>'New revision after funding'],'m3-stale-creative-01');
 $assert($fundPlans->funding($actor,$fundPlan['id'],$budgetDraft['id'],$reservation['id'])['status']==='SOURCE_STALE','Stale funding plan not detected.');
+$journal=new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidOperationJournal($db);
+$operation=$journal->begin($orgA,$fundPlan['id'],'CREATE_CAMPAIGN',str_repeat('d',32),str_repeat('e',64));
+$assert($operation['fresh']&&$operation['state']==='STARTED','Provider admission not durable.');
+$assert(!$journal->begin($orgA,$fundPlan['id'],'CREATE_CAMPAIGN',str_repeat('d',32),str_repeat('e',64))['fresh'],'Provider replay authorized.');
+$denied(static fn()=> $journal->begin($orgA,$fundPlan['id'],'CREATE_CAMPAIGN',str_repeat('f',32),str_repeat('e',64)),'Second Action reused operation.');
+$journal->identify($orgA,$fundPlan['id'],'CREATE_CAMPAIGN',str_repeat('d',32),'123456');
+$journal->finish($orgA,$fundPlan['id'],'CREATE_CAMPAIGN',str_repeat('d',32),null);
+$assert($journal->get($orgA,$fundPlan['id'],'CREATE_CAMPAIGN')['provider_id']==='123456'
+    &&$journal->get($orgA,$fundPlan['id'],'CREATE_CAMPAIGN')['state']==='UNCERTAIN','Uncertain receipt lost provider identity.');
+$denied(static fn()=> $journal->finish($orgA,$fundPlan['id'],'CREATE_CAMPAIGN',str_repeat('d',32),['status'=>'PAUSED']),'Uncertain receipt overwritten.');
+$assert($journal->get($orgB,$fundPlan['id'],'CREATE_CAMPAIGN')===null,'Cross-tenant journal leaked.');
 echo "Marketing M2 real MySQL two-person review, tenant fence, immutable Creative revisions, stale gate PASS\n";
 

@@ -108,7 +108,7 @@ Marketing володіє Campaign Draft, Meta Ad Account binding, provider Campa
 | `creative_planning` | Версії креативів, Product refs та опційний TargetSpec чернетки | D2 baseline; TargetSpec потребує CI/приймання, без provider eligibility |
 | `analyst_review` | Scoped analyst context, response policy, evidence proposals та незалежні review-рішення | D2, Hermes adapter, admission, journal, review, recovery, Kernel budget ceiling та canonical Action binding; native E2E fixture PASS, операторський preflight додано; live acceptance очікується |
 | `audience_planning` | Версії Audience і AdSet Draft, revision pins, планова потреба бюджету та Workspace editor | Backend CI green; Workspace CI/staging очікуються; без Finance reservation або Meta write |
-| `paid_funding` | Immutable funding candidate і Finance readback | D2 candidate; CI, атомарний execution claim та Meta acceptance очікуються |
+| `paid_funding` | Immutable funding candidate і Finance readback | D2 candidate; Finance execution claim, Meta write primitives і journal додано, canonical lifecycle та live acceptance очікуються |
 | `product_evidence` | Пошук Product/SKU, Product/Variant/Price та stock-by-location readback через Product Management read port | D2, без складу/URL/Meta policy acceptance |
 
 Компоненти не є незалежними installable modules.

@@ -141,6 +141,12 @@ Marketing зберігає immutable funding candidate для однієї Campa
 
 Finance реалізує one-shot exposure claim під тими самими locks, що й release. Окремий approved application service перевіряє canonical activation Action, pinned plan hash, envelope/reservation/revision. Після claim заборонено повторно видати execution authority або звільнити hold без незалежного фінансового settlement. Freeze блокує майбутні допуски, не обіцяє скасування in-flight provider request. Marketing write gate залишається закритим до інтеграції adapter, lifecycle та зовнішнього hard-cap acceptance.
 
+## M3.3–M3.6: Провайдерські примітиви та журнал операцій
+
+`MetaPaidWriteAdapter` має окремий write transport для Graph API v27.0, scoped Vault credential, fixed host, bounded request/response, no redirects/retries. P0 primitives: Campaign OUTCOME_TRAFFIC, один AdSet з lifetime budget та UTC schedule, Ad на незалежно прийнятому existing Creative; всі створення PAUSED. Readback перевіряє exact account/object. Status primitive змінює тільки ACTIVE/PAUSED. Цей обмежений сценарій не застосовувати до housing, credit, employment, political/social issues чи інших special-category ads; повноцінне підтвердження category, Creative, Page та landing URL ще необхідне.
+
+`MysqlMarketingPaidOperationJournal` забезпечує durable STARTED/CONFIRMED/UNCERTAIN per plan/operation, stable Action/request hash, provider ID до readback, CAS finish та no replay. `MarketingPaidLifecyclePolicy` задає порядок створення й активації, перевірку paused hierarchy, lifetime cap, schedule, parent/creative references і точне зіставлення campaign-grain spend у UTC. Це окремі технічні компоненти, НЕ live canonical orchestration. Не зареєстровані для зовнішнього виконання. Перед інтеграцією handler потрібні перевірка повного складу remote hierarchy (включно зі сторонніми AdSets), незалежний provider cap/creative acceptance, atomic Finance claim перед активацією, контроль drift, аварійна pause та reconciliation unknown outcomes. Source comparison не settlement; release claimed hold поки неможливий без фінансового приймання.
+
 ## Надійність імпорту та операційна черга
 
 Meta read-only sync об'єднує імпорт Campaign/AdSet/Ad, Insights, `last_synced_at` і запис `SUCCEEDED` в **одну MySQL-транзакцію**. Невалідний рядок Insights або помилка посеред import викликає rollback без часткових campaign/metrics; окремий `tests/integration/marketing_meta_atomic_mysql.php` перевіряє це на справжній MySQL.
