@@ -31,10 +31,22 @@ query COSCommerceOrder($id: ID!) {
   }
 }
 GQL;
-    private const PAGE=<<<'GQL'
-query COSCommerceOrderPage($after: String) {
+    private const LINES=<<<'GQL'
+query COSCommerceOrderLines($id: ID!, $after: String!) {
   currentAppInstallation { accessScopes { handle } }
-  orders(first: 25, after: $after, sortKey: UPDATED_AT) {
+  order(id: $id) {
+    id updatedAt
+    lineItems(first: 100, after: $after) {
+      nodes { id quantity sku product { id } variant { id } originalUnitPriceSet { shopMoney { amount currencyCode } } }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+}
+GQL;
+    private const PAGE=<<<'GQL'
+query COSCommerceOrderPage($after: String, $filter: String) {
+  currentAppInstallation { accessScopes { handle } }
+  orders(first: 25, after: $after, sortKey: ID, query: $filter) {
     nodes { id }
     pageInfo { hasNextPage endCursor }
   }
@@ -62,12 +74,13 @@ GQL;
         $financial=self::status($raw['displayFinancialStatus']??null);
         $fulfillment=self::status($raw['displayFulfillmentStatus']??null);
         $cancelled=$raw['cancelledAt']===null?null:self::time($raw['cancelledAt']);
+        $items=$this->allLines($c['shop_domain'],$token,$externalId,$updated,$raw['lineItems']??null);
+        $raw['lineItems']=$items;
         $reason=null;$terms=null;
         if($raw['test'])$reason='test_order';
         elseif($raw['edited']||$cancelled!==null||$current!==$original||$beforeReturns!==$original||in_array($financial,['REFUNDED','PARTIALLY_REFUNDED','VOIDED'],true))$reason='historical_or_changed_terms';
         else {
-            $items=$raw['lineItems']??null;
-            if(!is_array($items)||($items['pageInfo']['hasNextPage']??null)!==false||!is_array($items['nodes']??null)||!array_is_list($items['nodes'])||count($items['nodes'])<1||count($items['nodes'])>100)
+            if(!is_array($items)||($items['pageInfo']['hasNextPage']??null)!==false||!is_array($items['nodes']??null)||!array_is_list($items['nodes'])||count($items['nodes'])<1||count($items['nodes'])>1000)
                 $reason='incomplete_line_items';
             else {
                 $lines=[];$seen=[];
@@ -106,12 +119,13 @@ GQL;
             'currency'=>$currency,'original_total'=>$original,'current_total'=>$current,'terms'=>$terms,'blocked_reason'=>$reason];
     }
 
-    public function page(string $org,string $channel,string $connection,?string $cursor):array
+    public function page(string $org,string $channel,string $connection,?string $cursor,?string $cutoff=null):array
     {
         if($cursor!==null&&(trim($cursor)===''||strlen($cursor)>512))throw new DomainException('Invalid order cursor.');
         $c=$this->connection($org,$channel,$connection);
         $token=$this->credentials->accessToken($c['shop_domain'],$c['secret_ref'],$org,$connection);
-        $data=$this->read->query($c['shop_domain'],$token,self::PAGE,['after'=>$cursor])['data'];
+        $filter=$cutoff===null?null:'created_at:<='.self::time($cutoff);
+        $data=$this->read->query($c['shop_domain'],$token,self::PAGE,['after'=>$cursor,'filter'=>$filter])['data'];
         self::assertOrderScope($data);
         $page=$data['orders']??null;
         if(!is_array($page)||!is_array($page['nodes']??null)||!array_is_list($page['nodes'])||count($page['nodes'])>25||!is_bool($page['pageInfo']['hasNextPage']??null))throw new DomainException('Invalid Shopify order page.');
@@ -121,7 +135,7 @@ GQL;
         if($page['pageInfo']['hasNextPage']&&(!is_string($next)||$next===''||strlen($next)>512||$next===$cursor||$ids===[]))throw new DomainException('Unsafe Shopify order page cursor.');
         $fresh=$this->connection($org,$channel,$connection);
         if($fresh['shop_domain']!==$c['shop_domain']||$fresh['secret_ref']!==$c['secret_ref'])throw new DomainException('Commerce source changed.');
-        return ['order_ids'=>$ids,'next_cursor'=>$next];
+        return ['order_ids'=>$ids,'next_cursor'=>$next,'historical_access'=>in_array('read_all_orders',array_column($data['currentAppInstallation']['accessScopes'],'handle'),true)?'all_orders_scope':'provider_limited'];
     }
     public function pending(string $org,string $channel,string $connection):array
     {
@@ -146,6 +160,37 @@ GQL;
         if($unique['organization_id']!==$org||$unique['connection_id']!==$id||$unique['secret_ref']!==$c['secret_ref'])throw new DomainException('Ambiguous commerce source.');
         return $c;
     }
+    /** Complete immutable provider revision or fail closed; never import a truncated order. */
+    private function allLines(string $shop,string $token,string $id,string $revision,mixed $page):array
+    {
+        $lines=[];$cursors=[];
+        for($n=0;$n<10;$n++){
+            if(!is_array($page)||!is_array($page['nodes']??null)||!array_is_list($page['nodes'])||count($page['nodes'])>100||!is_bool($page['pageInfo']['hasNextPage']??null))
+                throw new DomainException('Invalid Shopify order line page.');
+            foreach($page['nodes'] as $node){
+                if(!is_array($node))throw new DomainException('Invalid Shopify line.');
+                $lineId=self::gid($node['id']??null,'LineItem');
+                if(isset($lines[$lineId]))throw new DomainException('Duplicate Shopify line across pages.');
+                $lines[$lineId]=$node;
+            }
+            if(!$page['pageInfo']['hasNextPage']){
+                ksort($lines,SORT_STRING);
+                return ['nodes'=>array_values($lines),'pageInfo'=>['hasNextPage'=>false,'endCursor'=>null]];
+            }
+            $cursor=$page['pageInfo']['endCursor']??null;
+            if(!is_string($cursor)||$cursor===''||strlen($cursor)>512||isset($cursors[$cursor])||$page['nodes']===[])throw new DomainException('Unsafe Shopify line cursor.');
+            $cursors[$cursor]=true;
+            if($n===9)throw new DomainException('Shopify order line limit exceeds 1000; manual review required.');
+            $data=$this->read->query($shop,$token,self::LINES,['id'=>$id,'after'=>$cursor])['data'];
+            self::assertOrderScope($data);
+            $order=$data['order']??null;
+            if(!is_array($order)||($order['id']??null)!==$id||self::time($order['updatedAt']??null)!==$revision)
+                throw \Kernel\Execution\ExecutionFailureException::retryable('Shopify order revision changed during pagination.');
+            $page=$order['lineItems']??null;
+        }
+        throw new DomainException('Shopify order line pagination exhausted.');
+    }
+
     private static function assertOrderScope(array $data):void
     {
         $scopes=$data['currentAppInstallation']['accessScopes']??null;
