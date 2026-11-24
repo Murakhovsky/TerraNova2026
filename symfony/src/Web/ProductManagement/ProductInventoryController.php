@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Web\ProductManagement;
 
 use App\Application\Capability\CanonicalCapabilityGateway;
+use App\Persistence\ProductManagement\ProductStockCountPlanProposalService;
 use App\Security\SessionCsrfValidator;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Shell\ShellBreadcrumb;
@@ -30,6 +31,7 @@ final readonly class ProductInventoryController
         private CanonicalCapabilityGateway $gateway,
         private SessionCsrfValidator $csrf,
         private WorkspaceShellFactory $shells,
+        private ProductStockCountPlanProposalService $countPlans,
     ) {}
 
     public function index(Request $request):Response
@@ -62,6 +64,10 @@ final readonly class ProductInventoryController
                     ])['items']??[];
                 }
             }
+            $countId=trim((string)$request->query->get('count_id',''));
+            if($countId!==''&&!preg_match('/^[a-f0-9]{32}$/D',$countId))return new Response('Invalid count identity.',422);
+            $count=$countId===''?null:($this->read($actor,'stock.count.get',['count_id'=>$countId])['count']??null);
+            if($count!==null&&($count['variant_id']!==$variant||$count['location_id']!==$location))return new Response('Count scope mismatch.',404);
             $context=new WebExtensionContext(
                 $actor->organizationId()->value(),$actor->role()->value(),
                 'workspace','product-management','pm-stock'
@@ -74,7 +80,7 @@ final readonly class ProductInventoryController
             return new Response($this->twig->render('experience/product_management/stock.html.twig',[
                 'shell'=>$shell,'locations'=>$loc['items']??[], 'catalog'=>$products['items']??[],
                 'variantId'=>$variant,'locationId'=>$location,
-                'balance'=>$balance,'movements'=>$movements,'reservations'=>$reservations,'reservationPage'=>$reservationPage,
+                'countId'=>$countId,'count'=>$count,'balance'=>$balance,'movements'=>$movements,'reservations'=>$reservations,'reservationPage'=>$reservationPage,
                 'csrfToken'=>$this->csrf->token($request),
                 'mutationKey'=>bin2hex(random_bytes(16)),
                 'notice'=>(string)$request->query->get('notice',''),
@@ -169,6 +175,27 @@ final readonly class ProductInventoryController
         }catch(Throwable $e){
             error_log('product_management.stock_workspace.post_failed '.$e::class);
             return new Response('Stock result uncertain. Reload native balance before retrying.',503);
+        }
+    }
+
+    public function proposeCount(Request $request):Response
+    {
+        $actor=$this->writeGuard($request);
+        if($actor instanceof Response)return $actor;
+        $variant=(string)$request->request->get('variant_id','');
+        $location=(string)$request->request->get('location_id','');
+        $revision=filter_var($request->request->get('expected_revision'),FILTER_VALIDATE_INT);
+        if($revision===false||$revision<0)return new Response('Invalid count revision.',422);
+        try{
+            $proposal=$this->countPlans->propose($actor,$variant,$location,
+                trim((string)$request->request->get('counted','')),$revision,
+                trim((string)$request->request->get('source_ref','')),(string)$request->request->get('idempotency_key',''));
+            return new RedirectResponse('/product-management/stock?variant='.$variant.'&location='.$location.'&count_id='.$proposal['count_id'].'&notice=count_proposed',303);
+        }catch(DomainException|\InvalidArgumentException){
+            return new Response('Count proposal blocked. Reload stock and verify document.',422);
+        }catch(Throwable $e){
+            error_log('product_management.stock_workspace.count_proposal_uncertain '.$e::class);
+            return new Response('Count proposal uncertain. Inspect Goal Workspace before retrying.',503);
         }
     }
 
