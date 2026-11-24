@@ -74,6 +74,22 @@ try{
     $check($invoke(['scope'=>'owner','owner_id'=>$other])['counts']['active_deals']===1,'Active team lead scope failed.');
     $db->prepare('UPDATE sales_teams SET status="DISABLED" WHERE organization_id=? AND id=?')->execute([$org,$teamId]);
     $reject(fn()=>$invoke(['scope'=>'owner','owner_id'=>$other]));
+    // P3: forecast is a complete current projection, not a historical snapshot.
+    $analytics=new \Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesCommercialAnalyticsReadModel($db);
+    $db->prepare('UPDATE tn_client_cases SET expected_close_at=? WHERE organization_id=? AND assigned_user_id=? AND currency="USD" AND status="active"')->execute(['2026-12-10',$org,$owner]);
+    $db->prepare('UPDATE tn_client_cases SET expected_close_at=? WHERE organization_id=? AND assigned_user_id=? AND currency="EUR"')->execute(['2026-12-01',$org,$owner]);
+    $forecast=$analytics->forecast($org,$owner,$pid,'2026-12-01','2027-01-01');
+    $buckets=array_column($forecast['buckets'],null,'bucket');
+    $money=array_column($buckets['in_period']['money_by_currency'],null,'currency');
+    $check($buckets['in_period']['deal_count']===252&&$money['USD']['pipeline_value']==='2512.51'&&$money['USD']['weighted_value']==='1256.26'&&$money['EUR']['pipeline_value']==='20.02','Forecast amounts or scoped population invalid.');
+    $check($buckets['unscheduled']['deal_count']===1&&$buckets['unscheduled']['unknown_value_count']===1,'Forecast missing-value coverage invalid.');
+    $db->prepare('UPDATE tn_client_cases SET expected_close_at=? WHERE organization_id=? AND assigned_user_id=? AND currency="EUR"')->execute(['2027-01-01',$org,$owner]);
+    $next=array_column($analytics->forecast($org,$owner,$pid,'2026-12-01','2027-01-01')['buckets'],null,'bucket');
+    $check($next['after_period']['deal_count']===1&&$next['in_period']['deal_count']===251,'Forecast exclusive end boundary invalid.');
+    $otherForecast=array_column($analytics->forecast($org,$other,$pid,'2026-12-01','2027-01-01')['buckets'],null,'bucket');
+    $check($otherForecast['unscheduled']['deal_count']===1,'Forecast other owner scope invalid.');
+    $reject(fn()=>$analytics->forecast($org,$owner,$pid,'2026-02-30','2026-03-02'));
+    $reject(fn()=>$analytics->forecast($org,$owner,$pid,'2026-12-01','2026-12-01'));
     $dash=$read->dashboard($org,$owner);$check($dash['kpis']['pipeline_value']===null&&$dash['kpis']['money_by_currency']===$summary['money_by_currency']&&$dash['metrics']===[],'Dashboard parity/tenant leakage.');
     $operational=new MysqlSalesWorkspaceOperationalReadModel($db,$read);
     $pipelines=$operational->pipelines($org);$p=array_values(array_filter($pipelines,fn($x)=>$x['id']===$pid))[0];
