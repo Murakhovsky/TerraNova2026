@@ -49,8 +49,7 @@
       "kind": "state",
       "owner": "Sales application",
       "domain": "sales",
-      "capability": null,
-      "capability_gap": "missing-domain-capability",
+      "capability": "sales.client_case.create",
       "critical": true,
       "runtime": [
         {

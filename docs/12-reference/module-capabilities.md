@@ -454,6 +454,7 @@ Manifest capabilities не задекларовані.
 - `sales.admin.rules.manage`;
 - `sales.admin.teams.manage`;
 - `sales.admin.view`;
+- `sales.client_case.create`;
 - `sales.create_task`;
 - `sales.deal.won.observation`;
 - `sales.director.view`;

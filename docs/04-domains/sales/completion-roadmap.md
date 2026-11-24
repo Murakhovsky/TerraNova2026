@@ -23,7 +23,7 @@ Manifest Sales 1.0.0 / schema 0.8.6 declares three typed contracts: inbound requ
 | sales.lead.intake | ReceivePublicLead / ReceiveCrmWebhook (different trust boundaries) | S1 |
 | sales.crm.inbox.process | ProcessCrmInbox | S1 |
 | sales.lead.state.manage | SalesInboundService::updateRequest, qualification rules | S1 |
-| sales.client-case.create | SalesInboundService::createCaseFromRequest | S1 |
+| sales.client_case.create (раніше sales.client-case.create) | SalesInboundService::createCaseFromRequest | S1 |
 | sales.deal.owner.assign | AssignDealOwner | S2 |
 | sales.pipeline.stage.manage | ChangeDealStage | S2 |
 | sales.deal.outcome.record | ChangeDealStage terminal transition and events | S2 |
@@ -57,3 +57,7 @@ Audit semantic boundaries: canonical-state, activity events, property match and 
 ## Критерії завершення
 
 Each slice contains actual Sales implementation, typed input/output where public, declared capability ownership, permission/policy, appropriate idempotency and failure semantics, native independent readback, positive/denied/cross-tenant/replay/failure tests, CI wiring, and matching Process Registry/debt/passport/generated references if changed. No new executor, no direct foreign persistence, no false contracts. For uncertain external effects reconcile before retry. Release only after operator evidence from the target environment. Issue #459 remains open until all business packages are accepted, not merely when DAS-001 debt reaches zero.
+
+## S1/P2 — канонічна конвертація ліда
+
+Контракт `sales.client_case.create` приймає лише `lead_id`; owner за замовчуванням визначає наявний SalesWriteService з авторизованого actor. Окрема зміна owner/priority не є частиною конвертації. Ідентифікатор нормалізовано відповідно до правил Kernel (underscore замість hyphen). Gateway вимагає ключ запиту, але бізнесова ідемпотентність визначається парою tenant/lead, а не значенням ключа. Інший lead є іншим бізнес-наміром. Повторний виклик не змінює owner. Результат містить тільки lead_id, case_id та replayed після незалежного читання ліда і кейса. Помилка читання після commit не є підтвердженням rollback: повторно прочитати нативний стан. Пряме виконання обмежено авторизованим менеджером; AI Workflow binding ще не реалізовано. Закриття gap у гілці є кандидатом до приймання після CI та runtime evidence; D3–D5 не змінюються.

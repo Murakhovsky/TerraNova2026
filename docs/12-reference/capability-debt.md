@@ -16,15 +16,15 @@ Capability debt означає, що бізнес-крок реальний, а�
 
 ## Підсумок
 
-- **Відкритих debt items:** 12
-- **High severity:** 9
+- **Відкритих debt items:** 11
+- **High severity:** 8
 - **Medium severity:** 3
 - **Зачеплених Domains:** 2
 
 | Domain | Відкрито | High | Medium | Low |
 | --- | ---: | ---: | ---: | ---: |
 | `diagnostic` | 1 | 1 | 0 | 0 |
-| `sales` | 11 | 8 | 3 | 0 |
+| `sales` | 10 | 7 | 3 | 0 |
 
 ## Пріоритетний backlog
 
@@ -37,7 +37,6 @@ Capability debt означає, що бізнес-крок реальний, а�
 | `high` | `sales` | [Sales Lead → Managed Case](../02-workflows/sales-lead-to-managed-case.md) · `intake` · Lead intake | `source` | `sales.lead.intake` | `declare-domain-capability` |
 | `high` | `sales` | [Sales Lead → Managed Case](../02-workflows/sales-lead-to-managed-case.md) · `outcome` · Record business outcome | `runtime` | `sales.deal.outcome.record` | `declare-domain-capability` |
 | `high` | `sales` | [Sales Lead → Managed Case](../02-workflows/sales-lead-to-managed-case.md) · `pipeline` · Manage pipeline stage | `source` | `sales.pipeline.stage.manage` | `declare-domain-capability` |
-| `high` | `sales` | [Sales Request → Property Match](../02-workflows/sales-request-to-property-match.md) · `create-case` · Create Client Case and link inbound request | `source` | `sales.client-case.create` | `declare-domain-capability` |
 | `high` | `sales` | [Sales Request → Property Match](../02-workflows/sales-request-to-property-match.md) · `record-match` · Record Property Match in Sales | `source` | `sales.property-match.record` | `declare-domain-capability` |
 | `medium` | `sales` | [Sales Lead → Managed Case](../02-workflows/sales-lead-to-managed-case.md) · `activity` · Record activity / call | `source` | `sales.activity.record` | `declare-domain-capability` |
 | `medium` | `sales` | [Sales Lead → Managed Case](../02-workflows/sales-lead-to-managed-case.md) · `crm-inbox` · Process durable CRM inbox | `source` | `sales.crm.inbox.process` | `declare-domain-capability` |

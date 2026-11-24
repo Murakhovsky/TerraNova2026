@@ -25,7 +25,8 @@ domain_id: sales
     {
       "id": "deals",
       "capability_ids": [
-        "sales.deal.won.observation"
+        "sales.deal.won.observation",
+        "sales.client_case.create"
       ]
     },
     {
