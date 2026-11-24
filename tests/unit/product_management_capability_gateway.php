@@ -78,7 +78,7 @@ $deny=static function(callable $fn)use($assert):void {
     try{$fn();}catch(DomainException){return;}
     $assert(false,'Untrusted Product capability invoked.');
 };
-$assert(count($catalog->executables())===45,'expected 45 Product Management contracts');
+$assert(count($catalog->executables())===47,'expected 47 Product Management contracts');
 $assert($gateway->describe($actor,'product_management.stock.receive')['status']==='direct_human',
     'stock command must be bound only to trusted human');
 $assert($gateway->describe($actor,'product_management.category.search')['status']==='read_only',
@@ -112,10 +112,13 @@ $assert($csv->calls===1,'rejected previews must not reach staging');
 $cat=$gateway->invoke($actor,'product_management.category.search',['limit'=>20],'trusted_read','','trace-012');
 $assert($cat['org']==='pm-gateway-ci'&&$cat['limit']===20&&$read->calls===1,
     'category query must retain trusted tenant scope');
+$deny(static fn()=> $gateway->invoke($actor,'product_management.stock.count.apply',
+    ['target_type'=>'product_stock_count','target_id'=>$id,'parameters'=>['variant_id'=>$id,'location_id'=>$id,'counted'=>'1','expected_revision'=>0,'source_ref'=>'count:ACT-1']],
+    'human_api','pm-count-bypass','trace-015'));
 $states->enabled=false;
 $deny(static fn()=> $gateway->invoke($actor,'product_management.category.search',
     ['limit'=>20],'trusted_read','','trace-013'));
 $deny(static fn()=> $gateway->invoke($actor,'product_management.stock.receive',
     $payload,'human_api','pm-gate-9','trace-014'));
 $assert($read->calls===1&&$stock->calls===1,'inactive module must reject both reads and writes');
-echo "Product Management 45 canonical Gateway contracts, tenant policy and schema guards passed.\n";
+echo "Product Management 47 canonical Gateway contracts, tenant policy and schema guards passed.\n";
