@@ -1,0 +1,43 @@
+name: COS Shopify tenant preflight (read-only)
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/cos-shopify-tenant-preflight.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    environment: AWS TN2026
+    env:
+      DEV_HOST: ${{ secrets.DEV_HOST }}
+      DEV_USER: ${{ secrets.DEV_USER }}
+      DEV_PORT: ${{ secrets.DEV_PORT }}
+      DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+    steps:
+      - name: SSH setup
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          for n in DEV_HOST DEV_USER DEV_PORT DEV_SSH_KEY; do [[ -n "${!n:-}" ]] || exit 2; done
+          [[ "$DEV_PORT" =~ ^[0-9]{1,5}$ ]] || exit 2
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$DEV_SSH_KEY" > "$HOME/.ssh/key"
+          chmod 600 "$HOME/.ssh/key"
+          ssh-keyscan -T 10 -p "$DEV_PORT" -H "$DEV_HOST" > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test -s "$HOME/.ssh/known_hosts"
+      - name: Discover active COS org and inspect Product Management module (no mutations)
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          ssh -T -o BatchMode=yes -o StrictHostKeyChecking=yes -i "$HOME/.ssh/key" -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            sudo -n bash -s <<'REMOTE'
+          set -Eeuo pipefail
+          cd /opt/cos
+          tenant=$(docker compose exec -T php sh -c 'printf "%s" "$COS_ORGANIZATION_ID"')
+          [[ "$tenant" =~ ^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,39}$ ]] || { echo INVALID_COS_DEPLOY_TENANT; exit 2; }
+          echo "COS_DEPLOY_TENANT=$tenant"
+          bash /opt/cos/bin/shopify-lamps-operator.sh "$tenant" preflight
+          REMOTE
