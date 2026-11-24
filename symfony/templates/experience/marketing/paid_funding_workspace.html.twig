@@ -33,6 +33,7 @@
         </form>
         {% if funding %}<p>Finance observation: {{ funding.status }}. Not activation authority.</p>{% endif %}
         <p>Deployment configuration: {{ status.profile_configured ? 'configured' : 'not configured' }}. Activation rollout: {{ status.activation_configured ? 'configured' : 'disabled' }}. Live verification: no.</p>
+        {% if status.profile_configured %}<p>Special advertising categories: {{ status.special_ad_categories is empty ? 'None (reviewed general retail)' : status.special_ad_categories|join(', ') }}. {{ status.special_ad_category_country|join(', ') }}</p>{% endif %}
         {% for op in status.operations %}<p>{{ op.operation }} · {{ op.state }} · {{ op.provider_id ?? 'no provider ID' }}</p>{% endfor %}
         {% if status.manual_reconciliation_required %}<p role="alert">Uncertain operation. Reconcile in Ads Manager; no blind retry. Use authorized emergency pause outside COS if needed.</p>{% endif %}
         {% if status.profile_configured and not status.manual_reconciliation_required %}

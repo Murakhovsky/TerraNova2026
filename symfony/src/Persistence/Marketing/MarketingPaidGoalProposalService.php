@@ -54,7 +54,7 @@ final readonly class MarketingPaidGoalProposalService
             if(isset($states[self::OPERATIONS[$operation]])||($operation!=='create_paused'&&($states['DEPLOY_PAUSED']??null)!=='CONFIRMED')
                 ||($operation==='activate'&&isset($states['PAUSE'])))throw new DomainException('Paid operation is not a valid next command.');
             $spec=new GoalSpecification($goal,$org,$actor->userId()->value(),
-                'Record approved Meta configured-status operation '.$operation.' for '.$id,
+                'Record approved Meta configured-status operation '.$operation.' for '.$id.'; categories: '.implode(',', $status['special_ad_categories']?:['NONE']).'; countries: '.implode(',', $status['special_ad_category_country']),
                 [['id'=>self::CRITERION,'operator'=>'at_least','expected'=>1]],[$cap],1,null,null,'',[],
                 ['independent_plan','independent_action'],'always');
             $this->goals->createGoal($actor,$spec);

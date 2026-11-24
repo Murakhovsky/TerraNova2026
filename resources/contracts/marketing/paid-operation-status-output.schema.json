@@ -87,6 +87,28 @@
     "finance_settled": {
       "type": "boolean",
       "const": false
+    },
+    "special_ad_categories": {
+      "type": "array",
+      "maxItems": 4,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "HOUSING",
+          "EMPLOYMENT",
+          "CREDIT",
+          "FINANCIAL_PRODUCTS_SERVICES"
+        ]
+      }
+    },
+    "special_ad_category_country": {
+      "type": "array",
+      "maxItems": 20,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Z]{2}$"
+      }
     }
   },
   "required": [
@@ -99,7 +121,9 @@
     "operations",
     "manual_reconciliation_required",
     "live_verified",
-    "finance_settled"
+    "finance_settled",
+    "special_ad_categories",
+    "special_ad_category_country"
   ],
   "additionalProperties": false
 }

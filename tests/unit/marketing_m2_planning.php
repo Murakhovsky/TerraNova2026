@@ -270,6 +270,16 @@ $blocked(static fn()=> $lifecycle::assertPausedHierarchy($fixturePlan,'act_10','
     [...$adsetReceipt,'lifetime_budget'=>'3751'],$adReceipt),'Wrong provider cap accepted.');
 $blocked(static fn()=> $lifecycle::assertPausedHierarchy($fixturePlan,'act_10','100','200','300','400',$campaignReceipt,
     $adsetReceipt,[...$adReceipt,'configured_status'=>'ACTIVE']),'Active ad accepted as paused.');
+$housing=[...$campaignReceipt,'special_ad_categories'=>['HOUSING'],'special_ad_category_country'=>['UA']];
+$lifecycle::assertPausedHierarchy($fixturePlan,'act_10','100','200','300','400',$housing,$adsetReceipt,$adReceipt,false,['HOUSING'],['UA']);
+$blocked(static fn()=> $lifecycle::assertPausedHierarchy($fixturePlan,'act_10','100','200','300','400',$housing,$adsetReceipt,$adReceipt),'Undeclared housing accepted.');
+$blocked(static fn()=> $lifecycle::assertSpecialCategory($housing,['HOUSING'],['PL']),'Special country drift accepted.');
+$blocked(static fn()=> $lifecycle::specialScope(['ISSUES_ELECTIONS_POLITICS'],['UA']),'Unimplemented authorization category accepted.');
+$delivery=['targeting'=>['geo_locations'=>['countries'=>['UA']]],'optimization_goal'=>'LINK_CLICKS',
+    'billing_event'=>'IMPRESSIONS','bid_strategy'=>'LOWEST_COST_WITHOUT_CAP','destination_type'=>'WEBSITE'];
+$lifecycle::assertDeliveryScope($delivery,['UA'],true);
+$blocked(static fn()=> $lifecycle::assertDeliveryScope([...$delivery,'targeting'=>['geo_locations'=>['countries'=>['UA']],'age_min'=>25]],['UA'],true),'Restricted age targeting accepted.');
+$blocked(static fn()=> $lifecycle::assertDeliveryScope([...$delivery,'targeting'=>['geo_locations'=>['countries'=>['UA'],'zips'=>['12345']]]],['UA'],true),'Restricted postal targeting accepted.');
 $snapshot=['ad_account_ref'=>$fixturePlan['account_id'],'external_id'=>'100','grain'=>'campaign','currency'=>'USD',
     'timezone'=>'UTC','window_start'=>'2026-12-01','window_end'=>'2026-12-03','reported_spend_decimal'=>'37.500001',
     'source_snapshot_ref'=>'mis-'.str_repeat('a',24),'source_revision'=>1];

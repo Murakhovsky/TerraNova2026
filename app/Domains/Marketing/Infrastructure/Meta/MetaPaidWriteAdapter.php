@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace Domains\Marketing\Infrastructure\Meta;
 
 use DomainException;
+use Domains\Marketing\Domain\MarketingPaidLifecyclePolicy;
 use Kernel\Shared\Domain\OrganizationId;
 use Platform\Integration\Contract\CredentialVaultInterface;
 use Platform\Integration\Model\Credential;
@@ -14,11 +15,13 @@ final readonly class MetaPaidWriteAdapter
 {
     public function __construct(private CredentialVaultInterface $vault,private MetaWriteTransport $transport){}
 
-    public function campaign(string $org,string $account,string $ref,string $name):string
+    public function campaign(string $org,string $account,string $ref,string $name,array $categories=[],array $categoryCountries=[]):string
     {
+        MarketingPaidLifecyclePolicy::specialScope($categories,$categoryCountries);
         return $this->created($this->call($org,$account,$ref,'POST',$account.'/campaigns',[
             'name'=>$this->name($name),'objective'=>'OUTCOME_TRAFFIC','status'=>'PAUSED',
-            'special_ad_categories'=>'[]','is_adset_budget_sharing_enabled'=>'false'
+            'special_ad_categories'=>json_encode($categories,JSON_THROW_ON_ERROR),'is_adset_budget_sharing_enabled'=>'false',
+            ...($categories===[]?[]:['special_ad_category_country'=>json_encode($categoryCountries,JSON_THROW_ON_ERROR)])
         ]));
     }
 
@@ -58,7 +61,7 @@ final readonly class MetaPaidWriteAdapter
     {
         $this->id($id);
         $fields=match($kind){
-            'campaign'=>'id,account_id,configured_status,effective_status,objective,special_ad_categories,lifetime_budget,daily_budget',
+            'campaign'=>'id,account_id,configured_status,effective_status,objective,special_ad_categories,special_ad_category_country,lifetime_budget,daily_budget',
             'adset'=>'id,account_id,campaign_id,configured_status,effective_status,lifetime_budget,daily_budget,start_time,end_time,targeting,optimization_goal,billing_event,bid_strategy,destination_type',
             'ad'=>'id,account_id,adset_id,configured_status,effective_status,creative{id}',
             'creative'=>'id,account_id',

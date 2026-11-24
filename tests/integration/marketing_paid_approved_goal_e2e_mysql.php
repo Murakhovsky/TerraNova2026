@@ -189,10 +189,10 @@ try {
     $account=$accounts->registerAccount($org,'env://META_FIXTURE_READ',['ad_account_id'=>$providerAccount,'currency'=>'USD',
         'timezone'=>'UTC','connection_status'=>'READ_ONLY','capability_scope'=>['ads_read']]);
     $campaign=$campaigns->createDraft($org,$owner,(new \Domains\Marketing\Domain\MarketingDraftPolicy())->validate([
-        'name'=>'Paid fixture product traffic','business_objective'=>'General retail product traffic','brief'=>'Synthetic fixture only'
+        'name'=>'Paid fixture housing traffic','business_objective'=>'Housing listing traffic','brief'=>'Synthetic fixture only'
     ]),'paid-campaign-'.$token);
     $creative=$planning->createCreative($org,$campaign['id'],$owner,$planningPolicy->creative([
-        'headline'=>'Synthetic product','primary_text'=>'Fixture retail product traffic test.','call_to_action'=>'Read more',
+        'headline'=>'Synthetic housing listing','primary_text'=>'Fixture housing traffic test.','call_to_action'=>'Read more',
         'destination_url'=>'https://example.com/catalog','language'=>'uk'
     ]),'paid-creative-'.$token);
     $audience=$planning->saveAudience($org,$owner,null,null,$planningPolicy->audience([
@@ -217,7 +217,8 @@ try {
     $metaProfiles=new \Domains\Marketing\Infrastructure\Meta\MetaPaidExecutionProfiles(json_encode([$org=>[$paidPlan['id']=>[
         'accepted_until'=>gmdate('Y-m-d\\TH:i:s\\Z',time()+86400),'account_id'=>$account['id'],'billing_cap_evidence_ref'=>'fixture-billing-cap',
         'creative_hash'=>$creative['content_hash'],'creative_id'=>'90004','credential_ref'=>'env://META_FIXTURE_WRITE',
-        'exclusive_control_evidence_ref'=>'fixture-exclusive-control','general_retail_review_ref'=>'fixture-retail-review',
+        'exclusive_control_evidence_ref'=>'fixture-exclusive-control','special_category_review_ref'=>'fixture-housing-review',
+        'special_ad_categories'=>['HOUSING'],'special_ad_category_country'=>['UA'],
         'plan_hash'=>$paidPlan['plan_hash'],'provider_account_id'=>$providerAccount
     ]]],JSON_THROW_ON_ERROR),true);
     $writeVault=new class implements \Platform\Integration\Contract\CredentialVaultInterface {
@@ -250,7 +251,12 @@ try {
                 $id=match($edge){'campaigns'=>'90001','adsets'=>'90002','ads'=>'90003',default=>throw new RuntimeException('Unknown create edge.')};
                 if(isset($this->rows[$id]))throw new RuntimeException('Duplicate provider creation.');
                 $row=['id'=>$id,'account_id'=>substr($this->account,4),'configured_status'=>'PAUSED','effective_status'=>'PAUSED',...$fields];
-                if($edge==='campaigns')$row['special_ad_categories']=json_decode($fields['special_ad_categories'],true,16,JSON_THROW_ON_ERROR);
+                if($edge==='campaigns'){
+                    $row['special_ad_categories']=json_decode($fields['special_ad_categories'],true,16,JSON_THROW_ON_ERROR);
+                    $row['special_ad_category_country']=json_decode($fields['special_ad_category_country']??'[]',true,16,JSON_THROW_ON_ERROR);
+                    if($row['special_ad_categories']!==['HOUSING']||$row['special_ad_category_country']!==['UA'])
+                        throw new RuntimeException('Housing category was not transmitted.');
+                }
                 if($edge==='adsets')$row['targeting']=json_decode($fields['targeting'],true,16,JSON_THROW_ON_ERROR);
                 if($edge==='ads')$row['creative']=['id'=>json_decode($fields['creative'],true,16,JSON_THROW_ON_ERROR)['creative_id']];
                 $this->rows[$id]=$row;return ['id'=>$id];

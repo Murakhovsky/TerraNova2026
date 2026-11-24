@@ -30,10 +30,13 @@ final readonly class ApprovedMetaPaidLifecycle
         if(!hash_equals($plan['plan_hash'],$p['plan_hash']))throw new DomainException('Approved paid plan changed.');
         $profile=$this->profiles->accepted($org,$plan,$p['configuration_hash'],$operation==='ACTIVATE');
         $account=$profile['provider_account_id'];$ref=$profile['credential_ref'];
+        $categories=$profile['special_ad_categories'];$categoryCountries=$profile['special_ad_category_country'];
         // Pause never requires fresh marketing pins or a still-active Finance budget.
         $ctx=null;
         if($operation!=='PAUSE'){
             $ctx=$this->plans->deploymentContext($actor,$id);
+            if($categories!==[]){$declared=$categoryCountries;$target=$ctx['countries'];sort($declared,SORT_STRING);sort($target,SORT_STRING);
+                if($declared!==$target)throw new DomainException('Special category countries differ from pinned audience.');}
             if($ctx['provider_account_id']!==$account||$ctx['read_credential_ref']===$ref||$ctx['creative_hash']!==$profile['creative_hash']){
                 throw new DomainException('Accepted provider identity, credential or Creative binding changed.');
             }
@@ -43,8 +46,9 @@ final readonly class ApprovedMetaPaidLifecycle
         if(!$command['fresh'])throw new DomainException('Command already admitted; no external replay.');
         try{
             if($operation==='DEPLOY_PAUSED'){
-                $campaign=$this->stage($org,$id,$action,'CREATE_CAMPAIGN',fn()=>$this->meta->campaign($org,$account,$ref,'COS '.$id),
+                $campaign=$this->stage($org,$id,$action,'CREATE_CAMPAIGN',fn()=>$this->meta->campaign($org,$account,$ref,'COS '.$id,$categories,$categoryCountries),
                     fn(string $remote)=>$this->verify($org,$account,$ref,'campaign',$remote,'PAUSED'));
+                MarketingPaidLifecyclePolicy::assertSpecialCategory($this->meta->read($org,$account,$ref,'campaign',$campaign),$categories,$categoryCountries);
                 $adset=$this->stage($org,$id,$action,'CREATE_ADSET',fn()=>$this->meta->adset($org,$account,$ref,$campaign,'COS set '.$id,
                     $plan['lifetime_minor'],$plan['period_start'].'T00:00:00Z',
                     \Domains\Marketing\Domain\MarketingPaidFundingPolicy::date($plan['period_end'])->modify('+1 day')->format('Y-m-d').'T00:00:00Z',$ctx['countries']),
@@ -132,9 +136,9 @@ final readonly class ApprovedMetaPaidLifecycle
             ||$this->meta->children($org,$account,$ref,$campaign,'ads')!==[$ad]
             ||$this->meta->children($org,$account,$ref,$adset,'ads')!==[$ad])throw new DomainException('Unexpected provider hierarchy members.');
         $adsetRead=$this->meta->read($org,$account,$ref,'adset',$adset);
-        MarketingPaidLifecyclePolicy::assertDeliveryScope($adsetRead,$countries);
+        MarketingPaidLifecyclePolicy::assertDeliveryScope($adsetRead,$countries,$profile['special_ad_categories']!==[]);
         MarketingPaidLifecyclePolicy::assertPausedHierarchy($plan,$account,$campaign,$adset,$ad,$profile['creative_id'],
             $this->meta->read($org,$account,$ref,'campaign',$campaign),$adsetRead,
-            $this->meta->read($org,$account,$ref,'ad',$ad),$active);
+            $this->meta->read($org,$account,$ref,'ad',$ad),$active,$profile['special_ad_categories'],$profile['special_ad_category_country']);
     }
 }
