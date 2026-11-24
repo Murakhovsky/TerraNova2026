@@ -8,5 +8,6 @@ interface SalesMutationAuthorityInterface
     public function actor(string $org,int $actor,string $permission='sales.workspace.use'):void;
     public function entity(string $org,int $actor,string $kind,int $id):void;
     public function targetOwner(string $org,int $actor,int $owner):void;
+    public function propertyMatchDeal(string $org,int $match):int;
     public function offerDeal(string $org,string $offer):int;
 }
