@@ -21,7 +21,7 @@ use Throwable;
 use Twig\Environment;
 
 /**
- * E5 human-only catalog UX. All reads/writes pass the canonical Capability
+ * E7/P0 human-only catalog UX. All reads/writes pass the canonical Capability
  * Gateway and Domain buses; this controller has no database/writer access.
  */
 final readonly class ProductManagementPageController

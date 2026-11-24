@@ -45,4 +45,4 @@ foreach([
 ] as $name) $assert(str_contains($routes,$name),'Missing explicit route: '.$name);
 $assert(str_contains($workflow,'php tests/architecture/product_management_workspace_contract.php'),
     'PM Workspace architecture gate must run in CI.');
-echo "Product Management E5 catalog workspace architecture passed.\n";
+echo "Product Management E7/P0 catalog workspace architecture passed.\n";

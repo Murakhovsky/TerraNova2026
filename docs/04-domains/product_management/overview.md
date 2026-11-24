@@ -58,7 +58,7 @@ Product Management є власником `pm_*` і не змінює безпо�
 - [Покриття бізнес-процесами](../../12-reference/domain-process-coverage.md)
 - [Архітектурне рішення](../../11-decisions/ADR-0016-product-management-domain.md)
 
-## E5: робочий простір каталогу товарів
+## E7/P0: робочий простір каталогу товарів
 
 Human manager at `/product-management` (only when the `product_management`
 module is enabled for this tenant). Product and Category navigation is a

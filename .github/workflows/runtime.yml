@@ -105,7 +105,7 @@ jobs:
           php symfony/bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
       - name: Shopify supervised GitHub operator architecture gate
         run: php tests/architecture/product_management_shopify_operator_workflow.php
-      - name: Product Management E5 catalog workspace architecture gate
+      - name: Product Management E7/P0 catalog workspace architecture gate
         run: php tests/architecture/product_management_workspace_contract.php
       - name: Product Management E0-E4 native MySQL acceptance
         env:
