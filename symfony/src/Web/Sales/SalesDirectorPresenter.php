@@ -41,7 +41,7 @@ final class SalesDirectorPresenter
                 ['label' => 'Lead conversion (all pipelines)', 'value'=>$this->exactPercent($conversion['conversion_percent']??null)],
                 ['label' => 'Created cohort win rate', 'value' => $this->percent($this->array($headline['created_cohort_win_rate'] ?? null)['rate'] ?? null)],
                 ['label' => 'Stuck deals', 'value' => (string) (int) ($headline['stuck_deal_count'] ?? 0)],
-                ['label' => 'Forecast coverage', 'value' => $this->percent($this->array($forecast['coverage'] ?? null)['expected_close_rate'] ?? null)],
+                ['label' => 'Forecast coverage', 'value' => $canonical!==[]?$this->canonicalCoverage($canonical):$this->percent($this->array($forecast['coverage'] ?? null)['expected_close_rate'] ?? null)],
             ],
             executiveGrid: $this->grid(
                 $canonical!==[]?$this->canonicalMoneyRows($canonical,$headline):$this->executiveRows($headline),
@@ -50,7 +50,8 @@ final class SalesDirectorPresenter
                     new DataGridColumn('pipeline', 'Pipeline', mobilePriority: 20, align: 'end'),
                     new DataGridColumn('weighted', 'Weighted pipeline', mobilePriority: 30, align: 'end'),
                     new DataGridColumn('forecast', 'Forecast', mobilePriority: 40, align: 'end'),
-                    new DataGridColumn('booked', 'Booked won', mobilePriority: 45, align: 'end'),
+                    new DataGridColumn('forecast_weighted', 'Weighted forecast', mobilePriority: 45, align: 'end'),
+                    new DataGridColumn('booked', 'Booked won', mobilePriority: 46, align: 'end'),
                     new DataGridColumn('risk', 'Risk estimate', mobilePriority: 50, align: 'end'),
                 ],
             ),
@@ -99,6 +100,16 @@ final class SalesDirectorPresenter
         );
     }
 
+    private function canonicalCoverage(array $canonical):string
+    {
+        $total=0;$scheduled=0;
+        foreach ($this->list($canonical['forecast']['buckets']??null) as $bucket) {
+            $count=(int)($bucket['deal_count']??0);$total+=$count;
+            if (($bucket['bucket']??null)!=='unscheduled') $scheduled+=$count;
+        }
+        return $this->percent($total>0?$scheduled/$total:null);
+    }
+
     private function canonicalMoneyRows(array $canonical,array $headline):array
     {
         $summary=$this->list($canonical['summary']['money_by_currency']??null);
@@ -119,6 +130,7 @@ final class SalesDirectorPresenter
             $rows[]=['currency'=>$currency,'pipeline'=>$this->exactMoney($s['pipeline_value']??null,$currency),
                 'weighted'=>$this->exactMoney($s['weighted_value']??null,$currency),
                 'forecast'=>$this->exactMoney($f['pipeline_value']??null,$currency),
+                'forecast_weighted'=>$this->exactMoney($f['weighted_value']??null,$currency),
                 'booked'=>$this->exactMoney($b['booked_value']??null,$currency),
                 'risk'=>isset($r['value'])?'~'.$this->money($r['value'],$currency):'—'];
         }
@@ -177,6 +189,7 @@ final class SalesDirectorPresenter
                 'pipeline' => $this->money($pipeline['pipeline_value'] ?? 0, $currency),
                 'weighted' => $this->money($pipeline['weighted_pipeline'] ?? 0, $currency),
                 'forecast' => $this->money($forecast['value'] ?? 0, $currency),
+                'forecast_weighted' => '—',
                 'booked' => '—',
                 'risk' => $this->money($risk['value'] ?? 0, $currency),
             ];
