@@ -20,7 +20,7 @@ generated: true
 | --- | ---: | --- |
 | `both` | 48 | Capability присутня і в runtime catalogue, і в manifest. |
 | `runtime-only` | 3 | Runtime може перевіряти capability, але manifest її не декларує. |
-| `manifest-only` | 243 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
+| `manifest-only` | 254 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
 
 ## Каталог
 
@@ -210,23 +210,23 @@ generated: true
 | `product_management` | `product_management.category.create` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.category.search` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.governed.attribute.product.bulk_set` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
+| `product_management` | `product_management.governed.category.assign` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
+| `product_management` | `product_management.governed.category.create` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
+| `product_management` | `product_management.governed.location.create` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.governed.price.base.set` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.governed.price.list.entry.set` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
-| `product_management` | `product_management.governed.product.create` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
-| `product_management` | `product_management.governed.category.create` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
-| `product_management` | `product_management.governed.category.assign` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
-| `product_management` | `product_management.governed.translation.upsert` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
-| `product_management` | `product_management.governed.variant.create` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
-| `product_management` | `product_management.governed.location.create` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.governed.product.archive` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
+| `product_management` | `product_management.governed.product.create` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.governed.product.update` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.governed.stock.issue` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.governed.stock.receive` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.governed.stock.release` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.governed.stock.reserve` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.governed.stock.transfer` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
-| `product_management` | `product_management.governed.variant.matrix.create` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
+| `product_management` | `product_management.governed.translation.upsert` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.governed.variant.archive` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
+| `product_management` | `product_management.governed.variant.create` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
+| `product_management` | `product_management.governed.variant.matrix.create` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.governed.variant.update` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.import.apply` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.import.batch.get` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
