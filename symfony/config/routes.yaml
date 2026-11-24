@@ -21,6 +21,11 @@ cos_product_management_import_propose:
   methods: [POST]
   requirements: { id: '[a-f0-9]{32}' }
 
+cos_product_management_governed_plan_propose:
+  path: /api/v1/product-management/governed/plans/propose
+  controller: App\Web\ProductManagement\ProductGovernedPlanController::propose
+  methods: [POST]
+
 cos_product_management_dashboard:
   path: /product-management/dashboard
   controller: App\Web\ProductManagement\ProductManagementPageController::dashboard
