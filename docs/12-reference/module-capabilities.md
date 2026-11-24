@@ -380,6 +380,7 @@ Manifest capabilities не задекларовані.
 - `product_management.stock.movement.search`;
 - `product_management.stock.receive`;
 - `product_management.stock.release`;
+- `product_management.stock.reservation.search`;
 - `product_management.stock.reserve`;
 - `product_management.stock.transfer`;
 - `product_management.sync.status.get`;
