@@ -9,7 +9,7 @@ use Kernel\Application\Query\QueryHandlerInterface;
 
 final readonly class GetClientCaseInboxQueryHandler implements QueryHandlerInterface
 {
-    public function __construct(private ClientCaseReadModelFactoryInterface $cases)
+    public function __construct(private ScopedClientCaseReadModelFactoryInterface $cases,private \App\Security\SalesRequestScope $scope)
     {
     }
 
