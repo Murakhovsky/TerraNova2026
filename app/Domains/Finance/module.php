@@ -26,7 +26,7 @@ return [
                 'purpose' => 'Read verified tenant-bound Marketing source snapshots into Finance-owned unreconciled observations, without Marketing writes or financial settlement claims.',
             ],
         ],
-        'migration_files' => ['app/migrations/20261119_000153_finance_budget_f1.sql','app/migrations/20261119_000155_finance_spend_observations.sql','app/migrations/20261124_000166_finance_paid_exposure_claims.sql'],
+        'migration_files' => ['app/migrations/20261119_000153_finance_budget_f1.sql','app/migrations/20261119_000155_finance_spend_observations.sql','app/migrations/20261124_000166_finance_paid_exposure_claims.sql','app/migrations/20261124_000190_finance_paid_settlements.sql'],
         'capabilities' => ['finance.budget.envelope.draft.create','finance.budget.envelope.get','finance.budget.reservation.list','finance.budget.envelope.activate','finance.budget.reservation.reserve','finance.budget.reservation.release','finance.budget.envelope.freeze','finance.ad_spend.reconciliation.status'],
         'capability_contracts' => [
 
