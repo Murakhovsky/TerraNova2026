@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Experience\Business;
 
 use App\Application\Experience\Business\Contract\BusinessEntitySummaryReadInterface;
+use App\Security\SalesRequestEntityAuthorizationInterface;
 use Domains\Property\Contract\PropertyReferencePort;
 use Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface;
 
@@ -15,6 +16,7 @@ final readonly class TenantBusinessEntitySummaryRead implements BusinessEntitySu
     public function __construct(
         private SalesWorkspaceReadModelInterface $sales,
         private PropertyReferencePort $properties,
+        private SalesRequestEntityAuthorizationInterface $authorization,
     ) {}
 
     public function facts(string $organizationId,string $entityType,string $entityId): array
@@ -36,10 +38,13 @@ final readonly class TenantBusinessEntitySummaryRead implements BusinessEntitySu
         if (!in_array($entityType,['sales.deal','sales.lead'],true)
             || preg_match('/^[1-9][0-9]{0,9}$/D',$entityId)!==1) return [];
         $id=(int)$entityId;
+        $kind=$entityType==='sales.deal'?'deal':'lead';
+        if (!$this->authorization->entity($organizationId,$kind,$id)) return [];
         $record=$entityType==='sales.deal'
             ? $this->sales->deal($organizationId,$id)
             : $this->sales->lead($organizationId,$id);
         if (!is_array($record) || (int)($record['id']??0)!==$id) return [];
+        if (!$this->authorization->entity($organizationId,$kind,$id)) return [];
         return $this->collect([
             'uw.facts.status'=>$record['status']??null,
             'uw.facts.stage'=>$record['stage_name']??$record['stage']??null,
