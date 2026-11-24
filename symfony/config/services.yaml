@@ -1,4 +1,5 @@
 parameters:
+  env(COS_MARKETING_HERMES_PROFILES_JSON): '{}'
   env(COS_AI_CAPABILITY_INTENT_SECRET): ''
   env(COS_CRON_CAPABILITY_INTENT_SECRET): ''
   env(COS_AUTOMATION_TENANT_ORGANIZATION): ''
@@ -2697,6 +2698,18 @@ services:
   Domains\Marketing\Application\Contract\MarketingAnalystRunStore:
     alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingAnalystRunStore
   Domains\Marketing\Application\Service\MarketingAnalystReviewService: ~
+  Domains\Marketing\Infrastructure\Hermes\HermesAnalystConfigurationRegistry:
+    arguments:
+      $profilesJson: '%env(COS_MARKETING_HERMES_PROFILES_JSON)%'
+  Domains\Marketing\Infrastructure\Hermes\CurlHermesAnalystTransport: ~
+  Domains\Marketing\Infrastructure\Hermes\HermesAnalystTransport:
+    alias: Domains\Marketing\Infrastructure\Hermes\CurlHermesAnalystTransport
+  Domains\Marketing\Infrastructure\Hermes\HermesAnalystExecutionFactory:
+    arguments:
+      $governance: '@Infrastructure\Llm\MysqlLlmGovernanceRepository'
+  App\Infrastructure\Marketing\HermesAnalystReadinessService:
+    arguments:
+      $governance: '@Infrastructure\Llm\MysqlLlmGovernanceRepository'
   # Marketing M2b only reads native ProductManagement application models.
   Domains\Marketing\Application\Contract\MarketingProductDraftReadPort:
     alias: App\Infrastructure\Marketing\ProductManagementDraftReadAdapter

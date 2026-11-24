@@ -315,7 +315,9 @@ Manifest capabilities не задекларовані.
 - `marketing.analyst.proposal.submit`;
 - `marketing.analyst.run.list`;
 - `marketing.analyst.run.recover`;
+- `marketing.analyst.run.request`;
 - `marketing.analyst.run.review`;
+- `marketing.analyst.runtime.status`;
 - `marketing.audience.list`;
 - `marketing.audience.save`;
 - `marketing.campaign.archive`;

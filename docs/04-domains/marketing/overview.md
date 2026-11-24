@@ -25,7 +25,7 @@ Marketing — окремий bounded context, що володіє рекламн
 
 ## Фактично додані можливості
 
-Двадцять три typed capabilities, включно з шістьма M2a, Product draft-check і Finance-facing source Query: `marketing.campaign.search`, `marketing.campaign.get`, `marketing.campaign.create`, `marketing.paid.account.list`, `marketing.paid.insights.query`, `marketing.paid.sync.history`. Для них діють Canonical Capability Gateway і перевірка tenant менеджера. Нових універсальних executor або CommandBus не створено.
+Двадцять п’ять typed capabilities, включно з шістьма M2a, Product draft-check і Finance-facing source Query: `marketing.campaign.search`, `marketing.campaign.get`, `marketing.campaign.create`, `marketing.paid.account.list`, `marketing.paid.insights.query`, `marketing.paid.sync.history`. Для них діють Canonical Capability Gateway і перевірка tenant менеджера. Нових універсальних executor або CommandBus не створено.
 
 На UI передбачено Overview, Campaigns, Campaign Workspace, Paid Media Accounts, Performance та Action Queue. Менеджер може створити внутрішню чернетку, під'єднати read-only Meta Ad Account через opaque Vault reference, імпортувати і переглядати provider observations.
 
@@ -106,6 +106,14 @@ Service, runtime та policy не зареєстровані як live endpoint/
 `marketing.analyst.run.list/review/recover` — typed native Query та human-only internal Commands. Campaign Workspace відображає paginated журнал, source pins, advice, receipt та незмінне рішення незалежного менеджера. ACCEPT повторно перевіряє context hash, блокує Marketing-owned source revisions на час транзакції; Product facts є поточним спостереженням, не гарантією майбутнього стану. REJECT дозволяє відхилити застарілу пораду. Рішення не запускає Workflow, Meta або Finance.
 
 STARTED та UNCERTAIN без рішення recovery блокують нові admission. Через 15 хвилин незалежний менеджер може зафіксувати ручне відновлення тільки після перевірки зупинки локального worker та remote Hermes process, із reason та зовнішнім evidence reference. Це operator attestation, не автоматичний доказ remote termination. Результат залишається UNCERTAIN, слот квоти не повертається, пізня відповідь не може перезаписати receipt. Повторний той самий decision key повертає існуюче рішення; інша дія блокується. Live запуск Hermes залишено неввімкненим до реального приймання і cost cap. Додано unit та MySQL tests.
+
+## M2c.5e.1: Конфігурація та гранична вартість зовнішнього аналітика
+
+`COS_MARKETING_HERMES_PROFILES_JSON` — deployment-only tenant map, за замовчуванням порожня. Один окремий profile URL та opaque Vault reference на tenant, evidence refs для ізоляції й provider hard cost cap, expiry (до 30 днів), 1–100 turns/UTC day, positive USD ceiling до 10.0000 за turn. Зміна будь-якого поля змінює configuration hash. Evidence refs є operator attestations, не автоматичним доказом remote safety. Немає UI setter або довільних URL із request.
+
+`KernelBudgetedHermesAnalystRuntime` використовує існуючий `LlmGovernanceRepositoryInterface`: explicit USD budget required, native atomic reservation та settlement ДО remote call. До загального LLM ledger записується консервативний approved ceiling із `cost_source=AUTHORIZED_CEILING`, без вигаданих tokens/actual cost. Це budget consumption estimate, не інвойс, не Finance Expense і не виміряна вартість. Невизначений результат не повертає allowance. Помилка резервування або persistence не допускає виклик. Кореляція прив'язана до durable run receipt. Реальний hard cost cap має бути забезпечений зовнішньою конфігурацією Hermes/provider і прийнятий незалежно.
+
+`marketing.analyst.runtime.status` — read-only локальна діагностика без передачі даних або розкриття secrets. Workspace показує конфігураційний статус та ceiling. `marketing.analyst.run.request` декларує external, approval-required, idempotent Action contract з pinned context і configuration hash; handler навмисно ще не зареєстрований у canonical runtime. Factory доступна для майбутнього Action binding, не для direct UI/API execution. Відсутність live handler відображається як unavailable; remote execution і production readiness не заявлено.
 
 ## Надійність імпорту та операційна черга
 

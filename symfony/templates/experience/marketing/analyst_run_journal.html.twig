@@ -1,6 +1,10 @@
 <section class="cos-panel" aria-label="Hermes analyst execution journal">
     <h3>Hermes analyst journal</h3>
-    <p>Advice only. Live execution is not yet enabled. No recommendation reserves funds or approves paid activation.</p>
+    <p>Advice only. Live execution is not yet enabled. No recommendation reserves advertising funds or approves paid activation.</p>
+    {% if runtime %}
+        <p>Runtime configuration: <strong>{{ runtime.status }}</strong>. Live verified: no. Approval-bound launch: unavailable.</p>
+        {% if runtime.max_cost_usd is not null %}<p>Conservative AI budget allowance: {{ runtime.max_cost_usd }} USD per turn · daily limit {{ runtime.daily_run_limit }}. Not an actual invoice.</p>{% endif %}
+    {% endif %}
     {% for run in runs %}
         <section class="cos-panel">
             <strong>{{ run.id }}</strong> · {{ run.state }} · {{ run.created_at }}

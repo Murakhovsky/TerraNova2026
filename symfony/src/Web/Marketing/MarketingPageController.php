@@ -12,6 +12,7 @@ use DomainException;
 use Domains\Marketing\Application\Service\MarketingCampaignService;
 use Domains\Marketing\Application\Service\MarketingPlanningService;
 use Domains\Marketing\Application\Service\MarketingAnalystReviewService;
+use App\Infrastructure\Marketing\HermesAnalystReadinessService;
 use Domains\Marketing\Application\Service\MarketingProductDraftCheckService;
 use Domains\Marketing\Application\Service\MarketingPaidReadService;
 use Kernel\Module\ActiveModuleResolver;
@@ -37,6 +38,7 @@ final readonly class MarketingPageController
         private MarketingProductDraftCheckService $productChecks,
         private MarketingPaidReadService $paid,
         private MarketingAnalystReviewService $analystReviews,
+        private HermesAnalystReadinessService $analystReadiness,
     ){}
 
     public function overview(Request $request):Response {return $this->render($request,'overview');}
@@ -271,7 +273,7 @@ final readonly class MarketingPageController
         $actor=$this->manager();
         if($actor instanceof Response)return $actor;
         try {
-            $creatives=[];$proposals=[];$audiences=[];$adsets=[];$analystRuns=[];$analystOffset=0;$productCheck=null;$productCheckError=null;$productPage=null;$productSearchError=null;
+            $creatives=[];$proposals=[];$audiences=[];$adsets=[];$analystRuns=[];$analystOffset=0;$analystRuntime=null;$productCheck=null;$productCheckError=null;$productPage=null;$productSearchError=null;
             if($section==='campaign'&&is_array($selected)&&is_string($selected['id']??null)){
                 $creatives=$this->planning->creatives($actor,$selected['id']);
                 $proposals=$this->planning->proposals($actor,$selected['id']);
@@ -279,6 +281,7 @@ final readonly class MarketingPageController
                 $adsets=$this->planning->adsets($actor,$selected['id']);
                 $analystOffset=max(0,min(1000000,$request->query->getInt('analyst_offset',0)));
                 $analystRuns=$this->analystReviews->listRuns($actor,$selected['id'],50,$analystOffset);
+                $analystRuntime=$this->analystReadiness->status($actor);
                 if($request->query->has('product_q')){
                     try{
                         $productPage=$this->productChecks->search($actor,(string)$request->query->get('product_q',''),20,
@@ -363,7 +366,7 @@ final readonly class MarketingPageController
                 'observations'=>$observations,'selectedCampaign'=>$selected,'accountId'=>$accountId,
                 'from'=>$from,'to'=>$to,'csrfToken'=>$this->csrf->token($request),
                 'creatives'=>$creatives,'proposals'=>$proposals,'audiences'=>$audiences,'adsets'=>$adsets,
-                'analystRuns'=>$analystRuns,'analystOffset'=>$analystOffset,
+                'analystRuns'=>$analystRuns,'analystOffset'=>$analystOffset,'analystRuntime'=>$analystRuntime,
                 'productCheck'=>$productCheck,'productCheckError'=>$productCheckError,
                 'productPage'=>$productPage,'productSearchError'=>$productSearchError,
                 'currentUserId'=>$actor->userId()->value(),

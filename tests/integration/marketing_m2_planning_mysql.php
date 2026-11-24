@@ -268,5 +268,28 @@ $rejected=$reviews->review($reviewer,$campaignId,$staleRun['id'],'REJECT','Dismi
 $assert($rejected['decision']==='REJECT','Stale advice cannot be dismissed.');
 $assert(count($reviews->listRuns($reviewer,$campaignId))===4,'Journal count mismatch.');
 $denied(static fn()=> $reviews->listRuns($contextActor($orgB),$campaignId),'Foreign journal exposed.');
+$budgetRepo=new \Infrastructure\Llm\MysqlLlmGovernanceRepository($db);
+$budgetConfig=new \Domains\Marketing\Infrastructure\Hermes\HermesAnalystRuntimeConfiguration($orgA,[
+    'enabled'=>true,'profile_ref'=>'mkt-budget-fixture','profile_url'=>'https://hermes.example.com/p/mkt-budget-fixture',
+    'credential_ref'=>'env://TEST_HERMES_SECRET','daily_run_limit'=>4,'cost_control_ref'=>'provider-cap-fixture',
+    'isolation_evidence_ref'=>'isolation-fixture','accepted_until'=>gmdate('Y-m-d\\TH:i:s\\Z',time()+86400),'max_cost_usd'=>'0.2500']);
+$mockBudgetRuntime=new class implements \Domains\Marketing\Application\Contract\MarketingAnalystRuntimePort {
+    public int $calls=0;
+    public function recommend(\Kernel\Tenant\Model\TenantContext $actor,array $envelope,string $correlationId):array{
+        $this->calls++;throw new RuntimeException('Fixture remote uncertainty.');
+    }
+};
+$budgeted=new \Domains\Marketing\Infrastructure\Hermes\KernelBudgetedHermesAnalystRuntime($mockBudgetRuntime,$budgetConfig,$budgetRepo);
+$denied(static fn()=> $budgeted->recommend($actor,$envelope,'mkar-'.str_repeat('d',24)),'Missing explicit LLM budget admitted.');
+$db->prepare("INSERT INTO cos_llm_budgets (organization_id,currency,monthly_limit) VALUES (?,'USD',0.2500)")->execute([$orgA]);
+try{$budgeted->recommend($actor,$envelope,'mkar-'.str_repeat('d',24));throw new LogicException('Fixture expected uncertainty.');}
+catch(RuntimeException $error){$assert($error->getMessage()==='Fixture remote uncertainty.','Unexpected budget/runtime failure.');}
+$assert($mockBudgetRuntime->calls===1&&abs($budgetRepo->monthlySpend($orgA,'USD')-0.25)<0.000001,'Ceiling not consumed before uncertain turn.');
+$q=$db->prepare("SELECT cost_source,cost_amount FROM cos_llm_usage WHERE organization_id=? AND correlation_id=?");
+$q->execute([$orgA,'mkar-'.str_repeat('d',24)]);$usage=$q->fetch(PDO::FETCH_ASSOC);
+$assert(is_array($usage)&&$usage['cost_source']==='AUTHORIZED_CEILING','Cost ceiling provenance lost.');
+try{$budgeted->recommend($actor,$envelope,'mkar-'.str_repeat('e',24));throw new LogicException('Budget exhausted but call admitted.');}
+catch(\Kernel\Llm\LlmBudgetExceededException){}
+$assert($mockBudgetRuntime->calls===1,'Over-budget turn reached runtime.');
 echo "Marketing M2 real MySQL two-person review, tenant fence, immutable Creative revisions, stale gate PASS\n";
 

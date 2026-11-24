@@ -110,7 +110,7 @@
             } only %}
 
             {% include 'experience/marketing/analyst_run_journal.html.twig' with {
-                campaign: c, runs: analystRuns, offset: analystOffset, currentUserId: currentUserId,
+                campaign: c, runs: analystRuns, offset: analystOffset, currentUserId: currentUserId, runtime: analystRuntime,
                 csrfToken: csrfToken, planningKey: planningKey
             } only %}
 

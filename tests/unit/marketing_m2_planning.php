@@ -97,7 +97,7 @@ foreach($manifest['contributions']['capability_contracts'] as $raw){
     $c=CapabilityContract::fromArray($raw);
     $contracts[$c->id]=$c;
 }
-$expect(count($contracts)===23,'Marketing M0/M1 seven, six M2a and two Product Queries expected.');
+$expect(count($contracts)===25,'Marketing M0/M1 seven, six M2a and two Product Queries expected.');
 $validator=new CapabilityJsonInputValidator();
 $validator->validate($contracts['marketing.audience.save'],['name'=>'Broad local market','target_spec'=>$target]);
 $validator->validate($contracts['marketing.adset.save'],['campaign_id'=>'mkt-'.str_repeat('a',24),'campaign_revision'=>1,...$ad]);
@@ -203,5 +203,29 @@ $recoverInput=['campaign_id'=>'mkt-'.str_repeat('a',24),'run_id'=>'mkar-'.str_re
 $validator->validate($contracts['marketing.analyst.run.recover'],$recoverInput);
 $blocked(static fn()=> $validator->validate($contracts['marketing.analyst.run.recover'],[...$recoverInput,'paid_activation_approved'=>true]),'Recovery injected paid authority.');
 $expect(str_contains($controller,'$this->analystReviews->review(')&&str_contains($controller,'$this->analystReviews->recover('),'Analyst journal decisions not wired.');
+$profilesClass=\Domains\Marketing\Infrastructure\Hermes\HermesAnalystConfigurationRegistry::class;
+$configRaw=['enabled'=>true,'profile_ref'=>'mkt-test','profile_url'=>'https://hermes.example.com/p/mkt-test',
+    'credential_ref'=>'env://TEST_HERMES_SECRET','daily_run_limit'=>4,'cost_control_ref'=>'provider-cap-fixture',
+    'isolation_evidence_ref'=>'isolation-fixture','accepted_until'=>gmdate('Y-m-d\\TH:i:s\\Z',time()+86400),'max_cost_usd'=>'0.2500'];
+$profiles=new $profilesClass(json_encode(['tenant-a'=>$configRaw],JSON_THROW_ON_ERROR));
+$configuration=$profiles->forTenant('tenant-a');
+$expect($configuration!==null&&$configuration->maxCostUsd===0.25&&$profiles->forTenant('tenant-b')===null,'Tenant profile registry leaked.');
+$configuration->assertAccepted('tenant-a');
+$blocked(static fn()=> $configuration->assertAccepted('tenant-b'),'Foreign Hermes configuration accepted.');
+$changed=new $profilesClass(json_encode(['tenant-a'=>[...$configRaw,'max_cost_usd'=>'0.3000']],JSON_THROW_ON_ERROR));
+$expect($changed->forTenant('tenant-a')->configurationHash!==$configuration->configurationHash,'Changed ceiling did not invalidate config hash.');
+foreach([['max_cost_usd'=>'0.0000'],['max_cost_usd'=>'11.0000'],['credential_ref'=>'raw-secret'],['profile_url'=>'http://hermes.example.com/p/mkt-test']] as $invalid){
+    $bad=new $profilesClass(json_encode(['tenant-a'=>[...$configRaw,...$invalid]],JSON_THROW_ON_ERROR));
+    $blocked(static fn()=> $bad->forTenant('tenant-a'),'Invalid profile accepted.');
+}
+$expired=new $profilesClass(json_encode(['tenant-a'=>[...$configRaw,'accepted_until'=>'2020-01-01T00:00:00Z']],JSON_THROW_ON_ERROR));
+$blocked(static fn()=> $expired->forTenant('tenant-a')->assertAccepted('tenant-a'),'Expired operator acceptance admitted.');
+$validator->validate($contracts['marketing.analyst.runtime.status'],[]);
+$launch=$contracts['marketing.analyst.run.request'];
+$expect($launch->approvalPolicy==='required'&&$launch->executionBinding==='action:marketing.analyst.run.request'
+    &&$launch->sideEffectLevel==='external'&&$launch->retryPolicy['max_attempts']===1,'Hermes launch bypasses approval.');
+$validator->validate($launch,['target_type'=>'marketing_campaign','target_id'=>'mkt-'.str_repeat('a',24),'parameters'=>[
+    'campaign_revision'=>1,'creative_id'=>'mkcr-'.str_repeat('b',24),'creative_revision'=>1,
+    'configuration_hash'=>str_repeat('c',64),'context_hash'=>str_repeat('d',64)]]);
 echo "Marketing M2 typed planning policy, provenance, CSRF and boundary PASS\n";
 

@@ -53,6 +53,8 @@ $manifest = [
             'marketing.analyst.run.list',
             'marketing.analyst.run.review',
             'marketing.analyst.run.recover',
+            'marketing.analyst.runtime.status',
+            'marketing.analyst.run.request',
             'marketing.analyst.proposal.submit',
             'marketing.analyst.proposal.list',
             'marketing.analyst.proposal.review',
@@ -151,6 +153,7 @@ foreach ([
     'marketing.analyst.run.list' => ['query','none','marketing/analyst-run-list'],
     'marketing.analyst.run.review' => ['command','internal','marketing/analyst-run-review'],
     'marketing.analyst.run.recover' => ['command','internal','marketing/analyst-run-recover'],
+    'marketing.analyst.runtime.status' => ['query','none','marketing/analyst-runtime-status'],
     'marketing.analyst.proposal.submit' => ['command','internal','marketing/analyst-proposal-submit'],
     'marketing.analyst.proposal.list' => ['query','none','marketing/analyst-proposal-list'],
     'marketing.analyst.proposal.review' => ['command','internal','marketing/analyst-proposal-review'],
@@ -175,6 +178,19 @@ foreach ([
         'documentation' => 'docs/04-domains/marketing/overview.md',
     ];
 }
+
+// Deliberately unavailable until an approved Workflow Action handler is registered.
+$contracts[] = [
+    'id'=>'marketing.analyst.run.request','version'=>'1.0.0','owner_domain'=>'marketing','kind'=>'command',
+    'input_schema'=>'resources/contracts/marketing/analyst-run-request-input.schema.json',
+    'output_schema'=>'resources/contracts/marketing/analyst-run-request-output.schema.json',
+    'execution_binding'=>'action:marketing.analyst.run.request','async'=>true,'side_effect_level'=>'external',
+    'permission'=>'cos.tenant.manage','approval_policy'=>'required','idempotency'=>'required',
+    'timeout_policy'=>['seconds'=>120],'retry_policy'=>['max_attempts'=>1],
+    'failure_contract'=>'Reconcile uncertain external turn and conservative budget usage. Never retry blindly or approve paid activation.',
+    'lifecycle'=>'experimental','tests'=>['tests/unit/marketing_m2_planning.php'],
+    'documentation'=>'docs/04-domains/marketing/overview.md',
+];
 
 $manifest['contributions']['capability_contracts'] = $contracts;
 return $manifest;
