@@ -24,7 +24,7 @@ final readonly class SalesDirectInvocationPolicy implements TransactionalCapabil
         $id=$contract->id;
         $permission=match(true){
             $id==='sales.team.manage'=>SalesCapability::AdminTeamsManage->value,
-            str_starts_with($id,'sales.crm.inbox.')=>SalesCapability::AdminIntegrationsManage->value,
+            (str_starts_with($id,'sales.crm.inbox.')||str_starts_with($id,'sales.order.source.'))=>SalesCapability::AdminIntegrationsManage->value,
             default=>SalesCapability::WorkspaceUse->value,
         };
         $kind=isset($input['deal_id'])?'deal':(isset($input['lead_id'])?'lead':null);
@@ -47,7 +47,7 @@ final readonly class SalesDirectInvocationPolicy implements TransactionalCapabil
             if (!$can(SalesCapability::AdminTeamsManage)) throw new DomainException('Sales team administration denied.');
             return;
         }
-        if (str_starts_with($id,'sales.crm.inbox.')) {
+        if (str_starts_with($id,'sales.crm.inbox.')||str_starts_with($id,'sales.order.source.')) {
             if (!$can(SalesCapability::AdminIntegrationsManage)) throw new DomainException('Sales integration administration denied.');
             return;
         }
