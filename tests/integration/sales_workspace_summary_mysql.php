@@ -533,6 +533,8 @@ try{
     $partial=$life('fulfill',$one,3,'dispatch-one',$fulfillItems);
     $check($partial['fulfillment_state']==='partial'&&$partial['fulfilled_quantity']===3&&$balance($locA)['on_hand']==='8.000000'&&$balance($locA)['reserved']==='3.000000','Partial dispatch did not atomically consume reserve and stock.');
     $check($life('fulfill',$one,3,'dispatch-one',$fulfillItems)['replayed']&&$balance($locA)['on_hand']==='8.000000','Dispatch replay duplicated movement.');
+    $atomicReject(fn()=>$gateway->invoke($manager,'sales.order.lifecycle.fulfill',['order_id'=>$one,'expected_revision'=>4,'reference'=>'document:dispatch-one','items'=>[['allocation_id'=>$allocA['allocation_id'],'quantity'=>1]]],'human_api','o3-duplicate-document-'.$token,'o3'));
+    $check($balance($locA)['on_hand']==='8.000000','Document replay with new key duplicated shipment.');
     $atomicReject(fn()=>$life('fulfill',$one,3,'stale-dispatch',['items'=>[['allocation_id'=>$allocA['allocation_id'],'quantity'=>1]]]));
     $released=$life('release',$one,4,'deallocate-one',['items'=>[['allocation_id'=>$allocA['allocation_id'],'quantity'=>1]]]);
     $check($released['unallocated_quantity']===1&&$balance($locA)['reserved']==='2.000000'&&$balance($locA)['on_hand']==='8.000000','Deallocation changed physical stock or lost remaining order quantity.');

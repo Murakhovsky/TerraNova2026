@@ -49,6 +49,7 @@ final readonly class SalesOrderLifecycleService
                 return $this->view($org,$order,true);
             }
             if($order['revision']!==$revision)throw new DomainException('Order revision changed.');
+            if($this->lifecycle->hasDocument($org,$id,$operation,$reference))throw new DomainException('Order operation document already recorded; use original receipt.');
             // A Shopify order may already have a provider commitment. Local stock effects are prohibited until explicit ownership cutover.
             if($order['channel']!=='native'&&$operation!=='confirm')throw new DomainException('External order inventory and fulfillment require verified ownership reconciliation.');
             if(!in_array($operation,['confirm','cancel'],true)&&!$this->modules->isEnabled($org,'product_management'))throw new DomainException('Product Management inactive.');

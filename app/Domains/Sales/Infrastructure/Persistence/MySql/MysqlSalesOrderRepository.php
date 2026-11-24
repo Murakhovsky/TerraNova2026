@@ -74,6 +74,13 @@ final readonly class MysqlSalesOrderRepository implements SalesOrderRepositoryIn
         $q->execute([$a['fulfilled'],$a['cancelled'],$a['returned'],$org,$order,$a['allocation_id']]);
         if($q->rowCount()!==1)throw new LogicException('Order allocation write failed.');
     }
+    public function hasDocument(string $org,string $order,string $operation,string $reference):bool
+    {
+        $this->transaction();
+        $q=$this->connection->prepare('SELECT event_id FROM sales_order_lifecycle_documents WHERE organization_id=? AND order_id=? AND operation_type=? AND source_reference=? FOR UPDATE');
+        $q->execute([$org,$order,$operation,$reference]);
+        return $q->fetchColumn()!==false;
+    }
     public function transition(string $org,string $order,int $revision,string $status,array $evidence):void
     {
         $this->transaction();
@@ -82,6 +89,8 @@ final readonly class MysqlSalesOrderRepository implements SalesOrderRepositoryIn
         if($q->rowCount()!==1)throw new \DomainException('Order revision changed.');
         $this->connection->prepare('INSERT INTO sales_order_evidence(organization_id,event_id,order_id,revision,event_type,occurred_at,payload) VALUES(?,?,?,?,?,UTC_TIMESTAMP(6),?)')
             ->execute([$org,$evidence['event_id'],$order,$revision+1,$evidence['event_type'],json_encode($evidence,JSON_THROW_ON_ERROR)]);
+        $this->connection->prepare('INSERT INTO sales_order_lifecycle_documents(organization_id,order_id,operation_type,source_reference,event_id) VALUES(?,?,?,?,?)')
+            ->execute([$org,$order,substr($evidence['event_type'],strlen('sales.commerce.order.')),$evidence['reference'],$evidence['event_id']]);
     }
     private function transaction():void
     {

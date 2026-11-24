@@ -1,0 +1,263 @@
+{
+  "schema_version": 5,
+  "id": "sales.order-to-fulfillment",
+  "title": "Sales Order → Fulfillment",
+  "domain": "sales",
+  "state": "as-is",
+  "workflow": "02-workflows/sales-order-to-fulfillment.md",
+  "trigger": "Authorized human places and manages a native Order with canonical Product references; external inventory authority stays under review.",
+  "outcomes": [
+    "Confirmed order and scoped allocation state",
+    "Product-owned reserve, commit, release and return evidence",
+    "Terminal or partial fulfillment without inferred payment"
+  ],
+  "actors": [
+    "Sales operator"
+  ],
+  "steps": [
+    {
+      "id": "place",
+      "label": "Create immutable native Order",
+      "kind": "state",
+      "owner": "Sales operator",
+      "domain": "sales",
+      "capability": "sales.order.create",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "symfony/src/Infrastructure/Capability/SalesOrderCreateAdapter.php",
+          "symbol": "sales.order.create"
+        }
+      ]
+    },
+    {
+      "id": "confirm",
+      "label": "Confirm commercial Order",
+      "kind": "state",
+      "owner": "Sales operator",
+      "domain": "sales",
+      "capability": "sales.order.lifecycle.confirm",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "symfony/src/Infrastructure/Capability/SalesOrderLifecycleConfirmAdapter.php",
+          "symbol": "sales.order.lifecycle.confirm"
+        }
+      ]
+    },
+    {
+      "id": "allocate",
+      "label": "Allocate mapped lines and reserve Product inventory atomically",
+      "kind": "operation",
+      "owner": "Sales operator",
+      "domain": "sales",
+      "capability": "sales.order.lifecycle.allocate",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "symfony/src/Infrastructure/Capability/SalesOrderLifecycleAllocateAdapter.php",
+          "symbol": "sales.order.lifecycle.allocate"
+        },
+        {
+          "type": "contract",
+          "ref": "Domains\\ProductManagement\\Application\\Contract\\OrderInventoryPort"
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Infrastructure/Persistence/MySqlProductManagementStore.php",
+          "symbol": "reserveForOrder("
+        }
+      ]
+    },
+    {
+      "id": "release",
+      "label": "Release allocation or reallocate without changing physical stock",
+      "kind": "operation",
+      "owner": "Sales operator",
+      "domain": "sales",
+      "capability": "sales.order.lifecycle.release",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "symfony/src/Infrastructure/Capability/SalesOrderLifecycleReleaseAdapter.php",
+          "symbol": "sales.order.lifecycle.release"
+        },
+        {
+          "type": "contract",
+          "ref": "Domains\\ProductManagement\\Application\\Contract\\OrderInventoryPort"
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Infrastructure/Persistence/MySqlProductManagementStore.php",
+          "symbol": "settleOrderReservation("
+        }
+      ]
+    },
+    {
+      "id": "fulfill",
+      "label": "Record partial or complete physical dispatch",
+      "kind": "operation",
+      "owner": "Sales operator",
+      "domain": "sales",
+      "capability": "sales.order.lifecycle.fulfill",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "symfony/src/Infrastructure/Capability/SalesOrderLifecycleFulfillAdapter.php",
+          "symbol": "sales.order.lifecycle.fulfill"
+        },
+        {
+          "type": "contract",
+          "ref": "Domains\\ProductManagement\\Application\\Contract\\OrderInventoryPort"
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Infrastructure/Persistence/MySqlProductManagementStore.php",
+          "symbol": "settleOrderReservation("
+        }
+      ]
+    },
+    {
+      "id": "cancel",
+      "label": "Cancel remainder and release active reservations",
+      "kind": "state",
+      "owner": "Sales operator",
+      "domain": "sales",
+      "capability": "sales.order.lifecycle.cancel",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "symfony/src/Infrastructure/Capability/SalesOrderLifecycleCancelAdapter.php",
+          "symbol": "sales.order.lifecycle.cancel"
+        },
+        {
+          "type": "contract",
+          "ref": "Domains\\ProductManagement\\Application\\Contract\\OrderInventoryPort"
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Infrastructure/Persistence/MySqlProductManagementStore.php",
+          "symbol": "settleOrderReservation("
+        }
+      ]
+    },
+    {
+      "id": "return",
+      "label": "Record accepted return and explicit stock disposition",
+      "kind": "operation",
+      "owner": "Sales operator",
+      "domain": "sales",
+      "capability": "sales.order.lifecycle.return",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "symfony/src/Infrastructure/Capability/SalesOrderLifecycleReturnAdapter.php",
+          "symbol": "sales.order.lifecycle.return"
+        },
+        {
+          "type": "contract",
+          "ref": "Domains\\ProductManagement\\Application\\Contract\\OrderInventoryPort"
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Infrastructure/Persistence/MySqlProductManagementStore.php",
+          "symbol": "settleOrderReservation("
+        }
+      ]
+    },
+    {
+      "id": "read",
+      "label": "Read canonical fulfillment state and reservation references",
+      "kind": "outcome",
+      "owner": "Sales operator",
+      "domain": "sales",
+      "capability": "sales.order.lifecycle.read",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "symfony/src/Infrastructure/Capability/SalesOrderLifecycleReadAdapter.php",
+          "symbol": "sales.order.lifecycle.read"
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "place",
+      "to": "confirm"
+    },
+    {
+      "from": "place",
+      "to": "cancel"
+    },
+    {
+      "from": "confirm",
+      "to": "allocate"
+    },
+    {
+      "from": "confirm",
+      "to": "cancel"
+    },
+    {
+      "from": "allocate",
+      "to": "fulfill"
+    },
+    {
+      "from": "allocate",
+      "to": "release"
+    },
+    {
+      "from": "release",
+      "to": "allocate",
+      "label": "reallocate"
+    },
+    {
+      "from": "allocate",
+      "to": "cancel"
+    },
+    {
+      "from": "fulfill",
+      "to": "fulfill",
+      "label": "remaining dispatch"
+    },
+    {
+      "from": "fulfill",
+      "to": "cancel",
+      "label": "cancel remainder"
+    },
+    {
+      "from": "fulfill",
+      "to": "return"
+    },
+    {
+      "from": "cancel",
+      "to": "return",
+      "label": "previously fulfilled only"
+    },
+    {
+      "from": "return",
+      "to": "return",
+      "label": "remaining accepted returns"
+    },
+    {
+      "from": "fulfill",
+      "to": "read"
+    },
+    {
+      "from": "cancel",
+      "to": "read"
+    },
+    {
+      "from": "return",
+      "to": "read"
+    }
+  ]
+}

@@ -7,5 +7,6 @@ interface SalesOrderLifecycleRepositoryInterface
     public function allocations(string $org,string $order):array;
     public function addAllocation(string $org,string $order,array $allocation):void;
     public function updateAllocation(string $org,string $order,array $allocation):void;
+    public function hasDocument(string $org,string $order,string $operation,string $reference):bool;
     public function transition(string $org,string $order,int $revision,string $status,array $evidence):void;
 }

@@ -18,4 +18,16 @@ CREATE TABLE IF NOT EXISTS sales_order_allocations (
  CONSTRAINT ck_sales_order_allocation_mode CHECK((stock_mode='local' AND reservation_id IS NOT NULL AND location_id IS NOT NULL) OR (stock_mode='nonstock' AND reservation_id IS NULL AND location_id IS NULL))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- A physical operation document cannot be reused merely by rotating the caller's idempotency key.
+CREATE TABLE IF NOT EXISTS sales_order_lifecycle_documents (
+ organization_id VARCHAR(40) NOT NULL,
+ order_id CHAR(32) NOT NULL,
+ operation_type VARCHAR(16) NOT NULL,
+ source_reference VARCHAR(120) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
+ event_id CHAR(32) NOT NULL,
+ PRIMARY KEY(organization_id,order_id,operation_type,source_reference),
+ UNIQUE KEY uq_sales_order_lifecycle_document_event(organization_id,event_id),
+ CONSTRAINT fk_sales_order_document_evidence FOREIGN KEY(organization_id,event_id) REFERENCES sales_order_evidence(organization_id,event_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 INSERT IGNORE INTO tn_migrations (migration) VALUES ('20261125_009008_sales_order_lifecycle');
