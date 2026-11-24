@@ -143,6 +143,7 @@ services:
   App\Application\Capability\CanonicalCapabilityGateway:
     arguments:
       $adapters: !tagged_iterator cos.capability.invoker
+      $policies: ['@App\Application\Sales\SalesDirectInvocationPolicy']
 
   App\Command\CapitalMarketsInstrumentStreamTrustCommand:
     arguments:
