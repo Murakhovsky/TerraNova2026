@@ -93,7 +93,7 @@ domain_id: marketing
 }
 COS-DOMAIN-PASSPORT-DATA -->
 
-> Паспорт фіксує перевірену на рівні D2 архітектуру, а не факт production-активації. Модуль за замовчуванням вимкнений; M3 платні операції заблоковані.
+> Паспорт фіксує перевірену на рівні D2 архітектуру, а не факт production-активації. Модуль за замовчуванням вимкнений; M3 операції вимагають tenant activation, підтвердженого профілю провайдера і незалежного погодження.
 
 ## 1. Ідентичність
 
@@ -144,7 +144,7 @@ Product є власником товару, Finance власником бюдж�
 
 ## 10. Робочий простір Unified Workspace
 
-Робочий простір містить Campaigns, Paid Media Accounts, Performance та Action Queue. Інтерфейс відображає source freshness/failures, але не підтверджує реальну витрату чи конверсію. Meta paid writes заблоковані.
+Робочий простір містить Campaigns, Paid Media Accounts, Performance та Action Queue. Інтерфейс відображає source freshness/failures, але не підтверджує реальну витрату чи конверсію. Платні дії проходять тільки через погоджений canonical Workflow; фінансове врегулювання читається з Finance ledger. Production rollout не прийнято.
 
 ## 11. Operations та Recovery
 

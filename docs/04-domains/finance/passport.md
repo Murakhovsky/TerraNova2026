@@ -36,7 +36,7 @@ domain_id: finance
     },
     {
       "id": "paid_settlement",
-      "capability_ids": ["finance.ad_spend.settlement.commit"]
+      "capability_ids": ["finance.ad_spend.settlement.commit", "finance.ad_spend.settlement.status", "finance.ad_spend.settlement.review"]
     },
     {
       "id": "marketing_spend_readback",
@@ -67,6 +67,7 @@ Finance є єдиним authoritative writer для BudgetEnvelope, Reservation,
 | --- | --- | --- |
 | `budgets` | BudgetEnvelope, Reservations, ревізії, ідемпотентні фінансові події | 7 F1 типізованих контрактів |
 | `spend_observations` | Незмінні ревізійні спостереження джерела | 1 типізований статус звіряння |
+| `paid_settlement` | Перевірені документи, рев’ю, фінансові квитанції | 3 типізовані контракти |
 
 Наведені компоненти не є незалежно installable Domain.
 

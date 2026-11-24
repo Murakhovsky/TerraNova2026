@@ -393,7 +393,10 @@ try {
     $realPolicy=new \Domains\Finance\Domain\FinancePaidSettlementPolicy();
     $early=new \Domains\Finance\Application\Service\FinancePaidSettlementReviewService($financeRepo,$financeRepo,$source,$reviewStore,$realPolicy,$modules);
     $deny(fn()=>$early->review($reviewActor,...$reviewArgs),'Settlement before real period closure.');
+    $statusService=new \Domains\Finance\Application\Service\FinancePaidSettlementStatusService($reviews,$settlements,$modules);
+    $assert($statusService->status($actor,$reservation['id'],$docId,$snapshotId)['state']==='REVIEW_REQUIRED','Unreviewed status not fenced.');
     $reviews->review($reviewActor,...$reviewArgs);
+    $assert($statusService->status($actor,$reservation['id'],$docId,$snapshotId)['state']==='MATCHED_NOT_SETTLED','Review status overclaims settlement.');
     $facts=$reviews->read($actor,$reservation['id'],$docId,$snapshotId);
     $assert($facts['candidate']['proposed_commit_minor']===1250&&!$facts['candidate']['finance_settled'],'Review must not mutate budget.');
     $settlementHandler=new \Domains\Finance\Automation\Action\FinancePaidSettlementHandler(
@@ -448,6 +451,7 @@ try {
     $receipt=$settlements->receipt($org,$reservation['id']);$balance=$financeRepo->envelope($org,$envelope['id']);
     $assert($receipt['committed_minor']===1250&&$balance['reserved_minor']===0&&$balance['committed_minor']===1250
         &&$balance['available_minor']===$paidPlan['lifetime_minor']-1250&&!$receipt['payment_confirmed'],'Native settlement balance incorrect.');
+    $assert($statusService->status($actor,$reservation['id'],$docId,$snapshotId)['state']==='SETTLED','Settlement status missing native receipt.');
     $assert($actionService->execute($org,$actionId,'settlement-replay')===null,'Completed financial Action replayed.');
     echo "Marketing M3 native Documents review, canonical financial Goal and independent Finance settlement outcome E2E PASS.\n";
     echo "Marketing M3 approved create-paused/activate/pause native MySQL E2E with isolated Meta fixture PASS.\n";

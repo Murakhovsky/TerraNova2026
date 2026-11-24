@@ -14,7 +14,7 @@
     {
       "domain": "finance",
       "owner": "COS Architecture",
-      "reason": "Finance F1 exposes approved tenant-safe budget mutations but no accepted end-to-end paid spend workflow, provider confirmation or accounting expense settlement. Cross-domain execution remains deferred until Marketing M3 and independent acceptance."
+      "reason": "Finance M3 has an implemented approved budget settlement workflow with native document review; formal Process Registry coverage remains exempt pending independent D3 acceptance. No accounting expense or payment authority."
     },
     {
       "domain": "hr",
@@ -24,7 +24,7 @@
     {
       "domain": "marketing",
       "owner": "COS Marketing / Architecture",
-      "reason": "M0 Domain foundation and Meta read-only have no canonical paid-execution process; FIN-BUDGET-001 and Workflow approval acceptance must precede process activation."
+      "reason": "Marketing M3 has governed paid lifecycle and Finance settlement execution; formal Process Registry coverage remains exempt pending independent provider and D3 acceptance. No production readiness claim."
     },
     {
       "domain": "procurement",

@@ -169,6 +169,8 @@ Manifest capabilities не задекларовані.
 
 - `finance.ad_spend.reconciliation.status`;
 - `finance.ad_spend.settlement.commit`;
+- `finance.ad_spend.settlement.review`;
+- `finance.ad_spend.settlement.status`;
 - `finance.budget.envelope.activate`;
 - `finance.budget.envelope.draft.create`;
 - `finance.budget.envelope.freeze`;

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "reservation_id",
+    "document_ref",
+    "snapshot_ref"
+  ],
+  "properties": {
+    "reservation_id": {
+      "type": "string",
+      "pattern": "^finr-[a-f0-9]{24}$"
+    },
+    "document_ref": {
+      "type": "string",
+      "pattern": "^DOC-[A-Za-z0-9_-]{8,76}$"
+    },
+    "snapshot_ref": {
+      "type": "string",
+      "pattern": "^mis-[a-f0-9]{24}$"
+    }
+  }
+}

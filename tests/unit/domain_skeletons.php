@@ -61,8 +61,8 @@ expectDomainSkeleton(in_array('app/migrations/20261119_000153_finance_budget_f1.
     $financeDefinition->contributions->migrationFiles,true),'Finance F1 migration must be explicitly declared.');
 expectDomainSkeleton($financeDefinition->manifest->enabledByDefault === false,
     'Finance F1 must remain disabled until independent acceptance.');
-expectDomainSkeleton(count($financeDefinition->contributions->capabilityContracts)===9,
-    'Finance must expose nine canonical typed capabilities, including settlement.');
+expectDomainSkeleton(count($financeDefinition->contributions->capabilityContracts)===11,
+    'Finance must expose eleven canonical typed capabilities, including settlement review, status and commit.');
 
 $serviceDefinition = ModuleDefinition::fromArray(require dirname(__DIR__, 2) . '/app/Domains/Service/module.php');
 expectDomainSkeleton($serviceDefinition->contributions->runtimeModuleService === 'serviceDomainModule', 'Service V0.2 must expose its runtime module.');

@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "candidate_hash",
+    "state",
+    "finance_settled",
+    "budget_mutated",
+    "expense_confirmed",
+    "payment_confirmed",
+    "reserved_minor",
+    "proposed_commit_minor",
+    "proposed_release_minor"
+  ],
+  "properties": {
+    "candidate_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "state": {
+      "type": "string",
+      "const": "MATCHED_NOT_SETTLED"
+    },
+    "finance_settled": {
+      "type": "boolean",
+      "const": false
+    },
+    "budget_mutated": {
+      "type": "boolean",
+      "const": false
+    },
+    "expense_confirmed": {
+      "type": "boolean",
+      "const": false
+    },
+    "payment_confirmed": {
+      "type": "boolean",
+      "const": false
+    },
+    "reserved_minor": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000000000000
+    },
+    "proposed_commit_minor": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000000000000
+    },
+    "proposed_release_minor": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000000000000
+    }
+  }
+}

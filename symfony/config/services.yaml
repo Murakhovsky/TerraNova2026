@@ -2885,6 +2885,11 @@ services:
   Domains\Finance\Application\Contract\FinancePaidSettlementSourcePort:
     alias: App\Infrastructure\Finance\NativePaidSettlementSourceAdapter
   Domains\Finance\Application\Service\FinancePaidSettlementReviewService: ~
+  Domains\Finance\Application\Service\FinancePaidSettlementStatusService: ~
+  App\Application\Capability\FinancePaidSettlementStatusAdapter:
+    tags: ['cos.capability.invoker']
+  App\Application\Capability\FinancePaidSettlementReviewAdapter:
+    tags: ['cos.capability.invoker']
   Domains\Finance\Application\Contract\FinancePaidSettlementEvidencePort:
     alias: Domains\Finance\Application\Service\FinancePaidSettlementReviewService
   Domains\Finance\Application\Service\ApprovedFinancePaidSettlementService: ~

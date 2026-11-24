@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "state",
+    "receipt",
+    "candidate",
+    "evidence",
+    "expected_revision"
+  ],
+  "properties": {
+    "state": {
+      "type": "string",
+      "enum": [
+        "REVIEW_REQUIRED",
+        "MATCHED_NOT_SETTLED",
+        "SETTLED"
+      ]
+    },
+    "receipt": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "candidate": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "evidence": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "expected_revision": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1
+    }
+  }
+}
