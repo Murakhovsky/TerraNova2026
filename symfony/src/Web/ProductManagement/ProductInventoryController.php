@@ -45,7 +45,9 @@ final readonly class ProductInventoryController
         try{
             $loc=$this->read($actor,'location.search',['limit'=>100,'offset'=>0]);
             $products=$this->read($actor,'product.search',['limit'=>100,'offset'=>0]);
-            $balance=null;$movements=[];
+            $balance=null;$movements=[];$reservations=[];
+            $reservationPage=filter_var($request->query->get('reservation_page','1'),FILTER_VALIDATE_INT);
+            if($reservationPage===false||$reservationPage<1||$reservationPage>333334)return new Response('Invalid reservation page.',422);
             if($variant!==''){
                 $moves=$this->read($actor,'stock.movement.search',[
                     'variant_id'=>$variant,'limit'=>30,'offset'=>0
@@ -55,6 +57,9 @@ final readonly class ProductInventoryController
                     $balance=$this->read($actor,'stock.balance.get',[
                         'variant_id'=>$variant,'location_id'=>$location
                     ]);
+                    $reservations=$this->read($actor,'stock.reservation.search',[
+                        'variant_id'=>$variant,'location_id'=>$location,'limit'=>30,'offset'=>($reservationPage-1)*30,
+                    ])['items']??[];
                 }
             }
             $context=new WebExtensionContext(
@@ -69,7 +74,7 @@ final readonly class ProductInventoryController
             return new Response($this->twig->render('experience/product_management/stock.html.twig',[
                 'shell'=>$shell,'locations'=>$loc['items']??[], 'catalog'=>$products['items']??[],
                 'variantId'=>$variant,'locationId'=>$location,
-                'balance'=>$balance,'movements'=>$movements,
+                'balance'=>$balance,'movements'=>$movements,'reservations'=>$reservations,'reservationPage'=>$reservationPage,
                 'csrfToken'=>$this->csrf->token($request),
                 'mutationKey'=>bin2hex(random_bytes(16)),
                 'notice'=>(string)$request->query->get('notice',''),
@@ -164,6 +169,61 @@ final readonly class ProductInventoryController
         }catch(Throwable $e){
             error_log('product_management.stock_workspace.post_failed '.$e::class);
             return new Response('Stock result uncertain. Reload native balance before retrying.',503);
+        }
+    }
+
+    public function reservation(Request $request):Response
+    {
+        $actor=$this->writeGuard($request);
+        if($actor instanceof Response)return $actor;
+        $action=(string)$request->request->get('action','');
+        $variant=(string)$request->request->get('variant_id','');
+        $location=(string)$request->request->get('location_id','');
+        if(!in_array($action,['reserve','release'],true)||!preg_match('/^[a-f0-9]{32}$/D',$variant)||!preg_match('/^[a-f0-9]{32}$/D',$location))
+            return new Response('Invalid reservation request.',422);
+        $scope=['variant_id'=>$variant,'location_id'=>$location];
+        $reservationId=(string)$request->request->get('reservation_id','');
+        if($action==='release'){
+            if(!preg_match('/^[a-f0-9]{32}$/D',$reservationId)||$request->request->get('confirm_release')!=='yes')
+                return new Response('Reservation and release confirmation required.',422);
+            try{
+                $before=$this->read($actor,'stock.reservation.search',$scope+['reservation_id'=>$reservationId,'limit'=>1])['items'][0]??null;
+                if($before===null)return new Response('Reservation not found in selected scope.',404);
+            }catch(Throwable $e){return new Response('Reservation unavailable.',503);}
+            $input=['reservation_id'=>$reservationId,'reason'=>trim((string)$request->request->get('reason',''))];
+        }else{
+            $input=$scope+['quantity'=>trim((string)$request->request->get('quantity','')),
+                'source_ref'=>trim((string)$request->request->get('source_ref',''))];
+        }
+        try{
+            $receipt=$this->write($actor,'stock.'.$action,$input,$request);
+        }catch(DomainException|\InvalidArgumentException){
+            return new Response('Reservation action blocked. Check quantity, origin and permissions.',422);
+        }catch(Throwable $e){
+            return new Response('Reservation outcome uncertain. Reload before retrying.',503);
+        }
+        try{
+            $id=(string)($receipt['reservation_id']??'');
+            if(!preg_match('/^[a-f0-9]{32}$/D',$id)||($action==='release'&&$id!==$reservationId))
+                throw new \RuntimeException('Reservation receipt identity mismatch.');
+            $row=$this->read($actor,'stock.reservation.search',$scope+['reservation_id'=>$id,'limit'=>1])['items'][0]??[];
+            $expected=$action==='reserve'?'active':'released';
+            foreach(['reservation_id'=>$id,'variant_id'=>$variant,'location_id'=>$location,'status'=>$expected] as $field=>$value){
+                if(($row[$field]??null)!==$value||($receipt[$field]??null)!==$value)throw new \RuntimeException('Reservation readback mismatch.');
+            }
+            if($action==='reserve'){
+                [$whole,$fraction]=array_pad(explode('.',$input['quantity'],2),2,'');
+                if(($row['quantity']??null)!==$whole.'.'.str_pad($fraction,6,'0')||($row['source_ref']??null)!==$input['source_ref'])
+                    throw new \RuntimeException('Reservation quantity/origin mismatch.');
+            }elseif(($row['release_reason']??null)!==$input['reason']){
+                throw new \RuntimeException('Release reason mismatch.');
+            }
+            $balance=$this->read($actor,'stock.balance.get',$scope);
+            $this->assertBalanceMatches($balance,$receipt['balance']??null,$variant,$location);
+            return new RedirectResponse('/product-management/stock?variant='.$variant.'&location='.$location.'&notice=posted',303);
+        }catch(Throwable $e){
+            error_log('product_management.stock_workspace.reservation_readback_uncertain '.$e::class);
+            return new Response('Reservation receipt obtained; state unverified. Reload before retrying.',503);
         }
     }
 
