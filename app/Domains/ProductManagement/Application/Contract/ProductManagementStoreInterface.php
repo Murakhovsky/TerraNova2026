@@ -56,5 +56,14 @@ interface ProductManagementStoreInterface
     public function countCandidates(string $org,string $location,int $limit,int $offset):array;
     public function getCountSession(string $org,string $sessionId):?array;
     public function getStockCount(string $org,string $countId):?array;
+    public function defineAttribute(string $org,array $definition,string $key,string $actor,string $trace):array;
+    public function attributes(string $org,int $limit,int $offset):array;
+    public function bindAttribute(string $org,string $category,string $code,bool $required,bool $axis,string $key,string $actor,string $trace):array;
+    public function categoryAttributes(string $org,string $category):array;
+    public function setAttributes(string $org,string $product,array $changes,int $revision,string $key,string $actor,string $trace):array;
+    public function productAttributes(string $org,string $product):array;
+    public function filterAttributes(string $org,string $code,mixed $value,int $limit,int $offset):array;
+    public function variantMatrix(string $org,string $product,array $matrix):array;
+    public function createMatrix(string $org,string $product,array $matrix,int $revision,string $uom,bool $track,string $key,string $actor,string $trace):array;
     public function stockBalance(string $organizationId, string $variantId, string $locationId): array;
 }
