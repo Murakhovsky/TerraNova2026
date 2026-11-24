@@ -18,10 +18,10 @@ generated: true
 | `event.consumers` | module-defined | 2 |
 | `tenant.configuration` | built-in | 2 |
 | `web.actions` | module-defined | 1 |
-| `web.commands` | module-defined | 6 |
-| `web.navigation` | module-defined | 6 |
-| `web.search` | module-defined | 6 |
-| `web.workspace` | module-defined | 6 |
+| `web.commands` | module-defined | 7 |
+| `web.navigation` | module-defined | 7 |
+| `web.search` | module-defined | 7 |
+| `web.workspace` | module-defined | 7 |
 | `web.workspace.extensions` | module-defined | 1 |
 
 ## `api.routes`
@@ -66,6 +66,7 @@ generated: true
 | `diagnostic` | `diagnosticNavigationContributor` |
 | `growth` | `growthNavigationContributor` |
 | `marketing` | `marketingNavigationContributor` |
+| `product_management` | `productManagementNavigationContributor` |
 | `property` | `propertyNavigationContributor` |
 | `sales` | `salesNavigationContributor` |
 
@@ -79,6 +80,7 @@ generated: true
 | `diagnostic` | `diagnosticNavigationContributor` |
 | `growth` | `growthNavigationContributor` |
 | `marketing` | `marketingNavigationContributor` |
+| `product_management` | `productManagementNavigationContributor` |
 | `property` | `propertyNavigationContributor` |
 | `sales` | `salesNavigationContributor` |
 
@@ -92,6 +94,7 @@ generated: true
 | `diagnostic` | `diagnosticNavigationContributor` |
 | `growth` | `growthNavigationContributor` |
 | `marketing` | `marketingNavigationContributor` |
+| `product_management` | `productManagementNavigationContributor` |
 | `property` | `propertyNavigationContributor` |
 | `sales` | `salesNavigationContributor` |
 
@@ -105,6 +108,7 @@ generated: true
 | `diagnostic` | `diagnosticNavigationContributor` |
 | `growth` | `growthNavigationContributor` |
 | `marketing` | `marketingNavigationContributor` |
+| `product_management` | `productManagementNavigationContributor` |
 | `property` | `propertyNavigationContributor` |
 | `sales` | `salesNavigationContributor` |
 
