@@ -28,8 +28,10 @@ final readonly class SalesWorkspaceAccessSubscriber implements EventSubscriberIn
     public function authorize(ControllerEvent $event):void
     {
         $controller=$event->getController();
-        if (!is_array($controller)||!is_object($controller[0])) return;
-        $class=$controller[0]::class;$method=(string)$controller[1];
+        if (is_array($controller)&&is_object($controller[0])) {
+            $class=$controller[0]::class;$method=(string)$controller[1];
+        } elseif (is_object($controller)) {$class=$controller::class;$method='__invoke';}
+        else return;
         $web=str_starts_with($class,'App\\Web\\Sales\\');
         $api=str_starts_with($class,'App\\Http\\Api\\V1\\Controller\\Sales');
         if (!$web&&!$api) return;
