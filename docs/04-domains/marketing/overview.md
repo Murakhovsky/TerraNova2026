@@ -137,6 +137,10 @@ Marketing зберігає immutable funding candidate для однієї Campa
 
 `marketing.paid.launch_plan.create/get` та `marketing.paid.funding.check` — typed internal command/read queries. Finance envelope повинен мати source_domain=marketing, source_ref=ID funding candidate, currency та період, що покриває план. Reservation має бути RESERVED з точним operation key `mkt-paid:<plan-id>:activate`, lifetime minor amount і Finance Action ID. Adapter використовує тільки FinanceBudgetControlInterface, перевіряє module activation та envelope revision до/після читання. F1 список обмежений 500 записами: відсутність рядка не вважається резервом. Source pins re-read до/після Finance observation. Результат `RESERVATION_OBSERVED_NOT_AUTHORIZED` не є атомарним допуском: race з release/freeze залишається, тому Meta mutation gate продовжує блокувати всі writes. Наступний пакет має реалізувати Finance-owned execution claim/release fence, provider lifetime cap і незалежний Workflow approval. Ніяких автоматичних Finance writes.
 
+## M3.2: Атомарний фінансовий допуск
+
+Finance реалізує one-shot exposure claim під тими самими locks, що й release. Окремий approved application service перевіряє canonical activation Action, pinned plan hash, envelope/reservation/revision. Після claim заборонено повторно видати execution authority або звільнити hold без незалежного фінансового settlement. Freeze блокує майбутні допуски, не обіцяє скасування in-flight provider request. Marketing write gate залишається закритим до інтеграції adapter, lifecycle та зовнішнього hard-cap acceptance.
+
 ## Надійність імпорту та операційна черга
 
 Meta read-only sync об'єднує імпорт Campaign/AdSet/Ad, Insights, `last_synced_at` і запис `SUCCEEDED` в **одну MySQL-транзакцію**. Невалідний рядок Insights або помилка посеред import викликає rollback без часткових campaign/metrics; окремий `tests/integration/marketing_meta_atomic_mysql.php` перевіряє це на справжній MySQL.

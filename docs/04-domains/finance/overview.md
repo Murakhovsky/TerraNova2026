@@ -60,6 +60,10 @@ Finance приймає й зберігає **окремий журнал спо�
 
 Автоматичний MySQL-тест: `tests/integration/finance_spend_observations_mysql.php` перевіряє незмінність попередніх версій, дублікати, tenant boundary, різні валюти/атрибуцію/вікна й відсутність фіктивних фінансових фактів.
 
+## F1.4. Блокування фінансового покриття зовнішньої операції
+
+Finance-owned `cos_finance_paid_exposure_claims` фіксує одноразовий execution claim за reservation, Action і immutable Marketing plan. Claim та release використовують однаковий порядок locks (envelope, reservation), перевіряють active envelope, точну суму/валюту/період/operation key і revision; replay повертає fresh=false, новий Action не може повторно використати hold. Сума лишається RESERVED. Звичайний release після claim заблокований до незалежного settlement; freeze не знімає exposure і не гарантує зупинки вже допущеного provider request. `ApprovedFinancePaidExposureService` вимагає persisted canonical approved Marketing activation Action; немає direct Capability або HTTP write. Реальний Meta activation handler ще не підключений. Тести MySQL використовують дві незалежні connections; fixture claim не є live provider acceptance.
+
 ## Відкладені залежності для Marketing
 
 1. Окремо прийняти Finance F1 у staging, включно з правами, багатокористувацькими race-сценаріями та довготривалою перевіркою інваріантів.

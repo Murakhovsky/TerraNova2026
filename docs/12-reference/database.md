@@ -131,6 +131,9 @@ generated: true
 | `finance` | `app/migrations/20261119_000153_finance_budget_f1.sql` | `cos_finance_budget_reservations` |
 | `finance` | `app/migrations/20261119_000155_finance_spend_observations.sql` | `cos_finance_spend_evidence_events` |
 | `finance` | `app/migrations/20261119_000155_finance_spend_observations.sql` | `cos_finance_spend_observations` |
+| `finance` | `app/migrations/20261124_000166_finance_paid_exposure_claims.sql` | `cos_finance_budget_envelopes` |
+| `finance` | `app/migrations/20261124_000166_finance_paid_exposure_claims.sql` | `cos_finance_budget_reservations` |
+| `finance` | `app/migrations/20261124_000166_finance_paid_exposure_claims.sql` | `cos_finance_paid_exposure_claims` |
 | `growth` | `app/migrations/20260921_000067_growth_v020_runtime.sql` | `tn_growth_candidate_signals` |
 | `growth` | `app/migrations/20260921_000067_growth_v020_runtime.sql` | `tn_growth_candidates` |
 | `growth` | `app/migrations/20260921_000067_growth_v020_runtime.sql` | `tn_growth_operation_receipts` |

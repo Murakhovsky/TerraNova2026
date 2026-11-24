@@ -96,4 +96,36 @@ $check($repeat['id']===$first['id']&&$repoA->envelope($org,$id)['reserved_minor'
 $event=$connA->prepare("SELECT COUNT(*) FROM cos_finance_budget_events
     WHERE organization_id=? AND event_type='FUNDS_RESERVED'");
 $event->execute([$org]);$check((int)$event->fetchColumn()===2,'Expected exactly two committed reservation events.');
+// A second envelope dedicated to an immutable Marketing launch plan.
+$plan='mkpl-'.bin2hex(random_bytes(12));
+$ex=$repoA->createDraft($org,'301',[...$draft,'source_ref'=>$plan,'limit_minor'=>5000],'exposure-draft-01');
+$repoA->activate($org,$ex['id'],'302','exposure-envelope-approval','exposure-trace',1,'exposure-activate-01');
+$hold=$repoA->reserve($org,$ex['id'],'303','exposure-reservation-approval','exposure-trace',[
+    'source_domain'=>'marketing','source_operation_key'=>'mkt-paid:'.$plan.':activate','amount_minor'=>5000,
+    'reason'=>'Dedicated exposure','expected_revision'=>2],'exposure-reserve-01');
+$input=['source_ref'=>$plan,'plan_hash'=>str_repeat('a',64),'currency'=>'USD','period_start'=>$draft['period_start'],
+    'period_end'=>$draft['period_end'],'amount_minor'=>5000,'expected_revision'=>3,'source_operation_key'=>'mkt-paid:'.$plan.':activate'];
+$connA->beginTransaction();
+try{
+    $q=$connA->prepare('SELECT id FROM cos_finance_budget_envelopes WHERE organization_id=? AND id=? FOR UPDATE');
+    $q->execute([$org,$ex['id']]);
+    $timeout=false;
+    try{$repoB->claimExposure($org,$ex['id'],$hold['id'],'303','claim-1','exposure-trace',$input);}
+    catch(PDOException){$timeout=true;}
+    $check($timeout&&!$connB->inTransaction()&&$repoA->exposure($org,$hold['id'])===null,'Claim bypassed envelope lock.');
+}finally{$connA->commit();}
+$claimed=$repoB->claimExposure($org,$ex['id'],$hold['id'],'303','claim-1','exposure-trace',$input);
+$check($claimed['fresh']===true&&$repoA->envelope($org,$ex['id'])['reserved_minor']===5000,'Exposure claim moved or lost funds.');
+$replayed=$repoA->claimExposure($org,$ex['id'],$hold['id'],'303','claim-1','exposure-trace',$input);
+$check($replayed['fresh']===false,'Replay grants external execution.');
+foreach([
+    fn()=>$repoA->claimExposure($org,$ex['id'],$hold['id'],'303','claim-2','exposure-trace',$input),
+    fn()=>$repoA->release($org,$hold['id'],'304','release-claimed','trace','Unsafe release','claimed-release-01'),
+    fn()=>$repoA->claimExposure('foreign-'.$org,$ex['id'],$hold['id'],'303','claim-3','exposure-trace',$input)
+] as $unsafe){
+    $denied=false;try{$unsafe();}catch(DomainException){$denied=true;}$check($denied,'Unsafe exposure or release accepted.');
+}
+$repoA->freeze($org,$ex['id'],'304','freeze-claimed','trace','Emergency freeze',4,'exposure-freeze-01');
+$check($repoB->envelope($org,$ex['id'])['state']==='FROZEN'&&$repoB->envelope($org,$ex['id'])['reserved_minor']===5000,
+    'Freeze released potentially exposed funds.');
 echo "Finance F1 MySQL two-connection lock wait, rollback, oversubscription and idempotent retry PASS\n";

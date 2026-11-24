@@ -2842,6 +2842,9 @@ services:
   Domains\Finance\Application\Contract\FinanceBudgetControlInterface:
     alias: Domains\Finance\Application\Service\FinanceBudgetControlService
   Domains\Finance\Application\Service\ApprovedFinanceBudgetOperations: ~
+  Domains\Finance\Application\Contract\FinancePaidExposureClaimStore:
+    alias: Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceBudgetRepository
+  Domains\Finance\Application\Service\ApprovedFinancePaidExposureService: ~
   Domains\Finance\Automation\Action\FinanceBudgetActionHandler: ~
   Domains\Finance\Bootstrap\FinanceDomainModule: ~
   financeDomainModule:
