@@ -38,7 +38,7 @@ final class MarketingPlanningPolicy
     /** @param array<string,mixed> $raw @return array<string,mixed> */
     public function creative(array $raw):array
     {
-        $this->only($raw,['headline','primary_text','call_to_action','destination_url','language','product_ref','media_sha256']);
+        $this->only($raw,['headline','primary_text','call_to_action','destination_url','language','product_ref','media_sha256','target_spec']);
         foreach(['headline','primary_text','call_to_action','destination_url','language'] as $field){
             if(!is_string($raw[$field]??null)){
                 throw new DomainException('Creative planning fields must be strings.');
@@ -77,13 +77,44 @@ final class MarketingPlanningPolicy
         if($media!==null&&(!is_string($media)||!preg_match('/^[a-f0-9]{64}$/D',$media))){
             throw new DomainException('Creative media must be referenced by a SHA-256 digest, not supplied as raw media.');
         }
-        return [
+        $content = [
             'headline'=>$headline,'primary_text'=>$text,'call_to_action'=>$cta,'destination_url'=>$url,
             'language'=>$lang,'product_ref'=>$productRef,'media_sha256'=>$media,
             'product_verification'=>'PENDING_PRODUCT_ACCEPTANCE',
             'destination_verification'=>'UNVERIFIED',
             'compliance_state'=>'NOT_REVIEWED',
         ];
+        // Omitted TargetSpec preserves the exact legacy content and idempotency hash.
+        if (array_key_exists('target_spec', $raw)) {
+            if (!is_array($raw['target_spec'])) throw new DomainException('TargetSpec must be an object.');
+            $content['target_spec'] = $this->targetSpec($raw['target_spec']);
+        }
+        return $content;
+    }
+
+    /** Provider-neutral planning only; no audience IDs, identity lists or activation fields.
+     * @param array<string,mixed> $raw @return array<string,mixed>
+     */
+    private function targetSpec(array $raw): array
+    {
+        $this->only($raw, ['market_countries', 'audience_hypothesis']);
+        $countries = $raw['market_countries'] ?? null;
+        $hypothesis = $raw['audience_hypothesis'] ?? null;
+        if (!is_array($countries) || !array_is_list($countries) || count($countries) < 1 || count($countries) > 20
+            || !is_string($hypothesis) || mb_strlen(trim($hypothesis)) < 5 || mb_strlen(trim($hypothesis)) > 500) {
+            throw new DomainException('TargetSpec requires 1-20 market country codes and a 5-500 character audience hypothesis.');
+        }
+        foreach ($countries as $code) {
+            if (!is_string($code) || !preg_match('/^[A-Z]{2}$/D', $code)) {
+                throw new DomainException('TargetSpec market codes must be uppercase two-letter codes.');
+            }
+        }
+        if (count(array_unique($countries)) !== count($countries)) {
+            throw new DomainException('Duplicate TargetSpec market codes are not allowed.');
+        }
+        sort($countries, SORT_STRING);
+        return ['market_countries'=>$countries, 'audience_hypothesis'=>trim($hypothesis),
+            'verification_status'=>'UNVERIFIED', 'provider_eligible'=>false];
     }
 
     /** @param array<string,mixed> $raw @return array<string,mixed> */

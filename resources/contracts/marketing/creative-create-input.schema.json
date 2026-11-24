@@ -46,6 +46,30 @@
     "media_sha256": {
       "type": "string",
       "pattern": "^[a-f0-9]{64}$"
+    },
+    "target_spec": {
+      "type": "object",
+      "required": [
+        "market_countries",
+        "audience_hypothesis"
+      ],
+      "properties": {
+        "market_countries": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}$"
+          }
+        },
+        "audience_hypothesis": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 500
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false

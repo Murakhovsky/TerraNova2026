@@ -150,7 +150,7 @@ final readonly class MarketingPageController
     {
         $product=trim((string)$request->request->get('product_ref',''));
         $media=trim((string)$request->request->get('media_sha256',''));
-        return [
+        $content = [
             'headline'=>(string)$request->request->get('headline',''),
             'primary_text'=>(string)$request->request->get('primary_text',''),
             'call_to_action'=>(string)$request->request->get('call_to_action',''),
@@ -159,6 +159,15 @@ final readonly class MarketingPageController
             'product_ref'=>$product!==''?$product:null,
             'media_sha256'=>$media!==''?$media:null,
         ];
+        $markets = trim((string)$request->request->get('target_market_countries',''));
+        $hypothesis = trim((string)$request->request->get('target_audience_hypothesis',''));
+        if ($markets !== '' || $hypothesis !== '') {
+            $content['target_spec'] = [
+                'market_countries'=>array_map(static fn(string $code): string => strtoupper(trim($code)), explode(',', $markets)),
+                'audience_hypothesis'=>$hypothesis,
+            ];
+        }
+        return $content;
     }
 
     public function connect(Request $request):Response

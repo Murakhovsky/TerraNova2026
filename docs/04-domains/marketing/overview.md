@@ -53,6 +53,12 @@ Marketing — окремий bounded context, що володіє рекламн
 
 **Докази D2:** `tests/unit/marketing_product_draft_check.php` та `tests/integration/marketing_product_draft_mysql.php` (реальна Product Management persistence/price, tenant/module isolation). D3/D4/D5 не заявлено.
 
+## M2c.1: TargetSpec для чернетки креативу
+
+Опційний provider-neutral `target_spec` у Creative create/revise містить 1–20 дволітерних market country codes та текстову гіпотезу щодо аудиторії (5–500 символів). Domain нормалізує порядок кодів, відхиляє дублікати, невідомі поля та спроби передати provider audience ID або право запуску. Формат коду перевіряється синтаксично, а не за реєстром країн. Server зберігає `verification_status=UNVERIFIED` і `provider_eligible=false`. Відсутність TargetSpec не змінює legacy payload/idempotency hash.
+
+Workspace дозволяє створювати, переглядати, змінювати або прибирати цю гіпотезу у новій Creative revision. Existing JSON persistence, tenant scope, receipt і stale-review fence збережені; окремої таблиці або executor не створено. Це не є завершеною моделлю Audience/AdSet, перевіркою policy, автоматичною класифікацією аудиторії чи Meta API mutation. Докази: unit schema/policy та MySQL revision/readback тести; незалежне приймання попереду.
+
 ## Надійність імпорту та операційна черга
 
 Meta read-only sync об'єднує імпорт Campaign/AdSet/Ad, Insights, `last_synced_at` і запис `SUCCEEDED` в **одну MySQL-транзакцію**. Невалідний рядок Insights або помилка посеред import викликає rollback без часткових campaign/metrics; окремий `tests/integration/marketing_meta_atomic_mysql.php` перевіряє це на справжній MySQL.

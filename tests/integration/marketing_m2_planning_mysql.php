@@ -38,12 +38,15 @@ $creativeData=$policy->creative([
     'call_to_action'=>'Read more',
     'destination_url'=>'https://example.com/catalog/product',
     'language'=>'uk',
-    'product_ref'=>'prod-future-1'
+    'product_ref'=>'prod-future-1',
+    'target_spec'=>['market_countries'=>['UA','PL'],'audience_hypothesis'=>'Broad local product demand'],
 ]);
 $creative=$repo->createCreative($orgA,$campaignId,'101',$creativeData,'creative-create-01');
 $creativeId=$creative['id'];
 $assert($creative['revision']===1&&$creative['status']==='DRAFT'
     &&$creative['content']['product_verification']==='PENDING_PRODUCT_ACCEPTANCE','Creative must begin unverified DRAFT');
+$assert($creative['content']['target_spec']['market_countries']===['PL','UA']
+    &&$creative['content']['target_spec']['provider_eligible']===false,'TargetSpec native readback missing.');
 $again=$repo->createCreative($orgA,$campaignId,'101',$creativeData,'creative-create-01');
 $assert($again['id']===$creativeId,'Creative create idempotency violated');
 $denied(static fn()=> $repo->createCreative($orgA,$campaignId,'101',
@@ -79,8 +82,9 @@ $denied(static fn()=> $repo->reviewProposal($orgA,$proposalId,'203',2,
     ['decision'=>'REJECT','reason'=>'Already reviewed'], 'review-after-accept-01'),'Double review accepted');
 
 $creativeV2=$repo->reviseCreative($orgA,$creativeId,'101',1,
-    [...$creativeData,'headline'=>'Local offer revised'],'creative-revise-01');
+    [...$creativeData,'headline'=>'Local offer revised','target_spec'=>[...$creativeData['target_spec'],'market_countries'=>['UA']]],'creative-revise-01');
 $assert($creativeV2['revision']===2&&$creativeV2['content']['headline']==='Local offer revised','Creative revision append failed');
+$assert($creativeV2['content']['target_spec']['market_countries']===['UA'],'TargetSpec revision did not persist.');
 $denied(static fn()=> $repo->reviseCreative($orgA,$creativeId,'101',1,
     [...$creativeData,'headline'=>'Old revision conflict'],'creative-revise-old'),'Stale creative revision accepted');
 $proposal2=$repo->submitProposal($orgA,$campaignId,$creativeId,1,2,'101',$evidence,'proposal-submit-02');
@@ -91,6 +95,10 @@ $denied(static fn()=> $repo->reviewProposal($orgA,$proposal2['id'],'202',1,
 $assert(count($repo->proposals($orgA,$campaignId))===2
     &&count($repo->creatives($orgA,$campaignId))===1,'Planning projections duplicated');
 
+$q=$db->prepare('SELECT content_json FROM marketing_creative_revisions WHERE organization_id=? AND creative_id=? AND revision=1');
+$q->execute([$orgA,$creativeId]);
+$first=json_decode((string)$q->fetchColumn(),true,32,JSON_THROW_ON_ERROR);
+$assert($first['target_spec']['market_countries']===['PL','UA'],'Original TargetSpec was overwritten.');
 $q=$db->prepare('SELECT COUNT(*) FROM marketing_creative_revisions WHERE organization_id=? AND creative_id=?');
 $q->execute([$orgA,$creativeId]);$assert((int)$q->fetchColumn()===3,'Creative append-only revision history lost');
 $q=$db->prepare('SELECT COUNT(*) FROM marketing_planning_intents WHERE organization_id=?');

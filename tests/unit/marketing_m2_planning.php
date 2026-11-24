@@ -37,6 +37,22 @@ foreach([
 ] as $invalid) {
     $blocked(static fn()=> $policy->creative($invalid),'Invalid or privileged Creative accepted.');
 }
+$expect(!array_key_exists('target_spec',$saved),'Legacy Creative payload/hash must remain unchanged.');
+$target=['market_countries'=>['UA','PL'],'audience_hypothesis'=>'Broad demand for local products'];
+$targeted=$policy->creative([...$creative,'target_spec'=>$target]);
+$expect($targeted['target_spec']['market_countries']===['PL','UA']
+    &&$targeted['target_spec']['verification_status']==='UNVERIFIED'
+    &&$targeted['target_spec']['provider_eligible']===false,'TargetSpec must be canonical and unverified.');
+foreach ([
+    null, [], ['market_countries'=>['ua'],'audience_hypothesis'=>'Valid hypothesis'],
+    [...$target,'market_countries'=>['UA','UA']],
+    [...$target,'market_countries'=>array_fill(0,21,'UA')],
+    [...$target,'market_countries'=>['UA','PL'],'provider_eligible'=>true],
+    [...$target,'audience_hypothesis'=>'   '],
+    [...$target,'provider_audience_id'=>'external-1'],
+] as $invalidTarget) {
+    $blocked(static fn()=> $policy->creative([...$creative,'target_spec'=>$invalidTarget]),'Invalid TargetSpec accepted.');
+}
 $proposal=[
     'recommendation'=>'Test a shorter headline for Ukrainian users.',
     'rationale'=>'Human hypothesis from an unverified planning note.',
@@ -66,6 +82,15 @@ foreach($manifest['contributions']['capability_contracts'] as $raw){
 $expect(count($contracts)===14,'Marketing M0/M1 seven, six M2a and one M2b Product Query expected.');
 $validator=new CapabilityJsonInputValidator();
 $validator->validate($contracts['marketing.creative.create'],['campaign_id'=>'mkt-'.str_repeat('a',24),...$creative]);
+$validator->validate($contracts['marketing.creative.create'],[
+    'campaign_id'=>'mkt-'.str_repeat('a',24),...$creative,'target_spec'=>$target
+]);
+$validator->validate($contracts['marketing.creative.revise'],[
+    'creative_id'=>'mkcr-'.str_repeat('b',24),'expected_revision'=>1,...$creative,'target_spec'=>$target
+]);
+$blocked(static fn()=> $validator->validate($contracts['marketing.creative.create'],[
+    'campaign_id'=>'mkt-'.str_repeat('a',24),...$creative,'target_spec'=>[...$target,'provider_eligible'=>true]
+]),'TargetSpec privilege injection accepted at schema gate.');
 $validator->validate($contracts['marketing.analyst.proposal.submit'],[
     'campaign_id'=>'mkt-'.str_repeat('a',24),'creative_id'=>'mkcr-'.str_repeat('b',24),
     'campaign_revision'=>1,'creative_revision'=>1,...$proposal

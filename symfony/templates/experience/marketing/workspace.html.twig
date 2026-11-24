@@ -92,6 +92,9 @@
                 <label>Language <input class="form-control" name="language" value="uk" required pattern="[a-z]{2}(-[A-Z]{2})?"></label>
                 <label>Product reference (optional, unverified) <input class="form-control" name="product_ref"></label>
                 <label>Media SHA-256 (optional) <input class="form-control" name="media_sha256" maxlength="64"></label>
+                <label>Target market country codes (optional, comma-separated) <input class="form-control" name="target_market_countries" maxlength="100" placeholder="UA, PL"></label>
+                <label>Audience hypothesis (optional, unverified) <textarea class="form-control" name="target_audience_hypothesis" maxlength="500"></textarea></label>
+                <p>Supply both TargetSpec fields or neither. Planning only, no provider audience or policy verification.</p>
                 <button class="btn btn-outline-primary" type="submit">Save creative draft</button>
             </form>
 
@@ -104,6 +107,10 @@
                 <p>{{ creative.content.primary_text }}</p>
                 <p>{{ creative.content.call_to_action }} · {{ creative.content.language }} · {{ creative.content.destination_url }}</p>
                 <p>Product: {{ creative.content.product_ref|default('not linked') }} · {{ creative.content.product_verification }} · URL {{ creative.content.destination_verification }}</p>
+                {% if creative.content.target_spec is defined %}
+                    <p>Draft target markets: {{ creative.content.target_spec.market_countries|join(', ') }} · {{ creative.content.target_spec.verification_status }}</p>
+                    <p>Audience hypothesis: {{ creative.content.target_spec.audience_hypothesis }}</p>
+                {% endif %}
                 <details>
                     <summary>Revise this creative (appends a version)</summary>
                     <form method="post" action="/marketing/campaigns/{{ c.id|url_encode }}/creatives/{{ creative.id|url_encode }}/revisions" class="cos-page__stack">
@@ -117,6 +124,8 @@
                         <label>Language <input class="form-control" name="language" required value="{{ creative.content.language }}"></label>
                         <label>Product reference <input class="form-control" name="product_ref" value="{{ creative.content.product_ref|default('') }}"></label>
                         <label>Media SHA-256 <input class="form-control" name="media_sha256" value="{{ creative.content.media_sha256|default('') }}"></label>
+                        <label>Target market country codes <input class="form-control" name="target_market_countries" maxlength="100" value="{{ creative.content.target_spec.market_countries|default([])|join(', ') }}"></label>
+                        <label>Audience hypothesis <textarea class="form-control" name="target_audience_hypothesis" maxlength="500">{{ creative.content.target_spec.audience_hypothesis|default('') }}</textarea></label>
                         <button class="btn btn-outline-secondary" type="submit">Save next creative revision</button>
                     </form>
                 </details>
