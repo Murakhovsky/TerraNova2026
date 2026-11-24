@@ -184,6 +184,13 @@ $reject(static fn()=> $prices->set($org,$variant,'EUR','1','pm-eur-stale-'.$toke
 $reject(static fn()=> $prices->set($org,$variant,'EUR','21.1250','pm-eur-update-'.$token,'ci-user','ci-pm',2),'Same key different revision');
 $reject(static fn()=> $prices->set($other,$variant,'EUR','1','pm-eur-cross-'.$token,'ci-other','ci-pm',0),'Cross tenant price');
 $assert($prices->get($org,$variant,'UAH')['price']==='129.9900' && $prices->get($org,$variant,'EUR')['price']==='21.1250','Independent currency readback');
+$history=$prices->history($org,$variant,'EUR',30,0);
+$assert(count($history)===2,'Exactly two EUR history events after replay and rejected writes');
+$assert($history[0]['old_amount']==='19.9900' && $history[0]['new_amount']==='21.1250'
+    && $history[1]['old_amount']===null && $history[1]['new_amount']==='19.9900','Native history preserves previous and new prices');
+$assert(count($prices->history($org,$variant,'EUR',1,1))===1,'Bounded history pagination');
+$assert(count($prices->history($org,$variant,'UAH'))===1,'Currency history isolation');
+$assert($prices->history($other,$variant,'EUR')===[],'Foreign tenant history is not disclosed');
 $csvPayload="sku,name,type,uom,track_inventory\nCSV".$token.",Sample,stock,pcs,1\n";
 $batch=$csv->preview($org,$csvPayload,'ci-user','pm-csv-stage-'.$token);
 $againBatch=$csv->preview($org,$csvPayload,'ci-user','pm-csv-stage-'.$token);
@@ -273,7 +280,8 @@ $reject(static fn()=> $products->recordMovement($org,$variant,$loc,'1','receipt'
 $assert((string)$products->balance($org,$variant,$loc)['on_hand']==='0.000000',
     'Archived Variant ledger remains unchanged after denied receipt');
 $reject(static fn()=> $prices->set($org,$variant,'EUR','1','pm-eur-archived-'.$token,'ci-user','ci-pm',2),'Archived Variant/Product price mutation');
-$assert($prices->get($org,$variant,'EUR')['price']==='21.1250','Archived price history remains readable');
+$assert($prices->get($org,$variant,'EUR')['price']==='21.1250','Archived price remains readable');
+$assert(count($prices->history($org,$variant,'EUR'))===2,'Archived SKU history remains readable');
 $stmt=$pdo->prepare('SELECT COUNT(*) FROM cos_events WHERE organization_id=? AND type LIKE ?');
 $stmt->execute([$org,'product_management.%']);
 $assert((int)$stmt->fetchColumn()===22,'twenty-two confirmed native Domain events');
