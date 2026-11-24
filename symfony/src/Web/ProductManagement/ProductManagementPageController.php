@@ -90,7 +90,10 @@ final readonly class ProductManagementPageController
             }
             $listCode=strtoupper(trim((string)$request->query->get('list_code','')));
             $listVariantId=trim((string)$request->query->get('list_variant',''));
-            $list=null;$listPrice=null;$listVariant=null;$listHistory=null;
+            $list=null;$listPrice=null;$listVariant=null;$listHistory=null;$tiers=[];$quote=null;
+            $quoteQty=trim((string)$request->query->get('quote_qty','1'));
+            $tierPage=filter_var($request->query->get('tier_page','1'),FILTER_VALIDATE_INT);
+            if($tierPage===false||$tierPage<1||$tierPage>333334)return new Response('Invalid tier page.',422);
             $listHistoryPage=filter_var($request->query->get('list_history_page','1'),FILTER_VALIDATE_INT);
             if ($listHistoryPage===false||$listHistoryPage<1||$listHistoryPage>333334) return new Response('Invalid list history page.',422);
             if ($listCode!==''||$listVariantId!=='') {
@@ -102,6 +105,11 @@ final readonly class ProductManagementPageController
                 if ($list===null) return new Response('Price list not found.',404);
                 $listPrice=$this->read($actor,'price.list.entry.get',['list_id'=>$list['list_id'],'variant_id'=>$listVariantId]);
                 if (($listPrice['found']??false)!==true) return new Response('Price list or Variant not found.',404);
+                if(!preg_match('/^(0|[1-9][0-9]{0,13})(\.[0-9]{1,6})?$/D',$quoteQty)||preg_match('/^0(?:\.0+)?$/D',$quoteQty))
+                    return new Response('Invalid quote quantity.',422);
+                $scope=['list_id'=>$list['list_id'],'variant_id'=>$listVariantId];
+                $tiers=$this->read($actor,'price.list.tier.search',$scope+['limit'=>30,'offset'=>($tierPage-1)*30])['items']??[];
+                $quote=$this->read($actor,'price.resolve',$scope+['currency'=>$list['currency'],'quantity'=>$quoteQty]);
                 $listHistory=$this->read($actor,'price.list.history.search',['list_id'=>$list['list_id'],'variant_id'=>$listVariantId,'limit'=>30,'offset'=>($listHistoryPage-1)*30]);
             }
             return $this->render($request,$actor,'product',[
@@ -109,7 +117,7 @@ final readonly class ProductManagementPageController
                 'priceCurrency'=>$currency,'pricePage'=>$pricePage,
                 'priceHasNext'=>count($product['variants']??[])>$pricePage*30,
                 'priceHistory'=>$history,'historyVariant'=>$historyVariant,'historyPage'=>$historyPage,
-                'selectedList'=>$list,'listPrice'=>$listPrice,'listVariant'=>$listVariant,'listHistory'=>$listHistory,'listHistoryPage'=>$listHistoryPage,
+                'selectedList'=>$list,'listPrice'=>$listPrice,'listVariant'=>$listVariant,'listHistory'=>$listHistory,'listHistoryPage'=>$listHistoryPage,'tiers'=>$tiers,'tierPage'=>$tierPage,'quote'=>$quote,'quoteQty'=>$quoteQty,
             ]);
         } catch (Throwable $e) {
             error_log('product_management.workspace.detail_unavailable '.$e::class);
@@ -226,21 +234,44 @@ final readonly class ProductManagementPageController
         } catch (Throwable $e) {
             return new Response('Price list temporarily unavailable.',503);
         }
-        $amount=trim((string)$request->request->get('amount',''));
-        if (!preg_match('/^(0|[1-9][0-9]{0,15})(\.[0-9]{1,4})?$/D',$amount)) return new Response('Invalid amount.',422);
-        $input=['list_id'=>$list['list_id'],'variant_id'=>$vid,'amount'=>$amount,'expected_revision'=>$revision];
+        $action=(string)$request->request->get('price_action','entry_set');
+        if(!in_array($action,['entry_set','entry_remove','tier_set','tier_remove'],true))return new Response('Invalid price action.',422);
+        $remove=in_array($action,['entry_remove','tier_remove'],true);
+        $tier=in_array($action,['tier_set','tier_remove'],true);
+        if($remove&&$request->request->get('confirm_remove')!=='yes')return new Response('Removal confirmation required.',422);
+        $amount=$remove?null:trim((string)$request->request->get('amount',''));
+        if (!$remove&&!preg_match('/^(0|[1-9][0-9]{0,15})(\.[0-9]{1,4})?$/D',$amount)) return new Response('Invalid amount.',422);
+        $scope=['list_id'=>$list['list_id'],'variant_id'=>$vid];
+        $input=$scope+['expected_revision'=>$revision];
+        $operation=match($action){'entry_set'=>'price.list.entry.set','entry_remove'=>'price.list.entry.remove',default=>'price.list.tier.set'};
+        if($action!=='entry_remove')$input['amount']=$amount;
+        if($tier){
+            $minimum=trim((string)$request->request->get('min_quantity',''));
+            if(!preg_match('/^(0|[1-9][0-9]{0,13})(\.[0-9]{1,6})?$/D',$minimum)||preg_match('/^0(?:\.0+)?$/D',$minimum))
+                return new Response('Invalid minimum quantity.',422);
+            [$qWhole,$qFrac]=array_pad(explode('.',$minimum,2),2,'');
+            $input['min_quantity']=$qWhole.'.'.str_pad($qFrac,6,'0');
+        }
         try {
-            $receipt=$this->write($actor,'price.list.entry.set',$input,$request);
+            $receipt=$this->write($actor,$operation,$input,$request);
         } catch (DomainException|\InvalidArgumentException) {
             return new Response('List price action blocked. Reload current revision.',422);
         } catch (Throwable $e) {
             return new Response('List price outcome uncertain. Reload before retrying.',503);
         }
         try {
-            $after=$this->read($actor,'price.list.entry.get',['list_id'=>$list['list_id'],'variant_id'=>$vid]);
-            [$whole,$fraction]=array_pad(explode('.',$amount,2),2,'');
-            $expected=['list_id'=>$list['list_id'],'variant_id'=>$vid,'found'=>true,'currency'=>$list['currency'],
-                'price'=>$whole.'.'.str_pad($fraction,4,'0'),'revision'=>$revision+1];
+            if($tier){
+                $after=$this->read($actor,'price.list.tier.search',$scope+['min_quantity'=>$input['min_quantity'],'limit'=>1])['items'][0]??[];
+            }else{
+                $after=$this->read($actor,'price.list.entry.get',$scope);
+            }
+            $normalized=null;
+            if($amount!==null){
+                [$whole,$fraction]=array_pad(explode('.',$amount,2),2,'');$normalized=$whole.'.'.str_pad($fraction,4,'0');
+            }
+            $expected=$scope+['currency'=>$list['currency'],'price'=>$normalized,'revision'=>$revision+1];
+            if($tier)$expected['min_quantity']=$input['min_quantity'];else $expected['found']=true;
+            if(!array_key_exists('price',$receipt)||!array_key_exists('price',$after))throw new \RuntimeException('Missing price readback.');
             foreach ($expected as $field=>$value) {
                 if (($receipt[$field]??null)!==$value||($after[$field]??null)!==$value)
                     throw new \RuntimeException('List price readback mismatch.');
