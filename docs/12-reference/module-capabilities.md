@@ -505,6 +505,7 @@ Manifest capabilities не задекларовані.
 - `sales.workspace.deals.list`;
 - `sales.workspace.leads.list`;
 - `sales.workspace.summary.read`;
+- `sales.workspace.team.summary.read`;
 - `sales.workspace.use`;
 
 ## Service (`service`)
