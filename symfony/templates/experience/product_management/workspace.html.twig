@@ -203,7 +203,7 @@
                 <p>Ціна за одиницю для кількості {{ quoteQty }}: {{ quote.price ?? 'Не визначено' }} {{ quote.currency }} ({{ quote.source }}). Пороги незалежні від базової позиції прайс-листа.</p>
                 <table class="table"><thead><tr><th>Від кількості</th><th>Ціна за одиницю</th><th>Ревізія</th><th>Дії</th></tr></thead><tbody>
                 {% for t in tiers %}
-                    <tr><td>{{ t.min_quantity }}</td><td>{{ t.price ?? 'Видалено' }}</td><td>{{ t.revision }}</td><td>
+                    <tr><td>{{ t.min_quantity }}</td><td>{{ t.price ?? 'Видалено' }}</td><td>{{ t.revision }}</td><td><a href="?list_code={{ selectedList.code }}&amp;list_variant={{ listVariant.variant_id }}&amp;tier_history_min={{ t.min_quantity }}&amp;tier_page={{ tierPage }}#tier-history">Історія</a>
                     {% if product.status != 'archived' and listVariant.status == 'active' and selectedList.status == 'active' %}
                     <form method="post" action="/product-management/products/{{ product.product_id }}/list-price" class="cos-toolbar">
                         <input type="hidden" name="csrf_token" value="{{ csrfToken }}"><input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,16) }}{{ 'd%015x'|format(loop.index*2) }}">
@@ -231,6 +231,16 @@
                     <label>Від кількості <input name="min_quantity" class="form-control" required></label><label>Ціна <input name="amount" class="form-control" required></label><button class="btn btn-primary">Додати поріг</button>
                 </form>
                 {% endif %}
+            {% endif %}
+            {% if selectedList and tierHistoryMinimum is not empty %}
+                <section id="tier-history">
+                    <h3>Історія кількісної ціни від {{ tierHistoryMinimum }}</h3>
+                    <table class="table"><thead><tr><th>Ревізія</th><th>Попередня</th><th>Нова</th><th>Автор</th><th>Дата</th></tr></thead><tbody>
+                    {% for h in tierHistory %}<tr><td>{{ h.revision }}</td><td>{{ h.old_amount ?? '—' }}</td><td>{{ h.new_amount ?? 'Видалено' }}</td><td>{{ h.actor_ref }}</td><td>{{ h.created_at }}</td></tr>
+                    {% else %}<tr><td colspan="5">Історія відсутня.</td></tr>{% endfor %}</tbody></table>
+                    {% if tierHistoryPage > 1 %}<a href="?list_code={{ selectedList.code }}&amp;list_variant={{ listVariant.variant_id }}&amp;tier_history_min={{ tierHistoryMinimum }}&amp;tier_history_page={{ tierHistoryPage-1 }}#tier-history">Попередня</a>{% endif %}
+                    {% if tierHistory|length == 30 and tierHistoryPage < 333334 %}<a href="?list_code={{ selectedList.code }}&amp;list_variant={{ listVariant.variant_id }}&amp;tier_history_min={{ tierHistoryMinimum }}&amp;tier_history_page={{ tierHistoryPage+1 }}#tier-history">Наступна</a>{% endif %}
+                </section>
             {% endif %}
             {% if listHistory %}
                 <h3>Історія ціни прайс-листа</h3>
