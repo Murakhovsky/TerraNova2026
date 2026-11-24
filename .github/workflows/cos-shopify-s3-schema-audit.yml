@@ -1,0 +1,86 @@
+name: COS Shopify S3 live GraphQL schema audit (read-only)
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/cos-shopify-s3-schema-audit.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  api-schema:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment: AWS TN2026
+    timeout-minutes: 8
+    env:
+      DEV_HOST: ${{ secrets.DEV_HOST }}
+      DEV_USER: ${{ secrets.DEV_USER }}
+      DEV_PORT: ${{ secrets.DEV_PORT }}
+      DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+    steps:
+      - name: Protected SSH
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          for n in DEV_HOST DEV_USER DEV_PORT DEV_SSH_KEY; do
+            [[ -n "${!n:-}" ]] || { echo "Missing $n"; exit 1; }
+          done
+          [[ "$DEV_PORT" =~ ^[0-9]{1,5}$ ]] || exit 1
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$DEV_SSH_KEY" > "$HOME/.ssh/key"
+          chmod 600 "$HOME/.ssh/key"
+          ssh-keyscan -T 10 -p "$DEV_PORT" -H "$DEV_HOST" > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test -s "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+      - name: Audit Shopify Admin 2026-10 GraphQL types and shop currency
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          ssh -T -o BatchMode=yes -o StrictHostKeyChecking=yes -i "$HOME/.ssh/key" -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            sudo -n bash -s <<'REMOTE'
+          set -Eeuo pipefail
+          cfg=/etc/cos/shopify.env
+          [[ -f "$cfg" && ! -L "$cfg" && "$(stat -c '%u:%a' "$cfg")" == "0:600" ]] || exit 11
+          set -a
+          source "$cfg"
+          set +a
+          [[ "${SHOPIFY_SHOP_DOMAIN:-}" == "e2rnbw-mr.myshopify.com" ]] || { echo SHOPIFY_WRONG_STORE; exit 12; }
+          [[ -n "${SHOPIFY_CLIENT_ID:-}" && -n "${SHOPIFY_CLIENT_SECRET:-}" ]] || exit 13
+          auth=$(curl -fsS --max-time 25 -X POST "https://$SHOPIFY_SHOP_DOMAIN/admin/oauth/access_token" \
+            --data-urlencode grant_type=client_credentials \
+            --data-urlencode "client_id=$SHOPIFY_CLIENT_ID" \
+            --data-urlencode "client_secret=$SHOPIFY_CLIENT_SECRET") || exit 14
+          unset SHOPIFY_CLIENT_ID SHOPIFY_CLIENT_SECRET
+          token=$(printf '%s' "$auth" | python3 -c 'import sys,json;print(json.load(sys.stdin).get("access_token",""))')
+          unset auth
+          [[ -n "$token" ]] || exit 15
+          request='{"query":"query COSSchema { shop { currencyCode } productSetInput: __type(name: \"ProductSetInput\") { inputFields { name } } variantSetInput: __type(name: \"ProductVariantSetInput\") { inputFields { name } } productSetIdentifiers: __type(name: \"ProductSetIdentifiers\") { inputFields { name } } publicationInput: __type(name: \"PublicationInput\") { inputFields { name } } orderType: __type(name: \"Order\") { fields { name } } }"}'
+          result=$(curl -fsS --max-time 25 "https://$SHOPIFY_SHOP_DOMAIN/admin/api/2026-10/graphql.json" \
+            -H "Content-Type: application/json" -H "X-Shopify-Access-Token: $token" \
+            --data-binary "$request") || { echo SHOPIFY_GRAPHQL_SCHEMA_HTTP_FAILED; exit 16; }
+          unset token
+          printf '%s' "$result" | python3 -c '
+          import json,sys
+          v=json.load(sys.stdin)
+          if v.get("errors"): print("SHOPIFY_SCHEMA_ERRORS"); sys.exit(17)
+          d=v.get("data") or {}
+          expected={
+            "productSetInput":["title","handle","status","variants","productOptions","descriptionHtml"],
+            "variantSetInput":["sku","price","optionValues"],
+            "productSetIdentifiers":["handle"],
+            "publicationInput":["publicationId"],
+            "orderType":["id","createdAt","updatedAt","currentTotalPriceSet","lineItems","displayFinancialStatus","displayFulfillmentStatus"]
+          }
+          ok=True
+          for key,names in expected.items():
+            node=d.get(key) or {}
+            fields={x.get("name") for x in ((node.get("fields") or node.get("inputFields")) or [])}
+            missing=set(names)-fields
+            print("SHOPIFY_SCHEMA_"+key.upper()+"="+("OK" if not missing else "MISSING:"+",".join(sorted(missing))))
+            ok=ok and not missing
+          currency=(d.get("shop") or {}).get("currencyCode")
+          print("SHOPIFY_SHOP_CURRENCY="+str(currency))
+          print("SHOPIFY_SCHEMA_AUDIT_OK" if ok and isinstance(currency,str) else "SHOPIFY_SCHEMA_AUDIT_FAILED")
+          sys.exit(0 if ok and isinstance(currency,str) else 18)
+          '
+          REMOTE
