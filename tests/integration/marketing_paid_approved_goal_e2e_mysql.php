@@ -455,6 +455,11 @@ try {
         &&$balance['available_minor']===$paidPlan['lifetime_minor']-1250&&!$receipt['payment_confirmed'],'Native settlement balance incorrect.');
     $assert($statusService->status($actor,$reservation['id'],$docId,$snapshotId)['state']==='SETTLED','Settlement status missing native receipt.');
     $assert($actionService->execute($org,$actionId,'settlement-replay')===null,'Completed financial Action replayed.');
+    $analyticsFinance=new \App\Infrastructure\Marketing\FinanceAnalyticsReadAdapter($financeRepo,$settlements,$modules);
+    $analyticsReceipt=$analyticsFinance->settlement($actor,$paidPlan['id'],$paidPlan['plan_hash'],$reservation['id']);
+    $assert($analyticsReceipt['committed_minor']===1250&&$analyticsReceipt['finance_settled']===true,'M4 Finance native receipt readback failed.');
+    $deny(fn()=>$analyticsFinance->settlement($actor,$paidPlan['id'],str_repeat('0',64),$reservation['id']),'M4 foreign plan hash accepted.');
+    echo "Marketing M4 native Finance analytics receipt PASS\n";
     echo "Marketing M3 native Documents review, canonical financial Goal and independent Finance settlement outcome E2E PASS.\n";
     echo "Marketing M3 approved create-paused/activate/pause native MySQL E2E with isolated Meta fixture PASS.\n";
 } finally {

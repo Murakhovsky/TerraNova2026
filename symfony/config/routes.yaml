@@ -3810,6 +3810,11 @@ cos_marketing_performance:
   controller: App\Web\Marketing\MarketingPageController::performance
   methods: [GET]
 
+cos_marketing_attribution_capture:
+  path: /marketing/attribution/capture
+  controller: App\Web\Marketing\MarketingPageController::captureAttribution
+  methods: [POST]
+
 cos_marketing_actions:
   path: /marketing/actions
   controller: App\Web\Marketing\MarketingPageController::actions

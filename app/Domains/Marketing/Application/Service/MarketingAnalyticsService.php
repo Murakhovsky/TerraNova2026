@@ -49,6 +49,7 @@ final readonly class MarketingAnalyticsService
         foreach($leadIds as $id){
             try{
                 $l=$this->sales->lead($actor,$id)??throw new DomainException('Native lead missing.');
+                if(strtolower($l['status'])==='spam')throw new DomainException('Spam lead excluded.');
                 $r=$this->store->record($actor->organizationId()->value(),$campaign,Policy::evidence($l,$campaign,$plan));
                 $out[]=['lead_id'=>$id,'state'=>'RECORDED','evidence_id'=>$r['id']];
             }catch(DomainException){$out[]=['lead_id'=>$id,'state'=>'REJECTED','evidence_id'=>null];}
@@ -108,7 +109,10 @@ final readonly class MarketingAnalyticsService
                 if($row['id']===$snapshot&&$row['revision']===$proof['source_revision']){$media=Policy::media($row);break;}
             }
             if($media===null)throw new DomainException('Source revision changed or missing.');
-            $media['source_hash']=$this->paid->spendEvidence($actor,$p['account_id'],$snapshot)['source_hash'];
+            $current=$this->paid->spendEvidence($actor,$p['account_id'],$snapshot);
+            if($current['source_revision']!==$media['source_revision'])throw new DomainException('Media evidence changed during report.');
+            $media['source_hash']=$current['source_hash'];
+            $media['attribution_hash']=$current['attribution_hash'];
             $media['timezone']='UTC';
         }
         if($reservation!==null){

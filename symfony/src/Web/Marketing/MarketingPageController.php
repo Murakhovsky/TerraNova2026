@@ -50,12 +50,29 @@ final readonly class MarketingPageController
         private \Domains\Finance\Application\Service\FinancePaidSettlementReviewService $settlementReviews,
         private \App\Persistence\Finance\FinancePaidSettlementGoalProposalService $settlementGoals,
         private \Domains\Finance\Application\Contract\FinancePaidSettlementStore $settlements,
+        private \App\Application\Capability\CanonicalCapabilityGateway $capabilityGateway,
     ){}
 
     public function overview(Request $request):Response {return $this->render($request,'overview');}
     public function campaigns(Request $request):Response {return $this->render($request,'campaigns');}
     public function accounts(Request $request):Response {return $this->render($request,'accounts');}
     public function performance(Request $request):Response {return $this->render($request,'performance');}
+    public function captureAttribution(Request $request):Response
+    {
+        $actor=$this->manager();if($actor instanceof Response)return $actor;
+        if(!$this->csrf->isValid($request))return new Response('CSRF validation failed',400);
+        try{
+            $f=$request->request->all();$campaign=MarketingWorkspacePlanningInput::field($f,'campaign_id');
+            $plan=MarketingWorkspacePlanningInput::field($f,'plan_id');$ids=MarketingWorkspacePlanningInput::field($f,'lead_ids');
+            if(strlen($ids)>1000)throw new DomainException('Attribution batch exceeds input bound.');
+            $leadIds=preg_split('/[\s,]+/',$ids,-1,PREG_SPLIT_NO_EMPTY)?:[];
+            $receipt=$this->capabilityGateway->invoke($actor,'marketing.attribution.capture',
+                ['campaign_id'=>$campaign,'plan_id'=>$plan===''?null:$plan,'lead_ids'=>$leadIds],
+                'human_ui',MarketingWorkspacePlanningInput::field($f,'idempotency_key'),'m4-'.bin2hex(random_bytes(12)));
+            return $this->render($request,'performance',null,$receipt);
+        }catch(DomainException $e){return new Response('Attribution capture blocked: '.$e->getMessage(),422);}
+        catch(Throwable){return new Response('Attribution capture unavailable; inspect native receipt.',503);}
+    }
     public function actions(Request $request):Response {return $this->render($request,'actions');}
 
     public function campaign(Request $request,string $id):Response
@@ -363,7 +380,7 @@ final readonly class MarketingPageController
         catch(Throwable $e){error_log('marketing.workspace.sync_failed '.$e::class);return new Response('Meta read sync failed; existing snapshots were retained.',503);}
     }
 
-    private function render(Request $request,string $section,?array $selected=null):Response
+    private function render(Request $request,string $section,?array $selected=null,?array $captureReceipt=null):Response
     {
         $actor=$this->manager();
         if($actor instanceof Response)return $actor;
@@ -467,6 +484,32 @@ final readonly class MarketingPageController
                 $providerCampaigns=$providerHierarchy['campaigns'];
                 $observations=$this->paid->insights($actor,$accountId,'campaign',$from,$to);
             }
+            $analytics=null;$analyticsDiscovery=null;$analyticsTracking=null;$analyticsError=null;$analyticsPlans=[];
+            $analyticsFrom=gmdate('Y-m-d',time()-6*86400);$analyticsTo=gmdate('Y-m-d');
+            if($section==='performance'&&$request->query->has('analytics_campaign')){
+                try{
+                    $q=$request->query->all();$campaign=MarketingWorkspacePlanningInput::field($q,'analytics_campaign');
+                    $plan=MarketingWorkspacePlanningInput::field($q,'analytics_plan');$plan=$plan===''?null:$plan;
+                    $analyticsFrom=MarketingWorkspacePlanningInput::field($q,'analytics_from',$analyticsFrom);
+                    $analyticsTo=MarketingWorkspacePlanningInput::field($q,'analytics_to',$analyticsTo);
+                    $snapshot=MarketingWorkspacePlanningInput::field($q,'analytics_snapshot');$reservation=MarketingWorkspacePlanningInput::field($q,'analytics_reservation');
+                    $analyticsPlans=$this->paidPlans->listForCampaign($actor,$campaign);
+                    $base=['campaign_id'=>$campaign,'plan_id'=>$plan];
+                    $trace='m4-'.bin2hex(random_bytes(12));
+                    $analyticsTracking=$this->capabilityGateway->invoke($actor,'marketing.attribution.tracking.get',
+                        [...$base,'source'=>(MarketingWorkspacePlanningInput::field($q,'analytics_source')?:($plan===null?'website':'meta')),
+                            'medium'=>(MarketingWorkspacePlanningInput::field($q,'analytics_medium')?:($plan===null?'organic':'paid_social'))],
+                        'human_ui','',$trace);
+                    $analytics=$this->capabilityGateway->invoke($actor,'marketing.analytics.report.get',
+                        [...$base,'window_start'=>$analyticsFrom,'window_end'=>$analyticsTo,'snapshot_ref'=>$snapshot===''?null:$snapshot,
+                            'reservation_id'=>$reservation===''?null:$reservation],'human_ui','',$trace);
+                    if($request->query->has('analytics_discover')){
+                        $offset=$request->query->getInt('analytics_offset',0);
+                        $analyticsDiscovery=$this->capabilityGateway->invoke($actor,'marketing.attribution.discover',
+                            [...$base,'window_start'=>$analyticsFrom,'window_end'=>$analyticsTo,'offset'=>$offset],'human_ui','',$trace);
+                    }
+                }catch(Throwable $e){$analyticsError='Analytics scope unavailable: verify active source modules, exact campaign, dates and source references.';}
+            }
             $role=$actor->role()->value();
             $titles=[
                 'overview'=>'Marketing Overview','campaigns'=>'Marketing Campaigns',
@@ -496,7 +539,9 @@ final readonly class MarketingPageController
                 'planningKey'=>'mktplan-'.bin2hex(random_bytes(12)),
                 'planningEvidenceRef'=>'human-note-'.bin2hex(random_bytes(10)),
                 'draftKey'=>'mktform-'.bin2hex(random_bytes(12)),
-                'query'=>$request->query->all(),
+                'query'=>$request->query->all(),'analytics'=>$analytics,'analyticsDiscovery'=>$analyticsDiscovery,
+                'analyticsTracking'=>$analyticsTracking,'analyticsPlans'=>$analyticsPlans,'analyticsError'=>$analyticsError,
+                'analyticsFrom'=>$analyticsFrom,'analyticsTo'=>$analyticsTo,'captureReceipt'=>$captureReceipt,
             ]),200,['Content-Type'=>'text/html; charset=UTF-8','Cache-Control'=>'no-store, private','X-Robots-Tag'=>'noindex, nofollow']);
         }catch(Throwable $e){
             error_log('marketing.workspace.read_failed '.$e::class);

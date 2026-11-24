@@ -1,0 +1,66 @@
+<section class="cos-panel" aria-label="Marketing attribution and analytics">
+    <h2>Attribution &amp; Analytics</h2>
+    <p>Exact UTM attribution of captured native Sales leads, not a causal model or a complete conversion census. Finance budget settlement, reported media spend and won deal values are separate facts.</p>
+    <form method="get" action="/marketing/performance" class="cos-page__stack">
+        <label>Campaign <select name="analytics_campaign" class="form-select" required>
+            {% for c in campaigns %}<option value="{{ c.id }}" {% if query.analytics_campaign|default('') == c.id %}selected{% endif %}>{{ c.name }} · {{ c.id }}</option>{% endfor %}
+        </select></label>
+        <label>Paid plan (optional) <select name="analytics_plan" class="form-select">
+            <option value="">All captured campaign channels</option>
+            {% for p in analyticsPlans %}<option value="{{ p.id }}" {% if query.analytics_plan|default('') == p.id %}selected{% endif %}>{{ p.id }} · {{ p.period_start }}–{{ p.period_end }}</option>{% endfor %}
+        </select></label>
+        <label>From <input type="date" name="analytics_from" class="form-control" value="{{ analyticsFrom }}" required></label>
+        <label>To <input type="date" name="analytics_to" class="form-control" value="{{ analyticsTo }}" required></label>
+        <label>UTM source (optional; paid plan: meta) <input name="analytics_source" class="form-control" value="{{ query.analytics_source|default('') }}" placeholder="website"></label>
+        <label>UTM medium (optional; paid plan: paid_social) <input name="analytics_medium" class="form-control" value="{{ query.analytics_medium|default('') }}" placeholder="organic"></label>
+        <label>Paid campaign snapshot ID <input name="analytics_snapshot" class="form-control" value="{{ query.analytics_snapshot|default('') }}" pattern="mis-[a-f0-9]{24}"></label>
+        <label>Finance reservation ID <input name="analytics_reservation" class="form-control" value="{{ query.analytics_reservation|default('') }}" pattern="finr-[a-f0-9]{24}"></label>
+        <button class="btn btn-outline-primary">Run exact-scope report</button>
+        <button class="btn btn-outline-secondary" name="analytics_discover" value="1">Discover native Sales leads</button>
+    </form>
+    {% if analyticsError %}<p role="alert">{{ analyticsError }}</p>{% endif %}
+    {% if analyticsTracking %}<p>UTM query string (apply to the actual destination before deployment): <code>{{ analyticsTracking.query_string }}</code></p>{% endif %}
+    {% if captureReceipt %}
+        <h3>Capture receipt</h3>
+        {% for item in captureReceipt.results %}<p>Lead {{ item.lead_id }} · {{ item.state }} · {{ item.evidence_id|default('no evidence') }}</p>{% endfor %}
+    {% endif %}
+    {% if analyticsDiscovery %}
+        <h3>Discovery page</h3><p>{{ analyticsDiscovery.scanned }} native leads scanned. Coverage not guaranteed.</p>
+        {% for item in analyticsDiscovery.matches %}<p>Lead {{ item.lead_id }} · {{ item.utm_source }}/{{ item.utm_medium }} · {{ item.created_at }}</p>{% else %}<p>No exact tags on this page.</p>{% endfor %}
+        {% if analyticsDiscovery.next_offset is not null %}<a href="/marketing/performance?{{ query|merge({analytics_offset: analyticsDiscovery.next_offset,analytics_discover: 1})|url_encode }}">Next source page</a>{% endif %}
+    {% endif %}
+    {% if analyticsTracking %}
+        <form method="post" action="/marketing/attribution/capture?{{ query|url_encode }}" class="cos-page__stack">
+            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+            <input type="hidden" name="campaign_id" value="{{ analyticsTracking.campaign_id }}">
+            <input type="hidden" name="plan_id" value="{{ analyticsTracking.plan_id|default('') }}">
+            <input type="hidden" name="idempotency_key" value="{{ planningKey }}-attribution">
+            <label>Capture 1–50 native Sales lead IDs <textarea name="lead_ids" class="form-control" required>{% if analyticsDiscovery %}{{ analyticsDiscovery.matches|map(m => m.lead_id)|join(', ') }}{% endif %}</textarea></label>
+            <button class="btn btn-outline-primary">Record exact attribution evidence</button>
+        </form>
+    {% endif %}
+    {% if analytics %}
+        <h3>Captured Sales cohort</h3>
+        <p>{{ analytics.window_start }}–{{ analytics.window_end }} · {{ analytics.coverage }} · current native readback, closed by report end.</p>
+        <div class="cos-page__metrics">
+            <twig:CosMetric label="Leads" value="{{ analytics.leads }}" hint="captured, non-spam" />
+            <twig:CosMetric label="Qualified" value="{{ analytics.qualified_leads }}" hint="current native status" />
+            <twig:CosMetric label="Won deals" value="{{ analytics.won_deals }}" hint="native won stage" />
+        </div>
+        <p>Lead-to-won: {{ analytics.lead_to_won_percent is null ? 'unavailable' : analytics.lead_to_won_percent ~ '%' }}. Linked deals: {{ analytics.linked_deals }}. Missing sources: {{ analytics.missing_source_count }}. Changed tags: {{ analytics.source_drift_count }}.</p>
+        {% for v in analytics.won_deal_value %}<p>Won deal value: {{ v.minor }} minor units {{ v.currency }} (not recognized revenue).</p>{% endfor %}
+        <table class="table"><thead><tr><th>Channel</th><th>Leads</th><th>Qualified</th><th>Won</th></tr></thead><tbody>
+            {% for c in analytics.channels %}<tr><td>{{ c.source }}/{{ c.medium }}</td><td>{{ c.leads }}</td><td>{{ c.qualified_leads }}</td><td>{{ c.won_deals }}</td></tr>{% else %}<tr><td colspan="4">No captured evidence in this window.</td></tr>{% endfor %}
+        </tbody></table>
+        <h3>Provider media observation</h3>
+        {% if analytics.media %}
+            <p>{{ analytics.media.reported_spend_decimal }} {{ analytics.media.currency }} · {{ analytics.media.source_status }} · r{{ analytics.media.source_revision }} · fetched {{ analytics.media.fetched_at }}.</p>
+            <p>Impressions {{ analytics.media.impressions ?? 'unknown' }} · clicks {{ analytics.media.clicks ?? 'unknown' }} · CTR {{ analytics.media.ctr_percent ?? 'unknown' }}% · CPC {{ analytics.media.cpc ?? 'unknown' }} · CPM {{ analytics.media.cpm ?? 'unknown' }}.</p>
+            <p>Reported spend per captured lead {{ analytics.cost_per_captured_lead ?? 'unavailable' }}; per captured won deal {{ analytics.cost_per_captured_won_deal ?? 'unavailable' }}. Not complete CPL or CAC.</p>
+        {% else %}<p>No exact provider snapshot supplied.</p>{% endif %}
+        <h3>Finance receipt</h3>
+        {% if analytics.settlement %}<p>Settled budget: {{ analytics.settlement.committed_minor }} committed, {{ analytics.settlement.released_minor }} released minor units {{ analytics.settlement.currency }}. Action {{ analytics.settlement.action_id }}.</p>
+        {% else %}<p>No matched settlement receipt in this report.</p>{% endif %}
+        <p>ROAS, net profit and recognized revenue unavailable without complete attribution and independent accounting evidence.</p>
+    {% endif %}
+</section>

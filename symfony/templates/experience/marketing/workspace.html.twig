@@ -6,7 +6,7 @@
         <div>
             <small>Marketing · Controlled Paid Media</small>
             <h1>{{ pageTitle }}</h1>
-            <p>Internal campaign drafts and Meta Ads read-only observations. Paid activation and budget writes are disabled until Finance and Workflow acceptance.</p>
+            <p>Campaign planning, governed paid operations and native attribution. Provider writes and budget settlement require independent approval.</p>
         </div>
     </header>
     <nav class="cos-toolbar" aria-label="Marketing workspaces">
@@ -298,7 +298,7 @@
                 </article>
             {% else %}<p>No imported Meta hierarchy. Connect and sync an authorized account to see provider campaigns, ad sets and ads.</p>{% endfor %}
         </section>
-        <section class="cos-panel"><h2>Attribution and Finance</h2><p>No accepted Shopify/Sales attribution or Finance expense reconciliation yet. ROAS and net profit are not confirmed.</p></section>
+        {% include 'experience/marketing/attribution_analytics.html.twig' %}
     {% elseif section == 'actions' %}
         <section class="cos-panel"><h2>Blocked paid operations</h2>
             <p>Campaign activation, changes to budgets, new paused provider objects and autonomous agent edits are unavailable until F1 + canonical Workflow acceptance.</p>
