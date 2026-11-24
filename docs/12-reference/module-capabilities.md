@@ -303,13 +303,17 @@ Manifest capabilities не задекларовані.
 - обробники jobs: —;
 - внески API routes: —;
 - постачальники конфігурації: —;
-- міграції: `app/migrations/20261119_000152_marketing_foundation.sql`, `app/migrations/20261119_000154_marketing_planning_m2.sql`.
+- міграції: `app/migrations/20261119_000152_marketing_foundation.sql`, `app/migrations/20261119_000154_marketing_planning_m2.sql`, `app/migrations/20261124_000162_marketing_audience_adsets.sql`.
 
 ### Задекларовані capabilities
 
+- `marketing.adset.list`;
+- `marketing.adset.save`;
 - `marketing.analyst.proposal.list`;
 - `marketing.analyst.proposal.review`;
 - `marketing.analyst.proposal.submit`;
+- `marketing.audience.list`;
+- `marketing.audience.save`;
 - `marketing.campaign.archive`;
 - `marketing.campaign.create`;
 - `marketing.campaign.get`;

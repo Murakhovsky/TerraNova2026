@@ -106,5 +106,24 @@ $q=$db->prepare('SELECT COUNT(*) FROM marketing_creative_revisions WHERE organiz
 $q->execute([$orgA,$creativeId]);$assert((int)$q->fetchColumn()===3,'Creative append-only revision history lost');
 $q=$db->prepare('SELECT COUNT(*) FROM marketing_planning_intents WHERE organization_id=?');
 $q->execute([$orgA]);$assert((int)$q->fetchColumn()===6,'Planning idempotency receipt count unexpected');
+$au=$policy->audience(['name'=>'Local audience','target_spec'=>['market_countries'=>['UA'],'audience_hypothesis'=>'General local demand']]);
+$aud=$repo->saveAudience($orgA,'101',null,null,$au,'aud-create-01');
+$ad=$policy->adset(['name'=>'Feed plan','audience_id'=>$aud['id'],'audience_revision'=>1,
+    'creatives'=>[['creative_id'=>$creativeId,'revision'=>3]],'placements'=>['FEED'],'optimization'=>'TRAFFIC',
+    'planned_daily_budget'=>'12.50','currency'=>'USD']);
+$set=$repo->saveAdset($orgA,$campaignId,1,'101',null,null,$ad,'adset-create-01');
+$assert(!$set['launch_eligible']&&!$set['content']['finance_reservation_confirmed'],'Draft falsely approved.');
+$assert(count($repo->audiences($orgA))===1&&$repo->audiences($orgB)===[],'Audience tenant isolation failed.');
+$assert($repo->adsets($orgA,$campaignId)[0]['pins_stale']===false,'Current pins falsely stale.');
+$denied(static fn()=> $repo->adsets($orgB,$campaignId),'Foreign AdSet listing accepted.');
+$denied(static fn()=> $repo->saveAdset($orgB,$campaignId,1,'101',null,null,$ad,'foreign-adset-01'),'Foreign campaign accepted.');
+$au2=$repo->saveAudience($orgA,'101',$aud['id'],1,[...$au,'name'=>'Revised audience'],'aud-revise-01');
+$assert($au2['revision']===2&&$repo->adsets($orgA,$campaignId)[0]['pins_stale'],'Audience revision did not stale AdSet.');
+$replay=$repo->saveAudience($orgA,'101',null,null,$au,'aud-create-01');
+$assert($replay['revision']===1&&$replay['id']===$aud['id'],'Original audience replay lost.');
+$denied(static fn()=> $repo->saveAdset($orgA,$campaignId,1,'101',$set['id'],1,$ad,'adset-stale-01'),'Stale Audience accepted.');
+$set2=$repo->saveAdset($orgA,$campaignId,1,'101',$set['id'],1,[...$ad,'audience_revision'=>2],'adset-revise-01');
+$assert($set2['revision']===2&&!$repo->adsets($orgA,$campaignId)[0]['pins_stale'],'AdSet revision failed.');
+$denied(static fn()=> $repo->saveAdset($orgA,$campaignId,1,'101',$set['id'],1,[...$ad,'audience_revision'=>2],'adset-old-01'),'Stale AdSet revision accepted.');
 echo "Marketing M2 real MySQL two-person review, tenant fence, immutable Creative revisions, stale gate PASS\n";
 

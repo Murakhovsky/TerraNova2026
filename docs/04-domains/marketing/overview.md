@@ -25,7 +25,7 @@ Marketing — окремий bounded context, що володіє рекламн
 
 ## Фактично додані можливості
 
-П’ятнадцять typed capabilities, включно з шістьма M2a, Product draft-check і Finance-facing source Query: `marketing.campaign.search`, `marketing.campaign.get`, `marketing.campaign.create`, `marketing.paid.account.list`, `marketing.paid.insights.query`, `marketing.paid.sync.history`. Для них діють Canonical Capability Gateway і перевірка tenant менеджера. Нових універсальних executor або CommandBus не створено.
+Дев’ятнадцять typed capabilities, включно з шістьма M2a, Product draft-check і Finance-facing source Query: `marketing.campaign.search`, `marketing.campaign.get`, `marketing.campaign.create`, `marketing.paid.account.list`, `marketing.paid.insights.query`, `marketing.paid.sync.history`. Для них діють Canonical Capability Gateway і перевірка tenant менеджера. Нових універсальних executor або CommandBus не створено.
 
 На UI передбачено Overview, Campaigns, Campaign Workspace, Paid Media Accounts, Performance та Action Queue. Менеджер може створити внутрішню чернетку, під'єднати read-only Meta Ad Account через opaque Vault reference, імпортувати і переглядати provider observations.
 
@@ -59,7 +59,7 @@ Marketing — окремий bounded context, що володіє рекламн
 
 Workspace дозволяє створювати, переглядати, змінювати або прибирати цю гіпотезу у новій Creative revision. Existing JSON persistence, tenant scope, receipt і stale-review fence збережені; окремої таблиці або executor не створено. Це не є завершеною моделлю Audience/AdSet, перевіркою policy, автоматичною класифікацією аудиторії чи Meta API mutation. Докази: unit schema/policy та MySQL revision/readback тести; незалежне приймання попереду.
 
-## M2c.2: Product Selector
+## M2c.2: Вибір товарів (Product Selector)
 
 `marketing.product.selector.search` — read-only tenant-manager Query через наявний Product read port. Пошук за назвою/SKU через Product owner, сторінки до 20 variant rows, повторне читання поточного статусу Product/Variant; архівні або неактивні варіації відсіюються. Pagination працює за source rows, тому відфільтрована сторінка може бути порожньою. Workspace дозволяє обрати SKU, виконати live price check та підставити Product reference у новий Creative Draft. Початковий M2c.2 використовував Variant selection для readback; M2c.3 додає версіоноване посилання. Немає stock guarantee, paid eligibility або прямого SQL. Unit та native MySQL tests додають tenant/module/role fences. D3–D5 не заявлено.
 
@@ -70,6 +70,10 @@ Creative create/revise приймають опційні canonical `variant_ref`
 Existing `marketing.product.draft_check.get` підтримує опційний `location_id` та `destination_url`. Через Product owner `balance()` читається on-hand/reserved/available/revision для активної варіації конкретного tenant і location. Non-stock variant позначається NOT_TRACKED; відсутній/неактивний Product не дає stock evidence. Decimal залишається string, без float conversion. Це поточне спостереження, а не резерв або гарантія доступності. Stock location наразі вводиться за ID; довідник локацій потребує Product-owned list contract.
 
 Destination URL проходить синтаксичну HTTPS перевірку без DNS/HTTP, credentials, IP та нестандартних портів. Reachability, redirect safety, ownership і відповідність товару залишаються непідтвердженими. Немає SSRF-prone server fetch. `launch_eligible`, `inventory_verified`, `external_destination_verified` залишаються false; Meta/Finance writes заборонені. Unit та native MySQL tests додано; CI і незалежне приймання потрібні.
+
+## M2c.4a: Чернетки аудиторій і груп оголошень
+
+Marketing має tenant-scoped Audience та внутрішній AdSet Draft, відокремлений від імпортованих Meta AdSet. `marketing.audience.save/list` та `marketing.adset.save/list` — типізовані контракти. Save створює запис або додає ревізію за ID + expected_revision. AdSet фіксує Campaign revision, Audience revision і 1–20 Creative revision pins; застарілі або чужі посилання блокують збереження, readback показує pins_stale. Ідемпотентне повторення повертає початкову незмінну ревізію. Плейсменти, optimization і planned_daily_budget є лише гіпотезою. Finance не резервував бюджет, Meta нічого не отримує, launch_eligible=false. UI-редактор і Finance reservation залишаються наступними кроками.
 
 ## Надійність імпорту та операційна черга
 

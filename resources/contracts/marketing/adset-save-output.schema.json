@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^mkas-[a-f0-9]{24}$"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2000000000
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 190
+    },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "content": {
+      "type": "object",
+      "properties": {
+        "campaign_id": {
+          "type": "string",
+          "pattern": "^mkt-[a-f0-9]{24}$"
+        },
+        "campaign_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2000000000
+        },
+        "name": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 180
+        },
+        "audience_id": {
+          "type": "string",
+          "pattern": "^mkau-[a-f0-9]{24}$"
+        },
+        "audience_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2000000000
+        },
+        "creatives": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "items": {
+            "type": "object",
+            "properties": {
+              "creative_id": {
+                "type": "string",
+                "pattern": "^mkcr-[a-f0-9]{24}$"
+              },
+              "revision": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2000000000
+              }
+            },
+            "required": [
+              "creative_id",
+              "revision"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "placements": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 5,
+          "items": {
+            "type": "string",
+            "enum": [
+              "AUTOMATIC",
+              "FEED",
+              "STORIES",
+              "REELS",
+              "SEARCH"
+            ]
+          }
+        },
+        "optimization": {
+          "type": "string",
+          "enum": [
+            "REACH",
+            "TRAFFIC",
+            "LEADS",
+            "CONVERSIONS"
+          ]
+        },
+        "planned_daily_budget": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,11})(\\.[0-9]{1,2})?$"
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        },
+        "finance_reservation_confirmed": {
+          "type": "boolean",
+          "const": false
+        },
+        "provider_eligible": {
+          "type": "boolean",
+          "const": false
+        }
+      },
+      "required": [
+        "campaign_id",
+        "campaign_revision",
+        "name",
+        "audience_id",
+        "audience_revision",
+        "creatives",
+        "placements",
+        "optimization",
+        "planned_daily_budget",
+        "currency",
+        "finance_reservation_confirmed",
+        "provider_eligible"
+      ],
+      "additionalProperties": false
+    },
+    "status": {
+      "type": "string",
+      "const": "DRAFT"
+    },
+    "launch_eligible": {
+      "type": "boolean",
+      "const": false
+    }
+  },
+  "required": [
+    "id",
+    "revision",
+    "actor_id",
+    "content_hash",
+    "content",
+    "status",
+    "launch_eligible"
+  ],
+  "additionalProperties": false
+}

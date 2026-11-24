@@ -14,6 +14,119 @@ final readonly class MysqlMarketingPlanningRepository implements MarketingPlanni
 {
     public function __construct(private PDO $connection){}
 
+    public function saveAudience(string $org,string $actor,?string $id,?int $expectedRevision,array $content,string $key):array
+    {
+        $hash=self::hash([$actor,$id,$expectedRevision,$content]);
+        return $this->write($org,'audience_save',$key,$hash,function()use($org,$actor,$id,$expectedRevision,$content):array{
+            $json=self::json($content);
+            if($id===null){
+                $id='mkau-'.bin2hex(random_bytes(12));$revision=1;
+                $this->connection->prepare("INSERT INTO marketing_audiences (organization_id,id,name,target_spec_json,status,revision)
+                    VALUES (?,?,?,?,'DRAFT',1)")->execute([$org,$id,$content['name'],self::json($content['target_spec'])]);
+            }else{
+                $q=$this->connection->prepare("UPDATE marketing_audiences SET name=?,target_spec_json=?,revision=revision+1
+                    WHERE organization_id=? AND id=? AND revision=? AND status='DRAFT'");
+                $q->execute([$content['name'],self::json($content['target_spec']),$org,$id,$expectedRevision]);
+                if($q->rowCount()!==1)throw new DomainException('Audience unavailable or revision stale.');
+                $revision=(int)$expectedRevision+1;
+            }
+            $this->connection->prepare('INSERT INTO marketing_audience_revisions
+                (organization_id,audience_id,revision,actor_id,content_hash,content_json) VALUES (?,?,?,?,?,?)')
+                ->execute([$org,$id,$revision,$actor,hash('sha256',$json),$json]);
+            return $this->planRevision($org,'audience',$id,$revision);
+        });
+    }
+
+    public function audiences(string $org):array
+    {
+        $q=$this->connection->prepare("SELECT a.id,a.revision,r.actor_id,r.content_hash,r.content_json
+            FROM marketing_audiences a JOIN marketing_audience_revisions r ON r.organization_id=a.organization_id
+            AND r.audience_id=a.id AND r.revision=a.revision WHERE a.organization_id=? AND a.status='DRAFT'
+            ORDER BY a.updated_at DESC,a.id DESC LIMIT 100");
+        $q->execute([$org]);
+        return array_map(self::planProjection(...),$q->fetchAll(PDO::FETCH_ASSOC));
+    }
+
+    public function saveAdset(string $org,string $campaignId,int $campaignRevision,string $actor,?string $id,?int $expectedRevision,array $content,string $key):array
+    {
+        $hash=self::hash([$campaignId,$campaignRevision,$actor,$id,$expectedRevision,$content]);
+        return $this->write($org,'adset_save',$key,$hash,function()use($org,$campaignId,$campaignRevision,$actor,$id,$expectedRevision,$content):array{
+            $campaign=$this->campaign($org,$campaignId,true);
+            if($campaign['status']!=='DRAFT'||(int)$campaign['revision']!==$campaignRevision)throw new DomainException('Campaign revision stale.');
+            $q=$this->connection->prepare("SELECT a.revision FROM marketing_audiences a JOIN marketing_audience_revisions r
+                ON r.organization_id=a.organization_id AND r.audience_id=a.id AND r.revision=a.revision
+                WHERE a.organization_id=? AND a.id=? AND a.status='DRAFT' FOR UPDATE");
+            $q->execute([$org,$content['audience_id']]);$current=$q->fetchColumn();
+            if($current===false||(int)$current!==$content['audience_revision'])throw new DomainException('Audience pin stale or foreign.');
+            foreach($content['creatives'] as $pin){
+                $creative=$this->lockedCreative($org,$pin['creative_id']);
+                if($creative['campaign_id']!==$campaignId||$creative['status']!=='DRAFT'||(int)$creative['revision']!==$pin['revision']){
+                    throw new DomainException('Creative pin stale or foreign to Campaign.');
+                }
+            }
+            if($id===null){
+                $id='mkas-'.bin2hex(random_bytes(12));$revision=1;
+                $this->connection->prepare("INSERT INTO marketing_adset_drafts (organization_id,id,campaign_id,revision,status)
+                    VALUES (?,?,?,1,'DRAFT')")->execute([$org,$id,$campaignId]);
+            }else{
+                $q=$this->connection->prepare("UPDATE marketing_adset_drafts SET revision=revision+1 WHERE organization_id=?
+                    AND id=? AND campaign_id=? AND revision=? AND status='DRAFT'");
+                $q->execute([$org,$id,$campaignId,$expectedRevision]);
+                if($q->rowCount()!==1)throw new DomainException('AdSet unavailable or revision stale.');
+                $revision=(int)$expectedRevision+1;
+            }
+            $json=self::json(['campaign_id'=>$campaignId,'campaign_revision'=>$campaignRevision,...$content]);
+            $this->connection->prepare('INSERT INTO marketing_adset_revisions
+                (organization_id,adset_id,revision,actor_id,content_hash,content_json) VALUES (?,?,?,?,?,?)')
+                ->execute([$org,$id,$revision,$actor,hash('sha256',$json),$json]);
+            return $this->planRevision($org,'adset',$id,$revision);
+        });
+    }
+
+    public function adsets(string $org,string $campaignId):array
+    {
+        $campaign=$this->campaign($org,$campaignId,false);
+        $q=$this->connection->prepare("SELECT a.id,a.revision,r.actor_id,r.content_hash,r.content_json
+            FROM marketing_adset_drafts a JOIN marketing_adset_revisions r ON r.organization_id=a.organization_id
+            AND r.adset_id=a.id AND r.revision=a.revision WHERE a.organization_id=? AND a.campaign_id=? AND a.status='DRAFT'
+            ORDER BY a.updated_at DESC,a.id DESC LIMIT 100");
+        $q->execute([$org,$campaignId]);
+        $items=array_map(self::planProjection(...),$q->fetchAll(PDO::FETCH_ASSOC));
+        foreach($items as &$item){
+            $content=$item['content'];$stale=$campaign['status']!=='DRAFT'||(int)$campaign['revision']!==$content['campaign_revision'];
+            $a=$this->connection->prepare("SELECT revision FROM marketing_audiences WHERE organization_id=? AND id=? AND status='DRAFT'");
+            $a->execute([$org,$content['audience_id']]);$current=$a->fetchColumn();
+            $stale=$stale||$current===false||(int)$current!==$content['audience_revision'];
+            $c=$this->connection->prepare("SELECT revision FROM marketing_creative_briefs WHERE organization_id=? AND id=? AND campaign_id=? AND status='DRAFT'");
+            foreach($content['creatives'] as $pin){
+                $c->execute([$org,$pin['creative_id'],$campaignId]);$current=$c->fetchColumn();
+                $stale=$stale||$current===false||(int)$current!==$pin['revision'];
+            }
+            $item['pins_stale']=$stale;
+        }
+        unset($item);
+        return $items;
+    }
+
+    /** Resolve immutable receipt revision, not mutable current state. */
+    private function planRevision(string $org,string $kind,string $id,int $revision):array
+    {
+        $sql=$kind==='audience'
+            ?'SELECT audience_id AS id,revision,actor_id,content_hash,content_json FROM marketing_audience_revisions WHERE organization_id=? AND audience_id=? AND revision=?'
+            :'SELECT adset_id AS id,revision,actor_id,content_hash,content_json FROM marketing_adset_revisions WHERE organization_id=? AND adset_id=? AND revision=?';
+        $q=$this->connection->prepare($sql);$q->execute([$org,$id,$revision]);$row=$q->fetch(PDO::FETCH_ASSOC);
+        if(!is_array($row))throw new DomainException('Planning revision receipt missing.');
+        return self::planProjection($row);
+    }
+
+    private static function planProjection(array $row):array
+    {
+        $row['revision']=(int)$row['revision'];
+        $row['content']=json_decode((string)$row['content_json'],true,32,JSON_THROW_ON_ERROR);
+        unset($row['content_json']);$row['status']='DRAFT';$row['launch_eligible']=false;
+        return $row;
+    }
+
     public function createCreative(string $org,string $campaignId,string $actor,array $content,string $key):array
     {
         $hash=self::hash(['campaign'=>$campaignId,'actor'=>$actor,'creative'=>$content]);
@@ -202,7 +315,7 @@ final readonly class MysqlMarketingPlanningRepository implements MarketingPlanni
             $this->connection->beginTransaction();
             $existing=$this->receipt($org,$op,$key,$hash,true);
             if($existing!==null){
-                $result=$this->resolve($org,$op,$existing['id']);
+                $result=$this->resolve($org,$op,$existing['id'],$existing['revision']);
                 $this->connection->commit();
                 return $result;
             }
@@ -216,7 +329,7 @@ final readonly class MysqlMarketingPlanningRepository implements MarketingPlanni
             if($this->connection->inTransaction())$this->connection->rollBack();
             if($e instanceof PDOException&&$e->getCode()==='23000'){
                 $existing=$this->receipt($org,$op,$key,$hash,false);
-                if($existing!==null)return $this->resolve($org,$op,$existing['id']);
+                if($existing!==null)return $this->resolve($org,$op,$existing['id'],$existing['revision']);
             }
             throw $e;
         }
@@ -233,8 +346,9 @@ final readonly class MysqlMarketingPlanningRepository implements MarketingPlanni
         return ['id'=>(string)$row['record_id'],'revision'=>(int)$row['record_revision']];
     }
 
-    private function resolve(string $org,string $operation,string $id):array
+    private function resolve(string $org,string $operation,string $id,int $revision):array
     {
+        if($operation==='audience_save'||$operation==='adset_save')return $this->planRevision($org,$operation==='audience_save'?'audience':'adset',$id,$revision);
         return str_starts_with($operation,'creative_')?$this->creative($org,$id):$this->proposal($org,$id);
     }
 

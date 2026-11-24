@@ -50,6 +50,15 @@ domain_id: marketing
       ]
     },
     {
+      "id": "audience_planning",
+      "capability_ids": [
+        "marketing.audience.save",
+        "marketing.audience.list",
+        "marketing.adset.save",
+        "marketing.adset.list"
+      ]
+    },
+    {
       "id": "product_evidence",
       "capability_ids": [
         "marketing.product.draft_check.get",
@@ -84,6 +93,7 @@ Marketing володіє Campaign Draft, Meta Ad Account binding, provider Campa
 | `paid_media_read` | Meta read-only snapshots, атомарність імпорту й історія sync | D2, без real Ads Manager acceptance |
 | `creative_planning` | Версії креативів, Product refs та опційний TargetSpec чернетки | D2 baseline; TargetSpec потребує CI/приймання, без provider eligibility |
 | `analyst_review` | Evidence proposals та незалежні review-рішення | D2, Hermes runtime не підключений |
+| `audience_planning` | Версії Audience і AdSet Draft, revision pins та планова потреба бюджету | Очікує CI; без Finance reservation або Meta write |
 | `product_evidence` | Пошук Product/SKU, Product/Variant/Price та stock-by-location readback через Product Management read port | D2, без складу/URL/Meta policy acceptance |
 
 Компоненти не є незалежними installable modules.

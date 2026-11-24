@@ -111,6 +111,55 @@ final class MarketingPlanningPolicy
         }
     }
 
+    /** @param array<string,mixed> $raw @return array<string,mixed> */
+    public function audience(array $raw):array
+    {
+        $this->only($raw,['name','target_spec']);
+        $name=$raw['name']??null;
+        if(!is_string($name)||mb_strlen(trim($name))<3||mb_strlen(trim($name))>180||!is_array($raw['target_spec']??null)){
+            throw new DomainException('Audience requires name and TargetSpec.');
+        }
+        return ['name'=>trim($name),'target_spec'=>$this->targetSpec($raw['target_spec'])];
+    }
+
+    /** @param array<string,mixed> $raw @return array<string,mixed> */
+    public function adset(array $raw):array
+    {
+        $this->only($raw,['name','audience_id','audience_revision','creatives','placements','optimization','planned_daily_budget','currency']);
+        $name=$raw['name']??null;$audience=$raw['audience_id']??null;
+        $creatives=$raw['creatives']??null;$placements=$raw['placements']??null;
+        $optimization=$raw['optimization']??null;$budget=$raw['planned_daily_budget']??null;$currency=$raw['currency']??null;
+        if(!is_string($name)||mb_strlen(trim($name))<3||mb_strlen(trim($name))>180||!is_string($audience)
+            ||!is_array($creatives)||!array_is_list($creatives)||count($creatives)<1||count($creatives)>20
+            ||!is_array($placements)||!array_is_list($placements)||count($placements)<1||count($placements)>5
+            ||!in_array($optimization,['REACH','TRAFFIC','LEADS','CONVERSIONS'],true)
+            ||!is_string($budget)||!preg_match('/^(0|[1-9][0-9]{0,11})(?:\\.[0-9]{1,2})?$/D',$budget)
+            ||!preg_match('/[1-9]/',$budget)||!is_string($currency)||!preg_match('/^[A-Z]{3}$/D',$currency)){
+            throw new DomainException('Invalid bounded AdSet planning fields.');
+        }
+        $refs=[];
+        foreach($creatives as $item){
+            if(!is_array($item))throw new DomainException('Invalid Creative pin.');
+            $this->only($item,['creative_id','revision']);
+            if(!is_string($item['creative_id']??null))throw new DomainException('Invalid Creative ID.');
+            $id=self::id($item['creative_id'],'mkcr-');
+            if(isset($refs[$id]))throw new DomainException('Duplicate Creative pin.');
+            $refs[$id]=['creative_id'=>$id,'revision'=>self::revision($item['revision']??null)];
+        }
+        ksort($refs,SORT_STRING);
+        foreach($placements as $placement){
+            if(!in_array($placement,['AUTOMATIC','FEED','STORIES','REELS','SEARCH'],true))throw new DomainException('Invalid draft placement.');
+        }
+        if(count(array_unique($placements))!==count($placements)||(in_array('AUTOMATIC',$placements,true)&&count($placements)>1)){
+            throw new DomainException('Duplicate or conflicting draft placements.');
+        }
+        sort($placements,SORT_STRING);
+        return ['name'=>trim($name),'audience_id'=>self::id($audience,'mkau-'),
+            'audience_revision'=>self::revision($raw['audience_revision']??null),'creatives'=>array_values($refs),
+            'placements'=>$placements,'optimization'=>$optimization,'planned_daily_budget'=>$budget,'currency'=>$currency,
+            'finance_reservation_confirmed'=>false,'provider_eligible'=>false];
+    }
+
     /** Provider-neutral planning only; no audience IDs, identity lists or activation fields.
      * @param array<string,mixed> $raw @return array<string,mixed>
      */

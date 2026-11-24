@@ -35,7 +35,7 @@ $manifest = [
                 'purpose' => 'Search current tenant-scoped Product variants and read base price facts for Marketing draft planning, without Product SQL or launch authorization.',
             ],
         ],
-        'migration_files' => ['app/migrations/20261119_000152_marketing_foundation.sql','app/migrations/20261119_000154_marketing_planning_m2.sql'],
+        'migration_files' => ['app/migrations/20261119_000152_marketing_foundation.sql','app/migrations/20261119_000154_marketing_planning_m2.sql','app/migrations/20261124_000162_marketing_audience_adsets.sql'],
         'capabilities' => [
             'marketing.campaign.search',
             'marketing.campaign.get',
@@ -52,6 +52,10 @@ $manifest = [
             'marketing.analyst.proposal.submit',
             'marketing.analyst.proposal.list',
             'marketing.analyst.proposal.review',
+            'marketing.audience.save',
+            'marketing.audience.list',
+            'marketing.adset.save',
+            'marketing.adset.list',
             'marketing.campaign.update',
             'marketing.campaign.archive',
             'marketing.paid.sync.request',
@@ -132,6 +136,10 @@ $contracts[] = [
 ];
 
 foreach ([
+    'marketing.audience.save' => ['command','internal','marketing/audience-save'],
+    'marketing.audience.list' => ['query','none','marketing/audience-list'],
+    'marketing.adset.save' => ['command','internal','marketing/adset-save'],
+    'marketing.adset.list' => ['query','none','marketing/adset-list'],
     'marketing.creative.create' => ['command','internal','marketing/creative-create'],
     'marketing.creative.revise' => ['command','internal','marketing/creative-revise'],
     'marketing.creative.list' => ['query','none','marketing/creative-list'],

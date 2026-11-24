@@ -61,6 +61,16 @@ foreach ([
 ] as $invalidTarget) {
     $blocked(static fn()=> $policy->creative([...$creative,'target_spec'=>$invalidTarget]),'Invalid TargetSpec accepted.');
 }
+$au=$policy->audience(['name'=>'Broad local market','target_spec'=>$target]);
+$expect($au['target_spec']['provider_eligible']===false,'Audience falsely eligible.');
+$ad=['name'=>'Local feed draft','audience_id'=>'mkau-'.str_repeat('a',24),'audience_revision'=>1,
+    'creatives'=>[['creative_id'=>'mkcr-'.str_repeat('b',24),'revision'=>1]],'placements'=>['FEED'],
+    'optimization'=>'TRAFFIC','planned_daily_budget'=>'15.50','currency'=>'USD'];
+$expect($policy->adset($ad)['finance_reservation_confirmed']===false,'Draft budget falsely reserved.');
+$blocked(static fn()=> $policy->adset([...$ad,'finance_reservation_confirmed'=>true]),'Forged Finance reservation.');
+$blocked(static fn()=> $policy->adset([...$ad,'placements'=>['AUTOMATIC','FEED']]),'Conflicting placements accepted.');
+$blocked(static fn()=> $policy->adset([...$ad,'planned_daily_budget'=>'0.00']),'Zero budget accepted.');
+$blocked(static fn()=> $policy->adset([...$ad,'creatives'=>[$ad['creatives'][0],$ad['creatives'][0]]]),'Duplicate creative accepted.');
 $proposal=[
     'recommendation'=>'Test a shorter headline for Ukrainian users.',
     'rationale'=>'Human hypothesis from an unverified planning note.',
@@ -87,8 +97,10 @@ foreach($manifest['contributions']['capability_contracts'] as $raw){
     $c=CapabilityContract::fromArray($raw);
     $contracts[$c->id]=$c;
 }
-$expect(count($contracts)===15,'Marketing M0/M1 seven, six M2a and two Product Queries expected.');
+$expect(count($contracts)===19,'Marketing M0/M1 seven, six M2a and two Product Queries expected.');
 $validator=new CapabilityJsonInputValidator();
+$validator->validate($contracts['marketing.audience.save'],['name'=>'Broad local market','target_spec'=>$target]);
+$validator->validate($contracts['marketing.adset.save'],['campaign_id'=>'mkt-'.str_repeat('a',24),'campaign_revision'=>1,...$ad]);
 $validator->validate($contracts['marketing.creative.create'],['campaign_id'=>'mkt-'.str_repeat('a',24),...$creative]);
 $validator->validate($contracts['marketing.creative.create'],[
     'campaign_id'=>'mkt-'.str_repeat('a',24),...$creative,'target_spec'=>$target
