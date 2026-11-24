@@ -15,7 +15,8 @@
         "required": [
           "product_id",
           "name",
-          "status"
+          "status",
+          "revision"
         ],
         "properties": {
           "product_id": {
@@ -27,6 +28,10 @@
           },
           "status": {
             "type": "string"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1
           }
         },
         "additionalProperties": false
