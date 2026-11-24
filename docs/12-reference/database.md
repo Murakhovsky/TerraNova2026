@@ -363,6 +363,8 @@ generated: true
 | `sales` | `app/migrations/20261125_009006_sales_order_sync_runs.sql` | `sales_order_sync_runs` |
 | `sales` | `app/migrations/20261125_009006_sales_order_sync_runs.sql` | `sales_order_sync_tasks` |
 | `sales` | `app/migrations/20261125_009008_sales_order_lifecycle.sql` | `sales_order_allocations` |
+| `sales` | `app/migrations/20261125_009008_sales_order_lifecycle.sql` | `sales_order_evidence` |
+| `sales` | `app/migrations/20261125_009008_sales_order_lifecycle.sql` | `sales_order_lifecycle_documents` |
 | `sales` | `app/migrations/20261125_009008_sales_order_lifecycle.sql` | `sales_order_lines` |
 | `service` | `app/migrations/20260919_000064_service_wave11_cutover.sql` | `tn_service_assignments` |
 | `service` | `app/migrations/20260919_000064_service_wave11_cutover.sql` | `tn_service_cases` |

@@ -27,6 +27,7 @@ generated: true
 | Property Submission → Publication | `property` | `as-is` | `source-verified` | 6 | 0 | 6/6 | 6/6 | 6/6 | 6/6 | 0/6 | [Відкрити workflow](../02-workflows/property-submission-to-publication.md) |
 | Opportunity → Property Reservation | `real_estate` | `as-is` | `source-verified` | 7 | 3 | 7/7 | 7/7 | 7/7 | 7/7 | 3/7 | [Відкрити workflow](../02-workflows/real-estate-opportunity-to-reservation.md) |
 | Sales Lead → Managed Case | `sales` | `as-is` | `source-verified` | 8 | 0 | 8/8 | 8/8 | 8/8 | 6/6 | 3/6 | [Відкрити workflow](../02-workflows/sales-lead-to-managed-case.md) |
+| Sales Order → Fulfillment | `sales` | `as-is` | `source-verified` | 8 | 0 | 8/8 | 8/8 | 8/8 | 8/8 | 5/8 | [Відкрити workflow](../02-workflows/sales-order-to-fulfillment.md) |
 | Sales Request → Property Match | `sales` | `as-is` | `source-verified` | 5 | 1 | 5/5 | 5/5 | 5/5 | 4/4 | 1/4 | [Відкрити workflow](../02-workflows/sales-request-to-property-match.md) |
 | Service Request → Ticket Close | `service` | `as-is` | `source-verified` | 7 | 0 | 7/7 | 7/7 | 7/7 | 6/6 | 0/6 | [Відкрити workflow](../02-workflows/service-request-to-close.md) |
 
@@ -50,6 +51,7 @@ generated: true
 | Property Submission → Publication | 6/6 | 6/6 | 0/6 | 0/6 | 6/6 | 6/6 | 0/6 | 6/6 | 0/6 |
 | Opportunity → Property Reservation | 7/7 | 7/7 | 0/7 | 3/7 | 7/7 | 7/7 | 3/7 | 7/7 | 3/7 |
 | Sales Lead → Managed Case | 8/8 | 8/8 | 0/8 | 0/8 | 8/8 | 8/8 | 3/8 | 6/6 | 3/6 |
+| Sales Order → Fulfillment | 8/8 | 8/8 | 0/8 | 0/8 | 8/8 | 8/8 | 5/8 | 8/8 | 5/8 |
 | Sales Request → Property Match | 5/5 | 5/5 | 0/5 | 1/5 | 5/5 | 5/5 | 1/5 | 4/4 | 1/4 |
 | Service Request → Ticket Close | 7/7 | 7/7 | 0/7 | 0/7 | 7/7 | 7/7 | 0/7 | 6/6 | 0/6 |
 
@@ -325,6 +327,37 @@ generated: true
 | Record activity / call | salesperson | `sales` | `sales.activity.record` | `operation` | ні | use_case `CompleteSalesCall` [source]<br>source `app/Domains/Sales/Automation/Event/CallCompleted.php` · `sales.call.completed` [source] |
 | Schedule next action | salesperson | `sales` | `sales.followup.schedule` | `operation` | так | use_case `ScheduleDealFollowup` [source]<br>event `sales.followup.created` [runtime] |
 | Record business outcome | salesperson | `sales` | `sales.deal.outcome.record` | `outcome` | так | event `sales.deal.won` [runtime]<br>event `sales.deal.lost` [runtime] |
+
+## Sales Order → Fulfillment
+
+- **Process ID:** `sales.order-to-fulfillment`
+- **Schema:** `v5`
+- **Domain:** `sales`
+- **Бізнес-стан:** `as-is`
+- **Покриття capabilities:** 8/8 кроків
+- **Cross-domain кроки:** 0/8
+- **Derived verification:** `source-verified`
+- **Тригер:** Authorized human places and manages a native Order with canonical Product references; external inventory authority stays under review.
+- **Workflow:** [Sales Order → Fulfillment](../02-workflows/sales-order-to-fulfillment.md)
+
+**Результати**
+
+- Confirmed order and scoped allocation state
+- Product-owned reserve, commit, release and return evidence
+- Terminal or partial fulfillment without inferred payment
+
+**Відповідальність, capabilities і runtime evidence**
+
+| Крок | Owner | Domain | Capability / gap | Вид | Критичний | Executable / evidence mapping |
+| --- | --- | --- | --- | --- | --- | --- |
+| Create immutable native Order | Sales operator | `sales` | `sales.order.create` | `state` | так | source `symfony/src/Infrastructure/Capability/SalesOrderCreateAdapter.php` · `sales.order.create` [source] |
+| Confirm commercial Order | Sales operator | `sales` | `sales.order.lifecycle.confirm` | `state` | так | source `symfony/src/Infrastructure/Capability/SalesOrderLifecycleConfirmAdapter.php` · `sales.order.lifecycle.confirm` [source] |
+| Allocate mapped lines and reserve Product inventory atomically | Sales operator | `sales` | `sales.order.lifecycle.allocate` | `operation` | так | source `symfony/src/Infrastructure/Capability/SalesOrderLifecycleAllocateAdapter.php` · `sales.order.lifecycle.allocate` [source]<br>contract `Domains\ProductManagement\Application\Contract\OrderInventoryPort` [runtime]<br>source `app/Domains/ProductManagement/Infrastructure/Persistence/MySqlProductManagementStore.php` · `reserveForOrder(` [source] |
+| Release allocation or reallocate without changing physical stock | Sales operator | `sales` | `sales.order.lifecycle.release` | `operation` | так | source `symfony/src/Infrastructure/Capability/SalesOrderLifecycleReleaseAdapter.php` · `sales.order.lifecycle.release` [source]<br>contract `Domains\ProductManagement\Application\Contract\OrderInventoryPort` [runtime]<br>source `app/Domains/ProductManagement/Infrastructure/Persistence/MySqlProductManagementStore.php` · `settleOrderReservation(` [source] |
+| Record partial or complete physical dispatch | Sales operator | `sales` | `sales.order.lifecycle.fulfill` | `operation` | так | source `symfony/src/Infrastructure/Capability/SalesOrderLifecycleFulfillAdapter.php` · `sales.order.lifecycle.fulfill` [source]<br>contract `Domains\ProductManagement\Application\Contract\OrderInventoryPort` [runtime]<br>source `app/Domains/ProductManagement/Infrastructure/Persistence/MySqlProductManagementStore.php` · `settleOrderReservation(` [source] |
+| Cancel remainder and release active reservations | Sales operator | `sales` | `sales.order.lifecycle.cancel` | `state` | так | source `symfony/src/Infrastructure/Capability/SalesOrderLifecycleCancelAdapter.php` · `sales.order.lifecycle.cancel` [source]<br>contract `Domains\ProductManagement\Application\Contract\OrderInventoryPort` [runtime]<br>source `app/Domains/ProductManagement/Infrastructure/Persistence/MySqlProductManagementStore.php` · `settleOrderReservation(` [source] |
+| Record accepted return and explicit stock disposition | Sales operator | `sales` | `sales.order.lifecycle.return` | `operation` | так | source `symfony/src/Infrastructure/Capability/SalesOrderLifecycleReturnAdapter.php` · `sales.order.lifecycle.return` [source]<br>contract `Domains\ProductManagement\Application\Contract\OrderInventoryPort` [runtime]<br>source `app/Domains/ProductManagement/Infrastructure/Persistence/MySqlProductManagementStore.php` · `settleOrderReservation(` [source] |
+| Read canonical fulfillment state and reservation references | Sales operator | `sales` | `sales.order.lifecycle.read` | `outcome` | так | source `symfony/src/Infrastructure/Capability/SalesOrderLifecycleReadAdapter.php` · `sales.order.lifecycle.read` [source] |
 
 ## Sales Request → Property Match
 
