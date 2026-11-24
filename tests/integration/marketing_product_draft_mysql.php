@@ -69,12 +69,12 @@ $check($before['product_status']==='DRAFT'&&$before['variant_status']==='ACTIVE'
     &&in_array('BASE_PRICE',$before['pending_checks'],true),
     'Marketing created a false advertising readiness or price from a native Product draft.');
 
-$price=$pricingOwner->set($org,$variantRef,'USD','23.750000',
+$price=$pricingOwner->set($org,$variantRef,'USD','23.75',
     'product-mkt-price-'.$token,'ci-product-owner','ci-product-mkt');
 $checked=$service->check($manager,$productRef,$variantRef,'USD');
 $check($checked['source_domain']==='product_management'
     &&$checked['product_ref']===$productRef&&$checked['variant_ref']===$variantRef
-    &&$checked['base_price_decimal']==='23.750000'
+    &&$checked['base_price_decimal']==='23.7500'
     &&!in_array('BASE_PRICE',$checked['pending_checks'],true)
     &&!$checked['launch_eligible'],
     'Marketing cross-domain Product readback failed price currency/source checks.');
