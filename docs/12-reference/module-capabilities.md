@@ -369,6 +369,7 @@ Manifest capabilities не задекларовані.
 - `product_management.price.list.entry.set`;
 - `product_management.price.list.history.search`;
 - `product_management.price.list.search`;
+- `product_management.price.list.tier.history.search`;
 - `product_management.price.list.tier.search`;
 - `product_management.price.list.tier.set`;
 - `product_management.price.list.update`;
