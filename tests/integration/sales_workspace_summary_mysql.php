@@ -51,6 +51,12 @@ try{
     $reports=new \Domains\Sales\Application\Service\SalesReportService($analyticsService);
     $teamSummary=new \Domains\Sales\Application\Service\SalesTeamSummaryService(
         new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesTeamScope($db,$scope,new MysqlSalesAccessControl($db)),$read);
+    $orderRepo=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository($db);
+    $orderService=new \Domains\Sales\Application\Service\SalesOrderService($orderRepo,
+        new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesMutationReceiptRepository($db),$guard,$entityScope,
+        new class implements \Domains\Sales\Application\Contract\SalesOfferReferencePort {
+            public function resolve(string $org,array $line):?array{return null;}
+        });
     $gateway=new CanonicalCapabilityGateway($catalog,$active,new FederationCapabilityBindingResolver($catalog,new DomainModuleRegistry([]),$active),[
         new SalesWorkspaceSummaryAdapter($scope,$read),
         new \App\Infrastructure\Capability\SalesWorkspaceLeadsListAdapter($scoped),
@@ -62,6 +68,8 @@ try{
         new \App\Infrastructure\Capability\SalesAnalyticsStagesAdapter($analyticsService),
         new \App\Infrastructure\Capability\SalesReportDataAdapter($reports),
         new \App\Infrastructure\Capability\SalesWorkspaceTeamSummaryAdapter($teamSummary),
+        new \App\Infrastructure\Capability\SalesOrderCreateAdapter($orderService),
+        new \App\Infrastructure\Capability\SalesOrderReadAdapter($orderService),
         new \App\Infrastructure\Capability\SalesDealStateReadAdapter(new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlDealRepository($db)),
         new \App\Infrastructure\Capability\SalesInboundRequestReadAdapter($read)
     ],[$policy]);
@@ -265,6 +273,27 @@ try{
     $writes=$guardedFactory->forOrganization($org);
     $grant=$db->prepare('INSERT INTO sales_user_capabilities(organization_id,user_id,capability,status,granted_by,created_at,updated_at) VALUES (?,?,?,"ACTIVE",?,NOW(6),NOW(6))');
     $grant->execute([$org,$owner,'sales.workspace.use',(string)$owner]);
+    // S5A O1/O2: manual channel, exact snapshots, native receipts and no financial assertion.
+    $orderInput=['currency'=>'EUR','lines'=>[['sku'=>'LAMP-1','title'=>'Lamp','quantity'=>3,'unit_price'=>'301.01']],
+        'discount'=>'3.03','tax'=>'10.00','shipping'=>'20.00','total'=>'930.00','attribution'=>['utm_campaign'=>'test-campaign']];
+    $createOrder=static fn(array $input,string $key)=>$gateway->invoke($manager,'sales.order.create',$input,'human_api',$key,'order-test');
+    $createdOrder=$createOrder($orderInput,'order-'.$token);
+    $orderId=$createdOrder['order']['order_id'];
+    $check(!$createdOrder['replayed']&&$createdOrder['order']['subtotal']==='903.03'&&$createdOrder['order']['total']==='930.00'&&$createdOrder['order']['status']==='placed'&&$createdOrder['order']['deal_id']===null,'Native order terms failed.');
+    $check($createOrder($orderInput,'order-'.$token)['order']['order_id']===$orderId&&$createOrder($orderInput,'order-'.$token)['replayed'],'Order receipt replay duplicated order.');
+    $reject(fn()=>$createOrder([...$orderInput,'total'=>'931.00'],'bad-total-'.$token));
+    $reject(fn()=>$createOrder([...$orderInput,'attribution'=>['utm_campaign'=>'changed']],'order-'.$token));
+    $reject(fn()=>$createOrder([...$orderInput,'owner_id'=>$other],'foreign-owner-'.$token));
+    $reject(fn()=>$createOrder([...$orderInput,'deal_id'=>$otherId],'foreign-deal-'.$token));
+    $reject(fn()=>$createOrder([...$orderInput,'lines'=>[[...$orderInput['lines'][0],'product_id'=>'missing','variant_id'=>'missing']]],'missing-product-'.$token));
+    $readOrder=static fn($who)=>$gateway->invoke($who,'sales.order.read',['order_id'=>$orderId],'trusted_read','','order-test');
+    $check($readOrder($manager)['order']===$createdOrder['order'],'Order readback differs.');
+    $reject(fn()=>$readOrder($actor($org,$other)));
+    $reject(fn()=>$readOrder($actor('foreign-'.$token,$owner)));
+    $reject(fn()=>$gateway->invoke($manager,'sales.order.create',$orderInput,'trusted_read','no-write-'.$token,'order-test'));
+    $q=$db->prepare('SELECT payload FROM sales_order_evidence WHERE organization_id=? AND order_id=?');$q->execute([$org,$orderId]);$events=$q->fetchAll(PDO::FETCH_COLUMN);
+    $fact=json_decode($events[0],true,512,JSON_THROW_ON_ERROR);
+    $check(count($events)===1&&$fact['event_type']==='sales.commerce.order.placed'&&$fact['realized_revenue']===null&&$fact['financial_evidence_reference']===null&&$fact['attribution_status']==='unresolved'&&$fact['attribution_observations']['utm_campaign']==='test-campaign','Placement fabricated attribution or financial fact.');
     $check($writes->quickUpdateOpportunity($ownedId,['priority'=>'high'],$owner,'p4-own')->ok,'Guarded own write failed.');
     $check($read->deal($org,$ownedId)['priority']==='high','Guarded write did not change native state.');
     $shared=$writes->updateOpportunity($ownedId,['full_name'=>'Forbidden shared contact edit'],$owner);
