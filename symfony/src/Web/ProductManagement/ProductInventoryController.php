@@ -5,6 +5,7 @@ namespace App\Web\ProductManagement;
 
 use App\Application\Capability\CanonicalCapabilityGateway;
 use App\Persistence\ProductManagement\ProductStockCountPlanProposalService;
+use App\Persistence\ProductManagement\ProductStockCountSessionPlanProposalService;
 use App\Security\SessionCsrfValidator;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Shell\ShellBreadcrumb;
@@ -32,6 +33,7 @@ final readonly class ProductInventoryController
         private SessionCsrfValidator $csrf,
         private WorkspaceShellFactory $shells,
         private ProductStockCountPlanProposalService $countPlans,
+        private ProductStockCountSessionPlanProposalService $sessionPlans,
     ) {}
 
     public function index(Request $request):Response
@@ -68,6 +70,13 @@ final readonly class ProductInventoryController
             if($countId!==''&&!preg_match('/^[a-f0-9]{32}$/D',$countId))return new Response('Invalid count identity.',422);
             $count=$countId===''?null:($this->read($actor,'stock.count.get',['count_id'=>$countId])['count']??null);
             if($count!==null&&($count['variant_id']!==$variant||$count['location_id']!==$location))return new Response('Count scope mismatch.',404);
+            $sessionPage=filter_var($request->query->get('session_page','1'),FILTER_VALIDATE_INT);
+            if($sessionPage===false||$sessionPage<1||$sessionPage>200001)return new Response('Invalid count session page.',422);
+            $sessionId=trim((string)$request->query->get('session_id',''));
+            if($sessionId!==''&&!preg_match('/^[a-f0-9]{32}$/D',$sessionId))return new Response('Invalid session identity.',422);
+            $session=$sessionId===''?null:($this->read($actor,'stock.count.session.get',['session_id'=>$sessionId])['session']??null);
+            if($session!==null&&$session['location_id']!==$location)return new Response('Session location mismatch.',404);
+            $candidates=$location===''?[]:($this->read($actor,'stock.count.session.candidates',['location_id'=>$location,'limit'=>50,'offset'=>($sessionPage-1)*50])['items']??[]);
             $context=new WebExtensionContext(
                 $actor->organizationId()->value(),$actor->role()->value(),
                 'workspace','product-management','pm-stock'
@@ -80,7 +89,7 @@ final readonly class ProductInventoryController
             return new Response($this->twig->render('experience/product_management/stock.html.twig',[
                 'shell'=>$shell,'locations'=>$loc['items']??[], 'catalog'=>$products['items']??[],
                 'variantId'=>$variant,'locationId'=>$location,
-                'countId'=>$countId,'count'=>$count,'balance'=>$balance,'movements'=>$movements,'reservations'=>$reservations,'reservationPage'=>$reservationPage,
+                'sessionId'=>$sessionId,'session'=>$session,'sessionPage'=>$sessionPage,'candidates'=>$candidates,'countId'=>$countId,'count'=>$count,'balance'=>$balance,'movements'=>$movements,'reservations'=>$reservations,'reservationPage'=>$reservationPage,
                 'csrfToken'=>$this->csrf->token($request),
                 'mutationKey'=>bin2hex(random_bytes(16)),
                 'notice'=>(string)$request->query->get('notice',''),
@@ -175,6 +184,32 @@ final readonly class ProductInventoryController
         }catch(Throwable $e){
             error_log('product_management.stock_workspace.post_failed '.$e::class);
             return new Response('Stock result uncertain. Reload native balance before retrying.',503);
+        }
+    }
+
+    public function proposeCountSession(Request $request):Response
+    {
+        $actor=$this->writeGuard($request);
+        if($actor instanceof Response)return $actor;
+        try{
+            $location=(string)$request->request->get('location_id','');
+            $values=$request->request->all('counts');$revisions=$request->request->all('revisions');
+            if(count($values)>50||count($revisions)>50)throw new DomainException('Session size exceeds 50.');
+            $rows=[];
+            foreach($values as $id=>$value){
+                if(!is_string($value))throw new DomainException('Invalid count.');
+                if(trim($value)==='')continue;
+                $revision=filter_var($revisions[$id]??null,FILTER_VALIDATE_INT);
+                if($revision===false||$revision<0)throw new DomainException('Invalid count revision.');
+                $rows[]=['variant_id'=>(string)$id,'counted'=>trim($value),'expected_revision'=>$revision];
+            }
+            $proposal=$this->sessionPlans->propose($actor,$location,$rows,trim((string)$request->request->get('source_ref','')),(string)$request->request->get('idempotency_key',''));
+            return new RedirectResponse('/product-management/stock?location='.$location.'&session_id='.$proposal['session_id'].'&notice=session_proposed#stock-session',303);
+        }catch(DomainException|\InvalidArgumentException){
+            return new Response('Count session blocked. Check selected rows, document and revisions.',422);
+        }catch(Throwable $e){
+            error_log('product_management.stock_workspace.session_proposal_uncertain '.$e::class);
+            return new Response('Session proposal uncertain. Inspect Goal Workspace before retrying.',503);
         }
     }
 
