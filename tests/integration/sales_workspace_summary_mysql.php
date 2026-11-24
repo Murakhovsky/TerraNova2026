@@ -54,8 +54,8 @@ try{
     $orderRepo=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository($db);
     $references=new class implements \Domains\Sales\Application\Contract\SalesOfferReferencePort {
         public function resolve(string $org,array $line):?array{
-            return ($line['product_id']??null)===str_repeat('a',32)&&($line['variant_id']??null)===str_repeat('b',32)&&($line['sku']??null)==='LAMP-1'
-                ?['product_id'=>str_repeat('a',32),'variant_id'=>str_repeat('b',32),'sku'=>'LAMP-1','name'=>'Lamp']:null;
+            return ($line['product_id']??null)===str_repeat('a',32)&&in_array($line['variant_id']??null,[str_repeat('b',32),str_repeat('c',32)],true)&&($line['sku']??null)==='LAMP-1'
+                ?['product_id'=>str_repeat('a',32),'variant_id'=>$line['variant_id'],'sku'=>'LAMP-1','name'=>'Lamp']:null;
         }
     };
     $receipts=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesMutationReceiptRepository($db);
@@ -96,7 +96,7 @@ try{
     };
     $productRefs=new class implements \Domains\ProductManagement\Application\Contract\ProductCommercialReferencePort {
         public function quoteReference(string $org,string $productId,string $variantId):?array{
-            return $productId===str_repeat('a',32)&&$variantId===str_repeat('b',32)?['product_id'=>$productId,'variant_id'=>$variantId,'sku'=>'LAMP-1','name'=>'Lamp']:null;
+            return $productId===str_repeat('a',32)&&in_array($variantId,[str_repeat('b',32),str_repeat('c',32)],true)?['product_id'=>$productId,'variant_id'=>$variantId,'sku'=>'LAMP-1','name'=>'Lamp']:null;
         }
     };
     $source=new \Domains\ProductManagement\Infrastructure\Shopify\ShopifyCommerceOrderSource($shopStore,
@@ -381,10 +381,13 @@ try{
     $newInput=[...$sourceInput,'external_order_id'=>'gid://shopify/Order/12346'];
     $blocked=$runSource($newInput,'blocked-'.$token);
     $check($blocked['outcome']==='blocked'&&$blocked['order_id']===null,'Unmapped order silently imported.');
-    $http->unmapped=false;
+    $shopStore->map($org,$conn,'variant','gid://shopify/ProductVariant/99',str_repeat('c',32));
     $check($runSource($newInput,'retry-'.$token)['outcome']==='imported','Mapping repair did not permit new supervised import.');
+    $http->unmapped=false;
     $http->fail=true;
-    $reject(fn()=>$runSource($sourceInput,'outage-'.$token));
+    $db->exec('SAVEPOINT order_provider_failure');
+    try {$reject(fn()=>$runSource($sourceInput,'outage-'.$token));}
+    finally {$db->exec('ROLLBACK TO SAVEPOINT order_provider_failure');$db->exec('RELEASE SAVEPOINT order_provider_failure');}
     $http->fail=false;
     $check($runSource($sourceInput,'outage-'.$token)['outcome']==='observed','Failed provider call consumed retry receipt.');
     $reject(fn()=>$runSource([...$sourceInput,'connection_id'=>str_repeat('e',32)],'foreign-shop-'.$token));
