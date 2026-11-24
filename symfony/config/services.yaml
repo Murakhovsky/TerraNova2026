@@ -2899,6 +2899,9 @@ services:
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyHttpTransportInterface:
     alias: Domains\ProductManagement\Infrastructure\Shopify\CurlShopifyHttpTransport
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyReadClient: ~
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyCommerceOrderSource: ~
+  Domains\ProductManagement\Application\Contract\CommerceOrderSourcePort:
+    alias: Domains\ProductManagement\Infrastructure\Shopify\ShopifyCommerceOrderSource
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyClientCredentials: ~
 
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyObservationStore:
@@ -3265,6 +3268,12 @@ services:
   Domains\Sales\Application\Contract\SalesCommerceOrderEvidencePort:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository
   Domains\Sales\Application\Service\SalesOrderService: ~
+  Domains\Sales\Application\Service\SalesOrderReconciliationService: ~
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderSourceRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Sales\Application\Contract\SalesOrderSourceRepositoryInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderSourceRepository
 
   Domains\Sales\Application\Contract\SalesOfferRepositoryInterface:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOfferRepository
