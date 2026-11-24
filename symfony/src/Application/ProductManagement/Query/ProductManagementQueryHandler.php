@@ -50,6 +50,11 @@ final readonly class ProductManagementQueryHandler implements QueryHandlerInterf
             ],
             'stock.balance.get' => $this->products->balance($org,(string)$in['variant_id'],(string)$in['location_id']),
             'import.batch.get' => $this->imports->report($org,(string)$in['batch_id']),
+            'price.list.search' => [
+                'items'=>$this->prices->searchLists($org,isset($in['code'])?(string)$in['code']:null,(int)($in['limit']??30),(int)($in['offset']??0)),
+                'limit'=>(int)($in['limit']??30),'offset'=>(int)($in['offset']??0),
+            ],
+            'price.list.entry.get' => $this->prices->getListPrice($org,(string)$in['list_id'],(string)$in['variant_id']),
             'price.history.search' => [
                 'items'=>$this->prices->history($org,(string)$in['variant_id'],(string)$in['currency'],(int)($in['limit']??30),(int)($in['offset']??0)),
                 'limit'=>(int)($in['limit']??30),'offset'=>(int)($in['offset']??0),
