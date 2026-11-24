@@ -417,3 +417,9 @@ B's secret. The default legacy single-store resolver remains temporarily
 available for the existing operator pilot and should not be used when
 onboarding multiple stores. This changes neither Shopify source-of-truth
 ownership nor the E4 prohibition on remote writes.
+
+## E7 native lifecycle Workspace
+
+Product cards expose native SKU/UOM/barcode updates and soft archive for Product and Variant, using the existing canonical Gateway and human manager/tenant/CSRF/idempotency guards. Each form supplies the observed revision; archive additionally requires explicit confirmation. Variant IDs are checked against the tenant Product before dispatch. An independent Product read must agree with the exact operation receipt and expected revision before a success redirect. A receipt/readback mismatch is an uncertain outcome, not authorization to repeat with a fresh key.
+
+Stock receipts/issues now lock the native Product/Variant lifecycle rows before checking eligibility; archive reads nonzero stock/reservations with a current locking read. Existing transfer already locks these rows. Variant archive also checks the parent state. No destructive deletion, new executor, Shopify or Sales behavior. Variant options remain preserved by the basic Workspace edit; advanced options editor and browser acceptance remain pending. Reservation branch must retain the same locks when integrated.
