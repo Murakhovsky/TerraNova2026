@@ -35,9 +35,13 @@ jobs:
           ssh -T -o BatchMode=yes -o StrictHostKeyChecking=yes -i "$HOME/.ssh/key" -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
             sudo -n bash -s <<'REMOTE'
           set -Eeuo pipefail
-          cd /opt/cos
-          tenant=$(docker compose exec -T php sh -c 'printf "%s" "$COS_ORGANIZATION_ID"')
+          # Compose may emit hundreds of unset-variable warnings when invoked
+          # from outside the configured deploy environment. Inspect the existing
+          # COS PHP container directly. No environment dump or secret logging.
+          docker inspect cos-php-1 >/dev/null || { echo COS_PHP_CONTAINER_MISSING; exit 3; }
+          tenant=$(docker exec cos-php-1 sh -c 'printf "%s" "$COS_ORGANIZATION_ID"')
           [[ "$tenant" =~ ^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,39}$ ]] || { echo INVALID_COS_DEPLOY_TENANT; exit 2; }
           echo "COS_DEPLOY_TENANT=$tenant"
-          bash /opt/cos/bin/shopify-lamps-operator.sh "$tenant" preflight
+          docker exec -e COS_SHOPIFY_OPERATOR_ENABLED=1 cos-php-1 \
+            php bin/console cos:product:shopify preflight --organization="$tenant"
           REMOTE
