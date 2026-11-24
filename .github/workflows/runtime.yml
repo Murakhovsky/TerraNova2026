@@ -995,17 +995,6 @@ jobs:
             printf "SET @e2e_email='%s';\n" "$SALES_E2E_EMAIL"
             cat tests/fixtures/ui/sales_functional_acceptance.sql
           } | docker compose exec -T mysql mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"
-      - name: Sales functional browser acceptance
-        env:
-          SALES_E2E_BASE_URL: http://127.0.0.1:8081
-          SALES_E2E_EMAIL: sales-functional-acceptance@example.test
-          SALES_E2E_PASSWORD: Sales-Functional-Acceptance-CI-Ab9!
-          SALES_E2E_MUTATION_SAFE: '1'
-        run: |
-          CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
-          test -n "$CHROME_BIN"
-          CHROME_PATH="$CHROME_BIN" node tests/browser/sales_workspace.mjs
-
       - name: Product Management functional browser acceptance
         env:
           PM_E2E_BASE_URL: http://127.0.0.1:8081
@@ -1029,6 +1018,17 @@ jobs:
           name: product-management-browser-evidence
           path: tmp/product-management-browser
           if-no-files-found: ignore
+
+      - name: Sales functional browser acceptance
+        env:
+          SALES_E2E_BASE_URL: http://127.0.0.1:8081
+          SALES_E2E_EMAIL: sales-functional-acceptance@example.test
+          SALES_E2E_PASSWORD: Sales-Functional-Acceptance-CI-Ab9!
+          SALES_E2E_MUTATION_SAFE: '1'
+        run: |
+          CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME_BIN"
+          CHROME_PATH="$CHROME_BIN" node tests/browser/sales_workspace.mjs
 
       - name: Seed UX-00 independent manager and Federation Plan policy
         env:
