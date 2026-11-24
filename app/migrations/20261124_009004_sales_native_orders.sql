@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS sales_orders (
  subtotal DECIMAL(14,2) NOT NULL,
  discount DECIMAL(14,2) NOT NULL,
  tax DECIMAL(14,2) NOT NULL,
+ tax_included TINYINT(1) NOT NULL DEFAULT 0,
  shipping DECIMAL(14,2) NOT NULL,
  total DECIMAL(14,2) NOT NULL,
  attribution_json JSON NOT NULL,
