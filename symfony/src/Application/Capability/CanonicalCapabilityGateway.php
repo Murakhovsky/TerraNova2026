@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace App\Application\Capability;
 
 use App\Application\Capability\Contract\CapabilityInvocationAdapterInterface;
+use App\Application\Capability\Contract\CapabilityInvocationPolicyInterface;
 use App\Persistence\Federation\FederationCapabilityBindingResolver;
 use DomainException;
 use Kernel\Module\ActiveModuleResolver;
@@ -17,13 +18,20 @@ use LogicException;
 final class CanonicalCapabilityGateway {
     /** @var array<string,CapabilityInvocationAdapterInterface> */
     private array $adapters=[];
+    /** @var list<CapabilityInvocationPolicyInterface> */
+    private array $policies=[];
     /** @param iterable<CapabilityInvocationAdapterInterface> $adapters */
     public function __construct(
         private readonly CanonicalCapabilityCatalog $catalog,
         private readonly ActiveModuleResolver $modules,
         private readonly FederationCapabilityBindingResolver $bindings,
         iterable $adapters,
+        iterable $policies=[],
     ) {
+        foreach ($policies as $policy) {
+            if (!$policy instanceof CapabilityInvocationPolicyInterface) throw new LogicException('Invalid capability policy.');
+            $this->policies[]=$policy;
+        }
         foreach ($adapters as $adapter) {
             if (!$adapter instanceof CapabilityInvocationAdapterInterface) throw new LogicException('Invalid capability adapter.');
             $binding=$adapter->binding();
@@ -83,7 +91,14 @@ final class CanonicalCapabilityGateway {
         // Same fail-closed local schema validator used by Federation approved Plans.
         // Validation occurs before any Domain side effect or idempotency claim.
         (new CapabilityJsonInputValidator())->validate($contract,$input);
-        return $adapter->invoke($actor,$input,$key,$correlationId);
+        foreach ($this->policies as $policy) {
+            if ($policy->supports($info['owner_domain'])) $policy->authorize($actor,$contract,$input);
+        }
+        $result=$adapter->invoke($actor,$input,$key,$correlationId);
+        if ($contract->kind==='query') foreach ($this->policies as $policy) {
+            if ($policy->supports($info['owner_domain'])) $policy->authorize($actor,$contract,$input);
+        }
+        return $result;
     }
 
     private function assertManager(TenantContext $actor):void {
