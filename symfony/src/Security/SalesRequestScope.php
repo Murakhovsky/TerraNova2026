@@ -34,7 +34,7 @@ final readonly class SalesRequestScope implements SalesRequestEntityAuthorizatio
     public function ownerFor(string $org,mixed $owner):?int
     {
         $actor=$this->actor($org);
-        if ($owner===null||$owner==='') return $this->searchOwner($org);
+        if ($owner===null||$owner===''||$owner==='0'||$owner===0) return $this->searchOwner($org);
         if ((!is_int($owner)&&!is_string($owner))||!ctype_digit((string)$owner)||(int)$owner<1||(string)(int)$owner!==(string)$owner)
             throw new DomainException('Invalid Sales owner scope.');
         return $this->scope->resolve($org,$actor,'owner',(int)$owner);
