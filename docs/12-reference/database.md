@@ -253,6 +253,9 @@ generated: true
 | `product_management` | `app/migrations/20261119_000160_product_management_shopify_approved_apply.sql` | `pm_shopify_import_previews` |
 | `product_management` | `app/migrations/20261119_000160_product_management_shopify_approved_apply.sql` | `pm_shopify_import_step_receipts` |
 | `product_management` | `app/migrations/20261120_000161_product_management_shopify_identity_claim.sql` | `pm_shopify_import_previews` |
+| `product_management` | `app/migrations/20261124_000162_product_management_reservations.sql` | `pm_locations` |
+| `product_management` | `app/migrations/20261124_000162_product_management_reservations.sql` | `pm_stock_reservations` |
+| `product_management` | `app/migrations/20261124_000162_product_management_reservations.sql` | `pm_variants` |
 | `property` | `app/migrations/20260914_000048_web_v041_property_tenancy.sql` | `tn_properties` |
 | `property` | `app/migrations/20260914_000050_property_v022_tenant_boundary.sql` | `tn_properties` |
 | `property` | `app/migrations/20260914_000050_property_v022_tenant_boundary.sql` | `tn_property_activities` |

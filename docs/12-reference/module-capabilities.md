@@ -30,7 +30,7 @@ generated: true
 | `hr` | HR | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/HR/module.php` |
 | `marketing` | Marketing | `0.1.2` | `0.1.2` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Marketing/module.php` |
 | `procurement` | Procurement | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Procurement/module.php` |
-| `product_management` | Product Management | `0.1.0` | `0.8.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/ProductManagement/module.php` |
+| `product_management` | Product Management | `0.1.0` | `0.9.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/ProductManagement/module.php` |
 | `property` | Property | `1.0.0` | `1.0.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Property/module.php` |
 | `real_estate` | Real Estate | `1.0.0` | `0.2.0` | `>=0.11.0 <0.12.0` | так | property, sales | `app/Domains/RealEstate/module.php` |
 | `sales` | Sales | `1.0.0` | `0.8.6` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Sales/module.php` |
@@ -344,7 +344,7 @@ Manifest capabilities не задекларовані.
 - обробники jobs: —;
 - внески API routes: —;
 - постачальники конфігурації: —;
-- міграції: `app/migrations/20261118_000152_product_management_catalog.sql`, `app/migrations/20261118_000153_product_management_inventory.sql`, `app/migrations/20261118_000154_product_management_prices_import.sql`, `app/migrations/20261118_000155_product_management_shopify_read.sql`, `app/migrations/20261119_000156_product_management_approved_import.sql`, `app/migrations/20261119_000157_product_management_media_links.sql`, `app/migrations/20261119_000158_product_management_import_plan_binding.sql`, `app/migrations/20261119_000159_product_management_shopify_import_preview.sql`, `app/migrations/20261119_000160_product_management_shopify_approved_apply.sql`, `app/migrations/20261120_000161_product_management_shopify_identity_claim.sql`.
+- міграції: `app/migrations/20261118_000152_product_management_catalog.sql`, `app/migrations/20261118_000153_product_management_inventory.sql`, `app/migrations/20261118_000154_product_management_prices_import.sql`, `app/migrations/20261118_000155_product_management_shopify_read.sql`, `app/migrations/20261119_000156_product_management_approved_import.sql`, `app/migrations/20261119_000157_product_management_media_links.sql`, `app/migrations/20261119_000158_product_management_import_plan_binding.sql`, `app/migrations/20261119_000159_product_management_shopify_import_preview.sql`, `app/migrations/20261119_000160_product_management_shopify_approved_apply.sql`, `app/migrations/20261120_000161_product_management_shopify_identity_claim.sql`, `app/migrations/20261124_000162_product_management_reservations.sql`.
 
 ### Задекларовані capabilities
 
@@ -370,6 +370,8 @@ Manifest capabilities не задекларовані.
 - `product_management.stock.issue`;
 - `product_management.stock.movement.search`;
 - `product_management.stock.receive`;
+- `product_management.stock.release`;
+- `product_management.stock.reserve`;
 - `product_management.stock.transfer`;
 - `product_management.sync.status.get`;
 - `product_management.translation.upsert`;
