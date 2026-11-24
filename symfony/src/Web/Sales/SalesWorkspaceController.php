@@ -27,6 +27,7 @@ final readonly class SalesWorkspaceController
     public function __construct(
         private Environment $twig,
         private QueryBusInterface $queries,
+        private \App\Security\SalesRequestScope $scope,
         private TenantContextProviderInterface $tenants,
         private ProviderBackedShellNavigation $navigation,
         private WorkspaceCompositionResolver $workspaces,
@@ -40,7 +41,7 @@ final readonly class SalesWorkspaceController
 
         $leadId = (int) $id;
         $lead = $this->queries->ask(new GetSalesLeadQuery($tenant->organizationId(), $leadId));
-        if (!is_array($lead)) {
+        if (!is_array($lead)||!$this->scope->entity($tenant->organizationId()->value(),'lead',$leadId)) {
             throw new NotFoundHttpException('Lead not found.');
         }
 
@@ -116,7 +117,7 @@ final readonly class SalesWorkspaceController
         }
 
         return array_values(array_filter(
-            $users,
+            $this->scope->ownerOptions($tenant->organizationId()->value(),$users),
             static fn (mixed $user): bool => is_array($user)
                 && strtolower((string) ($user['status'] ?? '')) === 'active'
                 && in_array(
