@@ -1,4 +1,26 @@
 pages:
+  - id: product_management.price_lists
+    route: { name: cos_product_management_price_lists, path: "/product-management/price-lists", methods: [GET] }
+    surface: workspace
+    domain: ProductManagement
+    capability: product_management.price.list.search
+    owner: ProductManagement
+    priority: P1
+    status: CONTRACTED
+    personas: [manager]
+    product:
+      primary_goal: "Manage explicit retail, wholesale and partner price lists."
+      page_purpose: "Browse and create tenant-owned price lists; edit SKU prices from Product cards."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, Toolbar]
+      optional: [EmptyState, ErrorState]
+    primary_action: product_management.price.list.create
+    states: [normal, empty, error]
+    responsive: { desktop: canonical, tablet: canonical, mobile: stacked_workspace }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
   - id: product_management.import
     route: { name: cos_product_management_import, path: "/product-management/import", methods: [GET] }
     surface: workspace
