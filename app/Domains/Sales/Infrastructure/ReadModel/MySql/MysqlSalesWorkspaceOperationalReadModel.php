@@ -205,7 +205,7 @@ final readonly class MysqlSalesWorkspaceOperationalReadModel implements SalesWor
             unset($item);
         }
         unset($items);
-        $today['needs_approval'] = $this->approvals($organizationId, null, $ownerId > 0 ? $ownerId : null, 20);
+        $today['needs_approval'] = $ownerId > 0 ? [] : $this->approvals($organizationId, null, null, 20);
         return $today;
     }
 
