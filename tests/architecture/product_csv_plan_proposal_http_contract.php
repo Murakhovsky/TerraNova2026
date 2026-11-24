@@ -10,7 +10,7 @@ foreach([
     'TenantContextProviderInterface','SessionCsrfValidator','ActiveModuleResolver',
     'ProductImportPlanProposalService','isManager()','TenantPermissions::MANAGE',
     'product_management','batch_digest','rows_digest',
-    "preg_match('/^[a-f0-9]{64}$/D'","->propose($tenant,$batchId,$digest,$rowsDigest)",
+    "preg_match('/^[a-f0-9]{64}$/D'",'->propose($tenant,$batchId,$digest,$rowsDigest)',
 ] as $token) {
     if(!str_contains($controller,$token))
         throw new RuntimeException('Unsafe Product CSV proposal endpoint missing: '.$token);
