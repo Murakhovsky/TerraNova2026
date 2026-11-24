@@ -1,0 +1,29 @@
+name: Shopify S5 isolated webhook unit acceptance
+on:
+  push:
+    branches: [feature/cos-shopify-s5-order-evidence-20261124]
+    paths:
+      - '.github/workflows/shopify-s5-unit.yml'
+      - 'app/Domains/ProductManagement/Infrastructure/Shopify/ShopifyOrderWebhookEvidence.php'
+      - 'tests/unit/product_management_shopify_order_webhook_evidence.php'
+  pull_request:
+    paths:
+      - '.github/workflows/shopify-s5-unit.yml'
+      - 'app/Domains/ProductManagement/Infrastructure/Shopify/ShopifyOrderWebhookEvidence.php'
+      - 'tests/unit/product_management_shopify_order_webhook_evidence.php'
+permissions:
+  contents: read
+jobs:
+  unit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify PHP syntax
+        run: |
+          php -l app/Domains/ProductManagement/Infrastructure/Shopify/ShopifyOrderWebhookEvidence.php
+          php -l app/Domains/ProductManagement/Infrastructure/Shopify/ShopifyObservationStore.php
+          php -l symfony/src/Http/Api/V1/Controller/ShopifyWebhookController.php
+          php -l tests/unit/product_management_shopify_order_webhook_evidence.php
+      - name: Verify signed order pointers and negative HMAC cases
+        run: php tests/unit/product_management_shopify_order_webhook_evidence.php
