@@ -10,7 +10,7 @@ foreach($raw['contributions']['capability_contracts'] as $definition) {
     $cap=CapabilityContract::fromArray($definition);
     $contracts[$cap->id]=$cap;
 }
-if(count($contracts)!==28)throw new RuntimeException('Missing typed PM contracts.');
+if(count($contracts)!==29)throw new RuntimeException('Missing typed PM contracts.');
 $validator=new CapabilityJsonInputValidator();
 $good=[
  'product_management.media.attach'=>['product_id'=>str_repeat('a',32),'file_id'=>'FILE-123',
@@ -22,6 +22,7 @@ $good=[
  'product_management.category.create'=>['name'=>'Components','slug'=>'components'],
  'product_management.category.assign'=>['product_id'=>str_repeat('a',32),'category_id'=>str_repeat('b',32)],
  'product_management.category.search'=>['limit'=>100,'offset'=>0],
+ 'product_management.location.search'=>['q'=>'WH','limit'=>20,'offset'=>0],
  'product_management.stock.receive'=>['variant_id'=>str_repeat('a',32),'location_id'=>str_repeat('b',32),
      'quantity'=>'1.125000','source_ref'=>'PO-123'],
  'product_management.stock.transfer'=>['variant_id'=>str_repeat('a',32),'from_location_id'=>str_repeat('b',32),
@@ -42,6 +43,8 @@ $bad=[
  'product_management.translation.upsert'=>[['product_id'=>str_repeat('a',32),'locale'=>'invalid','name'=>'X']],
  'product_management.category.create'=>[['name'=>'A','slug'=>'illegal space'],['name'=>'A','slug'=>'a','organization_id'=>'other']],
  'product_management.category.assign'=>[['product_id'=>'foo','category_id'=>str_repeat('b',32)]],
+ 'product_management.location.search'=>[['limit'=>101],['q'=>'ok','organization_id'=>'foreign']],
+
  'product_management.stock.transfer'=>[['variant_id'=>str_repeat('a',32),'from_location_id'=>'invalid',
  'to_location_id'=>str_repeat('b',32),'quantity'=>'1','source_ref'=>'MOVE-1']],
  'product_management.stock.receive'=>[['variant_id'=>str_repeat('a',32),'location_id'=>str_repeat('b',32),'quantity'=>'-1','source_ref'=>'X'],
