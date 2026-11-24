@@ -42,7 +42,7 @@ final readonly class MysqlSalesOfferRepository implements SalesOfferRepositoryIn
         $this->assertTransaction();
         $this->connection->prepare('INSERT INTO sales_offer_revisions(organization_id,offer_id,terms_version,title,currency,total,valid_until,lines_json,direction,terms_hash,actor_id) VALUES(?,?,?,?,?,?,?,?,?,?,?)')
             ->execute([$org,$id,$version,$terms['title'],$terms['currency'],$terms['total'],$terms['valid_until'],json_encode($terms['lines'],JSON_THROW_ON_ERROR),
-                $direction,hash('sha256',json_encode($terms,JSON_THROW_ON_ERROR)),$actor]);
+                $direction,\Domains\Sales\Application\Support\SalesOfferSnapshot::digest($terms),$actor]);
     }
     public function advance(string $org,string $id,int $expectedRevision,int $termsVersion,string $status):void
     {

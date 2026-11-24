@@ -3172,6 +3172,20 @@ services:
   Domains\Sales\Application\Contract\SalesActivityEvidenceReadPort:
     alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesActivityEvidenceReadModel
 
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOfferRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Sales\Application\Contract\SalesOfferRepositoryInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOfferRepository
+  Domains\Sales\Application\Contract\SalesCommercialEvidencePort:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOfferRepository
+  Domains\Sales\Application\Contract\SalesOfferReferencePort:
+    alias: App\Application\Sales\SalesOfferReferenceResolver
+  Domains\Sales\Application\Service\SalesOfferService: ~
+  Domains\ProductManagement\Application\Service\ProductCommercialReference: ~
+  Domains\ProductManagement\Application\Contract\ProductCommercialReferencePort:
+    alias: Domains\ProductManagement\Application\Service\ProductCommercialReference
+
   Domains\Sales\Application\Contract\SalesMutationReceiptRepositoryInterface:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesMutationReceiptRepository
 
