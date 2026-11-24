@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "title": "DiagnosticRecommendationAcceptInputV1",
+  "required": [
+    "session_id",
+    "recommendation_id",
+    "owner_id",
+    "due_at"
+  ],
+  "properties": {
+    "session_id": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 32,
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "recommendation_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 191,
+      "pattern": "^[a-zA-Z0-9_.:-]+$"
+    },
+    "owner_id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "due_at": {
+      "type": "string",
+      "minLength": 25,
+      "maxLength": 25,
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}[+-]\\d{2}:\\d{2}$"
+    }
+  }
+}

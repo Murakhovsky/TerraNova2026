@@ -12,16 +12,6 @@
       "target_capability": "diagnostic.methodology.manage"
     },
     {
-      "id": "diagnostic.session-to-recommendation:decision",
-      "process_id": "diagnostic.session-to-recommendation",
-      "step_id": "decision",
-      "gap_type": "missing-domain-capability",
-      "owner_domain": "diagnostic",
-      "severity": "high",
-      "resolution": "declare-domain-capability",
-      "target_capability": "diagnostic.recommendation.accept"
-    },
-    {
       "id": "sales.lead-to-managed-case:intake",
       "process_id": "sales.lead-to-managed-case",
       "step_id": "intake",

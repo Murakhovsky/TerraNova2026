@@ -310,7 +310,7 @@ final readonly class DiagnosticRuntimeService
 
         if(trim((string)($row['action_id']??''))!==''){
             $stored=is_array($row['payload']['action_assignment']??null)?$row['payload']['action_assignment']:null;
-            if($expectedAssignment!==null && $stored!==$expectedAssignment){
+            if($expectedAssignment!==null && (!is_array($stored) || array_replace($expectedAssignment,array_intersect_key($stored,$expectedAssignment))!==$expectedAssignment || count(array_intersect_key($stored,$expectedAssignment))!==count($expectedAssignment))){
                 throw new DomainException('Recommendation already has an action with a different operational assignment.');
             }
             return ['recommendation'=>$row['payload'],'action_id'=>(string)$row['action_id'],'action_status'=>'EXISTING','replayed'=>true];
@@ -318,6 +318,9 @@ final readonly class DiagnosticRuntimeService
 
         $r=$this->recommendationFromArray($row['payload']);
         $action=$this->acceptRecommendation->execute($organizationId,$sessionId,$r,$ownerId,$dueAt,$workflowCode);
+        if($expectedAssignment!==null && (count(array_intersect_key($action->parameters,$expectedAssignment))!==count($expectedAssignment) || array_replace($expectedAssignment,array_intersect_key($action->parameters,$expectedAssignment))!==$expectedAssignment)){
+            throw new DomainException('Recommendation already has an action with a different operational assignment.');
+        }
         $payload=$this->recommendationArray($r);
         $payload['action_assignment']=[
             'owner_id'=>$action->parameters['owner_id']??null,
