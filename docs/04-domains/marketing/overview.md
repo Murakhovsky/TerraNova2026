@@ -4,7 +4,7 @@ description: Планування маркетингових кампаній і
 status: draft
 updated: 2026-11-19
 kind: domain
-version: 0.1.1
+version: 0.1.2
 ---
 
 # Огляд домену Marketing
@@ -51,3 +51,9 @@ Meta read-only sync об'єднує імпорт Campaign/AdSet/Ad, Insights, `l
 
 Критерії подальшого приймання й контрольні етапи визначає `COS-MKT-TZ-001`.
 
+
+## Читання джерельних рекламних спостережень (DAS-001)
+
+`marketing.paid.spend.evidence.get` є tenant-scoped read-only Capability для перегляду збереженого source snapshot Meta на рівні кампанії. Сервіс перевіряє tenant, рекламний акаунт і snapshot identifier, повертає source hash, revision, window, timezone, currency та reported spend. Відповідь позначена `MARKETING_DB_SNAPSHOT` і `finance_expense_confirmed=false`.
+
+Цей контракт **не** підтверджує рахунок, витрату Finance, факт оплати або незалежну звірку з Meta. Будь-яке перенесення до Finance потребує окремого погодженого cross-domain port, source pinning та Finance-owned reconciliation.

@@ -74,7 +74,7 @@
       "max_process_gaps": 0
     },
     "marketing": {
-      "min_typed": 6,
+      "min_typed": 7,
       "max_descriptive_only": 7,
       "max_process_gaps": 0
     }
