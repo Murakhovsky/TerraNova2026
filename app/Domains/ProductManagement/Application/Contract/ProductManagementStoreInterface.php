@@ -61,6 +61,7 @@ interface ProductManagementStoreInterface
     public function bindAttribute(string $org,string $category,string $code,bool $required,bool $axis,string $key,string $actor,string $trace):array;
     public function categoryAttributes(string $org,string $category):array;
     public function setAttributes(string $org,string $product,array $changes,int $revision,string $key,string $actor,string $trace):array;
+    public function bulkSetAttributes(string $org,array $products,array $changes,string $key,string $actor,string $trace):array;
     public function productAttributes(string $org,string $product):array;
     public function filterAttributes(string $org,string $code,mixed $value,int $limit,int $offset):array;
     public function variantMatrix(string $org,string $product,array $matrix):array;
