@@ -52,7 +52,7 @@ Meta read-only sync об'єднує імпорт Campaign/AdSet/Ad, Insights, `l
 Критерії подальшого приймання й контрольні етапи визначає `COS-MKT-TZ-001`.
 
 
-## Marketing Spend Evidence Query (DAS-001)
+## Читання джерельних рекламних спостережень (DAS-001)
 
 `marketing.paid.spend.evidence.get` є tenant-scoped read-only Capability для перегляду збереженого source snapshot Meta на рівні кампанії. Сервіс перевіряє tenant, рекламний акаунт і snapshot identifier, повертає source hash, revision, window, timezone, currency та reported spend. Відповідь позначена `MARKETING_DB_SNAPSHOT` і `finance_expense_confirmed=false`.
 
