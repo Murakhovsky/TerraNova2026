@@ -31,6 +31,7 @@ final readonly class ProductManagementRuleContextProvider implements RuleContext
             'product_management.price.updated',
             'product_management.stock.reserved',
             'product_management.stock.released',
+            'product_management.stock.count_applied',
             'product_management.price_list.created',
             'product_management.price_list.updated',
             'product_management.price_list.archived',
