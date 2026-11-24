@@ -13,7 +13,7 @@ use PDOException;
 use Throwable;
 
 /** All mutation+DomainEvent+existing Kernel Outbox writes share one PDO transaction. */
-final readonly class MySqlProductManagementStore implements ProductManagementStoreInterface
+final readonly class MySqlProductManagementStore implements ProductManagementStoreInterface, \Domains\ProductManagement\Application\Contract\OrderInventoryPort
 {
     public function __construct(private PDO $connection, private EventStoreInterface $events) {}
 
@@ -363,6 +363,157 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
             },'product_management.stock.transferred','Stock');
     }
 
+    public function reserveStock(string $org,string $variantId,string $locationId,string $qty,string $source,string $key,string $actor,string $correlation):array
+    {
+        return $this->mutate($org,'stock.reserve',$key,[$variantId,$locationId,$qty,$source],$actor,$correlation,
+            function()use($org,$variantId,$locationId,$qty,$source,$actor):array {
+                $variant=$this->one('SELECT v.track_inventory,v.status,p.status AS product_status
+                    FROM pm_variants v JOIN pm_products p ON p.organization_id=v.organization_id AND p.product_id=v.product_id
+                    WHERE v.organization_id=? AND v.variant_id=? FOR UPDATE',[$org,$variantId]);
+                if($variant===null||(int)$variant['track_inventory']!==1||$variant['status']!=='active'||$variant['product_status']==='archived') {
+                    throw new DomainException('Active trackable Variant is required for reservation.');
+                }
+                $this->assertShopifyLocalOwnership($org,'variant',$variantId);
+                $loc=$this->one('SELECT status FROM pm_locations WHERE organization_id=? AND location_id=? FOR UPDATE',[$org,$locationId]);
+                if($loc===null||$loc['status']!=='active')throw new DomainException('Active tenant stock location is required.');
+                $this->execute('INSERT IGNORE INTO pm_stock_balances (organization_id,variant_id,location_id) VALUES (?,?,?)',
+                    [$org,$variantId,$locationId]);
+                if($this->one('SELECT reserved FROM pm_stock_balances WHERE organization_id=? AND variant_id=? AND location_id=? FOR UPDATE',
+                    [$org,$variantId,$locationId])===null)throw new DomainException('Stock projection missing.');
+                $stmt=$this->connection->prepare('UPDATE pm_stock_balances
+                    SET reserved=reserved+CAST(:qty AS DECIMAL(20,6)),revision=revision+1
+                    WHERE organization_id=:org AND variant_id=:variant AND location_id=:loc
+                    AND reserved+CAST(:guard AS DECIMAL(20,6))<=on_hand');
+                $stmt->execute(['qty'=>$qty,'guard'=>$qty,'org'=>$org,'variant'=>$variantId,'loc'=>$locationId]);
+                if($stmt->rowCount()!==1)throw new DomainException('Insufficient available stock for reservation.');
+                $id=bin2hex(random_bytes(16));
+                $this->execute('INSERT INTO pm_stock_reservations
+                    (organization_id,reservation_id,variant_id,location_id,source_ref,quantity,status,actor_ref)
+                    VALUES (?,?,?,?,?,?,?,?)',[$org,$id,$variantId,$locationId,$source,$qty,'active',$actor]);
+                return ['reservation_id'=>$id,'variant_id'=>$variantId,'location_id'=>$locationId,
+                    'quantity'=>$qty,'source_ref'=>$source,'status'=>'active',
+                    'balance'=>$this->stockBalance($org,$variantId,$locationId)];
+            },'product_management.stock.reserved','StockReservation');
+    }
+
+    /** Idempotent full release: never changes physical on_hand or creates a movement. */
+    public function releaseStock(string $org,string $reservationId,string $reason,string $key,string $actor,string $correlation):array
+    {
+        return $this->mutate($org,'stock.release',$key,[$reservationId,$reason],$actor,$correlation,
+            function()use($org,$reservationId,$reason):array {
+                $row=$this->one('SELECT variant_id,location_id,source_ref,quantity,status FROM pm_stock_reservations
+                    WHERE organization_id=? AND reservation_id=? FOR UPDATE',[$org,$reservationId]);
+                if($row===null||$row['status']!=='active'||!str_starts_with($row['source_ref'],'manual:'))throw new DomainException('Active manual reservation required; order-owned reservations are settled only through the Order port.');
+                $variantId=(string)$row['variant_id'];$locationId=(string)$row['location_id'];
+                $qty=(string)$row['quantity'];
+                $this->assertShopifyLocalOwnership($org,'variant',$variantId);
+                if($this->one('SELECT reserved FROM pm_stock_balances WHERE organization_id=? AND variant_id=? AND location_id=? FOR UPDATE',
+                    [$org,$variantId,$locationId])===null)throw new DomainException('Reservation balance missing.');
+                $stmt=$this->connection->prepare('UPDATE pm_stock_balances
+                    SET reserved=reserved-CAST(:qty AS DECIMAL(20,6)),revision=revision+1
+                    WHERE organization_id=:org AND variant_id=:variant AND location_id=:loc
+                    AND reserved>=CAST(:guard AS DECIMAL(20,6))');
+                $stmt->execute(['qty'=>$qty,'guard'=>$qty,'org'=>$org,'variant'=>$variantId,'loc'=>$locationId]);
+                if($stmt->rowCount()!==1)throw new DomainException('Reservation balance inconsistency.');
+                $this->execute("UPDATE pm_stock_reservations SET status='released',release_reason=?,released_at=UTC_TIMESTAMP(6),
+                    revision=revision+1 WHERE organization_id=? AND reservation_id=? AND status='active'",
+                    [$reason,$org,$reservationId]);
+                return ['reservation_id'=>$reservationId,'variant_id'=>$variantId,'location_id'=>$locationId,
+                    'quantity'=>$qty,'source_ref'=>(string)$row['source_ref'],'status'=>'released','reason'=>$reason,
+                    'balance'=>$this->stockBalance($org,$variantId,$locationId)];
+            },'product_management.stock.released','StockReservation');
+    }
+
+    public function searchReservations(string $org,string $variantId,string $locationId,?string $reservationId,int $limit,int $offset):array
+    {
+        $sql='SELECT reservation_id,variant_id,location_id,source_ref,quantity,status,release_reason,revision,created_at,released_at
+            FROM pm_stock_reservations WHERE organization_id=:org AND variant_id=:variant AND location_id=:loc';
+        if($reservationId!==null)$sql.=' AND reservation_id=:id';
+        $stmt=$this->connection->prepare($sql.' ORDER BY created_at DESC,reservation_id DESC LIMIT :lim OFFSET :off');
+        $stmt->bindValue(':org',$org);$stmt->bindValue(':variant',$variantId);$stmt->bindValue(':loc',$locationId);
+        if($reservationId!==null)$stmt->bindValue(':id',$reservationId);
+        $stmt->bindValue(':lim',$limit,PDO::PARAM_INT);$stmt->bindValue(':off',$offset,PDO::PARAM_INT);$stmt->execute();
+        return array_map(static function(array $row):array{$row['revision']=(int)$row['revision'];return $row;},$stmt->fetchAll(PDO::FETCH_ASSOC));
+    }
+
+    /** Internal order-owned reservation; no manual API can create or release this namespace. */
+    public function reserveForOrder(string $org,string $product,string $variant,string $sku,?string $location,int $quantity,string $source,string $key,string $actor,string $correlation):array
+    {
+        $this->orderAdmission($org,$source,$quantity,$key,$actor,$correlation);
+        foreach([$product,$variant] as $id)if(!preg_match('/^[a-f0-9]{32}$/D',$id))throw new DomainException('Invalid canonical order product reference.');
+        $row=$this->one('SELECT v.sku,v.track_inventory,v.status,p.status AS product_status,p.product_type FROM pm_variants v JOIN pm_products p ON p.organization_id=v.organization_id AND p.product_id=v.product_id WHERE v.organization_id=? AND v.variant_id=? AND v.product_id=? FOR UPDATE',[$org,$variant,$product]);
+        if($row===null||$row['sku']!==$sku||$row['status']!=='active'||$row['product_status']==='archived')throw new DomainException('Order product unavailable.');
+        if((int)$row['track_inventory']===0){
+            if($location!==null||!in_array($row['product_type'],['service','digital'],true))throw new DomainException('Untracked physical goods require inventory ownership review.');
+            return ['stock_mode'=>'nonstock','reservation_id'=>null,'location_id'=>null];
+        }
+        if($location===null||!preg_match('/^[a-f0-9]{32}$/D',$location))throw new DomainException('Tracked order line requires a warehouse.');
+        return $this->mutate($org,'stock.order.reserve',$key,[$product,$variant,$sku,$location,$quantity,$source],$actor,$correlation,
+            function()use($org,$variant,$location,$quantity,$source,$key,$actor,$correlation):array{
+                $r=$this->reserveStock($org,$variant,$location,(string)$quantity,$source,'order-reserve:'.hash('sha256',$key),$actor,$correlation);
+                $this->orderOperation($org,$r['reservation_id'],'reserve',$quantity,null,$source,$key,$actor);
+                return ['stock_mode'=>'local','reservation_id'=>$r['reservation_id'],'location_id'=>$location,'balance'=>$r['balance']];
+            },'product_management.stock.order_reserved','StockReservation');
+    }
+
+    public function settleOrderReservation(string $org,string $reservation,string $source,string $operation,int $quantity,string $key,string $actor,string $correlation):array
+    {
+        $this->orderAdmission($org,$source,$quantity,$key,$actor,$correlation);
+        if(!preg_match('/^[a-f0-9]{32}$/D',$reservation)||!in_array($operation,['commit','release','return'],true))throw new DomainException('Invalid order stock settlement.');
+        return $this->mutate($org,'stock.order.'.$operation,$key,[$reservation,$source,$operation,$quantity],$actor,$correlation,
+            function()use($org,$reservation,$source,$operation,$quantity,$key,$actor):array{
+                $r=$this->one('SELECT * FROM pm_stock_reservations WHERE organization_id=? AND reservation_id=? FOR UPDATE',[$org,$reservation]);
+                if($r===null||$r['source_ref']!==$source)throw new DomainException('Order reservation unavailable.');
+                $v=$r['variant_id'];$l=$r['location_id'];
+                $variant=$this->one('SELECT v.track_inventory,v.status,p.status AS product_status FROM pm_variants v JOIN pm_products p ON p.organization_id=v.organization_id AND p.product_id=v.product_id WHERE v.organization_id=? AND v.variant_id=? FOR UPDATE',[$org,$v]);
+                $loc=$this->one('SELECT status FROM pm_locations WHERE organization_id=? AND location_id=? FOR UPDATE',[$org,$l]);
+                if($variant===null||$loc===null)throw new DomainException('Order stock identity unavailable.');
+                if($operation!=='release'&&((int)$variant['track_inventory']!==1||$variant['status']!=='active'||$variant['product_status']==='archived'||$loc['status']!=='active'))throw new DomainException('Active order stock required.');
+                $this->assertShopifyLocalOwnership($org,'variant',$v);
+                $balance=$this->one('SELECT on_hand,reserved FROM pm_stock_balances WHERE organization_id=? AND variant_id=? AND location_id=? FOR UPDATE',[$org,$v,$l]);
+                if($balance===null)throw new DomainException('Order reservation balance missing.');
+                $movement=null;
+                if($operation==='return'){
+                    $cap=$this->one("SELECT (COALESCE(SUM(CASE WHEN operation_type='commit' THEN quantity WHEN operation_type='return' THEN -quantity ELSE 0 END),0)>=?) AS allowed FROM pm_order_reservation_operations WHERE organization_id=? AND reservation_id=?",[$quantity,$org,$reservation]);
+                    if((int)($cap['allowed']??0)!==1)throw new DomainException('Return exceeds physically committed stock.');
+                    $q=$this->connection->prepare('UPDATE pm_stock_balances SET on_hand=on_hand+?,revision=revision+1 WHERE organization_id=? AND variant_id=? AND location_id=?');
+                    $q->execute([$quantity,$org,$v,$l]);
+                }else{
+                    if($r['status']!=='active')throw new DomainException('Order reservation already exhausted.');
+                    $remaining=$this->one('SELECT CAST(quantity-? AS DECIMAL(20,6)) AS remaining,(quantity>=?) AS allowed FROM pm_stock_reservations WHERE organization_id=? AND reservation_id=?',[$quantity,$quantity,$org,$reservation]);
+                    if((int)($remaining['allowed']??0)!==1)throw new DomainException('Settlement exceeds active reservation.');
+                    $sql=$operation==='commit'?'on_hand=on_hand-?,reserved=reserved-?':'reserved=reserved-?';
+                    $q=$this->connection->prepare('UPDATE pm_stock_balances SET '.$sql.',revision=revision+1 WHERE organization_id=? AND variant_id=? AND location_id=? AND reserved>=?');
+                    $q->execute($operation==='commit'?[$quantity,$quantity,$org,$v,$l,$quantity]:[$quantity,$org,$v,$l,$quantity]);
+                    if($q->rowCount()!==1)throw new DomainException('Order reservation projection inconsistent.');
+                    if($remaining['remaining']==='0.000000'){
+                        $this->execute("UPDATE pm_stock_reservations SET status='released',release_reason=?,released_at=UTC_TIMESTAMP(6),revision=revision+1 WHERE organization_id=? AND reservation_id=?",['order_'.$operation,$org,$reservation]);
+                    }else{
+                        $this->execute('UPDATE pm_stock_reservations SET quantity=?,revision=revision+1 WHERE organization_id=? AND reservation_id=?',[$remaining['remaining'],$org,$reservation]);
+                    }
+                }
+                if($q->rowCount()!==1)throw new DomainException('Order stock projection update failed.');
+                if($operation!=='release'){
+                    $movement=bin2hex(random_bytes(16));
+                    $this->execute('INSERT INTO pm_stock_movements(organization_id,movement_id,variant_id,location_id,quantity_delta,movement_type,source_ref,idempotency_key,actor_ref) VALUES(?,?,?,?,?,?,?,?,?)',
+                        [$org,$movement,$v,$l,$operation==='commit'?-$quantity:$quantity,$operation==='commit'?'issue':'receipt',$source,'order-movement:'.hash('sha256',$key),$actor]);
+                }
+                $this->orderOperation($org,$reservation,$operation,$quantity,$movement,$source,$key,$actor);
+                return ['reservation_id'=>$reservation,'operation'=>$operation,'quantity'=>$quantity,'movement_id'=>$movement,'balance'=>$this->stockBalance($org,$v,$l)];
+            },'product_management.stock.order_'.$operation,'StockReservation');
+    }
+    private function orderAdmission(string $org,string $source,int $quantity,string $key,string $actor,string $correlation):void
+    {
+        if(!$this->connection->inTransaction()||$org===''||strlen($org)>40||$quantity<1||$quantity>100000||
+            !preg_match('/^sales-order:[a-f0-9]{32}:[1-9][0-9]{0,3}:[a-f0-9]{32}$/D',$source)||
+            $key===''||strlen($key)>191||!ctype_digit($actor)||$correlation==='')throw new DomainException('Order stock operation requires authorized native transaction and source.');
+    }
+    private function orderOperation(string $org,string $reservation,string $operation,int $quantity,?string $movement,string $source,string $key,string $actor):void
+    {
+        $this->execute('INSERT INTO pm_order_reservation_operations(organization_id,operation_id,reservation_id,operation_type,quantity,movement_id,source_ref,actor_ref) VALUES(?,?,?,?,?,?,?,?)',
+            [$org,substr(hash('sha256',$key),0,32),$reservation,$operation,$quantity,$movement,$source,$actor]);
+    }
+
     public function stockBalance(string $organizationId, string $variantId, string $locationId): array
     {
         $variant=$this->one('SELECT track_inventory FROM pm_variants WHERE organization_id=? AND variant_id=?',[$organizationId,$variantId]);
@@ -381,7 +532,9 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
     private function mutate(string $org,string $operation,string $key,array $identity,string $actor,string $correlation,callable $callback,string $eventType,string $aggregateType): array
     {
         $hash=hash('sha256',json_encode([$operation,$identity],JSON_THROW_ON_ERROR));
-        $this->connection->beginTransaction();
+        $outer=$this->connection->inTransaction();
+        $savepoint='pm_'.bin2hex(random_bytes(8));
+        if($outer)$this->connection->exec('SAVEPOINT '.$savepoint);else $this->connection->beginTransaction();
         try {
             try {
                 $this->execute('INSERT INTO pm_operation_receipts (organization_id,idempotency_key,operation,payload_hash) VALUES (?,?,?,?)',
@@ -390,7 +543,7 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
                 if ($e->getCode()!=='23000') throw $e;
                 $existing=$this->one('SELECT payload_hash,result_json FROM pm_operation_receipts WHERE organization_id=? AND idempotency_key=?',[$org,$key]);
                 if ($existing===null||!hash_equals((string)$existing['payload_hash'],$hash)||$existing['result_json']===null) throw new DomainException('Idempotency conflict or uncommitted result.');
-                $this->connection->commit();
+                if($outer)$this->connection->exec('RELEASE SAVEPOINT '.$savepoint);else $this->connection->commit();
                 return json_decode((string)$existing['result_json'],true,flags:JSON_THROW_ON_ERROR);
             }
             $result=$callback();
@@ -400,10 +553,13 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
             $this->events->append($event); // writes cos_events + cos_event_outbox in this same transaction
             $this->execute('UPDATE pm_operation_receipts SET result_json=? WHERE organization_id=? AND idempotency_key=?',
                 [json_encode($result,JSON_THROW_ON_ERROR),$org,$key]);
-            $this->connection->commit();
+            if($outer)$this->connection->exec('RELEASE SAVEPOINT '.$savepoint);else $this->connection->commit();
             return $result;
         } catch (Throwable $e) {
-            if ($this->connection->inTransaction()) $this->connection->rollBack();
+            if ($this->connection->inTransaction()) {
+                if($outer){$this->connection->exec('ROLLBACK TO SAVEPOINT '.$savepoint);$this->connection->exec('RELEASE SAVEPOINT '.$savepoint);}
+                else $this->connection->rollBack();
+            }
             throw $e;
         }
     }
