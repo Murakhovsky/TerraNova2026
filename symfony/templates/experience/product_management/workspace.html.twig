@@ -114,6 +114,7 @@
                             {% if prices[v.variant_id] is defined %}
                             {% set price = prices[v.variant_id] %}
                             {{ price.price is null ? 'Не встановлено' : price.price }} · rev {{ price.revision }}
+                            <a href="?currency={{ priceCurrency }}&amp;price_page={{ pricePage }}&amp;history_variant={{ v.variant_id }}#price-history">Історія ціни</a>
                             {% if product.status != 'archived' and v.status == 'active' %}
                                 <form class="cos-toolbar" method="post" action="/product-management/products/{{ product.product_id }}/price">
                                     <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
@@ -164,6 +165,24 @@
                 </form>
             {% endif %}
         </section>
+        {% if priceHistory is not null %}
+        <section class="cos-panel" id="price-history">
+            <h2>Історія ціни: {{ historyVariant.sku }} · {{ priceCurrency }}</h2>
+            <p>Незмінювані записи Domain. Дата відображена так, як її зберігає база даних.</p>
+            <div class="table-responsive"><table class="table">
+                <thead><tr><th>Дата</th><th>Попередня ціна</th><th>Нова ціна</th><th>Автор</th><th>Запис</th></tr></thead>
+                <tbody>{% for entry in priceHistory.items %}
+                    <tr><td>{{ entry.created_at }}</td><td>{{ entry.old_amount is null ? '—' : entry.old_amount }}</td>
+                    <td>{{ entry.new_amount }}</td><td>{{ entry.actor_ref }}</td><td><code>{{ entry.price_event_id }}</code></td></tr>
+                {% else %}<tr><td colspan="5">Історія відсутня.</td></tr>{% endfor %}</tbody>
+            </table></div>
+            <nav class="cos-toolbar" aria-label="Історія ціни">
+                {% if historyPage > 1 %}<a href="?currency={{ priceCurrency }}&amp;price_page={{ pricePage }}&amp;history_variant={{ historyVariant.variant_id }}&amp;history_page={{ historyPage - 1 }}#price-history">Попередня</a>{% endif %}
+                <span>Сторінка {{ historyPage }}</span>
+                {% if priceHistory.items|length == 30 and historyPage < 333334 %}<a href="?currency={{ priceCurrency }}&amp;price_page={{ pricePage }}&amp;history_variant={{ historyVariant.variant_id }}&amp;history_page={{ historyPage + 1 }}#price-history">Наступна</a>{% endif %}
+            </nav>
+        </section>
+        {% endif %}
         <section class="cos-panel">
             <h2>Категорії товару</h2>
             <p>
