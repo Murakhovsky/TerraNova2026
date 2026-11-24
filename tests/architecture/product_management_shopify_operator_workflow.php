@@ -11,11 +11,11 @@ $assert=static function(bool $valid,string $description):void {
     if (!$valid) throw new RuntimeException('Shopify operator workflow: '.$description);
 };
 foreach([
-    "if ($action==='preflight')",
-    "$this->modules->isInstalled(",
-    "$this->modules->isCurrent(",
-    "$this->modules->isConfiguredEnabled(",
-    "$this->modules->isEnabled(",
+    'if ($action===\'preflight\')',
+    '$this->modules->isInstalled(',
+    '$this->modules->isCurrent(',
+    '$this->modules->isConfiguredEnabled(',
+    '$this->modules->isEnabled(',
     'MODULE_NOT_READY',
     'COS_SHOPIFY_OPERATOR_ENABLED',
 ] as $expected) {
