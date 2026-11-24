@@ -25,7 +25,7 @@ final readonly class SalesClientCaseStatsController
 
         return new JsonResponse([
             'ok' => true,
-            'data' => $this->queries->ask(new GetClientCaseStatsQuery($tenant->organizationId())),
+            'data' => $this->queries->ask(new GetClientCaseStatsQuery($tenant->organizationId(),(int)$tenant->userId()->value())),
         ]);
     }
 }
