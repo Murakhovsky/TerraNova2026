@@ -45,7 +45,9 @@ try{
     $analytics=new \Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesCommercialAnalyticsReadModel($db);
     $analyticsService=new \Domains\Sales\Application\Service\SalesCommercialAnalyticsService($scope,$analytics);
     $entityScope=new \Domains\Sales\Application\Service\SalesEntityScopeService($scope,$read);
-    $policy=new \App\Application\Sales\SalesDirectInvocationPolicy($entityScope,new MysqlSalesAccessControl($db),new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOfferRepository($db));
+    $authority=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesMutationAuthority($db,$scope,new MysqlSalesAccessControl($db));
+    $guard=new \Domains\Sales\Application\Service\SalesMutationGuard(new \Infrastructure\Platform\Persistence\MySql\Transaction\TransactionManager($db),$authority);
+    $policy=new \App\Application\Sales\SalesDirectInvocationPolicy($entityScope,new MysqlSalesAccessControl($db),new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOfferRepository($db),$guard);
     $reports=new \Domains\Sales\Application\Service\SalesReportService($analyticsService);
     $gateway=new CanonicalCapabilityGateway($catalog,$active,new FederationCapabilityBindingResolver($catalog,new DomainModuleRegistry([]),$active),[
         new SalesWorkspaceSummaryAdapter($scope,$read),
