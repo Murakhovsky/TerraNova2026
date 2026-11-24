@@ -1,0 +1,10 @@
+sku,name,type,uom,track_inventory
+SERIES01-L01,ARC Desk Lamp,stock,pcs,false
+SERIES01-L02,LINE Wall Sconce,stock,pcs,false
+SERIES01-L03,RAIL Pendant,stock,pcs,false
+SERIES01-F01,BLOCK Side Table,stock,pcs,false
+SERIES01-F02,FRAME Coffee Table,stock,pcs,false
+SERIES01-F03,NEST Duo Tables,stock,pcs,false
+SERIES01-A01,RIPPLE 4 Wall Panels,stock,pcs,false
+SERIES01-A02,MONO Wall Triptych,stock,pcs,false
+SERIES01-A03,GRID Divider,stock,pcs,false

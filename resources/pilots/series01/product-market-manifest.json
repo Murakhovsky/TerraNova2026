@@ -1,0 +1,328 @@
+{
+  "schema_version": "series01-pilot-v1",
+  "project": "COS Product/Market SERIES01",
+  "shop_domain": "e2rnbw-mr.myshopify.com",
+  "canonical_owner": "product_management",
+  "experiment_owner": "growth",
+  "commerce_channel": "shopify",
+  "authority": "COS is canonical; all remote writes require approved Platform Workflow, version-pinned payload, tenant + shop match, durable receipts and native readback",
+  "commercial_rules": {
+    "standard_unit_floor_usd": 300,
+    "custom_min_qty": 10,
+    "custom_min_unit_price_usd": 1000,
+    "custom_order_floor_usd": 10000
+  },
+  "guardrails": {
+    "concept_only": true,
+    "no_checkout": true,
+    "no_inventory_claims": true,
+    "no_unverified_delivery_promises": true,
+    "no_auto_publish": true,
+    "eu_lighting_requires_independent_compliance_gate": true
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "segment": "HoReCa",
+      "skus": [
+        "SERIES01-L02",
+        "SERIES01-L03",
+        "SERIES01-F03"
+      ],
+      "primary_signal": "qualified_batch_RfQ"
+    },
+    {
+      "id": "H2",
+      "segment": "Interior designers",
+      "skus": [
+        "SERIES01-F02",
+        "SERIES01-A02",
+        "SERIES01-A03"
+      ],
+      "primary_signal": "qualified_project_spec_request"
+    },
+    {
+      "id": "H3",
+      "segment": "Premium B2C",
+      "skus": [
+        "SERIES01-L01",
+        "SERIES01-F01",
+        "SERIES01-A01"
+      ],
+      "primary_signal": "price_qualified_purchase_intent"
+    }
+  ],
+  "products": [
+    {
+      "sku": "SERIES01-L01",
+      "title": "ARC Desk Lamp",
+      "category": "LIGHT",
+      "concept_price_usd": 390,
+      "price_is_verified": false,
+      "cogs_is_verified": false,
+      "proposed_materials": [
+        "powder-coated steel",
+        "CNC-milled wood",
+        "LED module"
+      ],
+      "audience": "Premium home office / hospitality",
+      "description_en": "Architectural desk lamp with a repeatable steel-and-wood assembly.",
+      "ready_for_sale": false,
+      "product_status": "CONCEPT",
+      "publication_status": "BLOCKED",
+      "image_ref": "SERIES01-L01.jpg",
+      "image_type": "AI_CONCEPT_NOT_PHOTO",
+      "manufacturing_validation": [
+        "BOM",
+        "routing",
+        "cycle_time",
+        "packaging",
+        "safety_and_compliance",
+        "shipping_cost"
+      ],
+      "sales_call_to_action": "Request a quote / join interest list",
+      "custom_min_qty": 10,
+      "custom_min_unit_price_usd": 1000
+    },
+    {
+      "sku": "SERIES01-L02",
+      "title": "LINE Wall Sconce",
+      "category": "LIGHT",
+      "concept_price_usd": 520,
+      "price_is_verified": false,
+      "cogs_is_verified": false,
+      "proposed_materials": [
+        "powder-coated folded steel",
+        "standard LED module"
+      ],
+      "audience": "Hotels / architects",
+      "description_en": "Repeatable wall lighting for rooms and commercial interiors.",
+      "ready_for_sale": false,
+      "product_status": "CONCEPT",
+      "publication_status": "BLOCKED",
+      "image_ref": "SERIES01-L02.jpg",
+      "image_type": "AI_CONCEPT_NOT_PHOTO",
+      "manufacturing_validation": [
+        "BOM",
+        "routing",
+        "cycle_time",
+        "packaging",
+        "safety_and_compliance",
+        "shipping_cost"
+      ],
+      "sales_call_to_action": "Request a quote / join interest list",
+      "custom_min_qty": 10,
+      "custom_min_unit_price_usd": 1000
+    },
+    {
+      "sku": "SERIES01-L03",
+      "title": "RAIL Pendant",
+      "category": "LIGHT",
+      "concept_price_usd": 890,
+      "price_is_verified": false,
+      "cogs_is_verified": false,
+      "proposed_materials": [
+        "powder-coated metal",
+        "CNC wood insert",
+        "LED module"
+      ],
+      "audience": "HoReCa / coworking",
+      "description_en": "Modular linear pendant for repeat installations.",
+      "ready_for_sale": false,
+      "product_status": "CONCEPT",
+      "publication_status": "BLOCKED",
+      "image_ref": "SERIES01-L03.jpg",
+      "image_type": "AI_CONCEPT_NOT_PHOTO",
+      "manufacturing_validation": [
+        "BOM",
+        "routing",
+        "cycle_time",
+        "packaging",
+        "safety_and_compliance",
+        "shipping_cost"
+      ],
+      "sales_call_to_action": "Request a quote / join interest list",
+      "custom_min_qty": 10,
+      "custom_min_unit_price_usd": 1000
+    },
+    {
+      "sku": "SERIES01-F01",
+      "title": "BLOCK Side Table",
+      "category": "FURNITURE",
+      "concept_price_usd": 590,
+      "price_is_verified": false,
+      "cogs_is_verified": false,
+      "proposed_materials": [
+        "powder-coated steel",
+        "CNC-milled wood"
+      ],
+      "audience": "Premium apartments",
+      "description_en": "Compact repeatable side-table with flat-pack potential.",
+      "ready_for_sale": false,
+      "product_status": "CONCEPT",
+      "publication_status": "BLOCKED",
+      "image_ref": "SERIES01-F01.jpg",
+      "image_type": "AI_CONCEPT_NOT_PHOTO",
+      "manufacturing_validation": [
+        "BOM",
+        "routing",
+        "cycle_time",
+        "packaging",
+        "safety_and_compliance",
+        "shipping_cost"
+      ],
+      "sales_call_to_action": "Request a quote / join interest list",
+      "custom_min_qty": 10,
+      "custom_min_unit_price_usd": 1000
+    },
+    {
+      "sku": "SERIES01-F02",
+      "title": "FRAME Coffee Table",
+      "category": "FURNITURE",
+      "concept_price_usd": 990,
+      "price_is_verified": false,
+      "cogs_is_verified": false,
+      "proposed_materials": [
+        "modular metal frame",
+        "CNC-milled wood top"
+      ],
+      "audience": "Interior designers",
+      "description_en": "Modular coffee table for residential and hospitality projects.",
+      "ready_for_sale": false,
+      "product_status": "CONCEPT",
+      "publication_status": "BLOCKED",
+      "image_ref": "SERIES01-F02.jpg",
+      "image_type": "AI_CONCEPT_NOT_PHOTO",
+      "manufacturing_validation": [
+        "BOM",
+        "routing",
+        "cycle_time",
+        "packaging",
+        "safety_and_compliance",
+        "shipping_cost"
+      ],
+      "sales_call_to_action": "Request a quote / join interest list",
+      "custom_min_qty": 10,
+      "custom_min_unit_price_usd": 1000
+    },
+    {
+      "sku": "SERIES01-F03",
+      "title": "NEST Duo Tables",
+      "category": "FURNITURE",
+      "concept_price_usd": 1290,
+      "price_is_verified": false,
+      "cogs_is_verified": false,
+      "proposed_materials": [
+        "shared steel frames",
+        "two standard wooden tops"
+      ],
+      "audience": "Hospitality / premium residential",
+      "description_en": "A standardized nesting-table set as one series SKU.",
+      "ready_for_sale": false,
+      "product_status": "CONCEPT",
+      "publication_status": "BLOCKED",
+      "image_ref": "SERIES01-F03.jpg",
+      "image_type": "AI_CONCEPT_NOT_PHOTO",
+      "manufacturing_validation": [
+        "BOM",
+        "routing",
+        "cycle_time",
+        "packaging",
+        "safety_and_compliance",
+        "shipping_cost"
+      ],
+      "sales_call_to_action": "Request a quote / join interest list",
+      "custom_min_qty": 10,
+      "custom_min_unit_price_usd": 1000
+    },
+    {
+      "sku": "SERIES01-A01",
+      "title": "RIPPLE 4 Wall Panels",
+      "category": "ARCHITECTURAL",
+      "concept_price_usd": 490,
+      "price_is_verified": false,
+      "cogs_is_verified": false,
+      "proposed_materials": [
+        "CNC-milled wood"
+      ],
+      "audience": "Designers / premium residential",
+      "description_en": "Four-panel serial wall composition.",
+      "ready_for_sale": false,
+      "product_status": "CONCEPT",
+      "publication_status": "BLOCKED",
+      "image_ref": "SERIES01-A01.jpg",
+      "image_type": "AI_CONCEPT_NOT_PHOTO",
+      "manufacturing_validation": [
+        "BOM",
+        "routing",
+        "cycle_time",
+        "packaging",
+        "safety_and_compliance",
+        "shipping_cost"
+      ],
+      "sales_call_to_action": "Request a quote / join interest list",
+      "custom_min_qty": 10,
+      "custom_min_unit_price_usd": 1000
+    },
+    {
+      "sku": "SERIES01-A02",
+      "title": "MONO Wall Triptych",
+      "category": "ARCHITECTURAL",
+      "concept_price_usd": 790,
+      "price_is_verified": false,
+      "cogs_is_verified": false,
+      "proposed_materials": [
+        "CNC-milled wood",
+        "painted inserts"
+      ],
+      "audience": "Designers / offices",
+      "description_en": "Three-panel architectural wall composition.",
+      "ready_for_sale": false,
+      "product_status": "CONCEPT",
+      "publication_status": "BLOCKED",
+      "image_ref": "SERIES01-A02.jpg",
+      "image_type": "AI_CONCEPT_NOT_PHOTO",
+      "manufacturing_validation": [
+        "BOM",
+        "routing",
+        "cycle_time",
+        "packaging",
+        "safety_and_compliance",
+        "shipping_cost"
+      ],
+      "sales_call_to_action": "Request a quote / join interest list",
+      "custom_min_qty": 10,
+      "custom_min_unit_price_usd": 1000
+    },
+    {
+      "sku": "SERIES01-A03",
+      "title": "GRID Divider",
+      "category": "ARCHITECTURAL",
+      "concept_price_usd": 1490,
+      "price_is_verified": false,
+      "cogs_is_verified": false,
+      "proposed_materials": [
+        "powder-coated metal frame",
+        "CNC wood inserts"
+      ],
+      "audience": "HoReCa / offices",
+      "description_en": "Repeatable modular architectural room divider.",
+      "ready_for_sale": false,
+      "product_status": "CONCEPT",
+      "publication_status": "BLOCKED",
+      "image_ref": "SERIES01-A03.jpg",
+      "image_type": "AI_CONCEPT_NOT_PHOTO",
+      "manufacturing_validation": [
+        "BOM",
+        "routing",
+        "cycle_time",
+        "packaging",
+        "safety_and_compliance",
+        "shipping_cost"
+      ],
+      "sales_call_to_action": "Request a quote / join interest list",
+      "custom_min_qty": 10,
+      "custom_min_unit_price_usd": 1000
+    }
+  ]
+}
