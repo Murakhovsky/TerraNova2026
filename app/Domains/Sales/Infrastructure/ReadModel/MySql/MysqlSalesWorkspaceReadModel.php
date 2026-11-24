@@ -7,8 +7,9 @@ use Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface;
 use Domains\Sales\Application\Contract\SalesProposalLeadReadModelInterface;
 use PDO;
 use Domains\Sales\Application\Contract\SalesWorkspaceSummaryReadPort;
+use Domains\Sales\Application\Contract\SalesTeamSummaryReadPort;
 
-final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadModelInterface, SalesProposalLeadReadModelInterface, SalesWorkspaceSummaryReadPort
+final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadModelInterface, SalesProposalLeadReadModelInterface, SalesWorkspaceSummaryReadPort, SalesTeamSummaryReadPort
 {
     public function __construct(private PDO $connection)
     {
@@ -36,10 +37,30 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
 
     public function summary(string $organizationId,?int $ownerId=null,?string $pipelineId=null):array
     {
+        return $this->summaryPopulation($organizationId,$ownerId,$pipelineId,null);
+    }
+
+    public function summaryForOwners(string $org,array $owners,?string $pipeline=null):array
+    {
+        if (!array_is_list($owners)||count($owners)>1000) throw new \DomainException('Invalid team owner population.');
+        foreach ($owners as $id) if (!is_int($id)||$id<1) throw new \DomainException('Invalid team owner identity.');
+        return $this->summaryPopulation($org,null,$pipeline,array_values(array_unique($owners)));
+    }
+
+    private function summaryPopulation(string $organizationId,?int $ownerId,?string $pipelineId,?array $owners):array
+    {
         if($organizationId===''||($ownerId!==null&&$ownerId<1))throw new \DomainException('Invalid summary scope.');
         $where=['c.organization_id=:org','c.status IN ("active","paused")'];$params=['org'=>$organizationId];
         if($ownerId!==null){$where[]='c.assigned_user_id=:owner';$params['owner']=$ownerId;}
         if($pipelineId!==null){$where[]='c.pipeline_id=:pipeline';$params['pipeline']=$pipelineId;}
+        if ($owners!==null) {
+            if ($owners===[]) $where[]='1=0';
+            else {
+                $slots=[];
+                foreach ($owners as $i=>$id) {$key='team_owner_'.$i;$slots[]=':'.$key;$params[$key]=$id;}
+                $where[]='c.assigned_user_id IN ('.implode(',',$slots).')';
+            }
+        }
         $from=' FROM tn_client_cases c LEFT JOIN sales_pipeline_stages s ON s.id=c.stage_id AND s.organization_id=c.organization_id AND s.pipeline_id=c.pipeline_id WHERE '.implode(' AND ',$where);
         $known='c.deal_value IS NOT NULL AND c.deal_value>=0 AND UPPER(c.currency) IN ("USD","EUR","UAH")';
         $prob='COALESCE(c.probability,s.probability_default)';
