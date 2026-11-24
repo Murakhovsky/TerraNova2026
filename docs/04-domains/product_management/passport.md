@@ -42,6 +42,7 @@ domain_id: product_management
         "product_management.location.create",
         "product_management.location.search",
         "product_management.stock.reserve",
+        "product_management.stock.reservation.search",
         "product_management.stock.release",
         "product_management.stock.balance.get"
       ]
