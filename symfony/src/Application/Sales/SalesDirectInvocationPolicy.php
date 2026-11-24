@@ -52,7 +52,7 @@ final readonly class SalesDirectInvocationPolicy implements TransactionalCapabil
             return;
         }
         if ($contract->kind==='command'&&!$can(SalesCapability::WorkspaceUse)) throw new DomainException('Sales mutation denied.');
-        if (in_array($id,['sales.order.create','sales.order.read'],true)) return; // SalesOrderService resolves live order/owner/deal scope.
+        if (in_array($id,['sales.order.create','sales.order.read'],true)||str_starts_with($id,'sales.order.lifecycle.')) return; // SalesOrderService resolves live order/owner/deal scope.
         if (in_array($id,['sales.lead.create','sales.lead.intake'],true)) return;
         if (isset($input['offer_id'])) {
             $offer=$this->offers->get($org,(string)$input['offer_id']);
