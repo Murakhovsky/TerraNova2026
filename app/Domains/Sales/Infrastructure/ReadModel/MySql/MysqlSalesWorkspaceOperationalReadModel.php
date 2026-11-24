@@ -173,11 +173,11 @@ final readonly class MysqlSalesWorkspaceOperationalReadModel implements SalesWor
         return $this->base->metrics($organizationId, $days);
     }
 
-    public function pipelines(string $organizationId): array
+    public function pipelines(string $organizationId,?int $ownerId=null): array
     {
         $pipelines = $this->base->pipelines($organizationId);
         if(!$this->base instanceof \Domains\Sales\Application\Contract\SalesWorkspaceSummaryReadPort)throw new \LogicException('Native pipeline summary unavailable.');
-        $summary=$this->base->summary($organizationId);
+        $summary=$this->base->summary($organizationId,$ownerId);
         foreach($pipelines as &$pipeline){
             foreach($pipeline['stages'] as &$stage){
                 $row=null;
