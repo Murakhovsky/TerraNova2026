@@ -231,16 +231,23 @@ final readonly class ShopifyObservationStore
     }
 
     /** Entry point only after ShopifyWebhookVerifier::verify on raw input. */
-    public function recordVerifiedDelivery(string $org,string $conn,string $deliveryId,string $topic,string $rawBody): bool
+    public function recordVerifiedDelivery(string $org,string $conn,string $deliveryId,string $topic,string $rawBody,?string $resourceGid=null): bool
     {
         if ($deliveryId===''||strlen($deliveryId)>190||!preg_match('/^[a-z_]+\/[a-z_]+$/D',$topic)
-            ||strlen($topic)>120||strlen($rawBody)>1048576) throw new DomainException('Invalid webhook metadata.');
+            ||strlen($topic)>120||strlen($rawBody)>1048576
+            ||($resourceGid!==null&&!preg_match('#^gid://shopify/Order/[1-9][0-9]{0,18}$#D',$resourceGid))
+            ||(str_starts_with($topic,'orders/') && $resourceGid===null)) {
+            throw new DomainException('Invalid verified webhook metadata or order pointer.');
+        }
         $digest=hash('sha256',$rawBody);
-        $stmt=$this->query('INSERT IGNORE INTO pm_webhook_inbox (organization_id,connection_id,delivery_id,topic,payload_sha256) VALUES (?,?,?,?,?)',
-            [$org,$conn,$deliveryId,$topic,$digest]);
+        $stmt=$this->query('INSERT IGNORE INTO pm_webhook_inbox (organization_id,connection_id,delivery_id,topic,payload_sha256,resource_gid) VALUES (?,?,?,?,?,?)',
+            [$org,$conn,$deliveryId,$topic,$digest,$resourceGid]);
         if ($stmt->rowCount()===0) {
-            $record=$this->query('SELECT payload_sha256 FROM pm_webhook_inbox WHERE organization_id=? AND connection_id=? AND delivery_id=?',[$org,$conn,$deliveryId])->fetch(PDO::FETCH_ASSOC);
-            if ($record===false||!hash_equals((string)$record['payload_sha256'],$digest)) throw new DomainException('Webhook delivery ID reused with different payload.');
+            $record=$this->query('SELECT payload_sha256,resource_gid FROM pm_webhook_inbox WHERE organization_id=? AND connection_id=? AND delivery_id=?',[$org,$conn,$deliveryId])->fetch(PDO::FETCH_ASSOC);
+            if ($record===false||!hash_equals((string)$record['payload_sha256'],$digest)
+                ||$record['resource_gid']!==$resourceGid) {
+                throw new DomainException('Webhook delivery ID reused with different payload or resource identity.');
+            }
             return false;
         }
         return true;
