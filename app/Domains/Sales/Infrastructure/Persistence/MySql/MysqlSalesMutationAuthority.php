@@ -49,6 +49,57 @@ final readonly class MysqlSalesMutationAuthority implements SalesMutationAuthori
             throw new DomainException('Sales assignment denied.');
     }
 
+    public function contact(string $org,int $actor,?string $email,?string $phone):void
+    {
+        $this->transaction();
+        // Lock both identities, not just the first matching contact. No implicit
+        // merge or refresh of another manager's contact through a guessed email.
+        foreach (['email'=>$email,'phone'=>$phone] as $field=>$value) {
+            if ($value===null||$value==='') continue;
+            $q=$this->connection->prepare('SELECT id FROM tn_people WHERE organization_id=? AND '.$field.'=? ORDER BY id FOR UPDATE');
+            $q->execute([$org,$value]);
+            foreach ($q->fetchAll(PDO::FETCH_COLUMN) as $id) $this->person($org,$actor,(int)$id);
+        }
+    }
+
+    public function casePerson(string $org,int $actor,int $case):void
+    {
+        $this->transaction();
+        $q=$this->connection->prepare('SELECT person_id FROM tn_client_cases WHERE organization_id=? AND id=? FOR UPDATE');
+        $q->execute([$org,$case]);$person=(int)$q->fetchColumn();
+        if ($person<1) throw new \Domains\Sales\Application\Service\SalesMutationDenied('Sales mutation denied.');
+        $this->person($org,$actor,$person);
+    }
+
+    public function leadContact(string $org,int $actor,int $lead):void
+    {
+        $this->transaction();
+        $q=$this->connection->prepare('SELECT email,phone,client_case_id FROM tn_leads WHERE organization_id=? AND id=? FOR UPDATE');
+        $q->execute([$org,$lead]);$row=$q->fetch(PDO::FETCH_ASSOC);
+        if (!is_array($row)) throw new \Domains\Sales\Application\Service\SalesMutationDenied('Sales mutation denied.');
+        if ((int)($row['client_case_id']??0)>0) return; // Replay changes no shared contact.
+        $this->contact($org,$actor,
+            \Domains\Sales\Application\Support\ClientCaseInput::email((string)($row['email']??'')),
+            \Domains\Sales\Application\Support\ClientCaseInput::nullable((string)($row['phone']??''),50));
+    }
+
+    private function person(string $org,int $actor,int $person):void
+    {
+        $q=$this->connection->prepare('SELECT id FROM tn_people WHERE organization_id=? AND id=? FOR UPDATE');
+        $q->execute([$org,$person]);
+        if ($q->fetchColumn()===false) throw new \Domains\Sales\Application\Service\SalesMutationDenied('Sales mutation denied.');
+        try {$this->scope->resolve($org,$actor,'tenant',null);return;} catch (DomainException) {}
+        $linked=0;
+        try {
+            foreach (['deal'=>'tn_client_cases','lead'=>'tn_leads'] as $kind=>$table) {
+                $q=$this->connection->prepare('SELECT id FROM '.$table.' WHERE organization_id=? AND person_id=? ORDER BY id FOR UPDATE');
+                $q->execute([$org,$person]);
+                foreach ($q->fetchAll(PDO::FETCH_COLUMN) as $id) {$this->entity($org,$actor,$kind,(int)$id);$linked++;}
+            }
+        } catch (DomainException $e) {throw new \Domains\Sales\Application\Service\SalesMutationDenied('Sales mutation denied.',0,$e);}
+        if ($linked===0) throw new \Domains\Sales\Application\Service\SalesMutationDenied('Sales mutation denied.');
+    }
+
     public function propertyMatchDeal(string $org,int $match):int
     {
         $this->transaction();
