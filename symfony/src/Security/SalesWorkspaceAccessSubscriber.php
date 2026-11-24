@@ -89,7 +89,8 @@ final readonly class SalesWorkspaceAccessSubscriber implements EventSubscriberIn
                 $this->entity($org,$actor,$method==='lead'?'lead':'deal',$request->attributes->get('id'));return;
             }
             if (($name==='SalesReadController'&&in_array($method,['dashboard','pipelines'],true))||$name==='SalesDashboardController') return;
-            if ($name==='SalesTodayController'&&strtolower(trim((string)$request->query->get('scope','mine')))!=='team') return;
+            if (in_array($name,['ClientCaseInboxController','ClientCaseCollectionController','SalesTodayController'],true)&&!$mutation) return;
+            if ($name==='ClientCaseWorkspaceController'&&!$mutation) {$this->entity($org,$actor,'deal',$request->attributes->get('id'));return;}
             if ($name==='SalesWriteController'&&$method==='createLead') {
                 $input=str_contains(strtolower((string)$request->headers->get('Content-Type','')),'application/json')
                     ?json_decode((string)$request->getContent(),true):$request->request->all();
@@ -111,6 +112,7 @@ final readonly class SalesWorkspaceAccessSubscriber implements EventSubscriberIn
             // These commands now enter the native transactional write facade.
             if ($mutation&&($name==='SalesWriteController'
                 ||($name==='ClientCaseMutationController'&&!in_array($method,['create','update'],true))
+                ||$name==='SalesCommunicationController'
                 ||($name==='SalesFrontendController'&&in_array($method,['quickUpdate','owner','meeting','completeActivity','rescheduleActivity','leadFollowup'],true)))) return;
             if ($mutation) {
                 // Existing legacy write handlers do not uniformly lock/recheck owner authorization.
