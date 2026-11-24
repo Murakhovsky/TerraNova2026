@@ -15,8 +15,12 @@ final readonly class MysqlFinancePaidSettlementRepository implements FinancePaid
     public function __construct(private PDO $connection,private FinancePaidSettlementPolicy $policy){}
     public function receipt(string $org,string $reservationId):?array
     {
+        return $this->readReceipt($org,$reservationId,false);
+    }
+    private function readReceipt(string $org,string $reservationId,bool $locked):?array
+    {
         $row=$this->one('SELECT reservation_id,envelope_id,action_id,actor_id,candidate_hash,currency,reserved_minor,committed_minor,released_minor,created_at
-            FROM cos_finance_paid_settlements WHERE organization_id=? AND reservation_id=?',[$org,$reservationId]);
+            FROM cos_finance_paid_settlements WHERE organization_id=? AND reservation_id=?'.($locked?' FOR UPDATE':''),[$org,$reservationId]);
         if($row===null)return null;
         foreach(['reserved_minor','committed_minor','released_minor'] as $field)$row[$field]=(int)$row[$field];
         return [...$row,'state'=>'SETTLED','finance_settled'=>true,'expense_confirmed'=>false,'payment_confirmed'=>false];
@@ -42,7 +46,7 @@ final readonly class MysqlFinancePaidSettlementRepository implements FinancePaid
             if($envelope===null||$reservation===null||$claim===null||$claim['envelope_id']!==$id||$reservation['envelope_id']!==$id)
                 throw new DomainException('Native exposure and budget binding required.');
             $claim['amount_minor']=(int)$claim['amount_minor'];
-            $existing=$this->receipt($org,$reservationId);
+            $existing=$this->readReceipt($org,$reservationId,true);
             if($existing!==null){
                 if($existing['action_id']!==$action||$existing['actor_id']!==$actor||$existing['candidate_hash']!==$candidateHash
                     ||$reservation['state']!=='SETTLED')throw new DomainException('Settlement already committed with different authority.');
@@ -73,7 +77,7 @@ final readonly class MysqlFinancePaidSettlementRepository implements FinancePaid
                 (organization_id,id,envelope_id,reservation_id,event_type,amount_minor,actor_id,action_id,correlation_id,details_hash) VALUES (?,?,?,?,?,?,?,?,?,?)');
             $event->execute([$org,'fine-'.bin2hex(random_bytes(12)),$id,$reservationId,'PAID_SPEND_COMMITTED',$amount,$actor,$action,$trace,$candidateHash]);
             $event->execute([$org,'fine-'.bin2hex(random_bytes(12)),$id,$reservationId,'PAID_RESERVE_RELEASED',$released,$actor,$action,$trace,$candidateHash]);
-            $receipt=$this->receipt($org,$reservationId)??throw new DomainException('Settlement receipt missing.');
+            $receipt=$this->readReceipt($org,$reservationId,true)??throw new DomainException('Settlement receipt missing.');
             $this->connection->commit();return [...$receipt,'fresh'=>true];
         }catch(Throwable $e){if($this->connection->inTransaction())$this->connection->rollBack();throw $e;}
     }

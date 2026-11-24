@@ -298,6 +298,10 @@ try {
     };
     $paidRead=new \Domains\Marketing\Application\Service\MarketingPaidReadService($accounts,$readAdapter);
     $read=new \Domains\Marketing\Application\Service\MarketingPaidOperationsReadService($fundPlans,$journal,$metaProfiles,$paidRead);
+    // Synthetic provider insight record; a report alone must not authorize financial closure.
+    $accounts->importInsights($org,$account['id'],'campaign',$start,$end,[['campaign_id'=>'90001','date_start'=>$start,'date_stop'=>$end,'spend'=>'12.50']]);
+    $snapshotId=$accounts->insights($org,$account['id'],'campaign',$start,$end)[0]['id'];
+    $deny(fn()=>$read->settlementSource($actor,$paidPlan['id'],$snapshotId),'Terminal evidence accepted before paid lifecycle.');
     $planner=new \App\Persistence\Marketing\MarketingPaidGoalProposalService($db,$goals,$bridge,$fundPlans,$read);
     $assert($read->status($actor,$paidPlan['id'])['profile_configured']&&!$read->status($actor,$paidPlan['id'])['live_verified'],'Profile overclaims live verification.');
     $deny(fn()=>$planner->propose($actor,$paidPlan['id'],'activate','premature-activation-'.$token,$envelope['id'],$reservation['id']),'Activation before deployment.');
@@ -349,6 +353,12 @@ try {
     $deny(fn()=>$financeOps->release($org,$reservation['id'],$reviewer,bin2hex(random_bytes(16)),'fixture-release','Unsafe release after pause','unsafe-release-'.$token),
         'Claimed exposure released without settlement.');
     $assert($metaTransport->writes[count($metaTransport->writes)-1]===['90001','PAUSED'],'Campaign was not paused.');
+    $native=$read->settlementSource($actor,$paidPlan['id'],$snapshotId);
+    $assert($native['plan']['plan_hash']===$paidPlan['plan_hash']&&$native['terminal']['state']==='PAUSED_CONFIRMED'
+        &&$native['terminal']['activation_action_id']===$financeRepo->exposure($org,$reservation['id'])['action_id']
+        &&$native['observation']['source_snapshot_ref']===$snapshotId&&$native['observation']['reported_spend_decimal']==='12.500000',
+        'Native Marketing settlement source readback differs from confirmed receipts.');
+    $deny(fn()=>$read->settlementSource($actor,$paidPlan['id'],'mis-'.str_repeat('0',24)),'Unrelated insight accepted for settlement.');
     $assert($transport->posts===0,'Hermes unexpectedly invoked by paid lifecycle.');
     $deny(fn()=>$planner->propose($actor,$paidPlan['id'],'activate','reactivation-'.$token,$envelope['id'],$reservation['id']),'Paused plan reactivated.');
     echo "Marketing M3 approved create-paused/activate/pause native MySQL E2E with isolated Meta fixture PASS.\n";
