@@ -105,4 +105,49 @@ $assert(count($events)===2 &&$events[0]['aggregate_id']===$r['reservation_id']
 $statement=$pdo->prepare('SELECT COUNT(*) FROM cos_event_outbox o JOIN cos_events e ON e.id=o.event_id WHERE e.organization_id=? AND e.type IN (?,?)');
 $statement->execute([$org,'product_management.stock.reserved','product_management.stock.released']);
 $assert((int)$statement->fetchColumn()===2,'reserve/release must write existing Kernel outbox');
-echo "Product Management E5 manual reservation/release native MySQL acceptance passed.\n";
+// Approved physical counts: worker-boundary fixture, not a claim of full Plan E2E.
+$moduleState=new class implements \Kernel\Module\Contract\ModuleStateRepositoryInterface {
+    public bool $enabled=true;
+    public function enabledOverride(string $organizationId,string $moduleId):?bool{return $moduleId==='product_management'?$this->enabled:null;}
+    public function setEnabled(string $organizationId,string $moduleId,bool $enabled):void{$this->enabled=$enabled;}
+};
+$catalog=new \Kernel\Module\ModuleCatalog((new \Kernel\Module\ModuleDiscovery($root.'/app/Domains'))->discover());
+$modules=new \Kernel\Module\ActiveModuleResolver($catalog,$moduleState);
+$handler=new \Domains\ProductManagement\Automation\Action\ProductStockCountApplyHandler($products,$modules);
+$makeCount=static function(string $tenant,string $id,string $qty,int $rev,string $source,\Kernel\Action\ActionStatus $status=\Kernel\Action\ActionStatus::Running)use($v,$loc):\Kernel\Action\Action{
+    return new \Kernel\Action\Action(bin2hex(random_bytes(16)),$tenant,'product_management.stock.count.apply',
+        'product_stock_count',$id,['variant_id'=>$v,'location_id'=>$loc,'counted'=>$qty,'expected_revision'=>$rev,'source_ref'=>$source],
+        'USER','42','APPROVAL_REQUIRED','HIGH','wf:'.hash('sha256',$id),new DateTimeImmutable(),$status,'pm-count-test');
+};
+$revision=(int)$products->balance($org,$v,$loc)['revision'];$countId=bin2hex(random_bytes(16));
+$action=$makeCount($org,$countId,'4',$revision,'count:ACT-1');
+$assert(!$handler->execute($makeCount($org,$countId,'4',$revision,'count:ACT-1',\Kernel\Action\ActionStatus::PendingApproval))->successful,'Unapproved count rejected');
+$moduleState->enabled=false;
+$assert(!$handler->execute($action)->successful,'Disabled module rejected');
+$moduleState->enabled=true;
+$assert(!$handler->execute($makeCount($other,$countId,'4',$revision,'count:ACT-1'))->successful,'Cross tenant count rejected');
+$assert(!$handler->execute($makeCount($org,bin2hex(random_bytes(16)),'4',$revision-1,'count:STALE'))->successful,'Stale count rejected');
+$assert($products->stockCount($org,$countId)===null,'Denied count did not post');
+$assert($handler->execute($action)->successful && $handler->execute($action)->successful,'Count correction and same-key replay');
+$count=$products->stockCount($org,$countId);
+$assert($count!==null&&$count['delta']==='-1.000000'&&$count['counted']==='4.000000'&&$count['previous_on_hand']==='5.000000'&&$count['movement_id']!==null&&$count['result_revision']===$revision+1,'Count native evidence');
+$assert($products->stockCount($other,$countId)===null,'Count read isolation');
+$assert(!$handler->execute($makeCount($org,$countId,'3',$revision,'count:ACT-1'))->successful,'Changed payload replay rejected');
+$assert(!$handler->execute($makeCount($org,bin2hex(random_bytes(16)),'4',$revision+1,'count:ACT-1'))->successful,'Duplicate source count rejected');
+$zeroId=bin2hex(random_bytes(16));$zero=$makeCount($org,$zeroId,'4',$revision+1,'count:ZERO-DIFF');
+$assert($handler->execute($zero)->successful,'Zero discrepancy count');
+$assert($products->stockCount($org,$zeroId)['movement_id']===null,'No-op count must not create ledger movement');
+$res=$products->reserveStock($org,$v,$loc,'3','manual:COUNT-RSV','count-rsv-'.$tag,'42','count-test');
+$now=(int)$products->balance($org,$v,$loc)['revision'];
+$assert(!$handler->execute($makeCount($org,bin2hex(random_bytes(16)),'2',$now,'count:BELOW-RESERVE'))->successful,'Count below active reservation rejected');
+$assert($products->balance($org,$v,$loc)['on_hand']==='4.000000','Rejected count preserved stock');
+$products->releaseStock($org,$res['reservation_id'],'Test completed','count-release-'.$tag,'42','count-test');
+$now=(int)$products->balance($org,$v,$loc)['revision'];$emptyId=bin2hex(random_bytes(16));
+$assert($handler->execute($makeCount($org,$emptyId,'0',$now,'count:EMPTY'))->successful,'Zero physical stock is valid');
+$assert($products->balance($org,$v,$loc)['on_hand']==='0.000000','Physical zero applied');
+$audit=(new \Domains\ProductManagement\Infrastructure\Persistence\MySqlStockReconciliationAudit($pdo))->audit($org);
+$assert($audit['status']==='OK'&&$audit['complete']===true,'Count correction reconciles ledger and active reservations');
+$statement=$pdo->prepare('SELECT COUNT(*) FROM cos_event_outbox o JOIN cos_events e ON e.id=o.event_id WHERE e.organization_id=? AND e.type=?');
+$statement->execute([$org,'product_management.stock.count_applied']);
+$assert((int)$statement->fetchColumn()===3,'Count events/outbox exactly once per confirmed document');
+echo "Product Management E5 manual reservation/release and approved count MySQL acceptance passed.\n";
