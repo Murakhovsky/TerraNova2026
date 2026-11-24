@@ -490,3 +490,7 @@ limit or a future paginated read audit; a truncated response is not evidence.
 ## E5/E7 integrated reservation Workspace
 
 Tenant managers can browse paginated reservations by SKU and warehouse, create manual reservations and explicitly release active reservations. `stock.reservation.search` independently verifies identity/status and balance readback. No automatic expiry, partial release or Sales order writer is admitted by ADR-0017. All mutations use existing Gateway → CommandBus → Domain and uncertain post-write verification returns 503.
+
+## E7 quantity tiers and explicit price resolution
+
+A list entry can be removed using a revisioned null-amount tombstone; history and previous receipts are retained. Tiers are independent SKU/list/minimum-quantity prices, versioned and removable using a null amount. Quantity thresholds are exact DECIMAL(20,6) and inclusive. price.resolve uses the highest active eligible threshold, then the explicit list entry if present; without a list it uses the requested currency base price only. It returns no quote for archived lists or archived Product/Variant, and never infers customer eligibility, converts FX or falls back across lists. Tiers remain independent of removed list entries. Schema 0.12.0. Tier history is stored atomically; browsing tier history and approval-based stock adjustments remain distinct work.
