@@ -43,4 +43,8 @@ foreach(['stock.reservation.search','reservation_readback_uncertain','confirm_re
     $assert(str_contains($controller,$required),'Reservation Workspace missing: '.$required);
 $assert(str_contains($routes,'cos_product_management_stock_reservation:')&&str_contains($twig,'name="reservation_id"'),
     'Reservation requires guarded canonical route and identity.');
+$assert(str_contains($controller,'stock.count.get')&&str_contains($controller,'$this->countPlans->propose(')
+    &&str_contains($routes,'cos_product_management_stock_count_propose:')&&str_contains($twig,'name="expected_revision"'),
+    'Count proposal must be revision-pinned and read through canonical query.');
+$assert(!str_contains($controller,'applyApprovedStockCount'),'Workspace must not invoke approved stock writer.');
 echo "Product Management inventory Workspace architecture passed.\n";
