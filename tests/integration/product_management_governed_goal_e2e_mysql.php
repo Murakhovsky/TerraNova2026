@@ -298,6 +298,12 @@ try {
     $assert((int)$db->fetchOne('SELECT COUNT(*) FROM cos_federation_runs WHERE organization_id=?',[$org])===0,'No legacy executor');
     $foreign=new TenantContext(UserId::fromString($owner),OrganizationId::fromString('foreign-'.$token),OrganizationRole::fromString('manager'),[Permission::fromString(TenantPermissions::MANAGE)]);
     $deny(fn()=>$outcome->observeRun($foreign,$runId,ProductGovernedRunOutcomeProvider::CRITERION,new DateTimeImmutable('-1 day'),new DateTimeImmutable('+1 day')),'Foreign tenant evidence');
+    // Independently invalidate price history, then restore it and invalidate a transfer leg.
+    $db->executeStatement('UPDATE pm_price_list_history SET new_amount=? WHERE organization_id=? AND list_id=? AND variant_id=?',['100.0000',$org,$listId,$variant]);
+    $deny(fn()=>$goals->recordEvaluation($actor,'list-tampered-'.$token,$runId),'List price history tampering');
+    $db->executeStatement('UPDATE pm_price_list_history SET new_amount=? WHERE organization_id=? AND list_id=? AND variant_id=?',['99.2500',$org,$listId,$variant]);
+    $db->executeStatement('UPDATE pm_stock_movements SET source_ref=? WHERE organization_id=? AND variant_id=? AND location_id=?',['FORGED',$org,$variant,$destination]);
+    $deny(fn()=>$goals->recordEvaluation($actor,'transfer-tampered-'.$token,$runId),'Paired transfer tampering');
     // Deliberately alter only fixture native ledger, preserving technical Action success.
     $db->executeStatement('UPDATE pm_stock_movements SET source_ref=? WHERE organization_id=? AND variant_id=?',['FORGED',$org,$variant]);
     $deny(fn()=>$goals->recordEvaluation($actor,'tampered-'.$token,$runId),'Technical success without intact native evidence');

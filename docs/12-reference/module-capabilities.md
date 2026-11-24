@@ -366,11 +366,13 @@ Manifest capabilities не задекларовані.
 - `product_management.category.search`;
 - `product_management.governed.attribute.product.bulk_set`;
 - `product_management.governed.price.base.set`;
+- `product_management.governed.price.list.entry.set`;
 - `product_management.governed.product.create`;
 - `product_management.governed.stock.issue`;
 - `product_management.governed.stock.receive`;
 - `product_management.governed.stock.release`;
 - `product_management.governed.stock.reserve`;
+- `product_management.governed.stock.transfer`;
 - `product_management.governed.variant.matrix.create`;
 - `product_management.import.apply`;
 - `product_management.import.batch.get`;

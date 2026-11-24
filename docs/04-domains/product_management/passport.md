@@ -101,7 +101,9 @@ domain_id: product_management
         "product_management.governed.stock.receive",
         "product_management.governed.stock.issue",
         "product_management.governed.stock.reserve",
-        "product_management.governed.stock.release"
+        "product_management.governed.stock.release",
+        "product_management.governed.stock.transfer",
+        "product_management.governed.price.list.entry.set"
       ]
     },
     {
