@@ -30,12 +30,12 @@ final readonly class ShopifyReadClient
                 'Content-Type'=>'application/json',
                 'X-Shopify-Access-Token'=>$token,
             ],$body);
-            if (in_array($response['status'],[429,503],true)) {
+            if (in_array($response['status'],[408,425,429,500,502,503,504],true)) {
                 if ($attempt<3) {
                     usleep(250000*$attempt);
                     continue;
                 }
-                throw new DomainException('Shopify read throttled or temporarily unavailable after bounded retries.');
+                throw new ShopifyTransientReadFailure('Shopify read throttled or temporarily unavailable after bounded retries.');
             }
             if ($response['status']<200||$response['status']>=300) {
                 throw new DomainException('Shopify HTTP read error: '.$response['status']);
@@ -55,9 +55,8 @@ final readonly class ShopifyReadClient
                     usleep(250000*$attempt);
                     continue;
                 }
-                throw new DomainException($throttled
-                    ?'Shopify GraphQL throttle budget exhausted.'
-                    :'Shopify GraphQL returned errors.');
+                if($throttled)throw new ShopifyTransientReadFailure('Shopify GraphQL throttle budget exhausted.');
+                throw new DomainException('Shopify GraphQL returned errors.');
             }
             if (!array_key_exists('data',$result)||!is_array($result['data'])) {
                 throw new DomainException('Shopify GraphQL missing data.');
