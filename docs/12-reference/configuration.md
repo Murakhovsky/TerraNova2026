@@ -22,7 +22,7 @@ generated: true
 | `finance` | `0.2.2` | — | 8 |
 | `growth` | `0.50.0` | — | 92 |
 | `hr` | `0.1.0` | — | 0 |
-| `marketing` | `0.1.2` | — | 14 |
+| `marketing` | `0.2.3` | — | 21 |
 | `procurement` | `0.1.0` | — | 0 |
 | `product_management` | `0.1.0` | — | 28 |
 | `property` | `1.0.0` | `propertyModuleConfigurationProvisioner` | 25 |
@@ -82,7 +82,7 @@ generated: true
 
 - manifest: `app/Domains/Marketing/module.php`;
 - configuration provisioners: —;
-- capabilities: `marketing.campaign.search`, `marketing.campaign.get`, `marketing.campaign.create`, `marketing.paid.account.list`, `marketing.paid.sync.history`, `marketing.paid.spend.evidence.get`, `marketing.paid.insights.query`, `marketing.campaign.update`, `marketing.campaign.archive`, `marketing.paid.sync.request`, `marketing.paid.change.request`, `marketing.paid.meta.campaign.create_paused`, `marketing.paid.meta.campaign.activate`, `marketing.paid.meta.campaign.pause`.
+- capabilities: `marketing.campaign.search`, `marketing.campaign.get`, `marketing.campaign.create`, `marketing.paid.account.list`, `marketing.paid.sync.history`, `marketing.paid.spend.evidence.get`, `marketing.paid.insights.query`, `marketing.product.draft_check.get`, `marketing.creative.create`, `marketing.creative.revise`, `marketing.creative.list`, `marketing.analyst.proposal.submit`, `marketing.analyst.proposal.list`, `marketing.analyst.proposal.review`, `marketing.campaign.update`, `marketing.campaign.archive`, `marketing.paid.sync.request`, `marketing.paid.change.request`, `marketing.paid.meta.campaign.create_paused`, `marketing.paid.meta.campaign.activate`, `marketing.paid.meta.campaign.pause`.
 
 ## `procurement`
 

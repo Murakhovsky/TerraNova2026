@@ -28,7 +28,7 @@ generated: true
 | `finance` | Finance | `0.2.2` | `0.2.2` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Finance/module.php` |
 | `growth` | Growth | `0.50.0` | `0.50.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Growth/module.php` |
 | `hr` | HR | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/HR/module.php` |
-| `marketing` | Marketing | `0.1.2` | `0.1.2` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Marketing/module.php` |
+| `marketing` | Marketing | `0.2.3` | `0.2.3` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Marketing/module.php` |
 | `procurement` | Procurement | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Procurement/module.php` |
 | `product_management` | Product Management | `0.1.0` | `0.8.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/ProductManagement/module.php` |
 | `property` | Property | `1.0.0` | `1.0.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Property/module.php` |
@@ -297,21 +297,27 @@ Manifest capabilities не задекларовані.
 
 ## Marketing (`marketing`)
 
-**Опис із manifest:** Marketing planning and Meta Paid Media read-only; financial and external mutations are deliberately blocked.
+**Опис із manifest:** Marketing M2 creative drafts/analyst review and Meta read-only evidence; Finance owns budgets and paid mutations remain blocked.
 
 - runtime service модуля: —;
 - обробники jobs: —;
 - внески API routes: —;
 - постачальники конфігурації: —;
-- міграції: `app/migrations/20261119_000152_marketing_foundation.sql`.
+- міграції: `app/migrations/20261119_000152_marketing_foundation.sql`, `app/migrations/20261119_000154_marketing_planning_m2.sql`.
 
 ### Задекларовані capabilities
 
+- `marketing.analyst.proposal.list`;
+- `marketing.analyst.proposal.review`;
+- `marketing.analyst.proposal.submit`;
 - `marketing.campaign.archive`;
 - `marketing.campaign.create`;
 - `marketing.campaign.get`;
 - `marketing.campaign.search`;
 - `marketing.campaign.update`;
+- `marketing.creative.create`;
+- `marketing.creative.list`;
+- `marketing.creative.revise`;
 - `marketing.paid.account.list`;
 - `marketing.paid.change.request`;
 - `marketing.paid.insights.query`;
@@ -321,6 +327,7 @@ Manifest capabilities не задекларовані.
 - `marketing.paid.spend.evidence.get`;
 - `marketing.paid.sync.history`;
 - `marketing.paid.sync.request`;
+- `marketing.product.draft_check.get`;
 
 ## Procurement (`procurement`)
 
