@@ -8,8 +8,11 @@ require getenv('COS_TEST_AUTOLOAD') ?: dirname(__DIR__,2).'/symfony/vendor/autol
 $db=new PDO(sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',getenv('DB_HOST')?:'127.0.0.1',(int)(getenv('DB_PORT')?:3306),getenv('DB_DATABASE')?:'cos'),getenv('DB_USERNAME')?:'cos',getenv('DB_PASSWORD')?:'',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_EMULATE_PREPARES=>false,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
 $check=static function(bool $condition,string $message):void{if(!$condition)throw new RuntimeException($message);};
 // Session-local shadows of migrated schemas; no live queue or external sender touched.
-$db->exec('CREATE TEMPORARY TABLE tn_integration_outbox LIKE tn_integration_outbox');
-$db->exec('CREATE TEMPORARY TABLE tn_webhook_deliveries LIKE tn_webhook_deliveries');
+$migration=file_get_contents(dirname(__DIR__,2).'/app/migrations/20260823_000016_content_n8n.sql');
+foreach(['tn_integration_outbox','tn_webhook_deliveries'] as $table){
+    if(!preg_match('/CREATE TABLE IF NOT EXISTS '.preg_quote($table,'/').'\s*\([\s\S]*?;\s*/',$migration,$ddl))throw new RuntimeException('Missing migrated fixture schema.');
+    $db->exec(str_replace('CREATE TABLE IF NOT EXISTS','CREATE TEMPORARY TABLE',trim($ddl[0])));
+}
 $insert=$db->prepare('INSERT INTO tn_integration_outbox(integration,event_type,entity_type,entity_id,payload,dedupe_key,status,attempts,available_at,locked_at,lock_token) VALUES ("n8n","notification.email","notification",NULL,?,?,?,?,"2000-01-01 00:00:00",?,?)');
 $seed=static function(?string $key,string $status='pending',int $attempts=0,?string $locked=null)use($db,$insert):int{
     $insert->execute([json_encode(['organization_id'=>'fixture','notification_id'=>$key],JSON_THROW_ON_ERROR),$key,$status,$attempts,$locked,$locked===null?null:str_repeat('a',32)]);
