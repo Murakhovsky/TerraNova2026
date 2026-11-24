@@ -1377,6 +1377,16 @@ services:
 
   Domains\Sales\Application\Service\SalesWorkspaceScopedReadService: ~
 
+  Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesCommercialAnalyticsReadModel:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Sales\Application\Contract\SalesCommercialAnalyticsReadPort:
+    alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesCommercialAnalyticsReadModel
+
+  Domains\Sales\Application\Service\SalesCommercialAnalyticsService: ~
+
+
   Domains\Sales\Application\Contract\SalesWorkspaceSummaryReadPort:
     alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceReadModel
 
