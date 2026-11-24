@@ -42,11 +42,17 @@ try{
         public function setEnabled(string $organizationId,string $moduleId,bool $enabled):void{$this->enabled=$enabled;}
     });
     $scoped=new \Domains\Sales\Application\Service\SalesWorkspaceScopedReadService($scope,$read);
+    $analytics=new \Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesCommercialAnalyticsReadModel($db);
+    $analyticsService=new \Domains\Sales\Application\Service\SalesCommercialAnalyticsService($scope,$analytics);
     $gateway=new CanonicalCapabilityGateway($catalog,$active,new FederationCapabilityBindingResolver($catalog,new DomainModuleRegistry([]),$active),[
         new SalesWorkspaceSummaryAdapter($scope,$read),
         new \App\Infrastructure\Capability\SalesWorkspaceLeadsListAdapter($scoped),
         new \App\Infrastructure\Capability\SalesWorkspaceDealsListAdapter($scoped),
-        new \App\Infrastructure\Capability\SalesWorkspaceTimelineAdapter($scoped)
+        new \App\Infrastructure\Capability\SalesWorkspaceTimelineAdapter($scoped),
+        new \App\Infrastructure\Capability\SalesAnalyticsOutcomesAdapter($analyticsService),
+        new \App\Infrastructure\Capability\SalesAnalyticsForecastAdapter($analyticsService),
+        new \App\Infrastructure\Capability\SalesAnalyticsConversionAdapter($analyticsService),
+        new \App\Infrastructure\Capability\SalesAnalyticsStagesAdapter($analyticsService)
     ]);
     $actor=static fn(string $tenant,int $user)=>new TenantContext(UserId::fromString((string)$user),OrganizationId::fromString($tenant),OrganizationRole::fromString('manager'),[Permission::fromString(TenantPermissions::ACCESS),Permission::fromString(TenantPermissions::MANAGE)]);
     $manager=$actor($org,$owner);
@@ -125,5 +131,25 @@ try{
     }
     $leads=$page('sales.workspace.leads.list',['status'=>'new']);
     $check(count($leads['items'])===1&&$leads['items'][0]['owner_id']===$owner&&!str_contains(json_encode($leads,JSON_THROW_ON_ERROR),'Private'),'Scoped lead list mismatch.');
+    $analyticsCall=static fn(string $view,array $input)=>$gateway->invoke($manager,'sales.analytics.'.$view.'.read',$input,'trusted_read','','analytics-test');
+    $range=['from'=>'2026-12-01','to'=>'2027-01-01'];
+    $check($analyticsCall('forecast',$range+['pipeline_id'=>$pid])===$analytics->forecast($org,$owner,$pid,$range['from'],$range['to']),'Forecast capability parity failed.');
+    $check($analyticsCall('outcomes',$range)['win_rate_percent']===null,'Empty outcome period returned fabricated rate.');
+    $reject(fn()=>$analyticsCall('forecast',$range+['scope'=>'tenant']));
+    $reject(fn()=>$analyticsCall('stages',$range+['scope'=>'owner','owner_id'=>$other]));
+    $reject(fn()=>$analyticsCall('conversion',$range+['pipeline_id'=>$pid]));
+    $reject(fn()=>$analyticsCall('outcomes',['from'=>'2026-02-30','to'=>'2026-03-02']));
+    $leadId=$leads['items'][0]['id'];
+    $db->prepare('UPDATE tn_leads SET created_at=?,client_case_id=? WHERE organization_id=? AND id=?')->execute(['2026-12-05',$ownedId,$org,$leadId]);
+    $cohort=$analyticsCall('conversion',$range);
+    $check($cohort['lead_count']===1&&$cohort['linked_count']===1&&$cohort['link_without_event_count']===1&&$cohort['event_confirmed_count']===0&&$cohort['conversion_percent']==='100.00','Lead cohort/link evidence mismatch.');
+    // Native projection fixtures: historical owner at entry and COMPLETE duration only.
+    $db->prepare("INSERT INTO sales_deal_owner_history(id,organization_id,deal_id,owner_user_id,assigned_at,unassigned_at,history_quality) VALUES (?,?,?,?,?,?,'COMPLETE')")->execute(['fixture-owner-'.$token,$org,(string)$ownedId,$owner,'2026-12-02','2026-12-20']);
+    $stageInsert=$db->prepare('INSERT INTO sales_deal_stage_history(id,organization_id,deal_id,pipeline_id,from_stage_id,to_stage_id,to_stage_code,entered_at,left_at,duration_seconds,history_quality) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
+    $stageInsert->execute(['fixture-stage-a-'.$token,$org,(string)$ownedId,$pid,null,$stage,'FIXTURE','2026-12-03','2026-12-04',86400,'COMPLETE']);
+    $stageInsert->execute(['fixture-stage-b-'.$token,$org,(string)$ownedId,$pid,null,$stage,'FIXTURE','2026-12-05','2026-12-06',86400,'PARTIAL']);
+    $history=$analyticsCall('stages',$range+['pipeline_id'=>$pid]);
+    $check(count($history['items'])===1&&$history['items'][0]['entry_count']===2&&$history['items'][0]['distinct_deal_count']===1&&$history['items'][0]['complete_count']===1&&$history['items'][0]['partial_count']===1&&$history['items'][0]['duration_count']===1&&$history['items'][0]['average_duration_seconds']==='86400.00','Stage history quality/duration mismatch.');
+    $check(!str_contains(json_encode([$cohort,$history],JSON_THROW_ON_ERROR),'Private'),'Analytics leaked PII.');
     echo "Sales S5 scoped exact summary, redacted lists and timeline PASS.\n";
 }finally{$db->rollBack();}
