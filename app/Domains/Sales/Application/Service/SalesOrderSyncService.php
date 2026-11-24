@@ -111,7 +111,7 @@ final readonly class SalesOrderSyncService
         ksort($input);
         $key=hash('sha256',json_encode([$run['run_id'],$kind,$input],JSON_THROW_ON_ERROR));
         $job=$this->queue->enqueue($org,self::JOB,['run_id'=>$run['run_id'],'task_key'=>$key,'actor_id'=>(string)$run['actor_id']],
-            $correlation,'sales-order-sync:'.$key,5,900);
+            $correlation,'sales-order-sync:'.$key,5,1200);
         return $this->runs->register($org,$run['run_id'],$key,$job,$kind,$input);
     }
     private function assertActive(string $org):void
