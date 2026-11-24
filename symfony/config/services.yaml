@@ -1378,6 +1378,12 @@ services:
 
   Domains\Sales\Application\Service\SalesWorkspaceScopedReadService: ~
   Domains\Sales\Application\Service\SalesEntityScopeService: ~
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesMutationAuthority:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Sales\Application\Contract\SalesMutationAuthorityInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesMutationAuthority
+  Domains\Sales\Application\Service\SalesMutationGuard: ~
 
   Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesCommercialAnalyticsReadModel:
     arguments:
