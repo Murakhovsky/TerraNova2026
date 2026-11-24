@@ -63,7 +63,7 @@ final readonly class SalesOrderReconciliationService
                 if($reason===null){
                     try {
                         if(!is_array($snapshot['terms']??null))throw new DomainException('Missing commercial terms.');
-                        $terms=SalesOrderTerms::normalize($snapshot['terms']);
+                        $terms=SalesOrderTerms::normalize($snapshot['terms'],1000);
                         if($terms['currency']!==$snapshot['currency']||$terms['total']!==$snapshot['original_total'])throw new DomainException('Commercial snapshot disagrees with provider totals.');
                         foreach($terms['lines'] as $line){
                             if($line['product_id']===null||$line['variant_id']===null)throw new DomainException('Order line must reference mapped Product.');
