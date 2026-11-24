@@ -103,3 +103,31 @@ Stage створює лише незмінний Preview. Native Product ств�
 власника й права 0600 на файлі реквізитів. Ці реквізити не потрібно
 додавати в `/opt/cos/.env` або перезапускати PHP-контейнер, якщо
 застосунок уже розгорнуто з актуальним Product Management кодом.
+
+## Керований запуск через GitHub Actions
+
+Workflow: `.github/workflows/cos-shopify-lamps-operator.yml`, тільки
+`workflow_dispatch` на `main`, середовище `AWS TN2026`.
+Власник GitHub доступу обирає tenant organization та дію в Actions.
+Секрети залишаються **лише на COS VPS**, в `/etc/cos/shopify-lamps.env`
+(0600). У workflow передаються тільки ID, дія та SSH credentials із
+існуючого захищеного GitHub Environment. Жоден Shopify secret/token не
+потрапляє в Actions inputs або логи.
+
+Порядок безпечної перевірки:
+
+1. `preflight` — лише перевіряє installed/current/configured/enabled
+   `product_management` для вказаної організації. Не активує модуль.
+2. `provision` — **явний ручний** OAuth preflight та одноразова
+   реєстрація готового Shopify connection в COS. Не повторювати, якщо
+   `connection_id` уже існує.
+3. `pull` — тільки одна сторінка read-only Shopify каталогу.
+4. `candidates` та `status` — тільки читання за `connection_id`.
+
+`preflight` доводить лише стан tenant-модуля. Не підтверджує, що
+деплой актуальний, міграції застосовані, IP allowlist пропускає VPS
+або що Shopify OAuth/GraphQL успішні. Це підтверджує лише окремий
+live `provision` і `pull`. Якщо відсутній чинний tenant або модуль не
+активований, далі не рухаємось. Дії `stage`, `audit`, зміни COS
+Product/Stock і Shopify remote writes навмисно не доступні через
+цей workflow. Використовувати тільки тестовий tenant і магазин.

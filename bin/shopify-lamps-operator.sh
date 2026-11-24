@@ -5,6 +5,7 @@ umask 077
 
 usage() {
   printf '%s\n' \
+    'sudo bash bin/shopify-lamps-operator.sh ORGANIZATION preflight' \
     'sudo bash bin/shopify-lamps-operator.sh ORGANIZATION provision' \
     'sudo bash bin/shopify-lamps-operator.sh ORGANIZATION pull CONNECTION_ID' \
     'sudo bash bin/shopify-lamps-operator.sh ORGANIZATION candidates CONNECTION_ID' \
@@ -28,6 +29,9 @@ set +a
 [[ -n "${SHOPIFY_CLIENT_ID:-}" && -n "${SHOPIFY_CLIENT_SECRET:-}" ]] || { echo 'Shopify credentials missing.' >&2; exit 2; }
 PARAMS=(--organization="$ORGANIZATION")
 case "$ACTION" in
+  preflight)
+    [[ "$#" -eq 0 ]] || usage
+    ;;
   provision)
     [[ "$#" -eq 0 ]] || usage
     PARAMS+=(--shop="$SHOPIFY_SHOP_DOMAIN" --confirm=PROVISION_READ_ONLY)
