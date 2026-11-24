@@ -104,6 +104,11 @@
                 </section>
             {% endif %}
 
+            {% include 'experience/marketing/planning_audience_adsets.html.twig' with {
+                campaign: c, audiences: audiences, adsets: adsets, creatives: creatives,
+                csrfToken: csrfToken, planningKey: planningKey
+            } only %}
+
             <h3>Creative drafts</h3>
             <p>Planning records only. Product availability, landing URL, regulatory compliance and media ownership have NOT been verified. Nothing here creates or activates an ad.</p>
             <form method="post" action="/marketing/campaigns/{{ c.id|url_encode }}/creatives" class="cos-page__stack">

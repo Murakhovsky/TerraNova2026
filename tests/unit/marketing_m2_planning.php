@@ -143,5 +143,25 @@ $expect(str_contains($controller,'$this->csrf->isValid($request)')
     &&str_contains($controller,'submitProposal('),'M2 UI must use tenant+CSRF and Domain service.');
 $gate=(string)file_get_contents($root.'/app/Domains/Marketing/Application/Service/PaidMediaMutationGate.php');
 $expect(str_contains($gate,'throw new DomainException'),'M2 must not remove external write guard.');
+require_once $root.'/symfony/src/Web/Marketing/MarketingWorkspacePlanningInput.php';
+$mapper=\App\Web\Marketing\MarketingWorkspacePlanningInput::class;
+$audienceForm=['name'=>'Broad local market','market_countries'=>'ua, pl','audience_hypothesis'=>'General demand'];
+$expect($policy->audience($mapper::audience($audienceForm))['target_spec']['market_countries']===['PL','UA'],'Audience form normalization failed.');
+$form=['name'=>'Local feed draft','audience_pin'=>$ad['audience_id'].':1',
+    'creative_pins'=>[$ad['creatives'][0]['creative_id'].':1'],'placements'=>['FEED'],
+    'optimization'=>'TRAFFIC','planned_daily_budget'=>'15.50','currency'=>'USD','campaign_revision'=>'1'];
+$expect($mapper::adset($form)===$ad,'AdSet form did not preserve revision pins.');
+$expect($mapper::revisionPair(['adset_id'=>'mkas-'.str_repeat('c',24),'expected_revision'=>'2'],'adset_id')
+    ===['mkas-'.str_repeat('c',24),2],'AdSet edit revision lost.');
+$blocked(static fn()=> $mapper::adset([...$form,'audience_pin'=>$ad['audience_id'].':0']),'Invalid audience pin accepted.');
+$blocked(static fn()=> $mapper::adset([...$form,'creative_pins'=>[[]]]),'Nested creative pin accepted.');
+$blocked(static fn()=> $mapper::revisionPair(['adset_id'=>'mkas-'.str_repeat('c',24)],'adset_id'),'Incomplete revision pair accepted.');
+$blocked(static fn()=> $mapper::revision([...$form,'campaign_revision'=>'1.5'],'campaign_revision'),'Coerced campaign revision accepted.');
+$view=(string)file_get_contents($root.'/symfony/templates/experience/marketing/planning_audience_adsets.html.twig');
+$routes=(string)file_get_contents($root.'/symfony/config/routes.yaml');
+$expect(str_contains($controller,'$this->planning->saveAudience(')&&str_contains($controller,'$this->planning->saveAdset(')
+    &&str_contains($view,'adset.pins_stale')&&str_contains($view,'name="creative_pins[]"')
+    &&str_contains($view,'name="csrf_token"')&&str_contains($routes,'cos_marketing_audience_save:')
+    &&str_contains($routes,'cos_marketing_adset_save:'),'Audience/AdSet Workspace wiring incomplete.');
 echo "Marketing M2 typed planning policy, provenance, CSRF and boundary PASS\n";
 

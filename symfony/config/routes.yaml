@@ -3711,6 +3711,18 @@ cos_marketing_campaign:
   methods: [GET]
   requirements: { id: 'mkt-[a-f0-9]{24}' }
 
+cos_marketing_audience_save:
+  path: /marketing/campaigns/{id}/audiences
+  controller: App\Web\Marketing\MarketingPageController::saveAudience
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}' }
+
+cos_marketing_adset_save:
+  path: /marketing/campaigns/{id}/adsets
+  controller: App\Web\Marketing\MarketingPageController::saveAdset
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}' }
+
 cos_marketing_creative_create:
   path: /marketing/campaigns/{id}/creatives
   controller: App\Web\Marketing\MarketingPageController::createCreative

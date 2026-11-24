@@ -73,7 +73,11 @@ Destination URL проходить синтаксичну HTTPS перевірк
 
 ## M2c.4a: Чернетки аудиторій і груп оголошень
 
-Marketing має tenant-scoped Audience та внутрішній AdSet Draft, відокремлений від імпортованих Meta AdSet. `marketing.audience.save/list` та `marketing.adset.save/list` — типізовані контракти. Save створює запис або додає ревізію за ID + expected_revision. AdSet фіксує Campaign revision, Audience revision і 1–20 Creative revision pins; застарілі або чужі посилання блокують збереження, readback показує pins_stale. Ідемпотентне повторення повертає початкову незмінну ревізію. Плейсменти, optimization і planned_daily_budget є лише гіпотезою. Finance не резервував бюджет, Meta нічого не отримує, launch_eligible=false. UI-редактор і Finance reservation залишаються наступними кроками.
+Marketing має tenant-scoped Audience та внутрішній AdSet Draft, відокремлений від імпортованих Meta AdSet. `marketing.audience.save/list` та `marketing.adset.save/list` — типізовані контракти. Save створює запис або додає ревізію за ID + expected_revision. AdSet фіксує Campaign revision, Audience revision і 1–20 Creative revision pins; застарілі або чужі посилання блокують збереження, readback показує pins_stale. Ідемпотентне повторення повертає початкову незмінну ревізію. Плейсменти, optimization і planned_daily_budget є лише гіпотезою. Finance не резервував бюджет, Meta нічого не отримує, launch_eligible=false. Finance reservation залишається наступним кроком.
+
+## M2c.4b: Робочий простір аудиторій і груп оголошень
+
+Campaign Workspace має форми create/revise для спільних tenant Audience та campaign-bound AdSet Draft. UI вибирає поточні Audience/Creative revision pins, передає expected_revision і campaign_revision, показує попередні pinned revisions та stale warning. Застарілі pins не підміняються автоматично новими. CSRF, tenant manager, module activation та native Domain validation залишаються обов'язковими; HTML mapper не приймає tenant/approval/provider authority. Budget — лише planning amount, не Finance reservation. Unit tests перевіряють form mapping, malformed pins і wiring; браузерне та staging-приймання ще потрібні.
 
 ## Надійність імпорту та операційна черга
 

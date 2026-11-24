@@ -73,6 +73,38 @@ final readonly class MarketingPageController
     }
 
 
+    public function saveAudience(Request $request,string $id):Response
+    {
+        $actor=$this->manager();
+        if($actor instanceof Response)return $actor;
+        if(!$this->csrf->isValid($request))return new Response('CSRF validation failed',400);
+        try{
+            if($this->campaigns->get($actor,$id)===null)return new Response('Campaign not found',404);
+            $form=$request->request->all();
+            [$record,$revision]=MarketingWorkspacePlanningInput::revisionPair($form,'audience_id');
+            $this->planning->saveAudience($actor,$record,$revision,MarketingWorkspacePlanningInput::audience($form),
+                MarketingWorkspacePlanningInput::field($form,'idempotency_key'));
+            return new RedirectResponse('/marketing/campaigns/'.$id,303);
+        }catch(DomainException $e){return new Response('Audience planning denied: '.$e->getMessage(),422);}
+        catch(Throwable $e){error_log('marketing.workspace.audience_save_failed '.$e::class);return new Response('Audience save uncertain; inspect native receipt.',503);}
+    }
+
+    public function saveAdset(Request $request,string $id):Response
+    {
+        $actor=$this->manager();
+        if($actor instanceof Response)return $actor;
+        if(!$this->csrf->isValid($request))return new Response('CSRF validation failed',400);
+        try{
+            $form=$request->request->all();
+            [$record,$revision]=MarketingWorkspacePlanningInput::revisionPair($form,'adset_id');
+            $this->planning->saveAdset($actor,$id,MarketingWorkspacePlanningInput::revision($form,'campaign_revision'),
+                $record,$revision,MarketingWorkspacePlanningInput::adset($form),
+                MarketingWorkspacePlanningInput::field($form,'idempotency_key'));
+            return new RedirectResponse('/marketing/campaigns/'.$id,303);
+        }catch(DomainException $e){return new Response('AdSet planning denied: '.$e->getMessage(),422);}
+        catch(Throwable $e){error_log('marketing.workspace.adset_save_failed '.$e::class);return new Response('AdSet save uncertain; inspect native receipt.',503);}
+    }
+
     public function createCreative(Request $request,string $id):Response
     {
         $actor=$this->manager();
@@ -207,10 +239,12 @@ final readonly class MarketingPageController
         $actor=$this->manager();
         if($actor instanceof Response)return $actor;
         try {
-            $creatives=[];$proposals=[];$productCheck=null;$productCheckError=null;$productPage=null;$productSearchError=null;
+            $creatives=[];$proposals=[];$audiences=[];$adsets=[];$productCheck=null;$productCheckError=null;$productPage=null;$productSearchError=null;
             if($section==='campaign'&&is_array($selected)&&is_string($selected['id']??null)){
                 $creatives=$this->planning->creatives($actor,$selected['id']);
                 $proposals=$this->planning->proposals($actor,$selected['id']);
+                $audiences=$this->planning->audiences($actor);
+                $adsets=$this->planning->adsets($actor,$selected['id']);
                 if($request->query->has('product_q')){
                     try{
                         $productPage=$this->productChecks->search($actor,(string)$request->query->get('product_q',''),20,
@@ -294,7 +328,7 @@ final readonly class MarketingPageController
                 'providerHierarchy'=>$providerHierarchy,
                 'observations'=>$observations,'selectedCampaign'=>$selected,'accountId'=>$accountId,
                 'from'=>$from,'to'=>$to,'csrfToken'=>$this->csrf->token($request),
-                'creatives'=>$creatives,'proposals'=>$proposals,
+                'creatives'=>$creatives,'proposals'=>$proposals,'audiences'=>$audiences,'adsets'=>$adsets,
                 'productCheck'=>$productCheck,'productCheckError'=>$productCheckError,
                 'productPage'=>$productPage,'productSearchError'=>$productSearchError,
                 'currentUserId'=>$actor->userId()->value(),
