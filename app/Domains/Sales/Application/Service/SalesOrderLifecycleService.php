@@ -59,6 +59,7 @@ final readonly class SalesOrderLifecycleService
                 $next='confirmed';
             }elseif($operation==='allocate'){
                 if($status!=='confirmed')throw new DomainException('Only confirmed orders may be allocated.');
+                if(count($allocations)+count($items)>1000)throw new DomainException('Order allocation limit requires operator review.');
                 $used=[];foreach($allocations as $a)$used[$a['line_no']]=($used[$a['line_no']]??0)+$a['quantity']-$a['cancelled'];
                 foreach($items as $item){
                     $line=$byLine[$item['line_no']]??null;
@@ -160,7 +161,7 @@ final readonly class SalesOrderLifecycleService
     }
     private function items(string $op,mixed $rows):array
     {
-        if(!is_array($rows)||!array_is_list($rows)||count($rows)<1||count($rows)>1000)throw new DomainException('Invalid order operation items.');
+        if(!is_array($rows)||!array_is_list($rows)||count($rows)<1||count($rows)>100)throw new DomainException('Invalid order operation items.');
         $out=[];$seen=[];
         foreach($rows as $row){
             if(!is_array($row)||!is_int($row['quantity']??null)||$row['quantity']<1||$row['quantity']>100000)throw new DomainException('Invalid operation quantity.');
