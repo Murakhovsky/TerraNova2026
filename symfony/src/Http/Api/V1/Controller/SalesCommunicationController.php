@@ -20,6 +20,7 @@ final readonly class SalesCommunicationController
         private TenantContextProviderInterface $tenants,
         private SessionCsrfValidator $csrf,
         private ActiveModuleResolver $modules,
+        private \App\Security\SalesRequestScope $scope,
     ) {
     }
 
@@ -42,6 +43,10 @@ final readonly class SalesCommunicationController
         $actor = $tenant->userId()->value();
         if (!ctype_digit($actor) || (int) $actor <= 0) {
             return $this->error(403, 'invalid_actor', 'Authenticated actor is invalid.');
+        }
+
+        if (!ctype_digit($id)||(int)$id<1||(string)(int)$id!==$id||!$this->scope->entity($tenant->organizationId()->value(),'deal',(int)$id)) {
+            return $this->error(404,'not_found','Opportunity not found.');
         }
 
         $key = trim((string) $request->headers->get('X-Idempotency-Key', ''));
