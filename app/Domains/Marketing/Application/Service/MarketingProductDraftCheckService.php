@@ -16,6 +16,39 @@ final readonly class MarketingProductDraftCheckService
     public function __construct(private MarketingProductDraftReadPort $products){}
 
     /** @return array<string,mixed> */
+    public function search(TenantContext $actor,string $query='',int $limit=20,int $offset=0):array
+    {
+        if(!$actor->isManager()||!$actor->allows(TenantPermissions::ACCESS)||!$actor->allows(TenantPermissions::MANAGE)){
+            throw new DomainException('Marketing manager required for Product selection.');
+        }
+        $query=trim($query);
+        if(mb_strlen($query)>200||$limit<1||$limit>20||$offset<0||$offset>1000000){
+            throw new DomainException('Invalid Product selection bounds.');
+        }
+        $page=$this->products->search($actor->organizationId()->value(),$query,$limit,$offset);
+        if(!is_array($page['items']??null)||!array_is_list($page['items'])||count($page['items'])>$limit||!is_bool($page['has_more']??null)){
+            throw new DomainException('Untrusted Product search page.');
+        }
+        $items=[];$seen=[];
+        foreach($page['items'] as $row){
+            if(!is_array($row))throw new DomainException('Untrusted Product search row.');
+            foreach(['product_ref','variant_ref','name','sku','product_status'] as $key){
+                if(!is_string($row[$key]??null))throw new DomainException('Untrusted Product search field.');
+            }
+            if(!preg_match('/^[a-f0-9]{32}$/D',$row['product_ref'])||!preg_match('/^[a-f0-9]{32}$/D',$row['variant_ref'])
+                ||!in_array($row['product_status'],['active','draft'],true)||isset($seen[$row['variant_ref']])
+                ||mb_strlen($row['name'])<1||mb_strlen($row['name'])>250||mb_strlen($row['sku'])<1||mb_strlen($row['sku'])>191){
+                throw new DomainException('Untrusted Product selection reference.');
+            }
+            $seen[$row['variant_ref']]=true;
+            $items[]=['product_ref'=>$row['product_ref'],'variant_ref'=>$row['variant_ref'],'name'=>$row['name'],
+                'sku'=>$row['sku'],'product_status'=>strtoupper($row['product_status']),'launch_eligible'=>false];
+        }
+        return ['items'=>$items,'limit'=>$limit,'offset'=>$offset,'has_more'=>$page['has_more']&&$offset+$limit<=1000000,
+            'source_domain'=>'product_management'];
+    }
+
+    /** @return array<string,mixed> */
     public function check(TenantContext $actor,string $productId,?string $variantId,string $currency):array
     {
         if(!$actor->isManager()||!$actor->allows(TenantPermissions::ACCESS)

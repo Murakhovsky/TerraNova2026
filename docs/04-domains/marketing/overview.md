@@ -25,7 +25,7 @@ Marketing — окремий bounded context, що володіє рекламн
 
 ## Фактично додані можливості
 
-Чотирнадцять typed capabilities, включно з шістьма M2a, Product draft-check і Finance-facing source Query: `marketing.campaign.search`, `marketing.campaign.get`, `marketing.campaign.create`, `marketing.paid.account.list`, `marketing.paid.insights.query`, `marketing.paid.sync.history`. Для них діють Canonical Capability Gateway і перевірка tenant менеджера. Нових універсальних executor або CommandBus не створено.
+П’ятнадцять typed capabilities, включно з шістьма M2a, Product draft-check і Finance-facing source Query: `marketing.campaign.search`, `marketing.campaign.get`, `marketing.campaign.create`, `marketing.paid.account.list`, `marketing.paid.insights.query`, `marketing.paid.sync.history`. Для них діють Canonical Capability Gateway і перевірка tenant менеджера. Нових універсальних executor або CommandBus не створено.
 
 На UI передбачено Overview, Campaigns, Campaign Workspace, Paid Media Accounts, Performance та Action Queue. Менеджер може створити внутрішню чернетку, під'єднати read-only Meta Ad Account через opaque Vault reference, імпортувати і переглядати provider observations.
 
@@ -58,6 +58,10 @@ Marketing — окремий bounded context, що володіє рекламн
 Опційний provider-neutral `target_spec` у Creative create/revise містить 1–20 дволітерних market country codes та текстову гіпотезу щодо аудиторії (5–500 символів). Domain нормалізує порядок кодів, відхиляє дублікати, невідомі поля та спроби передати provider audience ID або право запуску. Формат коду перевіряється синтаксично, а не за реєстром країн. Server зберігає `verification_status=UNVERIFIED` і `provider_eligible=false`. Відсутність TargetSpec не змінює legacy payload/idempotency hash.
 
 Workspace дозволяє створювати, переглядати, змінювати або прибирати цю гіпотезу у новій Creative revision. Existing JSON persistence, tenant scope, receipt і stale-review fence збережені; окремої таблиці або executor не створено. Це не є завершеною моделлю Audience/AdSet, перевіркою policy, автоматичною класифікацією аудиторії чи Meta API mutation. Докази: unit schema/policy та MySQL revision/readback тести; незалежне приймання попереду.
+
+## M2c.2: Product Selector
+
+`marketing.product.selector.search` — read-only tenant-manager Query через наявний Product read port. Пошук за назвою/SKU через Product owner, сторінки до 20 variant rows, повторне читання поточного статусу Product/Variant; архівні або неактивні варіації відсіюються. Pagination працює за source rows, тому відфільтрована сторінка може бути порожньою. Workspace дозволяє обрати SKU, виконати live price check та підставити Product reference у новий Creative Draft. Variant selection наразі використовується для readback, а не зберігається як прив'язка креативу. Немає stock guarantee, paid eligibility або прямого SQL. Unit та native MySQL tests додають tenant/module/role fences. D3–D5 не заявлено.
 
 ## Надійність імпорту та операційна черга
 

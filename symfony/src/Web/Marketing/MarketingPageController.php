@@ -203,10 +203,18 @@ final readonly class MarketingPageController
         $actor=$this->manager();
         if($actor instanceof Response)return $actor;
         try {
-            $creatives=[];$proposals=[];$productCheck=null;$productCheckError=null;
+            $creatives=[];$proposals=[];$productCheck=null;$productCheckError=null;$productPage=null;$productSearchError=null;
             if($section==='campaign'&&is_array($selected)&&is_string($selected['id']??null)){
                 $creatives=$this->planning->creatives($actor,$selected['id']);
                 $proposals=$this->planning->proposals($actor,$selected['id']);
+                if($request->query->has('product_q')){
+                    try{
+                        $productPage=$this->productChecks->search($actor,(string)$request->query->get('product_q',''),20,
+                            $request->query->getInt('product_offset',0));
+                    }catch(DomainException){
+                        $productSearchError='Product search unavailable: verify module activation, permissions and search bounds.';
+                    }
+                }
                 // Operator-initiated native Product readback; never cached as an
                 // approved Creative or paid activation decision.
                 if($request->query->has('product_id')){
@@ -281,6 +289,7 @@ final readonly class MarketingPageController
                 'from'=>$from,'to'=>$to,'csrfToken'=>$this->csrf->token($request),
                 'creatives'=>$creatives,'proposals'=>$proposals,
                 'productCheck'=>$productCheck,'productCheckError'=>$productCheckError,
+                'productPage'=>$productPage,'productSearchError'=>$productSearchError,
                 'currentUserId'=>$actor->userId()->value(),
                 'planningKey'=>'mktplan-'.bin2hex(random_bytes(12)),
                 'planningEvidenceRef'=>'human-note-'.bin2hex(random_bytes(10)),

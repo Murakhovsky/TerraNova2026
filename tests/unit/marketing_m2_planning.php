@@ -79,7 +79,7 @@ foreach($manifest['contributions']['capability_contracts'] as $raw){
     $c=CapabilityContract::fromArray($raw);
     $contracts[$c->id]=$c;
 }
-$expect(count($contracts)===14,'Marketing M0/M1 seven, six M2a and one M2b Product Query expected.');
+$expect(count($contracts)===15,'Marketing M0/M1 seven, six M2a and two Product Queries expected.');
 $validator=new CapabilityJsonInputValidator();
 $validator->validate($contracts['marketing.creative.create'],['campaign_id'=>'mkt-'.str_repeat('a',24),...$creative]);
 $validator->validate($contracts['marketing.creative.create'],[

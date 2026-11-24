@@ -61,6 +61,13 @@ $productRef=$created['product_id'];$variantRef=$created['variant_id'];
 $source=$productOwner->getProduct($org,$productRef);
 $check($source!==null&&$source['status']==='draft'&&count($source['variants'])===1,
     'Native Product Management did not persist original Product/Variant source.');
+$page=$service->search($manager,'MKT'.strtoupper($token),20,0);
+$check(count($page['items'])===1&&$page['items'][0]['product_ref']===$productRef
+    &&$page['items'][0]['variant_ref']===$variantRef&&!$page['items'][0]['launch_eligible'],
+    'Native Product search did not return matching tenant variant.');
+$check($service->search($otherManager,'MKT'.strtoupper($token))['items']===[],'Foreign Product catalog leaked.');
+$denied(static fn()=> $service->search($disabledManager),'Disabled Product catalog exposed.');
+$denied(static fn()=> $service->search($actor($org,'viewer')),'Viewer read Product selector.');
 $before=$service->check($manager,$productRef,$variantRef,'USD');
 $check($before['product_status']==='DRAFT'&&$before['variant_status']==='ACTIVE'
     &&$before['can_reference_in_draft']===true

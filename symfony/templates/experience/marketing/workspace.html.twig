@@ -66,6 +66,23 @@
             {% if c.product_refs is not empty %}<p>{{ c.product_refs|join(', ') }} (stored references, not verified advertising eligibility)</p>{% else %}<p>No Product links yet.</p>{% endif %}
             <p>Product Management is the source of truth for catalog/variant/base price. This check never verifies stock by location, destination URL, Meta policy or Finance permission.</p>
             <form method="get" action="/marketing/campaigns/{{ c.id|url_encode }}" class="cos-page__stack">
+                <label>Find Product by name or SKU <input class="form-control" name="product_q" maxlength="200" value="{{ query.product_q|default('') }}"></label>
+                <label>Price currency <input class="form-control" name="currency" value="{{ query.currency|default('USD') }}" maxlength="3" pattern="[A-Z]{3}"></label>
+                <button class="btn btn-outline-primary" type="submit">Search catalog</button>
+            </form>
+            {% if productSearchError %}<p role="alert">{{ productSearchError }}</p>{% endif %}
+            {% if productPage %}
+                <ul>
+                {% for item in productPage.items %}
+                    <li><a href="/marketing/campaigns/{{ c.id|url_encode }}?product_q={{ query.product_q|default('')|url_encode }}&amp;product_offset={{ productPage.offset }}&amp;product_id={{ item.product_ref|url_encode }}&amp;variant_id={{ item.variant_ref|url_encode }}&amp;currency={{ query.currency|default('USD')|url_encode }}">{{ item.name }} · {{ item.sku }} ({{ item.product_status }})</a></li>
+                {% else %}
+                    <li>No selectable variants on this page.</li>
+                {% endfor %}
+                </ul>
+                {% if productPage.offset > 0 %}<a href="?product_q={{ query.product_q|default('')|url_encode }}&amp;product_offset={{ max(0, productPage.offset - productPage.limit) }}&amp;currency={{ query.currency|default('USD')|url_encode }}">Previous catalog page</a>{% endif %}
+                {% if productPage.has_more %}<a href="?product_q={{ query.product_q|default('')|url_encode }}&amp;product_offset={{ productPage.offset + productPage.limit }}&amp;currency={{ query.currency|default('USD')|url_encode }}">Next catalog page</a>{% endif %}
+            {% endif %}
+            <form method="get" action="/marketing/campaigns/{{ c.id|url_encode }}" class="cos-page__stack">
                 <label>Product Management ID (32 hex) <input class="form-control" name="product_id" required pattern="[a-f0-9]{32}" value="{{ query.product_id|default('') }}"></label>
                 <label>Variant ID (optional, 32 hex) <input class="form-control" name="variant_id" pattern="[a-f0-9]{32}" value="{{ query.variant_id|default('') }}"></label>
                 <label>Price currency <input class="form-control" name="currency" value="{{ query.currency|default('USD') }}" maxlength="3" pattern="[A-Z]{3}"></label>
@@ -90,7 +107,7 @@
                 <label>Call to action <input class="form-control" name="call_to_action" value="Learn more" required minlength="2" maxlength="80"></label>
                 <label>Destination HTTPS URL <input class="form-control" type="url" name="destination_url" required placeholder="https://shop.example.com/item"></label>
                 <label>Language <input class="form-control" name="language" value="uk" required pattern="[a-z]{2}(-[A-Z]{2})?"></label>
-                <label>Product reference (optional, unverified) <input class="form-control" name="product_ref"></label>
+                <label>Product reference (optional, unverified) <input class="form-control" name="product_ref" value="{{ productCheck and productCheck.can_reference_in_draft ? productCheck.product_ref : '' }}"></label>
                 <label>Media SHA-256 (optional) <input class="form-control" name="media_sha256" maxlength="64"></label>
                 <label>Target market country codes (optional, comma-separated) <input class="form-control" name="target_market_countries" maxlength="100" placeholder="UA, PL"></label>
                 <label>Audience hypothesis (optional, unverified) <textarea class="form-control" name="target_audience_hypothesis" maxlength="500"></textarea></label>

@@ -20,6 +20,35 @@ final readonly class ProductManagementDraftReadAdapter implements MarketingProdu
         private ActiveModuleResolver $modules,
     ){}
 
+    public function search(string $organizationId,string $query,int $limit,int $offset):array
+    {
+        if(!$this->modules->isEnabled($organizationId,'product_management')){
+            throw new DomainException('Product Management is not active for this tenant.');
+        }
+        // Owner search is variant-grained. Filter by current owner detail because
+        // its list projection does not expose variant lifecycle state.
+        $rows=$this->products->searchProducts($organizationId,$query,$limit+1,$offset);
+        $items=[];$details=[];
+        foreach(array_slice($rows,0,$limit) as $row){
+            $id=(string)($row['product_id']??'');$variantId=(string)($row['variant_id']??'');
+            if(!preg_match('/^[a-f0-9]{32}$/D',$id)||!preg_match('/^[a-f0-9]{32}$/D',$variantId)){
+                throw new DomainException('Invalid Product source reference.');
+            }
+            if(!array_key_exists($id,$details))$details[$id]=$this->products->getProduct($organizationId,$id);
+            $product=$details[$id];
+            if($product===null)continue;
+            if(($product['product_id']??null)!==$id)throw new DomainException('Mismatched Product source reference.');
+            if(!in_array($product['status']??null,['active','draft'],true))continue;
+            foreach(($product['variants']??[]) as $variant){
+                if(($variant['variant_id']??null)!==$variantId||($variant['status']??null)!=='active')continue;
+                $items[]=['product_ref'=>$id,'variant_ref'=>$variantId,'name'=>$product['name']??null,
+                    'sku'=>$variant['sku']??null,'product_status'=>$product['status']];
+                break;
+            }
+        }
+        return ['items'=>$items,'has_more'=>count($rows)>$limit];
+    }
+
     public function inspect(string $organizationId,string $productId,?string $variantId,string $currency):?array
     {
         if(!$this->modules->isEnabled($organizationId,'product_management')){

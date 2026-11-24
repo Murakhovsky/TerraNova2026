@@ -328,6 +328,7 @@ Manifest capabilities не задекларовані.
 - `marketing.paid.sync.history`;
 - `marketing.paid.sync.request`;
 - `marketing.product.draft_check.get`;
+- `marketing.product.selector.search`;
 
 ## Procurement (`procurement`)
 

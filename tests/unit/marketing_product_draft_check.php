@@ -35,6 +35,11 @@ $source=new class($productId,$variantId) implements MarketingProductDraftReadPor
     public string $variantStatus='active';
     public ?string $price='17.250000';
     public function __construct(public string $productId,public string $variantId){}
+    public function search(string $org,string $query,int $limit,int $offset):array {
+        if($org!=='product-marketing-tenant')throw new DomainException('Foreign tenant must not access Product.');
+        return ['items'=>[['product_ref'=>$this->forge?'bad':$this->productId,'variant_ref'=>$this->variantId,
+            'name'=>'Local Product','sku'=>'LOCAL-SKU','product_status'=>$this->status]],'has_more'=>false];
+    }
     public function inspect(string $org,string $productId,?string $variantId,string $currency):?array {
         if($org!=='product-marketing-tenant')throw new DomainException('Foreign tenant must not access Product.');
         if($productId!==$this->productId)return null;
@@ -51,6 +56,15 @@ $source=new class($productId,$variantId) implements MarketingProductDraftReadPor
     }
 };
 $service=new MarketingProductDraftCheckService($source);
+$page=$service->search($manager,'LOCAL',20,0);
+$assert(count($page['items'])===1&&$page['items'][0]['variant_ref']===$variantId
+    &&$page['items'][0]['launch_eligible']===false,'Product selector must expose draft-only references.');
+$deny(static fn()=> $service->search($viewer),'Viewer bypassed Product selection permissions.');
+$deny(static fn()=> $service->search($foreign),'Other tenant accessed Product search.');
+$deny(static fn()=> $service->search($manager,'',21),'Unbounded Product page accepted.');
+$source->forge=true;
+$deny(static fn()=> $service->search($manager),'Malformed Product source search trusted.');
+$source->forge=false;
 $ready=$service->check($manager,$productId,$variantId,'USD');
 $assert($ready['product_status']==='DRAFT'
     &&$ready['variant_status']==='ACTIVE'
@@ -104,6 +118,14 @@ $assert($c->kind==='query'&&$c->sideEffectLevel==='none'
 $deny(static fn()=> (new CapabilityJsonInputValidator())->validate($c,[
     'product_id'=>$productId,'currency'=>'USD','organization_id'=>'alien']),
     'Client can forge Product tenant in canonical Query.');
+$selector=array_values(array_filter($manifest['contributions']['capability_contracts'],
+    static fn($c)=>$c['id']==='marketing.product.selector.search'));
+$assert(count($selector)===1,'Product selector Query missing.');
+$sc=CapabilityContract::fromArray($selector[0]);
+$assert($sc->kind==='query'&&$sc->sideEffectLevel==='none','Product selector must be read-only.');
+(new CapabilityJsonInputValidator())->validate($sc,['q'=>'LOCAL','limit'=>20,'offset'=>0]);
+$deny(static fn()=> (new CapabilityJsonInputValidator())->validate($sc,['organization_id'=>'alien']),
+    'Caller supplied a forged selector tenant.');
 $adapter=(string)file_get_contents($root.'/symfony/src/Infrastructure/Marketing/ProductManagementDraftReadAdapter.php');
 $assert(str_contains($adapter,"isEnabled(\$organizationId,'product_management')")
     &&str_contains($adapter,'$this->products->getProduct($organizationId,$productId)')
