@@ -32,6 +32,7 @@ final readonly class RecoverCrmInboxCommandHandler implements CommandHandlerInte
         $hash=hash('sha256',json_encode([$command->actorId,$command->inboxId,$command->revision,$command->reason],JSON_THROW_ON_ERROR));
         $done='done:'.$hash;
         return $this->transactions->transactional(function()use($command,$org,$key,$done):array{
+            if ($this->inbox->status($org,$command->inboxId)===null) throw new DomainException('CRM inbox not found.');
             $pending='pending:'.bin2hex(random_bytes(16));
             if (!$this->receipts->claim($org,self::OPERATION,$key,$pending)) {
                 $existing=$this->receipts->find($org,self::OPERATION,$key);
@@ -45,7 +46,8 @@ final readonly class RecoverCrmInboxCommandHandler implements CommandHandlerInte
             $row=$this->inbox->status($org,$command->inboxId,true);
             if ($row===null || $row['status']!=='RECEIVED' || $row['attempts']!==0) throw new RuntimeException('CRM recovery native readback failed.');
             $this->audit->user($org,$command->actorId,$command->correlationId,'sales.crm.inbox.recover',$command->inboxId,
-                ['reason_code'=>$command->reason,'prior_revision'=>$command->revision]);
+                ['changes'=>['status'=>['from'=>'DEAD','to'=>'RECEIVED'],'attempts'=>['to'=>0]],
+                    'metadata'=>['reason_code'=>$command->reason,'prior_revision'=>$command->revision]]);
             if (!$this->receipts->complete($org,self::OPERATION,$key,$pending,$done)) throw new RuntimeException('CRM recovery receipt failed.');
             return ['inbox_id'=>$command->inboxId,'requeued'=>true,'replayed'=>false];
         });
