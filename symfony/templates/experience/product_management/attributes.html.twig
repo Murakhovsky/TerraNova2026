@@ -39,5 +39,18 @@
         <label>Значення JSON <input name="filter_value" class="form-control" required value="{{ filterValue }}" placeholder='"oak" або true'></label>
         <button type="submit" class="btn btn-outline-primary">Знайти товари</button>
     </form>
-    {% if filterCode %}<ul>{% for p in matches %}<li><a href="/product-management/products/{{ p.product_id }}/attributes">{{ p.name }}</a> · {{ p.status }}</li>{% else %}<li>Збігів немає.</li>{% endfor %}</ul>{% endif %}
+    {% if filterCode %}
+      {% if matches %}
+      <form method="post" action="/product-management/attributes" class="cos-page__stack">
+        <input type="hidden" name="csrf_token" value="{{ csrfToken }}"><input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000003"><input type="hidden" name="action" value="bulk">
+        <h3>Масове редагування знайдених товарів</h3>
+        <p>Виберіть до 20 товарів та до 10 атрибутів. Усі зміни застосуються разом або жодна.</p>
+        <table class="table"><thead><tr><th>Вибір</th><th>Товар</th><th>Ревізія</th></tr></thead><tbody>
+        {% for p in matches %}<tr><td><input type="checkbox" name="selected[]" value="{{ p.product_id }}" aria-label="Вибрати {{ p.name }}"><input type="hidden" name="revisions[{{ p.product_id }}]" value="{{ p.revision }}"></td><td><a href="/product-management/products/{{ p.product_id }}/attributes">{{ p.name }}</a> · {{ p.status }}</td><td>{{ p.revision }}</td></tr>{% endfor %}
+        </tbody></table>
+        <label>Зміни JSON <textarea name="values" class="form-control" required rows="4" placeholder='[{"code":"material","value":"oak"}]'></textarea></label>
+        <label><input type="checkbox" name="confirm_bulk" value="yes" required> Підтверджую пакет</label><button type="submit" class="btn btn-primary">Застосувати пакет</button>
+      </form>
+      {% else %}<p>Збігів немає.</p>{% endif %}
+    {% endif %}
 </section>
