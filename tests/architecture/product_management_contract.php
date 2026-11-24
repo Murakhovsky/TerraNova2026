@@ -13,7 +13,7 @@ $catalog->assertCompatibility(KernelVersion::VERSION);
 $definition=$catalog->definition('product_management');
 if ($definition->manifest->enabledByDefault) throw new RuntimeException('PM must be tenant-disabled by default.');
 $contracts=$definition->contributions->capabilityContracts;
-if (count($contracts)!==59) throw new RuntimeException('Unexpected executable PM capability count.');
+if (count($contracts)!==60) throw new RuntimeException('Unexpected executable PM capability count.');
 foreach($contracts as $contract) {
     if (!$contract instanceof CapabilityContract) throw new RuntimeException('Invalid PM contract.');
     foreach([$contract->inputSchema,$contract->outputSchema] as $path) {
