@@ -66,4 +66,8 @@ $assert(str_contains($controller,'price_readback_uncertain')&&str_contains($twig
 $assert(str_contains($controller,'price.history.search')&&str_contains($twig,'id="price-history"')
     &&str_contains($pricing,'WHERE organization_id=:org AND variant_id=:variant AND currency=:currency'),
     'Price history requires canonical query, native tenant scope and Workspace projection.');
+foreach (['price.list.create','price.list.search','price.list.entry.get','price.list.entry.set','list_price_readback_uncertain'] as $required)
+    $assert(str_contains($controller,$required),'Missing price list workspace contract: '.$required);
+$assert(str_contains($routes,'cos_product_management_price_list_entry_set:')&&str_contains($twig,'id="list-price"'),
+    'Price list workspace requires canonical routes and forms.');
 echo "Product Management E7/P0 catalog workspace architecture passed.\n";
