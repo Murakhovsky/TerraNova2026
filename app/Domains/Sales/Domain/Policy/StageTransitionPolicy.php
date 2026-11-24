@@ -5,10 +5,8 @@ use Domains\Sales\Model\{PipelineDefinition,PipelineStageDefinition,PipelineTran
 final class StageTransitionPolicy
 {
     /**
-     * Validates Sales business topology only. PipelineTransitionDefinition::requiresApproval
-     * is automation metadata consumed by the Kernel action/policy path. An authorized direct
-     * USER command is not converted into a Kernel approval request here; AI/SYSTEM actions
-     * must still pass Kernel Policy (AUTO / APPROVAL_REQUIRED / DENIED / HUMAN_ONLY).
+     * Validates Sales topology. Required approval cannot be inferred from actor type;
+     * the use case blocks that edge until verified canonical approval is available.
      */
     public function evaluate(array $deal,PipelineDefinition $pipeline,PipelineStageDefinition $current,PipelineStageDefinition $target,?PipelineTransitionDefinition $transition):StageTransitionResult
     {

@@ -245,7 +245,7 @@ try {
     $current=$snapshot($wonCase);
     $pdef=$pipelines->getPipeline($org,$current['pipeline_id']);
     $queue=[[$current['stage_id'],[]]];$visited=[];$route=null;
-    while($queue!==[]){[$from,$path]=array_shift($queue);if(isset($visited[$from]))continue;$visited[$from]=true;if($from===$won->id){$route=$path;break;}foreach($pdef->stages as $stage){if($stage->isLost||isset($visited[$stage->id]))continue;$transition=$pipelines->getTransition($org,$pdef->id,$from,$stage->id);if($transition!==null&&$transition->conditions===[])$queue[]=[$stage->id,[...$path,$stage->id]];}}
+    while($queue!==[]){[$from,$path]=array_shift($queue);if(isset($visited[$from]))continue;$visited[$from]=true;if($from===$won->id){$route=$path;break;}foreach($pdef->stages as $stage){if($stage->isLost||isset($visited[$stage->id]))continue;$transition=$pipelines->getTransition($org,$pdef->id,$from,$stage->id);if($transition!==null&&$transition->conditions===[]&&!$transition->requiresApproval)$queue[]=[$stage->id,[...$path,$stage->id]];}}
     $check(is_array($route) && $route!==[],'Default pipeline has no configured path to WON.');
     foreach($route as $index=>$next){
         $current=$snapshot($wonCase);$payload=['deal_id'=>$wonCase,'expected_revision'=>$current['revision'],'target_stage_id'=>$next];

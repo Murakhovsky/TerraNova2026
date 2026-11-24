@@ -67,8 +67,8 @@ final readonly class ChangeDealStage
             return ChangeDealStageResult::success($current->id, $target->id, false);
         }
 
-        if (!in_array(strtoupper($command->actorType),['USER'],true) && $validation->requiresApproval) {
-            return ChangeDealStageResult::failure('CRM stage transition requires canonical approval.');
+        if ($validation->requiresApproval) {
+            return ChangeDealStageResult::failure('Stage transition requires independently verified canonical approval; direct execution is blocked.');
         }
 
         if ($target->isWon && ($deal['deal_value']===null || !is_numeric($deal['deal_value']) || (float)$deal['deal_value']<=0

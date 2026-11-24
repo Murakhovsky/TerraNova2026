@@ -133,29 +133,40 @@ final readonly class MysqlSalesTeamAdministration implements SalesTeamAdministra
 
     public function setMember(string $organizationId, string $teamId, int $userId, array $input, string $actorId): array
     {
-        if ($this->team($organizationId, $teamId) === null) throw new DomainException('Sales team was not found.');
-        $this->assertOrganizationUser($organizationId, $userId);
-        $role = strtoupper(trim((string) ($input['role'] ?? 'MEMBER')));
-        $status = strtoupper(trim((string) ($input['status'] ?? 'ACTIVE')));
-        if (!in_array($role, ['MEMBER','LEAD'], true) || !in_array($status, ['ACTIVE','INACTIVE'], true)) throw new DomainException('Invalid team membership.');
-        $assignment = !empty($input['assignment_enabled']) ? 1 : 0;
-        $approval = !empty($input['approval_enabled']) ? 1 : 0;
-        $weight = max(1, min(100, (int) ($input['assignment_weight'] ?? 1)));
-        $before = $this->member($organizationId, $teamId, $userId);
-        $statement = $this->connection->prepare(
-            'INSERT INTO sales_team_members
-             (organization_id,team_id,user_id,role,status,assignment_enabled,approval_enabled,assignment_weight,created_at,updated_at)
-             VALUES (:organization_id,:team_id,:user_id,:role,:status,:assignment_enabled,:approval_enabled,:assignment_weight,NOW(6),NOW(6))
-             ON DUPLICATE KEY UPDATE role=VALUES(role),status=VALUES(status),assignment_enabled=VALUES(assignment_enabled),
-                approval_enabled=VALUES(approval_enabled),assignment_weight=VALUES(assignment_weight),updated_at=NOW(6)'
-        );
-        $statement->execute([
-            'organization_id'=>$organizationId,'team_id'=>$teamId,'user_id'=>$userId,'role'=>$role,'status'=>$status,
-            'assignment_enabled'=>$assignment,'approval_enabled'=>$approval,'assignment_weight'=>$weight,
-        ]);
-        $after = $this->member($organizationId, $teamId, $userId) ?? [];
-        $this->revision($organizationId, 'ASSIGNMENT', $teamId . ':' . $userId, 1, $before === null ? 'CREATE' : 'UPDATE', $actorId, $before, $after);
-        return $after;
+        $role=strtoupper(trim((string)($input['role']??'MEMBER')));
+        $status=strtoupper(trim((string)($input['status']??'ACTIVE')));
+        if (!in_array($role,['MEMBER','LEAD'],true)||!in_array($status,['ACTIVE','INACTIVE'],true)) throw new DomainException('Invalid team membership.');
+        $assignment=!empty($input['assignment_enabled'])?1:0;
+        $approval=!empty($input['approval_enabled'])?1:0;
+        $weight=(int)($input['assignment_weight']??1);
+        if ($weight<1||$weight>100) throw new DomainException('Assignment weight must be between 1 and 100.');
+        if ($status==='INACTIVE') {$assignment=0;$approval=0;}
+        return $this->transactional(function()use($organizationId,$teamId,$userId,$input,$actorId,$role,$status,$assignment,$approval,$weight):array{
+            $q=$this->connection->prepare('SELECT status,configuration_version FROM sales_teams WHERE organization_id=? AND id=? FOR UPDATE');
+            $q->execute([$organizationId,$teamId]);$team=$q->fetch(PDO::FETCH_ASSOC);
+            if (!is_array($team)||$team['status']!=='ACTIVE') throw new DomainException('Active Sales team was not found.');
+            $version=(int)$team['configuration_version'];
+            if (isset($input['configuration_version']) && (int)$input['configuration_version']!==$version) throw new DomainException('CONFIGURATION_CONFLICT');
+            $this->assertOrganizationUser($organizationId,$userId);
+            $before=$this->member($organizationId,$teamId,$userId);
+            if ($before!==null && $before['role']===$role && $before['status']===$status
+                && (int)$before['assignment_enabled']===$assignment && (int)$before['approval_enabled']===$approval
+                && (int)$before['assignment_weight']===$weight) return $before+['configuration_version'=>$version];
+            $statement=$this->connection->prepare(
+                'INSERT INTO sales_team_members (organization_id,team_id,user_id,role,status,assignment_enabled,approval_enabled,assignment_weight,created_at,updated_at)
+                VALUES (:organization_id,:team_id,:user_id,:role,:status,:assignment_enabled,:approval_enabled,:assignment_weight,NOW(6),NOW(6))
+                ON DUPLICATE KEY UPDATE role=VALUES(role),status=VALUES(status),assignment_enabled=VALUES(assignment_enabled),
+                    approval_enabled=VALUES(approval_enabled),assignment_weight=VALUES(assignment_weight),updated_at=NOW(6)');
+            $statement->execute(['organization_id'=>$organizationId,'team_id'=>$teamId,'user_id'=>$userId,'role'=>$role,'status'=>$status,
+                'assignment_enabled'=>$assignment,'approval_enabled'=>$approval,'assignment_weight'=>$weight]);
+            $bump=$this->connection->prepare('UPDATE sales_teams SET configuration_version=configuration_version+1,updated_by=?,updated_at=NOW(6) WHERE organization_id=? AND id=? AND configuration_version=?');
+            $bump->execute([$actorId,$organizationId,$teamId,$version]);
+            if ($bump->rowCount()!==1) throw new DomainException('CONFIGURATION_CONFLICT');
+            $after=$this->member($organizationId,$teamId,$userId);
+            if ($after===null) throw new DomainException('Team membership readback failed.');
+            $this->revision($organizationId,'ASSIGNMENT',$teamId.':'.$userId,$version+1,$before===null?'CREATE':'UPDATE',$actorId,$before,$after);
+            return $after+['configuration_version'=>$version+1];
+        });
     }
 
     public function setCapabilities(string $organizationId, int $userId, array $capabilities, string $actorId): array
@@ -166,8 +177,14 @@ final readonly class MysqlSalesTeamAdministration implements SalesTeamAdministra
         foreach ($wanted as $capability) {
             if (!in_array($capability, $allowed, true)) throw new DomainException('Unsupported Sales capability: ' . $capability);
         }
-        $before = $this->userCapabilities($organizationId, $userId);
-        $this->transactional(function () use ($organizationId, $userId, $wanted, $actorId, $before): void {
+        sort($wanted);
+        $this->transactional(function () use ($organizationId, $userId, $wanted, $actorId): void {
+            $lock=$this->connection->prepare('SELECT id FROM tn_users WHERE organization_id=? AND id=? FOR UPDATE');
+            $lock->execute([$organizationId,$userId]);
+            if ($lock->fetchColumn()===false) throw new DomainException('Sales user not found.');
+            $this->assertOrganizationUser($organizationId,$userId);
+            $before=$this->userCapabilities($organizationId,$userId);
+            if ($before===$wanted) return;
             $this->connection->prepare('DELETE FROM sales_user_capabilities WHERE organization_id=:organization_id AND user_id=:user_id')
                 ->execute(['organization_id'=>$organizationId,'user_id'=>$userId]);
             $insert = $this->connection->prepare(
