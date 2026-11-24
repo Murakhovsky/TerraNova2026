@@ -266,6 +266,16 @@ final readonly class ProductManagementService
     }
 
     /** @return array<string,mixed> */
+    public function reservations(string $org,string $variantId,string $locationId,?string $reservationId,int $limit=30,int $offset=0):array
+    {
+        $this->tenant($org);
+        foreach(array_filter([$variantId,$locationId,$reservationId],static fn($id)=>$id!==null) as $id){
+            if(!preg_match('/^[a-f0-9]{32}$/D',$id))throw new DomainException('Invalid reservation scope.');
+        }
+        if($limit<1||$limit>100||$offset<0||$offset>10000000)throw new DomainException('Invalid reservation pagination.');
+        return $this->store->searchReservations($org,$variantId,$locationId,$reservationId,$limit,$offset);
+    }
+
     public function balance(string $organizationId, string $variantId, string $locationId): array
     {
         $this->tenant($organizationId);
