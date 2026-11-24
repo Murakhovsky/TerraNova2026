@@ -1,5 +1,5 @@
 ---
-title: Sales Order → виконання замовлення
+title: Sales Order → Fulfillment
 description: Керований цикл замовлення з атомарним резервуванням, виконанням і поверненням через Product Management.
 status: active
 updated: 2026-11-25
@@ -9,7 +9,7 @@ process_state: as-is
 process_id: sales.order-to-fulfillment
 ---
 
-# Sales Order → виконання замовлення
+# Sales Order → Fulfillment
 
 ## Бізнес-мета
 
@@ -23,6 +23,14 @@ Sales володіє Order, OrderLine, allocation references, revision і біз
 ## Процес
 
 <ProcessDiagram process-id="sales.order-to-fulfillment" />
+
+### Матриця відповідальності
+
+<ProcessDiagram process-id="sales.order-to-fulfillment" view="ownership" />
+
+### Контракти виконання
+
+<ProcessDiagram process-id="sales.order-to-fulfillment" view="capability" />
 
 ## Контроль виконання
 
