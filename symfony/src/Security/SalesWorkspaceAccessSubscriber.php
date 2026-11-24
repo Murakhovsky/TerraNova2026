@@ -67,15 +67,25 @@ final readonly class SalesWorkspaceAccessSubscriber implements EventSubscriberIn
                 return;
             }
             if ($mutation&&!$require(SalesCapability::WorkspaceUse)) throw new DomainException('Denied.');
-            if ($name==='SalesReadController'&&in_array($method,['leads','opportunities'],true)) {
-                $filters=$request->query->all();$mode=$filters['scope']??'self';$owner=$filters['owner_id']??null;
+            if (($name==='SalesReadController'&&in_array($method,['leads','opportunities'],true))
+                ||in_array($name,['SalesLeadsController','SalesDealsController','SalesPipelineController'],true)) {
+                $filters=$request->query->all();$nested=is_array($filters['filter']??null)?$filters['filter']:[];
+                $owner=$name==='SalesDealsController'?($nested['owner_id']??$filters['owner_id']??null):($filters['owner_id']??null);
+                if ($owner==='') $owner=null;
+                $mode=$filters['scope']??($owner===null?'self':'owner');
                 if (!is_string($mode)||($owner!==null&&(!is_string($owner)||!ctype_digit($owner)||(int)$owner<1||(string)(int)$owner!==$owner))) throw new DomainException('Denied.');
                 $resolved=$this->scope->resolve($org,$actor,$mode,$owner===null?null:(int)$owner);
                 unset($filters['scope'],$filters['owner_id']);
-                if ($resolved!==null) $filters['owner_id']=$resolved;
+                if ($resolved!==null) $filters['owner_id']=(string)$resolved;
+                if ($name==='SalesDealsController') {
+                    unset($nested['owner_id']);
+                    if ($resolved!==null) $nested['owner_id']=(string)$resolved;
+                    $filters['filter']=$nested;
+                }
                 $request->query->replace($filters);return;
             }
-            if ($name==='SalesReadController'&&in_array($method,['lead','opportunity'],true)) {
+            if (($name==='SalesReadController'&&in_array($method,['lead','opportunity'],true))
+                ||$name==='SalesDealController'||$name==='SalesWorkspaceController') {
                 $this->entity($org,$actor,$method==='lead'?'lead':'deal',$request->attributes->get('id'));return;
             }
             if (($name==='SalesReadController'&&in_array($method,['dashboard','pipelines'],true))||$name==='SalesDashboardController') return;
