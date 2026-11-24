@@ -2782,6 +2782,10 @@ services:
   Domains\Finance\Application\Contract\FinanceSpendObservationRepositoryInterface:
     alias: Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceSpendObservationRepository
   Domains\Finance\Application\Service\FinanceSpendObservationService: ~
+  App\Infrastructure\Finance\MarketingSpendEvidenceReadAdapter: ~
+  Domains\Finance\Application\Contract\MarketingSpendEvidenceReadPort:
+    alias: App\Infrastructure\Finance\MarketingSpendEvidenceReadAdapter
+  Domains\Finance\Application\Service\FinanceMarketingSpendReadbackService: ~
   Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceBudgetRepository:
     arguments:
       $connection: '@cos.database.pdo'

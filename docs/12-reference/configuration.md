@@ -19,7 +19,7 @@ generated: true
 | `diagnostic` | `1.0.0` | — | 7 |
 | `documents` | `0.1.0` | — | 3 |
 | `federation` | `1.0.0` | — | 1 |
-| `finance` | `0.2.1` | — | 8 |
+| `finance` | `0.2.2` | — | 8 |
 | `growth` | `0.50.0` | — | 92 |
 | `hr` | `0.1.0` | — | 0 |
 | `marketing` | `0.1.2` | — | 14 |

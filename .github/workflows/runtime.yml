@@ -149,6 +149,10 @@ jobs:
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
         run: php tests/integration/finance_spend_observations_mysql.php
+      - name: Finance F1.2 tenant-safe Marketing source readback MySQL acceptance
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/integration/finance_marketing_spend_readback_mysql.php
       - name: Finance F1 two-connection concurrent reservation and anti-overspend
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php

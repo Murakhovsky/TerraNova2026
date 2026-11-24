@@ -33,6 +33,10 @@ domain_id: finance
       "capability_ids": [
         "finance.ad_spend.reconciliation.status"
       ]
+    },
+    {
+      "id": "marketing_spend_readback",
+      "capability_ids": []
     }
   ],
   "process_ids": [],
@@ -109,3 +113,6 @@ P0: прийняти typed Finance→Marketing bridge лише після indepe
 - Integration: `tests/integration/finance_budget_f1_mysql.php`, `tests/integration/finance_budget_f1_concurrency_mysql.php`, `tests/integration/finance_spend_observations_mysql.php`
 - Process exemption: `docs/.vitepress/process-coverage-exemptions.json`
 - Release: `docs/10-operations/das-001-domain-acceptance.md`
+
+
+F1.2 — приватний readback порт між Marketing і Finance. Він навмисно не є public Capability до F1.3 canonical approved Action; D2 не підвищується автоматично.
