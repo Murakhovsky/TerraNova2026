@@ -104,7 +104,7 @@ final class SalesPipelinePresenter
                     'customer' => (string) ($deal['customer'] ?? '—'),
                     'title' => (string) ($deal['title'] ?? $deal['public_id'] ?? 'Deal'),
                     'owner' => trim((string) ($deal['owner_name'] ?? '')) ?: 'Unassigned',
-                    'daysInStage' => (int) ($deal['days_in_stage'] ?? 0),
+                    'daysInStage' => isset($deal['days_in_stage'])?(int)$deal['days_in_stage']:null,
                     'stageAgeEstimated' => (bool) ($deal['stage_age_estimated'] ?? false),
                     'value' => $this->money($deal['deal_value'] ?? null, $currency),
                     'weightedValue' => $this->money($deal['weighted_value'] ?? null, $currency),
