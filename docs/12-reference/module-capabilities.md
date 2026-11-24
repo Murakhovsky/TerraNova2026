@@ -440,10 +440,10 @@ Manifest capabilities не задекларовані.
 **Опис із manifest:** Sales operations, CRM workflow, intelligence and automation.
 
 - runtime service модуля: `salesDomainModule`;
-- обробники jobs: `salesCrmInboxJobHandler`;
+- обробники jobs: `salesCrmInboxJobHandler`, `salesOrderSyncJobHandler`;
 - внески API routes: —;
 - постачальники конфігурації: `salesModuleConfigurationProvisioner`;
-- міграції: `app/migrations/20260910_000030_sales_v071_configuration_ownership.sql`, `app/migrations/20260913_000044_sales_v081_historical_stage_history.sql`, `app/migrations/20260913_000045_sales_v082_funnel_metrics.sql`, `app/migrations/20260913_000046_sales_v083_operational_performance.sql`, `app/migrations/20260913_000047_sales_v086_hardening.sql`, `app/migrations/20260928_000118_sales_v100_release.sql`, `app/migrations/20261003_000121_sales_lead_qualification_transition.sql`, `app/migrations/20261003_000122_sales_followup_activity_type.sql`, `app/migrations/20261003_000123_sales_lead_qualification_governance_repair.sql`, `app/migrations/20261124_009001_sales_offer_lifecycle.sql`, `app/migrations/20261124_009002_sales_activity_cancellation.sql`, `app/migrations/20261124_009003_sales_offer_delivery.sql`, `app/migrations/20261124_009004_sales_native_orders.sql`, `app/migrations/20261125_009005_sales_order_source_reconciliation.sql`.
+- міграції: `app/migrations/20260910_000030_sales_v071_configuration_ownership.sql`, `app/migrations/20260913_000044_sales_v081_historical_stage_history.sql`, `app/migrations/20260913_000045_sales_v082_funnel_metrics.sql`, `app/migrations/20260913_000046_sales_v083_operational_performance.sql`, `app/migrations/20260913_000047_sales_v086_hardening.sql`, `app/migrations/20260928_000118_sales_v100_release.sql`, `app/migrations/20261003_000121_sales_lead_qualification_transition.sql`, `app/migrations/20261003_000122_sales_followup_activity_type.sql`, `app/migrations/20261003_000123_sales_lead_qualification_governance_repair.sql`, `app/migrations/20261124_009001_sales_offer_lifecycle.sql`, `app/migrations/20261124_009002_sales_activity_cancellation.sql`, `app/migrations/20261124_009003_sales_offer_delivery.sql`, `app/migrations/20261124_009004_sales_native_orders.sql`, `app/migrations/20261125_009005_sales_order_source_reconciliation.sql`, `app/migrations/20261125_009006_sales_order_sync_runs.sql`.
 
 ### Задекларовані capabilities
 
@@ -501,6 +501,8 @@ Manifest capabilities не задекларовані.
 - `sales.order.source.page.read`;
 - `sales.order.source.pending.read`;
 - `sales.order.source.reconcile`;
+- `sales.order.source.sync.start`;
+- `sales.order.source.sync.status.read`;
 - `sales.pipeline.stage.manage`;
 - `sales.property_match.record`;
 - `sales.reports.data.read`;

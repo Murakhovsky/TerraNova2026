@@ -354,6 +354,8 @@ generated: true
 | `sales` | `app/migrations/20261124_009004_sales_native_orders.sql` | `sales_orders` |
 | `sales` | `app/migrations/20261125_009005_sales_order_source_reconciliation.sql` | `sales_order_source_observations` |
 | `sales` | `app/migrations/20261125_009005_sales_order_source_reconciliation.sql` | `sales_order_sources` |
+| `sales` | `app/migrations/20261125_009006_sales_order_sync_runs.sql` | `sales_order_sync_runs` |
+| `sales` | `app/migrations/20261125_009006_sales_order_sync_runs.sql` | `sales_order_sync_tasks` |
 | `sales` | `app/migrations/20261125_009005_sales_order_source_reconciliation.sql` | `sales_orders` |
 | `service` | `app/migrations/20260919_000064_service_wave11_cutover.sql` | `tn_service_assignments` |
 | `service` | `app/migrations/20260919_000064_service_wave11_cutover.sql` | `tn_service_cases` |
