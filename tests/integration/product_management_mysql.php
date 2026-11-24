@@ -248,8 +248,10 @@ $reject(static fn()=> $products->updateProduct($org,$created['product_id'],['nam
     'pm-edit-archived-'.$token,'ci-user','ci-pm'),'archived Product cannot be edited');
 // Exact replay must return the original receipt even after the lifecycle advanced.
 $replayedVariant=$products->archiveVariant($org,$variant,2,'pm-var-archive-'.$token,'ci-user','ci-pm');
+ksort($replayedVariant);ksort($variantArchived);
 $assert($replayedVariant===$variantArchived,'Variant archive replay must return the same receipt');
 $replayedProduct=$products->archiveProduct($org,$created['product_id'],2,'pm-archive-'.$token,'ci-user','ci-pm');
+ksort($replayedProduct);ksort($archived);
 $assert($replayedProduct===$archived,'Product archive replay must return the same receipt');
 $reject(static fn()=> $products->archiveProduct($other,$created['product_id'],2,
     'pm-archive-cross-'.$token,'ci-other','ci-pm'),'cross-tenant Product archive');
