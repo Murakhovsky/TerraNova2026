@@ -39,7 +39,7 @@ final class ProductManagementShopifyOperatorCommand extends Command
 
     protected function configure(): void
     {
-        $this->addArgument('action',InputArgument::REQUIRED,'provision|status|pull|candidates|inspect|stage|audit')
+        $this->addArgument('action',InputArgument::REQUIRED,'preflight|provision|status|pull|candidates|inspect|stage|audit')
             ->addOption('organization',null,InputOption::VALUE_REQUIRED,'Explicit tenant organization')
             ->addOption('shop',null,InputOption::VALUE_REQUIRED,'Existing <shop>.myshopify.com name')
             ->addOption('secret-ref',null,InputOption::VALUE_REQUIRED,'Vault ref env://COS_SHOPIFY_* or pilot legacy','shopify_env_primary')
@@ -65,8 +65,26 @@ final class ProductManagementShopifyOperatorCommand extends Command
             return $this->result($output,['status'=>'INVALID_TENANT'],Command::INVALID);
         }
         try {
-            if (!in_array($action,['provision','status','pull','candidates','inspect','stage','audit'],true)) {
+            if (!in_array($action,['preflight','provision','status','pull','candidates','inspect','stage','audit'],true)) {
                 return $this->result($output,['status'=>'INVALID_ACTION'],Command::INVALID);
+            }
+            // Supervised, read-only diagnostics are available even before tenant
+            // activation. They do not install/enable the module or contact Shopify.
+            if ($action==='preflight') {
+                $module='product_management';
+                $installed=$this->modules->isInstalled($org,$module);
+                $current=$this->modules->isCurrent($org,$module);
+                $configured=$this->modules->isConfiguredEnabled($org,$module);
+                $enabled=$this->modules->isEnabled($org,$module);
+                return $this->result($output,[
+                    'status'=>$enabled?'MODULE_READY':'MODULE_NOT_READY',
+                    'organization_id'=>$org,
+                    'module_id'=>$module,
+                    'installed'=>$installed,
+                    'current'=>$current,
+                    'configured_enabled'=>$configured,
+                    'enabled'=>$enabled,
+                ],$enabled?Command::SUCCESS:Command::FAILURE);
             }
             if (!$this->modules->isEnabled($org,'product_management')) {
                 throw new DomainException('Product Management module not activated for tenant.');
