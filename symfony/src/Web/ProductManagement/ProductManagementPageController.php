@@ -152,6 +152,81 @@ final readonly class ProductManagementPageController
         return $this->mutateProduct($actor,$request,$id,'variant.create',$input);
     }
 
+    public function updateVariant(Request $request,string $id,string $variantId):Response
+    {
+        return $this->lifecycle($request,$id,$variantId,'variant.update');
+    }
+
+    public function archiveVariant(Request $request,string $id,string $variantId):Response
+    {
+        return $this->lifecycle($request,$id,$variantId,'variant.archive');
+    }
+
+    public function archiveProduct(Request $request,string $id):Response
+    {
+        return $this->lifecycle($request,$id,null,'product.archive');
+    }
+
+    private function lifecycle(Request $request,string $id,?string $variantId,string $capability):Response
+    {
+        $actor=$this->guardWrite($request);
+        if ($actor instanceof Response) return $actor;
+        $product=$this->checkedProduct($actor,$id);
+        if ($product instanceof Response) return $product;
+        if ($variantId!==null && $this->findVariant($product,$variantId)===null)
+            return new Response('Variant not found for this Product.',404);
+        $revision=filter_var($request->request->get('expected_revision'),FILTER_VALIDATE_INT);
+        if ($revision===false || $revision<1) return new Response('Invalid revision.',422);
+        $input=['expected_revision'=>$revision];
+        $field=$variantId===null?'product_id':'variant_id';
+        $target=$variantId??$id;
+        $input[$field]=$target;
+        if ($capability==='variant.update') {
+            $input['sku']=strtoupper(trim((string)$request->request->get('sku','')));
+            $input['uom']=trim((string)$request->request->get('uom',''));
+            $input['barcode']=trim((string)$request->request->get('barcode',''));
+        } elseif ($request->request->get('confirm_archive','')!=='1') {
+            return new Response('Explicit archive confirmation required.',422);
+        }
+        try {
+            $receipt=$this->write($actor,$capability,$input,$request);
+        } catch (DomainException|\InvalidArgumentException) {
+            return new Response('Action blocked. Check revision, SKU, stock, reservations and ownership.',422);
+        } catch (Throwable $e) {
+            error_log('product_management.workspace.lifecycle_write_uncertain '.$e::class);
+            return new Response('Operation outcome uncertain. Reload before retrying.',503);
+        }
+        // A receipt does not establish success without a separate scoped read.
+        try {
+            $after=$this->readProduct($actor,$id);
+            $entity=$after===null?null:($variantId===null?$after:$this->findVariant($after,$variantId));
+            $status=$capability==='variant.update'?'active':'archived';
+            $verified=$entity!==null && ($receipt[$field]??null)===$target
+                && ($receipt['status']??null)===$status
+                && (int)($receipt['revision']??0)===$revision+1
+                && ($entity[$field]??null)===$target && ($entity['status']??null)===$status
+                && (int)($entity['revision']??0)===$revision+1;
+            if ($capability==='variant.update' && $verified) {
+                $verified=($entity['sku']??null)===$input['sku']
+                    && ($entity['uom']??null)===$input['uom']
+                    && (string)($entity['barcode']??'')===$input['barcode'];
+            }
+            if (!$verified) throw new \RuntimeException('Lifecycle readback mismatch.');
+            return $this->go('/product-management/products/'.$id.'?notice=updated');
+        } catch (Throwable $e) {
+            error_log('product_management.workspace.lifecycle_readback_uncertain '.$e::class);
+            return new Response('Operation receipt obtained; current state unverified. Reload before retrying.',503);
+        }
+    }
+
+    private function findVariant(array $product,string $variantId):?array
+    {
+        foreach ($product['variants']??[] as $variant) {
+            if (is_array($variant)&&($variant['variant_id']??null)===$variantId) return $variant;
+        }
+        return null;
+    }
+
     public function translate(Request $request,string $id):Response
     {
         $actor=$this->guardWrite($request);
