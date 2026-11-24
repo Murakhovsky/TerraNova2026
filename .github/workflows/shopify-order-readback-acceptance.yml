@@ -1,0 +1,29 @@
+name: COS Shopify S5 Order readback contract
+on:
+  push:
+    branches: [feature/shopify-order-readback-contract-20261124]
+    paths:
+      - '.github/workflows/shopify-order-readback-acceptance.yml'
+      - 'app/Domains/ProductManagement/Infrastructure/Shopify/ShopifyOrderReadback*.php'
+      - 'tests/unit/product_management_shopify_order_readback.php'
+  pull_request:
+    paths:
+      - '.github/workflows/shopify-order-readback-acceptance.yml'
+      - 'app/Domains/ProductManagement/Infrastructure/Shopify/ShopifyOrderReadback*.php'
+      - 'tests/unit/product_management_shopify_order_readback.php'
+permissions:
+  contents: read
+jobs:
+  unit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify PHP syntax and operator shell
+        run: |
+          php -l app/Domains/ProductManagement/Infrastructure/Shopify/ShopifyOrderReadbackNormalizer.php
+          php -l app/Domains/ProductManagement/Infrastructure/Shopify/ShopifyOrderReadbackService.php
+          php -l symfony/src/Command/ProductManagementShopifyOperatorCommand.php
+          bash -n bin/shopify-series01-operator.sh
+      - name: Verify signed source evidence readback contract
+        run: php tests/unit/product_management_shopify_order_readback.php
