@@ -202,6 +202,30 @@ try{
     $directorController=(new ReflectionClass(\App\Web\Sales\SalesDirectorController::class))->newInstanceWithoutConstructor();
     $request=\Symfony\Component\HttpFoundation\Request::create('/sales/director');
     $httpDenied(fn()=>$subscriber->authorize(new \Symfony\Component\HttpKernel\Event\ControllerEvent($kernel,[$directorController,'index'],$request,\Symfony\Component\HttpKernel\HttpKernelInterface::MAIN_REQUEST)),403);
+    // P4 atomic legacy facade: real native factory, same PDO and transaction.
+    $nativeFactory=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesWriteServiceFactory(
+        $db,new \Domains\Property\Infrastructure\ReadModel\MySql\MysqlPropertyReferencePort($db),
+        new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAssignmentAuthority($db));
+    $guardedFactory=new \Domains\Sales\Application\Service\GuardedSalesWriteServiceFactory($nativeFactory,$guard,$authority);
+    $writes=$guardedFactory->forOrganization($org);
+    $grant=$db->prepare('INSERT INTO sales_user_capabilities(organization_id,user_id,capability,status,granted_by,created_at,updated_at) VALUES (?,?,?,"ACTIVE",?,NOW(6),NOW(6))');
+    $grant->execute([$org,$owner,'sales.workspace.use',(string)$owner]);
+    $check($writes->quickUpdateOpportunity($ownedId,['priority'=>'high'],$owner,'p4-own')->ok,'Guarded own write failed.');
+    $check($read->deal($org,$ownedId)['priority']==='high','Guarded write did not change native state.');
+    $foreignBefore=$read->deal($org,$otherId);
+    $denied=$writes->quickUpdateOpportunity($otherId,['priority'=>'urgent'],$owner,'p4-foreign');
+    $check(!$denied->ok&&$denied->code==='sales_access_denied'&&$read->deal($org,$otherId)['priority']===$foreignBefore['priority'],'Foreign mutation bypass.');
+    $denyOwner=$writes->updateLead($leadId,['owner_id'=>$other],$owner,'p4-assign');
+    $check(!$denyOwner->ok&&$denyOwner->code==='sales_access_denied','Unauthorized assignment accepted.');
+    $created=$writes->createLead(['full_name'=>'Private guard fixture','email'=>'guard-'.$token.'@example.test'],$owner,'p4-create','guard-'.$token);
+    $check($created->ok,'Authorized lead creation failed.');
+    $newLead=(int)$created->data['lead_id'];
+    $db->prepare('UPDATE tn_leads SET assigned_user_id=? WHERE organization_id=? AND id=?')->execute([$other,$org,$newLead]);
+    $replay=$writes->createLead(['full_name'=>'Private guard fixture','email'=>'guard-'.$token.'@example.test'],$owner,'p4-replay','guard-'.$token);
+    $check(!$replay->ok&&$replay->code==='sales_access_denied','Receipt replay exposed reassigned lead.');
+    $db->prepare('DELETE FROM sales_user_capabilities WHERE organization_id=? AND user_id=? AND capability="sales.workspace.use"')->execute([$org,$owner]);
+    $denied=$writes->quickUpdateOpportunity($ownedId,['priority'=>'urgent'],$owner,'p4-revoked');
+    $check(!$denied->ok&&$denied->code==='sales_access_denied'&&$read->deal($org,$ownedId)['priority']==='high','Revoked permission still wrote.');
     // P5: stable table data contract for Workspace/export, exact values and scope.
     $reportCall=static fn(string $id,array $extra=[])=>$gateway->invoke($manager,'sales.reports.data.read',['report_id'=>$id,...$range,...$extra],'trusted_read','','reports-test');
     $report=$reportCall('forecast',['pipeline_id'=>$pid]);
