@@ -397,6 +397,23 @@ final readonly class ProductManagementService
         if($revision<1)throw new DomainException('Product revision required.');
         return $this->store->setAttributes($org,$product,AttributeRules::changes($rows),$revision,$key,$actor,$trace);
     }
+    public function bulkSetAttributes(string $org,array $products,array $rows,string $key,string $actor,string $trace):array
+    {
+        $this->scope($org,$key,$actor,$trace);
+        if(!array_is_list($products)||count($products)<1||count($products)>20||count($rows)>10)
+            throw new DomainException('Bulk patch limited to 20 Products and 10 attributes.');
+        $targets=[];
+        foreach($products as $p){
+            if(!is_array($p)||count($p)!==2||!is_string($p['product_id']??null)||!is_int($p['expected_revision']??null)||$p['expected_revision']<1)
+                throw new DomainException('Invalid bulk patch target.');
+            $id=$p['product_id'];$this->attributeId($id);
+            if(isset($targets[$id]))throw new DomainException('Duplicate Product target.');
+            $targets[$id]=$p['expected_revision'];
+        }
+        ksort($targets,SORT_STRING);
+        return $this->store->bulkSetAttributes($org,$targets,AttributeRules::changes($rows),$key,$actor,$trace);
+    }
+
     public function productAttributes(string $org,string $product):array
     {
         $this->tenant($org);$this->attributeId($product);return $this->store->productAttributes($org,$product);
