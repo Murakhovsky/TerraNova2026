@@ -125,5 +125,29 @@ $denied(static fn()=> $repo->saveAdset($orgA,$campaignId,1,'101',$set['id'],1,$a
 $set2=$repo->saveAdset($orgA,$campaignId,1,'101',$set['id'],1,[...$ad,'audience_revision'=>2],'adset-revise-01');
 $assert($set2['revision']===2&&!$repo->adsets($orgA,$campaignId)[0]['pins_stale'],'AdSet revision failed.');
 $denied(static fn()=> $repo->saveAdset($orgA,$campaignId,1,'101',$set['id'],1,[...$ad,'audience_revision'=>2],'adset-old-01'),'Stale AdSet revision accepted.');
+$contextActor=static fn(string $org)=>new \Kernel\Tenant\Model\TenantContext(
+    \Kernel\Shared\Domain\UserId::fromString('101'),\Kernel\Shared\Domain\OrganizationId::fromString($org),
+    \Kernel\Identity\Model\OrganizationRole::fromString('manager'),[
+        \Kernel\Tenant\Model\Permission::fromString(\Kernel\Tenant\Model\TenantPermissions::ACCESS),
+        \Kernel\Tenant\Model\Permission::fromString(\Kernel\Tenant\Model\TenantPermissions::MANAGE)]);
+$disabledProduct=new class implements \Domains\Marketing\Application\Contract\MarketingProductDraftReadPort {
+    public function inspect(string $organizationId,string $productId,?string $variantId,string $currency):?array {throw new DomainException('Product disabled.');}
+    public function search(string $organizationId,string $query,int $limit,int $offset):array {throw new DomainException('Product disabled.');}
+    public function stock(string $organizationId,string $productId,string $variantId,string $locationId):?array {throw new DomainException('Product disabled.');}
+};
+$contexts=new \Domains\Marketing\Application\Service\MarketingAnalystContextService(
+    new \Domains\Marketing\Application\Service\MarketingCampaignService($campaigns,new MarketingDraftPolicy()),
+    new \Domains\Marketing\Application\Service\MarketingPlanningService($repo,$policy),
+    new \Domains\Marketing\Application\Service\MarketingProductDraftCheckService($disabledProduct));
+$actor=$contextActor($orgA);
+$envelope=$contexts->build($actor,$campaignId,1,$creativeId,3,$set['id'],2);
+$assert(!$envelope['delegated']&&$envelope['context']['facts']['product']['status']==='UNAVAILABLE'
+    &&$envelope['context']['facts']['performance']['status']==='NO_VERIFIED_CAMPAIGN_BINDING'
+    &&count($envelope['context']['sources'])===4,'Scoped analyst context missing or overclaimed.');
+$assert(!str_contains(json_encode($envelope,JSON_THROW_ON_ERROR),'destination_url'),'Raw destination URL leaked.');
+$assert($contexts->build($actor,$campaignId,1,$creativeId,3,$set['id'],2)['context_hash']===$envelope['context_hash'],'Stable context hash changed.');
+$denied(static fn()=> $contexts->build($contextActor($orgB),$campaignId,1,$creativeId,3),'Cross-tenant analyst context accepted.');
+$denied(static fn()=> $contexts->build($actor,$campaignId,1,$creativeId,2),'Stale Creative context accepted.');
+$denied(static fn()=> $contexts->build($actor,$campaignId,1,$creativeId,3,$set['id'],1),'Stale AdSet context accepted.');
 echo "Marketing M2 real MySQL two-person review, tenant fence, immutable Creative revisions, stale gate PASS\n";
 

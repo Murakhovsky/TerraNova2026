@@ -25,7 +25,7 @@ Marketing — окремий bounded context, що володіє рекламн
 
 ## Фактично додані можливості
 
-Дев’ятнадцять typed capabilities, включно з шістьма M2a, Product draft-check і Finance-facing source Query: `marketing.campaign.search`, `marketing.campaign.get`, `marketing.campaign.create`, `marketing.paid.account.list`, `marketing.paid.insights.query`, `marketing.paid.sync.history`. Для них діють Canonical Capability Gateway і перевірка tenant менеджера. Нових універсальних executor або CommandBus не створено.
+Двадцять typed capabilities, включно з шістьма M2a, Product draft-check і Finance-facing source Query: `marketing.campaign.search`, `marketing.campaign.get`, `marketing.campaign.create`, `marketing.paid.account.list`, `marketing.paid.insights.query`, `marketing.paid.sync.history`. Для них діють Canonical Capability Gateway і перевірка tenant менеджера. Нових універсальних executor або CommandBus не створено.
 
 На UI передбачено Overview, Campaigns, Campaign Workspace, Paid Media Accounts, Performance та Action Queue. Менеджер може створити внутрішню чернетку, під'єднати read-only Meta Ad Account через opaque Vault reference, імпортувати і переглядати provider observations.
 
@@ -78,6 +78,12 @@ Marketing має tenant-scoped Audience та внутрішній AdSet Draft, �
 ## M2c.4b: Робочий простір аудиторій і груп оголошень
 
 Campaign Workspace має форми create/revise для спільних tenant Audience та campaign-bound AdSet Draft. UI вибирає поточні Audience/Creative revision pins, передає expected_revision і campaign_revision, показує попередні pinned revisions та stale warning. Застарілі pins не підміняються автоматично новими. CSRF, tenant manager, module activation та native Domain validation залишаються обов'язковими; HTML mapper не приймає tenant/approval/provider authority. Budget — лише planning amount, не Finance reservation. Unit tests перевіряють form mapping, malformed pins і wiring; браузерне та staging-приймання ще потрібні.
+
+## M2c.5a: Контекст зовнішнього аналітика та контракт рекомендації
+
+`marketing.analyst.context.get` — локальний read-only Query, що збирає лише обрані tenant Campaign/Creative та опційно актуальні AdSet/Audience revisions. При AdSet pin перевіряються stale state і належність Creative. Product observations читаються через існуючий Product port, якщо є валюта AdSet; відсутність джерела явно позначається. Не підставляються performance metrics без перевіреного Campaign binding. Контекст містить обмежені факти, source pins, SHA-256 digest, редагування email/phone за Kernel redactor, видалення URL з текстових полів; довільний текст залишається untrusted. Raw owner IDs, credentials, account IDs, destination URL та media не передаються. Query нічого не відправляє назовні.
+
+Marketing-owned runtime port визначає межу майбутнього advisory adapter. Recommendation policy приймає лише bounded text, точний context hash та evidence aliases із виданого контексту, відхиляє action payload, fabricated evidence, privilege fields. Результат не є proposal receipt або дозволом запуску. Hermes adapter, authenticated transport, governed admission і durable independent review ще не підключені; fake provider чи автоматичного fallback немає. Для передачі фактичного контексту назовні потрібні окремі правила допуску й приймання. Додано unit та native MySQL context tests.
 
 ## Надійність імпорту та операційна черга
 

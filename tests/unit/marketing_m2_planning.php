@@ -97,7 +97,7 @@ foreach($manifest['contributions']['capability_contracts'] as $raw){
     $c=CapabilityContract::fromArray($raw);
     $contracts[$c->id]=$c;
 }
-$expect(count($contracts)===19,'Marketing M0/M1 seven, six M2a and two Product Queries expected.');
+$expect(count($contracts)===20,'Marketing M0/M1 seven, six M2a and two Product Queries expected.');
 $validator=new CapabilityJsonInputValidator();
 $validator->validate($contracts['marketing.audience.save'],['name'=>'Broad local market','target_spec'=>$target]);
 $validator->validate($contracts['marketing.adset.save'],['campaign_id'=>'mkt-'.str_repeat('a',24),'campaign_revision'=>1,...$ad]);
@@ -163,5 +163,18 @@ $expect(str_contains($controller,'$this->planning->saveAudience(')&&str_contains
     &&str_contains($view,'adset.pins_stale')&&str_contains($view,'name="creative_pins[]"')
     &&str_contains($view,'name="csrf_token"')&&str_contains($routes,'cos_marketing_audience_save:')
     &&str_contains($routes,'cos_marketing_adset_save:'),'Audience/AdSet Workspace wiring incomplete.');
+$contextPolicy=new \Domains\Marketing\Domain\MarketingAnalystRecommendationPolicy();
+$contextHash=str_repeat('a',64);
+$envelope=['context_hash'=>$contextHash,'context'=>['sources'=>[['alias'=>'creative','record_id'=>'mkcr-'.str_repeat('a',24),'revision'=>1]]]];
+$advice=['context_hash'=>$contextHash,'recommendation'=>'Improve the headline','rationale'=>'Draft language needs review','evidence_aliases'=>['creative']];
+$validated=$contextPolicy->validate($envelope,$advice);
+$expect(!$validated['paid_activation_approved']&&$validated['evidence'][0]['alias']==='creative','Analyst recommendation overclaimed.');
+$blocked(static fn()=> $contextPolicy->validate($envelope,[...$advice,'action'=>'activate']),'Analyst injected Action.');
+$blocked(static fn()=> $contextPolicy->validate($envelope,[...$advice,'context_hash'=>str_repeat('b',64)]),'Foreign context response accepted.');
+$blocked(static fn()=> $contextPolicy->validate($envelope,[...$advice,'evidence_aliases'=>['invented']]),'Invented evidence accepted.');
+$validator->validate($contracts['marketing.analyst.context.get'],['campaign_id'=>'mkt-'.str_repeat('a',24),
+    'campaign_revision'=>1,'creative_id'=>'mkcr-'.str_repeat('b',24),'creative_revision'=>1]);
+$blocked(static fn()=> $validator->validate($contracts['marketing.analyst.context.get'],['campaign_id'=>'mkt-'.str_repeat('a',24),
+    'campaign_revision'=>1,'creative_id'=>'mkcr-'.str_repeat('b',24),'creative_revision'=>1,'organization_id'=>'foreign']),'Client supplied tenant.');
 echo "Marketing M2 typed planning policy, provenance, CSRF and boundary PASS\n";
 

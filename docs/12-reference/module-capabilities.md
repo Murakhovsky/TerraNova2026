@@ -309,6 +309,7 @@ Manifest capabilities не задекларовані.
 
 - `marketing.adset.list`;
 - `marketing.adset.save`;
+- `marketing.analyst.context.get`;
 - `marketing.analyst.proposal.list`;
 - `marketing.analyst.proposal.review`;
 - `marketing.analyst.proposal.submit`;

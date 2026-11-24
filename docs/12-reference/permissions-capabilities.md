@@ -20,7 +20,7 @@ generated: true
 | --- | ---: | --- |
 | `both` | 48 | Capability присутня і в runtime catalogue, і в manifest. |
 | `runtime-only` | 3 | Runtime може перевіряти capability, але manifest її не декларує. |
-| `manifest-only` | 210 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
+| `manifest-only` | 211 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
 
 ## Каталог
 
@@ -181,6 +181,7 @@ generated: true
 | `growth` | `growth.workspace` | ні | так | `manifest-only` | — | `app/Domains/Growth/module.php` |
 | `marketing` | `marketing.adset.list` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
 | `marketing` | `marketing.adset.save` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
+| `marketing` | `marketing.analyst.context.get` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
 | `marketing` | `marketing.analyst.proposal.list` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
 | `marketing` | `marketing.analyst.proposal.review` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
 | `marketing` | `marketing.analyst.proposal.submit` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |

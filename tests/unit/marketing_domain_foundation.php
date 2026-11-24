@@ -34,6 +34,6 @@ foreach($manifest['contributions']['capability_contracts'] as $raw) {
     $assert(is_file($root.'/'.$contract->outputSchema),'Output schema missing: '.$contract->id);
 }
 $validator->validate(CapabilityContract::fromArray($manifest['contributions']['capability_contracts'][2]),['name'=>'Test launch','business_objective'=>'Leads']);
-$assert(count($found)===19,'Expected seven M0/M1, six M2a and two Product Query capabilities');
+$assert(count($found)===20,'Expected seven M0/M1, six M2a and two Product Query capabilities');
 echo "Marketing M0 foundation PASS\n";
 
