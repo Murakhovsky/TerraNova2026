@@ -6,15 +6,15 @@ updated: 2026-11-24
 kind: architecture
 ---
 
-# Sales Domain completion (#459)
+# Завершення домену Sales (#459)
 
-## Target
+## Цільова модель
 
 Sales is the authoritative business domain for the commercial relationship, lead qualification, case/deal, pipeline, sales activities and commercial outcome. It must operate independently of an external CRM or LLM. Property-specific functionality is an optional integration, not a requirement for selling a Product or Service. Finance owns payments/accounting, Product Management owns catalog/stock, Property owns listings, Marketing owns campaigns and acquisition, Communication owns delivery where available, Kernel owns identities and authorization; verify each actual counterpart contract before adding a dependency. No cross-domain table access or invented integration contracts.
 
 The same business operation has one Sales-owned implementation and one typed public contract per distinct semantic action. Human and AI entrypoints may have different permissions and approval paths, not different business rules. AI planning uses COS Goals/Federation; mutation requires approved canonical Platform Workflow/Action and persisted receipts. Human internal operations may use the existing canonical Gateway where its policy allows. Neither agent nor UI grants itself authority. Do not weaken the Gateway manager fence as a shortcut to salesperson access; design and test scoped permissions first.
 
-## Baseline (post #458, 2026-11-24)
+## Початковий стан після #458 (2026-11-24)
 
 Manifest Sales 1.0.0 / schema 0.8.6 declares three typed contracts: inbound request read, external create task, deal-won observation. Existing native operations include ReceivePublicLead, ReceiveCrmWebhook, ProcessCrmInbox, AssignDealOwner, ChangeDealStage, CompleteSalesCall, ScheduleDealFollowup and SalesInboundService. Their existence is not proof of canonical capability invocation, concurrency safety, or real tenant acceptance. The passport is UNKNOWN; preserve D3–D5 gates.
 
@@ -33,7 +33,7 @@ Manifest Sales 1.0.0 / schema 0.8.6 declares three typed contracts: inbound requ
 
 Audit semantic boundaries: canonical-state, activity events, property match and outcome may be atomic substeps rather than independent commands. If so, correct registry steps to reference the actual typed atomic operation and readback, instead of manufacturing a callable that bypasses invariants. Close gaps only with executable evidence in the same PR.
 
-## Packages and exit criteria
+## Пакети робіт і критерії приймання
 
 | Package | Scope and acceptance |
 | --- | --- |
@@ -46,14 +46,14 @@ Audit semantic boundaries: canonical-state, activity events, property match and 
 | S6 | Discoverability in Capability Library, typed plans, human/agent policy, approval before effect, one canonical Workflow/Action path for automated commands, idempotency receipts, bounded retry and native observation. Test unauthorized agent, disabled module, revoked access, stale plan and unknown outcome. |
 | S7 | Real MySQL E2E, operator UX, production-like worker/recovery tests, independent exact-SHA evidence and DAS-001/Golden 50 checks. Verify a human and an approved agent can perform the same allowed commercial operation through canonical contracts. No D3–D5 or production activation by inference. |
 
-## Immediate execution audit
+## Першочерговий аудит виконання
 
 - CanonicalCapabilityGateway currently enforces a tenant-manager fence and human-only direct commands. Agent mutations must not be routed through direct invocation.
 - ReceivePublicLead fixes its tenant at composition time and has no explicit request idempotency key in its signature. Separate trusted ingestion identity from generic capability inputs and prove duplicate behavior before exposing it.
-- SalesInboundService::createCaseFromRequest checks the existing link before its transaction. Inspect repository locking and conditional attachment under concurrent requests; do not claim concurrent idempotency based on the preliminary check.
+- S1/P1 moved conversion and attachment under a tenant-scoped lead row lock. CI, Runtime and Frontend passed at 0e9df3a; real two-connection concurrency and rollback evidence remains required.
 - ChangeDealStage executes business transitions and terminal events in one transaction. Audit caller-side approval enforcement and expected-stage concurrency; requiresApproval on a receipt is not evidence of prior approval.
 - First safety patch: verify the inbound request read adapter rejects mismatched tenant or entity ID before exposing even its redacted summary. Keep registry debt unchanged.
 
-## Definition of done
+## Критерії завершення
 
 Each slice contains actual Sales implementation, typed input/output where public, declared capability ownership, permission/policy, appropriate idempotency and failure semantics, native independent readback, positive/denied/cross-tenant/replay/failure tests, CI wiring, and matching Process Registry/debt/passport/generated references if changed. No new executor, no direct foreign persistence, no false contracts. For uncertain external effects reconcile before retry. Release only after operator evidence from the target environment. Issue #459 remains open until all business packages are accepted, not merely when DAS-001 debt reaches zero.
