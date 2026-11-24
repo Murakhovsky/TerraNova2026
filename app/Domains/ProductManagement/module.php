@@ -512,6 +512,7 @@ return [
             'product_management.stock.movement.search',
             'product_management.variant.create',
             'product_management.location.create',
+            'product_management.location.search',
             'product_management.stock.receive',
             'product_management.stock.issue',
             'product_management.price.base.set',
