@@ -349,6 +349,12 @@ generated: true
 | `sales` | `app/migrations/20261124_009002_sales_activity_cancellation.sql` | `tn_lead_activities` |
 | `sales` | `app/migrations/20261124_009003_sales_offer_delivery.sql` | `sales_offer_deliveries` |
 | `sales` | `app/migrations/20261124_009003_sales_offer_delivery.sql` | `sales_offer_revisions` |
+| `sales` | `app/migrations/20261124_009004_sales_native_orders.sql` | `sales_order_evidence` |
+| `sales` | `app/migrations/20261124_009004_sales_native_orders.sql` | `sales_order_lines` |
+| `sales` | `app/migrations/20261124_009004_sales_native_orders.sql` | `sales_orders` |
+| `sales` | `app/migrations/20261125_009005_sales_order_source_reconciliation.sql` | `sales_order_source_observations` |
+| `sales` | `app/migrations/20261125_009005_sales_order_source_reconciliation.sql` | `sales_order_sources` |
+| `sales` | `app/migrations/20261125_009005_sales_order_source_reconciliation.sql` | `sales_orders` |
 | `service` | `app/migrations/20260919_000064_service_wave11_cutover.sql` | `tn_service_assignments` |
 | `service` | `app/migrations/20260919_000064_service_wave11_cutover.sql` | `tn_service_cases` |
 | `service` | `app/migrations/20260919_000064_service_wave11_cutover.sql` | `tn_service_escalations` |
