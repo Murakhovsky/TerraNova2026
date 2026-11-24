@@ -147,6 +147,79 @@ SQL;
             'basis'=>'current_open_pipeline','buckets'=>array_values($buckets)];
     }
 
+    /** Creation cohort; conversion is evidenced by a current same-tenant case link.
+     * This is a current observation, not an as-of reconstruction. */
+    public function conversion(string $org, ?int $owner, ?string $pipeline, string $from, string $to): array
+    {
+        $this->validate($org,$owner,$pipeline,$from,$to);
+        if ($pipeline!==null) throw new DomainException('Lead creation cohorts cannot be filtered by a downstream pipeline.');
+        $params=['org'=>$org,'from_at'=>$from,'to_at'=>$to];
+        $filter='';
+        if ($owner!==null) {$filter=' AND l.assigned_user_id=:owner';$params['owner']=$owner;}
+        $sql=<<<'SQL'
+SELECT COUNT(*) total,
+ COALESCE(SUM(CASE WHEN c.id IS NOT NULL THEN 1 ELSE 0 END),0) linked,
+ COALESCE(SUM(CASE WHEN l.client_case_id IS NOT NULL AND c.id IS NULL THEN 1 ELSE 0 END),0) dangling,
+ COALESCE(SUM(CASE WHEN c.id IS NOT NULL AND EXISTS (
+ SELECT 1 FROM cos_events e WHERE
+ CONVERT(e.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci=CONVERT(l.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+ AND e.aggregate_type='lead' AND e.aggregate_id=CAST(l.id AS CHAR)
+ AND e.type='sales.lead.changed'
+ AND JSON_UNQUOTE(JSON_EXTRACT(e.payload,'$.changes.client_case_id.to'))=CAST(c.id AS CHAR)
+ AND e.occurred_at>=l.created_at
+ ) THEN 1 ELSE 0 END),0) evidenced
+FROM tn_leads l LEFT JOIN tn_client_cases c ON c.id=l.client_case_id
+ AND CONVERT(c.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci=CONVERT(l.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+WHERE l.organization_id=:org AND l.created_at>=:from_at AND l.created_at<:to_at
+SQL;
+        $row=$this->rows($sql.$filter,$params)[0];
+        $total=(int)$row['total'];$linked=(int)$row['linked'];$evidenced=(int)$row['evidenced'];
+        return ['from'=>$from,'to_exclusive'=>$to,'owner_id'=>$owner,'pipeline_id'=>null,
+            'basis'=>'created_lead_cohort_current_link','lead_count'=>$total,'linked_count'=>$linked,
+            'event_confirmed_count'=>$evidenced,'link_without_event_count'=>$linked-$evidenced,
+            'dangling_link_count'=>(int)$row['dangling'],
+            'conversion_percent'=>$total===0?null:number_format(100*$linked/$total,2,'.','')];
+    }
+
+    /** Period of observed stage entries. Duration is included only for COMPLETE
+     * intervals closed before the exclusive boundary. Estimated undated rows are not facts. */
+    public function stages(string $org, ?int $owner, ?string $pipeline, string $from, string $to): array
+    {
+        $this->validate($org,$owner,$pipeline,$from,$to);
+        $params=['org'=>$org,'from_at'=>$from,'to_at'=>$to,'duration_cutoff'=>$to];
+        $filters='';
+        if ($pipeline!==null) {$filters.=' AND h.pipeline_id=:pipeline';$params['pipeline']=$pipeline;}
+        if ($owner!==null) {
+            $filters.=' AND (SELECT o.owner_user_id FROM sales_deal_owner_history o WHERE o.organization_id=h.organization_id AND o.deal_id=h.deal_id AND o.history_quality IN (\'COMPLETE\',\'PARTIAL\') AND o.assigned_at<=h.entered_at AND (o.unassigned_at IS NULL OR o.unassigned_at>h.entered_at) ORDER BY o.assigned_at DESC,o.id DESC LIMIT 1)=:owner';
+            $params['owner']=$owner;
+        }
+        $sql=<<<'SQL'
+WITH facts AS (
+ SELECT h.pipeline_id,h.to_stage_id,h.from_stage_id,h.deal_id,h.history_quality,
+ CASE WHEN h.history_quality='COMPLETE' AND h.left_at<:duration_cutoff AND h.left_at>=h.entered_at
+ THEN h.duration_seconds ELSE NULL END duration_seconds
+ FROM sales_deal_stage_history h
+ WHERE h.organization_id=:org AND h.entered_at>=:from_at AND h.entered_at<:to_at
+SQL;
+        $sql.=$filters.<<<'SQL'
+
+)
+SELECT pipeline_id,to_stage_id,from_stage_id,COUNT(*) entry_count,COUNT(DISTINCT deal_id) distinct_deal_count,
+ SUM(history_quality='COMPLETE') complete_count,SUM(history_quality='PARTIAL') partial_count,
+ SUM(history_quality='ESTIMATED') estimated_count,COUNT(duration_seconds) duration_count,
+ ROUND(AVG(duration_seconds),2) average_duration_seconds
+FROM facts GROUP BY pipeline_id,to_stage_id,from_stage_id ORDER BY pipeline_id,to_stage_id,from_stage_id
+SQL;
+        $items=[];
+        foreach ($this->rows($sql,$params) as $row) {
+            foreach (['entry_count','distinct_deal_count','complete_count','partial_count','estimated_count','duration_count'] as $key) $row[$key]=(int)$row[$key];
+            $row['average_duration_seconds']=$row['average_duration_seconds']===null?null:(string)$row['average_duration_seconds'];
+            $items[]=$row;
+        }
+        return ['from'=>$from,'to_exclusive'=>$to,'owner_id'=>$owner,'pipeline_id'=>$pipeline,
+            'basis'=>'projected_stage_entry_history','items'=>$items];
+    }
+
     private function validate(string $org,?int $owner,?string $pipeline,string $from,string $to):void
     {
         if ($org===''||($owner!==null&&$owner<1)
