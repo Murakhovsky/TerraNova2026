@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "source_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "order_id": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "outcome": {
+      "type": "string",
+      "enum": [
+        "imported",
+        "observed",
+        "unchanged",
+        "stale",
+        "conflict",
+        "blocked",
+        "replayed"
+      ]
+    },
+    "blocked_reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "replayed": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "source_id",
+    "order_id",
+    "outcome",
+    "blocked_reason",
+    "replayed"
+  ],
+  "additionalProperties": false
+}
