@@ -59,7 +59,7 @@
       "max_process_gaps": 0
     },
     "sales": {
-      "min_typed": 29,
+      "min_typed": 40,
       "max_descriptive_only": 10,
       "max_process_gaps": 0
     },

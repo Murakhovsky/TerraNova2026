@@ -51,6 +51,7 @@ final readonly class SalesOfferDeliveryService
                 if($saved['recipient_hash']!==$in['recipient_hash']||$saved['document_hash']!==$in['document_hash']||$offer['terms_hash']!==$in['terms_hash'])throw new DomainException('Existing delivery evidence differs; revise quote before new delivery.');
                 return $this->status($org,$id,$offer['terms_version']);
             }
+            if(preg_match('/[\r\n]/',$doc['subject'])===1)throw new DomainException('Unsafe offer subject.');
             if($offer['revision']!==$in['expected_revision']||$offer['terms_hash']!==$in['terms_hash']||$doc['document_hash']!==$in['document_hash']||$recipientHash!==$in['recipient_hash'])throw new DomainException('Offer, document or recipient changed after approval.');
             if(in_array($deal['status'],['closed','lost'],true)||!in_array($offer['status'],['draft','presented'],true)||$offer['valid_until']<=gmdate('Y-m-d H:i:s'))throw new DomainException('Offer is no longer deliverable.');
             foreach($offer['lines'] as $line){

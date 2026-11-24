@@ -31,7 +31,8 @@ domain_id: sales
       "capability_ids": [
         "sales.crm.inbox.status",
         "sales.crm.inbox.recover",
-        "sales.crm.inbox.process"
+        "sales.crm.inbox.process",
+        "sales.crm.reconciliation.read"
       ]
     },
     {
@@ -61,7 +62,14 @@ domain_id: sales
         "sales.activity.complete",
         "sales.activity.reschedule",
         "sales.followup.schedule",
-        "sales.property_match.record"
+        "sales.property_match.record",
+        "sales.lead.followup.schedule",
+        "sales.lead.activity.complete",
+        "sales.lead.activity.reschedule",
+        "sales.lead.activity.cancel",
+        "sales.activity.cancel",
+        "sales.activity.overdue.read",
+        "sales.activity.reminder.queue"
       ]
     },
     {
@@ -72,7 +80,10 @@ domain_id: sales
         "sales.offer.transition",
         "sales.negotiation.record",
         "sales.offer.read",
-        "sales.offer.list"
+        "sales.offer.list",
+        "sales.offer.document.render",
+        "sales.offer.delivery.status",
+        "sales.offer.delivery.queue"
       ]
     }
   ],

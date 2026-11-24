@@ -52,11 +52,14 @@ class IntegrationOutboxProcessor
         $pdo = $this->database->connection();
         $pdo->beginTransaction();
         try {
+            // Sales quote/reminder handoff cannot be blindly retried after unknown HTTP outcome.
+            $pdo->exec('UPDATE tn_integration_outbox SET status="failed", last_error="sales_transport_ambiguous", locked_at=NULL,lock_token=NULL WHERE integration="n8n" AND event_type="notification.email" AND status="processing" AND locked_at<DATE_SUB(NOW(),INTERVAL 10 MINUTE) AND (dedupe_key LIKE "notification:SQUO-%" OR dedupe_key LIKE "notification:SREM-%")');
             $statement = $pdo->prepare('
                 UPDATE tn_integration_outbox
                 SET status = "processing", attempts = attempts + 1, locked_at = NOW(), lock_token = :token
                 WHERE integration = "n8n" AND available_at <= NOW() AND attempts < 5
                   AND (status IN ("pending", "failed") OR (status = "processing" AND locked_at < DATE_SUB(NOW(), INTERVAL 10 MINUTE)))
+                  AND ((dedupe_key NOT LIKE "notification:SQUO-%" AND dedupe_key NOT LIKE "notification:SREM-%") OR (status="pending" AND attempts=0))
                 ORDER BY id LIMIT ' . $limit . '
             ');
             $statement->execute(['token' => $token]);
@@ -92,6 +95,11 @@ class IntegrationOutboxProcessor
 
     private function retry(array $item, string $body, string $error): void
     {
+        $key=(string)($item['dedupe_key']??'');
+        if(str_starts_with($key,'notification:SQUO-')||str_starts_with($key,'notification:SREM-')){
+            $this->finish($item,'failed',$body,'sales_transport_ambiguous');
+            return;
+        }
         $delay = min(60, 2 ** max(0, (int) $item['attempts'] - 1));
         $this->database->connection()->prepare('
             UPDATE tn_integration_outbox

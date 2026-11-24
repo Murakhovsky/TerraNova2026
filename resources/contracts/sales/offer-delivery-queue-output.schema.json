@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "offer_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "terms_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "notification_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "not_queued",
+        "queued",
+        "processing",
+        "handed_off",
+        "failed",
+        "ambiguous",
+        "unknown"
+      ]
+    },
+    "recipient_delivery_verified": {
+      "type": "boolean",
+      "enum": [
+        false
+      ]
+    },
+    "attempts": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "handoff_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "offer_id",
+    "terms_version",
+    "notification_id",
+    "state",
+    "recipient_delivery_verified",
+    "attempts",
+    "handoff_at"
+  ],
+  "additionalProperties": false
+}
