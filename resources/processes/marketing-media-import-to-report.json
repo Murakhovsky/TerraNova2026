@@ -1,0 +1,69 @@
+{
+  "schema_version": 4,
+  "id": "marketing.media-import-to-report",
+  "title": "Meta Read Import → Media Analytics",
+  "domain": "marketing",
+  "state": "as-is",
+  "workflow": "02-workflows/marketing-media-import-to-report.md",
+  "trigger": "Tenant manager imports a bounded provider reporting window or requests comparison of complete batches",
+  "outcomes": [
+    "Complete read-only provider batch is committed with exact account revision and source scope",
+    "Media totals and equal-length period comparison use one grain, one currency and immutable receipts",
+    "Provider reported actions and reach are not treated as native deduplicated conversions"
+  ],
+  "actors": [
+    "Marketing manager",
+    "Marketing media analytics runtime",
+    "Meta read adapter"
+  ],
+  "steps": [
+    {
+      "id": "import",
+      "label": "Import complete provider batch",
+      "kind": "state",
+      "owner": "Marketing",
+      "domain": "marketing",
+      "capability": "marketing.analytics.media.sync",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/Marketing/Application/Service/MarketingMediaAnalyticsService.php",
+          "symbol": "public function sync("
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/Marketing/Infrastructure/Persistence/MySql/MysqlMarketingMediaAnalyticsStore.php",
+          "symbol": "public function commit("
+        }
+      ]
+    },
+    {
+      "id": "report",
+      "label": "Read exact media report and comparison",
+      "kind": "outcome",
+      "owner": "Marketing",
+      "domain": "marketing",
+      "capability": "marketing.analytics.media.report",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/Marketing/Application/Service/MarketingMediaAnalyticsService.php",
+          "symbol": "public function report("
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/Marketing/Domain/MarketingMediaAnalyticsPolicy.php",
+          "symbol": "public static function comparison("
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "import",
+      "to": "report"
+    }
+  ]
+}

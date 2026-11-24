@@ -89,7 +89,7 @@ domain_id: marketing
       ]
     }
   ],
-  "process_ids": [],
+  "process_ids": ["marketing.attribution-to-analytics", "marketing.media-import-to-report"],
   "readiness": {
     "level": "D2",
     "evidence": []
@@ -141,7 +141,7 @@ Product є власником товару, Finance власником бюдж�
 
 ## 8. Процеси та результати
 
-Поточна канонічна Process Registry має explicit Marketing exemption від завершеного наскрізного paid-execution process. Цей паспорт не заявляє M3 або M4/M5 process readiness.
+Process Registry містить два M4 процеси `marketing.attribution-to-analytics` і `marketing.media-import-to-report`. Marketing exemption знято. Source-verified topology не означає D3/D4 або повне приймання M3/M4.
 
 ## 9. Tenant, Policy та Security
 

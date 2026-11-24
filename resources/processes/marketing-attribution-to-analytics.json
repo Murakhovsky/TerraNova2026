@@ -1,0 +1,114 @@
+{
+  "schema_version": 4,
+  "id": "marketing.attribution-to-analytics",
+  "title": "Campaign UTM → Native Sales Attribution",
+  "domain": "marketing",
+  "state": "as-is",
+  "workflow": "02-workflows/marketing-attribution-to-analytics.md",
+  "trigger": "Tenant manager requests attribution for a known Marketing campaign or immutable paid plan",
+  "outcomes": [
+    "Exact UTM tags identify a campaign or paid plan without customer contact data",
+    "Native Sales lead evidence is captured once with immutable replay receipts",
+    "Current native Sales outcomes and optional exact Finance/media facts are projected without recognized revenue or causal attribution claims"
+  ],
+  "actors": [
+    "Marketing manager",
+    "Marketing analytics runtime",
+    "Sales and Finance read boundaries"
+  ],
+  "steps": [
+    {
+      "id": "tracking",
+      "label": "Generate exact tracking tags",
+      "kind": "operation",
+      "owner": "Marketing",
+      "domain": "marketing",
+      "capability": "marketing.attribution.tracking.get",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/Marketing/Application/Service/MarketingAnalyticsService.php",
+          "symbol": "public function tracking("
+        }
+      ]
+    },
+    {
+      "id": "discover",
+      "label": "Discover scoped native lead evidence",
+      "kind": "operation",
+      "owner": "Marketing",
+      "domain": "marketing",
+      "capability": "marketing.attribution.discover",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/Marketing/Application/Service/MarketingAnalyticsService.php",
+          "symbol": "public function discover("
+        },
+        {
+          "type": "source",
+          "path": "symfony/src/Infrastructure/Marketing/SalesAttributionReadAdapter.php",
+          "symbol": "public function page("
+        }
+      ]
+    },
+    {
+      "id": "capture",
+      "label": "Persist immutable attribution evidence",
+      "kind": "state",
+      "owner": "Marketing",
+      "domain": "marketing",
+      "capability": "marketing.attribution.capture",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/Marketing/Application/Service/MarketingAnalyticsService.php",
+          "symbol": "public function capture("
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/Marketing/Infrastructure/Persistence/MySql/MysqlMarketingAttributionStore.php",
+          "symbol": "public function batch("
+        }
+      ]
+    },
+    {
+      "id": "report",
+      "label": "Project current native outcomes and source quality",
+      "kind": "outcome",
+      "owner": "Marketing",
+      "domain": "marketing",
+      "capability": "marketing.analytics.report.get",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/Marketing/Application/Service/MarketingAnalyticsService.php",
+          "symbol": "public function report("
+        },
+        {
+          "type": "source",
+          "path": "symfony/src/Infrastructure/Marketing/FinanceAnalyticsReadAdapter.php",
+          "symbol": "public function settlement("
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "tracking",
+      "to": "discover"
+    },
+    {
+      "from": "discover",
+      "to": "capture"
+    },
+    {
+      "from": "capture",
+      "to": "report"
+    }
+  ]
+}

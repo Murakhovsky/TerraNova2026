@@ -24,6 +24,8 @@ generated: true
 | Diagnostic Session → Recommendation | `diagnostic` | `as-is` | `source-verified` | 6 | 0 | 6/6 | 5/6 | 6/6 | 6/6 | 0/6 | [Відкрити workflow](../02-workflows/diagnostic-session-to-recommendation.md) |
 | Federation Goal Plan Approval | `federation` | `as-is` | `documented` | 1 | 0 | 1/1 | 1/1 | 0/1 | 0/0 | 0/0 | [Відкрити workflow](../02-workflows/federation-goal-plan-approval.md) |
 | Signal → Qualified Opportunity Handoff | `growth` | `to-be` | `source-verified` | 6 | 0 | 6/6 | 6/6 | 6/6 | 5/5 | 0/5 | [Відкрити workflow](../02-workflows/growth-opportunity-candidate-to-handoff.md) |
+| Campaign UTM → Native Sales Attribution | `marketing` | `as-is` | `source-verified` | 4 | 0 | 4/4 | 4/4 | 4/4 | 4/4 | 0/4 | [Відкрити workflow](../02-workflows/marketing-attribution-to-analytics.md) |
+| Meta Read Import → Media Analytics | `marketing` | `as-is` | `source-verified` | 2 | 0 | 2/2 | 2/2 | 2/2 | 2/2 | 0/2 | [Відкрити workflow](../02-workflows/marketing-media-import-to-report.md) |
 | Property Submission → Publication | `property` | `as-is` | `source-verified` | 6 | 0 | 6/6 | 6/6 | 6/6 | 6/6 | 0/6 | [Відкрити workflow](../02-workflows/property-submission-to-publication.md) |
 | Opportunity → Property Reservation | `real_estate` | `as-is` | `source-verified` | 7 | 3 | 7/7 | 7/7 | 7/7 | 7/7 | 3/7 | [Відкрити workflow](../02-workflows/real-estate-opportunity-to-reservation.md) |
 | Sales Lead → Managed Case | `sales` | `as-is` | `source-verified` | 8 | 0 | 8/8 | 0/8 | 8/8 | 6/6 | 3/6 | [Відкрити workflow](../02-workflows/sales-lead-to-managed-case.md) |
@@ -47,6 +49,8 @@ generated: true
 | Diagnostic Session → Recommendation | 6/6 | 5/6 | 1/6 | 0/6 | 6/6 | 6/6 | 0/6 | 6/6 | 0/6 |
 | Federation Goal Plan Approval | 1/1 | 1/1 | 0/1 | 0/1 | 0/1 | 0/1 | 0/1 | 0/0 | 0/0 |
 | Signal → Qualified Opportunity Handoff | 6/6 | 6/6 | 0/6 | 0/6 | 6/6 | 6/6 | 0/6 | 5/5 | 0/5 |
+| Campaign UTM → Native Sales Attribution | 4/4 | 4/4 | 0/4 | 0/4 | 4/4 | 4/4 | 0/4 | 4/4 | 0/4 |
+| Meta Read Import → Media Analytics | 2/2 | 2/2 | 0/2 | 0/2 | 2/2 | 2/2 | 0/2 | 2/2 | 0/2 |
 | Property Submission → Publication | 6/6 | 6/6 | 0/6 | 0/6 | 6/6 | 6/6 | 0/6 | 6/6 | 0/6 |
 | Opportunity → Property Reservation | 7/7 | 7/7 | 0/7 | 3/7 | 7/7 | 7/7 | 3/7 | 7/7 | 3/7 |
 | Sales Lead → Managed Case | 8/8 | 0/8 | 8/8 | 0/8 | 8/8 | 8/8 | 3/8 | 6/6 | 3/6 |
@@ -233,6 +237,58 @@ generated: true
 | Qualify or monitor candidate | growth operator | `growth` | `growth.candidate.qualify` | `decision` | так | source `app/Domains/Growth/Domain/OpportunityCandidate.php` · `public function qualify(` [source] |
 | Monitor until timing changes | Growth automation | `growth` | `growth.candidate.monitor` | `state` | ні | source `app/Domains/Growth/Domain/OpportunityCandidate.php` · `public function monitor(` [source] |
 | Prepare opportunity handoff | growth operator | `growth` | `growth.handoff.prepare` | `outcome` | так | use_case `PrepareOpportunityHandoff` [source]<br>source `app/Domains/Growth/Application/DTO/OpportunityHandoff.php` · `public static function fromCandidate(` [source] |
+
+## Campaign UTM → Native Sales Attribution
+
+- **Process ID:** `marketing.attribution-to-analytics`
+- **Schema:** `v4`
+- **Domain:** `marketing`
+- **Бізнес-стан:** `as-is`
+- **Покриття capabilities:** 4/4 кроків
+- **Cross-domain кроки:** 0/4
+- **Derived verification:** `source-verified`
+- **Тригер:** Tenant manager requests attribution for a known Marketing campaign or immutable paid plan
+- **Workflow:** [Campaign UTM → Native Sales Attribution](../02-workflows/marketing-attribution-to-analytics.md)
+
+**Результати**
+
+- Exact UTM tags identify a campaign or paid plan without customer contact data
+- Native Sales lead evidence is captured once with immutable replay receipts
+- Current native Sales outcomes and optional exact Finance/media facts are projected without recognized revenue or causal attribution claims
+
+**Відповідальність, capabilities і runtime evidence**
+
+| Крок | Owner | Domain | Capability / gap | Вид | Критичний | Executable / evidence mapping |
+| --- | --- | --- | --- | --- | --- | --- |
+| Generate exact tracking tags | Marketing | `marketing` | `marketing.attribution.tracking.get` | `operation` | так | source `app/Domains/Marketing/Application/Service/MarketingAnalyticsService.php` · `public function tracking(` [source] |
+| Discover scoped native lead evidence | Marketing | `marketing` | `marketing.attribution.discover` | `operation` | так | source `app/Domains/Marketing/Application/Service/MarketingAnalyticsService.php` · `public function discover(` [source]<br>source `symfony/src/Infrastructure/Marketing/SalesAttributionReadAdapter.php` · `public function page(` [source] |
+| Persist immutable attribution evidence | Marketing | `marketing` | `marketing.attribution.capture` | `state` | так | source `app/Domains/Marketing/Application/Service/MarketingAnalyticsService.php` · `public function capture(` [source]<br>source `app/Domains/Marketing/Infrastructure/Persistence/MySql/MysqlMarketingAttributionStore.php` · `public function batch(` [source] |
+| Project current native outcomes and source quality | Marketing | `marketing` | `marketing.analytics.report.get` | `outcome` | так | source `app/Domains/Marketing/Application/Service/MarketingAnalyticsService.php` · `public function report(` [source]<br>source `symfony/src/Infrastructure/Marketing/FinanceAnalyticsReadAdapter.php` · `public function settlement(` [source] |
+
+## Meta Read Import → Media Analytics
+
+- **Process ID:** `marketing.media-import-to-report`
+- **Schema:** `v4`
+- **Domain:** `marketing`
+- **Бізнес-стан:** `as-is`
+- **Покриття capabilities:** 2/2 кроків
+- **Cross-domain кроки:** 0/2
+- **Derived verification:** `source-verified`
+- **Тригер:** Tenant manager imports a bounded provider reporting window or requests comparison of complete batches
+- **Workflow:** [Meta Read Import → Media Analytics](../02-workflows/marketing-media-import-to-report.md)
+
+**Результати**
+
+- Complete read-only provider batch is committed with exact account revision and source scope
+- Media totals and equal-length period comparison use one grain, one currency and immutable receipts
+- Provider reported actions and reach are not treated as native deduplicated conversions
+
+**Відповідальність, capabilities і runtime evidence**
+
+| Крок | Owner | Domain | Capability / gap | Вид | Критичний | Executable / evidence mapping |
+| --- | --- | --- | --- | --- | --- | --- |
+| Import complete provider batch | Marketing | `marketing` | `marketing.analytics.media.sync` | `state` | так | source `app/Domains/Marketing/Application/Service/MarketingMediaAnalyticsService.php` · `public function sync(` [source]<br>source `app/Domains/Marketing/Infrastructure/Persistence/MySql/MysqlMarketingMediaAnalyticsStore.php` · `public function commit(` [source] |
+| Read exact media report and comparison | Marketing | `marketing` | `marketing.analytics.media.report` | `outcome` | так | source `app/Domains/Marketing/Application/Service/MarketingMediaAnalyticsService.php` · `public function report(` [source]<br>source `app/Domains/Marketing/Domain/MarketingMediaAnalyticsPolicy.php` · `public static function comparison(` [source] |
 
 ## Property Submission → Publication
 

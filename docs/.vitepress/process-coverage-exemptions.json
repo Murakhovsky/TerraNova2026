@@ -22,11 +22,6 @@
       "reason": "V1 skeleton only; executable HR process models are intentionally deferred until HR runtime implementation."
     },
     {
-      "domain": "marketing",
-      "owner": "COS Marketing / Architecture",
-      "reason": "Marketing M3 has governed paid lifecycle and Finance settlement execution; formal Process Registry coverage remains exempt pending independent provider and D3 acceptance. No production readiness claim."
-    },
-    {
       "domain": "procurement",
       "owner": "COS Architecture",
       "reason": "V1 skeleton only; executable Procurement process models are intentionally deferred until Procurement runtime implementation."
