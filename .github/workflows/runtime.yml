@@ -173,6 +173,11 @@ jobs:
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
         run: php tests/integration/product_management_analytics_mysql.php
+      - name: Product Management governed business Goal multi-step MySQL acceptance
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+          COS_TEST_PM_GOVERNED_FULL: "1"
+        run: php tests/integration/product_management_governed_goal_e2e_mysql.php
       - name: Product Management approved CSV Action native MySQL acceptance
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
