@@ -17,6 +17,10 @@ process_id: product_management.governed-business-cycle
 - No unapproved Action or second executor
 - Ledger and current native results are verified
 
+## Учасники
+
+- Approved Product Action worker
+
 ## Тригер
 
 Signed AI or CRON intent is reviewed and adopted into an approved Plan.
@@ -36,3 +40,7 @@ Signed AI or CRON intent is reviewed and adopted into an approved Plan.
 ## Контроль і recovery
 
 Модель описує один допустимий бізнес-сценарій, не новий виконавчий рушій. Tenant і capability contract перевіряються до кожної операції. Для action-bound кроків незалежні Plan та Action approvals і Platform Workflow обов'язкові. При невідомому результаті — native readback та контрольоване врегулювання, не сліпий повтор. Послідовність не є однією глобальною транзакцією. Source verification не підтверджує production acceptance. Shopify не потрібний.
+
+## Карта коду
+
+- `app/Domains/ProductManagement/Automation/Action/ProductGovernedOperationHandler.php`
