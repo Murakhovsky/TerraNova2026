@@ -19,7 +19,7 @@ final readonly class SalesOrderLifecycleService
     private const OPERATIONS=['confirm','allocate','release','fulfill','cancel','return'];
     public function __construct(private SalesOrderRepositoryInterface $orders,private SalesOrderLifecycleRepositoryInterface $lifecycle,
         private SalesMutationReceiptRepositoryInterface $receipts,private SalesMutationGuard $guard,
-        private SalesMutationAuthorityInterface $authority,private SalesOrderService $native,
+        private SalesMutationAuthorityInterface $authority,private SalesEntityScopeService $scope,
         private OrderInventoryPort $inventory,private ActiveModuleResolver $modules){}
 
     public function read(string $org,int $actor,string $id):array
@@ -131,7 +131,8 @@ final readonly class SalesOrderLifecycleService
         if(!preg_match('/^[a-f0-9]{32}$/D',$id))throw new DomainException('Order unavailable.');
         $order=$this->orders->get($org,$id,true);
         if($order===null)throw new DomainException('Order unavailable.');
-        $this->native->read($org,$actor,$id);
+        try {$this->scope->resolve($org,$actor,'owner',$order['owner_id']);}
+        catch (DomainException) {$this->scope->resolve($org,$actor,'tenant');}
         if($order['deal_id']!==null)$this->authority->entity($org,$actor,'deal',$order['deal_id']);
         return $order;
     }

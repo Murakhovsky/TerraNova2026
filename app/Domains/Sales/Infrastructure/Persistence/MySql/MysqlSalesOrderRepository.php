@@ -56,7 +56,7 @@ final readonly class MysqlSalesOrderRepository implements SalesOrderRepositoryIn
     }
     public function allocations(string $org,string $order):array
     {
-        $q=$this->connection->prepare('SELECT allocation_id,line_no,location_id,reservation_id,stock_mode,quantity,fulfilled,cancelled,returned FROM sales_order_allocations WHERE organization_id=? AND order_id=? ORDER BY line_no,allocation_id');
+        $q=$this->connection->prepare('SELECT allocation_id,line_no,location_id,reservation_id,stock_mode,quantity,fulfilled,cancelled,returned FROM sales_order_allocations WHERE organization_id=? AND order_id=? ORDER BY line_no,allocation_id'.($this->connection->inTransaction()?' FOR UPDATE':''));
         $q->execute([$org,$order]);$rows=$q->fetchAll(PDO::FETCH_ASSOC);
         foreach($rows as &$r)foreach(['line_no','quantity','fulfilled','cancelled','returned'] as $field)$r[$field]=(int)$r[$field];unset($r);
         return $rows;

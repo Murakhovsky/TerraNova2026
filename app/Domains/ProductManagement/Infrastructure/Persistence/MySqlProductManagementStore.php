@@ -365,6 +365,12 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
 
     public function reserveStock(string $org,string $variantId,string $locationId,string $qty,string $source,string $key,string $actor,string $correlation):array
     {
+        if(!preg_match('#^manual:[A-Za-z0-9._:/-]{1,150}$#D',$source))throw new DomainException('Manual reservation source required.');
+        return $this->reserveStockInternal($org,$variantId,$locationId,$qty,$source,$key,$actor,$correlation);
+    }
+
+    private function reserveStockInternal(string $org,string $variantId,string $locationId,string $qty,string $source,string $key,string $actor,string $correlation):array
+    {
         return $this->mutate($org,'stock.reserve',$key,[$variantId,$locationId,$qty,$source],$actor,$correlation,
             function()use($org,$variantId,$locationId,$qty,$source,$actor):array {
                 $variant=$this->one('SELECT v.track_inventory,v.status,p.status AS product_status
@@ -442,7 +448,7 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
         $this->orderAdmission($org,$source,$quantity,$key,$actor,$correlation);
         foreach([$product,$variant] as $id)if(!preg_match('/^[a-f0-9]{32}$/D',$id))throw new DomainException('Invalid canonical order product reference.');
         $row=$this->one('SELECT v.sku,v.track_inventory,v.status,p.status AS product_status,p.product_type FROM pm_variants v JOIN pm_products p ON p.organization_id=v.organization_id AND p.product_id=v.product_id WHERE v.organization_id=? AND v.variant_id=? AND v.product_id=? FOR UPDATE',[$org,$variant,$product]);
-        if($row===null||$row['sku']!==$sku||$row['status']!=='active'||$row['product_status']==='archived')throw new DomainException('Order product unavailable.');
+        if($row===null||$row['sku']!==$sku||$row['status']!=='active'||$row['product_status']!=='active')throw new DomainException('Order product unavailable.');
         if((int)$row['track_inventory']===0){
             if($location!==null||!in_array($row['product_type'],['service','digital'],true))throw new DomainException('Untracked physical goods require inventory ownership review.');
             return ['stock_mode'=>'nonstock','reservation_id'=>null,'location_id'=>null];
@@ -450,7 +456,7 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
         if($location===null||!preg_match('/^[a-f0-9]{32}$/D',$location))throw new DomainException('Tracked order line requires a warehouse.');
         return $this->mutate($org,'stock.order.reserve',$key,[$product,$variant,$sku,$location,$quantity,$source],$actor,$correlation,
             function()use($org,$variant,$location,$quantity,$source,$key,$actor,$correlation):array{
-                $r=$this->reserveStock($org,$variant,$location,(string)$quantity,$source,'order-reserve:'.hash('sha256',$key),$actor,$correlation);
+                $r=$this->reserveStockInternal($org,$variant,$location,(string)$quantity,$source,'order-reserve:'.hash('sha256',$key),$actor,$correlation);
                 $this->orderOperation($org,$r['reservation_id'],'reserve',$quantity,null,$source,$key,$actor);
                 return ['stock_mode'=>'local','reservation_id'=>$r['reservation_id'],'location_id'=>$location,'balance'=>$r['balance']];
             },'product_management.stock.order_reserved','StockReservation');
