@@ -1386,6 +1386,7 @@ services:
     alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesCommercialAnalyticsReadModel
 
   Domains\Sales\Application\Service\SalesCommercialAnalyticsService: ~
+  Domains\Sales\Application\Service\SalesReportService: ~
 
 
   Domains\Sales\Application\Contract\SalesWorkspaceSummaryReadPort:
