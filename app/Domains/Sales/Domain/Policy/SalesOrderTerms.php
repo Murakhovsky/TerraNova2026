@@ -8,14 +8,14 @@ use DomainException;
 final class SalesOrderTerms
 {
     private const MAX=99999999999999; // DECIMAL(14,2)
-    public static function normalize(array $input):array
+    public static function normalize(array $input,int $lineLimit=100):array
     {
         if (array_diff(array_keys($input),['currency','lines','discount','tax','tax_included','shipping','total','deal_id','owner_id','attribution'])!==[])
             throw new DomainException('Unknown order field.');
         $currency=$input['currency']??null;
         if (!in_array($currency,['USD','EUR','UAH'],true)) throw new DomainException('Unsupported order currency.');
         $items=$input['lines']??null;
-        if (!is_array($items)||!array_is_list($items)||count($items)<1||count($items)>100) throw new DomainException('Invalid order lines.');
+        if (!is_array($items)||!array_is_list($items)||count($items)<1||count($items)>$lineLimit||$lineLimit<1||$lineLimit>1000) throw new DomainException('Invalid order lines.');
         $lines=[];$subtotal=0;
         foreach ($items as $i=>$line) {
             if (!is_array($line)||array_diff(array_keys($line),['sku','title','quantity','unit_price','product_id','variant_id'])!==[])
