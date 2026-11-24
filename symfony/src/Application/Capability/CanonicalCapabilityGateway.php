@@ -4,6 +4,7 @@ namespace App\Application\Capability;
 
 use App\Application\Capability\Contract\CapabilityInvocationAdapterInterface;
 use App\Application\Capability\Contract\CapabilityInvocationPolicyInterface;
+use App\Application\Capability\Contract\TransactionalCapabilityInvocationPolicyInterface;
 use App\Persistence\Federation\FederationCapabilityBindingResolver;
 use DomainException;
 use Kernel\Module\ActiveModuleResolver;
@@ -94,7 +95,14 @@ final class CanonicalCapabilityGateway {
         foreach ($this->policies as $policy) {
             if ($policy->supports($info['owner_domain'])) $policy->authorize($actor,$contract,$input);
         }
-        $result=$adapter->invoke($actor,$input,$key,$correlationId);
+        $operation=fn()=>$adapter->invoke($actor,$input,$key,$correlationId);
+        if ($contract->kind==='command') foreach (array_reverse($this->policies) as $policy) {
+            if ($policy instanceof TransactionalCapabilityInvocationPolicyInterface&&$policy->supports($info['owner_domain'])) {
+                $next=$operation;
+                $operation=fn()=>$policy->execute($actor,$contract,$input,$next);
+            }
+        }
+        $result=$operation();
         if ($contract->kind==='query') foreach ($this->policies as $policy) {
             if ($policy->supports($info['owner_domain'])) $policy->authorize($actor,$contract,$input);
         }
