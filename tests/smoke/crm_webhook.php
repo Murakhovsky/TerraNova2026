@@ -30,7 +30,7 @@ $inbox = new class implements CrmInboxRepositoryInterface {
         $key = $organizationId . ':' . $provider . ':' . $externalEventId;
         return $this->items[$key]['id'] ?? ($this->items[$key] = ['id' => 'inbox-' . (count($this->items) + 1), 'event' => $eventType])['id'];
     }
-    public function claim(string $organizationId, string $id, string $workerId): ?CrmInboxItem { return null; }
+    public function claim(string $organizationId, string $id, string $workerId, ?string $expectedRevision = null): ?CrmInboxItem { return null; }
     public function lockClaim(CrmInboxItem $item): bool { return true; }
     public function complete(CrmInboxItem $item): void {}
     public function fail(CrmInboxItem $item, Throwable $error): void {}

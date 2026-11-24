@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 use App\Application\Capability\CanonicalCapabilityGateway;
 use App\Application\Integration\Command\RecoverCrmInboxCommand;
+use App\Application\Integration\Command\ProcessCrmInboxNowCommand;
+use App\Application\Integration\Command\ProcessCrmInboxNowCommandHandler;
 use App\Application\Integration\Command\RecoverCrmInboxCommandHandler;
 use App\Application\Integration\IntegrationMutationAudit;
 use App\Infrastructure\Capability\SalesCrmInboxStatusAdapter;
@@ -183,7 +185,14 @@ try{
     $check(in_array($dead,array_column($other->pending(500),'id'),true),'Recovered inbox is not visible to the existing worker sweep.');
     $denied(fn()=>$recover($input,'different-'.$token));
     $denied(fn()=>$recover([...$input,'reason'=>'configuration_repaired'],$key));
-    $check($processor->execute($org,$dead,'after-recovery'),'Recovered inbox not processed.');
+    $current=$repo->status($org,$dead);
+    $processHandler=new ProcessCrmInboxNowCommandHandler($repo,$processor);
+    $makeProcess=static fn(string $revision,string $key)=>new ProcessCrmInboxNowCommand(OrganizationId::fromString($org),$managerId,$dead,$revision,$key,$correlation);
+    $denied(fn()=>$processHandler($makeProcess(str_repeat('0',64),'stale')));
+    $check($read($dead)['status']==='RECEIVED','Stale process changed native item.');
+    $check($processHandler($makeProcess($current['revision'],'process'))===['inbox_id'=>$dead,'status'=>'COMPLETED','replayed'=>false],'Native CRM processing receipt missing.');
+    $check($processHandler($makeProcess($current['revision'],'another-key'))===['inbox_id'=>$dead,'status'=>'COMPLETED','replayed'=>true],'Completed item replay failed.');
+    $check((int)$read($dead)['attempts']===1,'Replay duplicated claim.');
     $check($recover($input,$key)===[...$receipt,'replayed'=>true] && $read($dead)['status']==='COMPLETED','Recovery replay reset a completed item.');
     $q=$b->prepare("SELECT COUNT(*) FROM cos_audit_log WHERE organization_id=? AND subject_id=? AND action='sales.crm.inbox.recover' AND JSON_UNQUOTE(JSON_EXTRACT(metadata,'$.reason_code'))='mapping_repaired'");
     $q->execute([$org,$dead]);

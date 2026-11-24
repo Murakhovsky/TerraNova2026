@@ -17,7 +17,7 @@ interface CrmInboxRepositoryInterface
         string $correlationId,
     ): string;
 
-    public function claim(string $organizationId, string $id, string $workerId): ?CrmInboxItem;
+    public function claim(string $organizationId, string $id, string $workerId, ?string $expectedRevision = null): ?CrmInboxItem;
 
     public function lockClaim(CrmInboxItem $item): bool;
 

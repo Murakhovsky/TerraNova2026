@@ -76,10 +76,26 @@ final readonly class MysqlCrmInboxRepository implements CrmInboxRepositoryInterf
         return (string) $row['id'];
     }
 
-    public function claim(string $organizationId, string $id, string $workerId): ?CrmInboxItem
+    public function claim(string $organizationId, string $id, string $workerId, ?string $expectedRevision = null): ?CrmInboxItem
     {
         if ($this->connection->inTransaction()) throw new DomainException('CRM claim must commit before processing.');
         if (trim($workerId)==='' || strlen($workerId)>100) throw new DomainException('Invalid CRM worker.');
+        if ($expectedRevision===null) return $this->claimAvailable($organizationId,$id,$workerId);
+        $this->connection->beginTransaction();
+        try {
+            $row=$this->status($organizationId,$id,true);
+            $item=$row!==null && $row['signature_verified'] && hash_equals($row['revision'],$expectedRevision)
+                ? $this->claimAvailable($organizationId,$id,$workerId) : null;
+            $this->connection->commit();
+            return $item;
+        } catch (Throwable $error) {
+            if ($this->connection->inTransaction()) $this->connection->rollBack();
+            throw $error;
+        }
+    }
+
+    private function claimAvailable(string $organizationId,string $id,string $workerId): ?CrmInboxItem
+    {
         $dead = $this->connection->prepare("UPDATE cos_crm_inbox SET status='DEAD',locked_at=NULL,locked_by=NULL,last_error='CRM attempt budget exhausted' WHERE id=:id AND organization_id=:organization_id AND attempts>=10 AND (status IN ('RECEIVED','FAILED') OR (status='PROCESSING' AND (locked_at IS NULL OR locked_at<=DATE_SUB(NOW(6), INTERVAL 300 SECOND))))");
         $dead->execute(['id'=>$id,'organization_id'=>$organizationId]);
         $token=substr($workerId,0,60).':'.bin2hex(random_bytes(16));

@@ -32,9 +32,9 @@ final readonly class ProcessCrmInbox
     ) {
     }
 
-    public function execute(string $organizationId, string $inboxId, string $workerId): bool
+    public function execute(string $organizationId, string $inboxId, string $workerId, ?string $expectedRevision = null): bool
     {
-        $item = $this->inbox->claim($organizationId, $inboxId, $workerId);
+        $item = $this->inbox->claim($organizationId, $inboxId, $workerId, $expectedRevision);
         if ($item === null) return false;
 
         try {

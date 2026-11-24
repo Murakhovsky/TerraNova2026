@@ -98,7 +98,7 @@ $makeInbox = static fn (CrmInboxItem $item, bool $throwOnFail = false): CrmInbox
     public array $failed = [];
     public function __construct(private CrmInboxItem $item, private bool $throwOnFail) {}
     public function receive(string $organizationId, string $provider, string $externalEventId, string $eventType, array $payload, string $correlationId): string { return $this->item->id; }
-    public function claim(string $organizationId, string $id, string $workerId): ?CrmInboxItem
+    public function claim(string $organizationId, string $id, string $workerId, ?string $expectedRevision = null): ?CrmInboxItem
     {
         return $organizationId === $this->item->organizationId && $id === $this->item->id ? $this->item : null;
     }
