@@ -49,6 +49,8 @@ try{
     $guard=new \Domains\Sales\Application\Service\SalesMutationGuard(new \Infrastructure\Platform\Persistence\MySql\Transaction\TransactionManager($db),$authority);
     $policy=new \App\Application\Sales\SalesDirectInvocationPolicy($entityScope,new MysqlSalesAccessControl($db),new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOfferRepository($db),$guard);
     $reports=new \Domains\Sales\Application\Service\SalesReportService($analyticsService);
+    $teamSummary=new \Domains\Sales\Application\Service\SalesTeamSummaryService(
+        new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesTeamScope($db,$scope,new MysqlSalesAccessControl($db)),$read);
     $gateway=new CanonicalCapabilityGateway($catalog,$active,new FederationCapabilityBindingResolver($catalog,new DomainModuleRegistry([]),$active),[
         new SalesWorkspaceSummaryAdapter($scope,$read),
         new \App\Infrastructure\Capability\SalesWorkspaceLeadsListAdapter($scoped),
@@ -59,6 +61,7 @@ try{
         new \App\Infrastructure\Capability\SalesAnalyticsConversionAdapter($analyticsService),
         new \App\Infrastructure\Capability\SalesAnalyticsStagesAdapter($analyticsService),
         new \App\Infrastructure\Capability\SalesReportDataAdapter($reports),
+        new \App\Infrastructure\Capability\SalesWorkspaceTeamSummaryAdapter($teamSummary),
         new \App\Infrastructure\Capability\SalesDealStateReadAdapter(new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlDealRepository($db)),
         new \App\Infrastructure\Capability\SalesInboundRequestReadAdapter($read)
     ],[$policy]);
@@ -86,8 +89,16 @@ try{
     $teams->setMember($org,$teamId,$owner,['role'=>'LEAD','status'=>'ACTIVE','assignment_enabled'=>true],(string)$owner);
     $teams->setMember($org,$teamId,$other,['role'=>'MEMBER','status'=>'ACTIVE','assignment_enabled'=>true],(string)$owner);
     $check($invoke(['scope'=>'owner','owner_id'=>$other])['counts']['active_deals']===1,'Active team lead scope failed.');
+    $teamCall=static fn($who)=>$gateway->invoke($who,'sales.workspace.team.summary.read',['team_id'=>$teamId,'pipeline_id'=>$pid],'trusted_read','','team-summary');
+    $teamData=$teamCall($manager);
+    $check($teamData['scope']['member_count']===2&&$teamData['counts']['active_deals']===254,'Team population incorrect.');
+    $teamMoney=array_column($teamData['money_by_currency'],null,'currency');
+    $check($teamMoney['USD']['pipeline_value']==='2512.51'&&$teamMoney['UAH']['pipeline_value']==='333.00','Team exact currency totals incorrect.');
+    $check($read->summaryForOwners($org,[],$pid)['counts']['active_deals']===0,'Empty team widened to tenant.');
+    $reject(fn()=>$teamCall($actor($org,$other)));
     $db->prepare('UPDATE sales_teams SET status="DISABLED" WHERE organization_id=? AND id=?')->execute([$org,$teamId]);
     $reject(fn()=>$invoke(['scope'=>'owner','owner_id'=>$other]));
+    $reject(fn()=>$teamCall($manager));
     // P3: forecast is a complete current projection, not a historical snapshot.
     $analytics=new \Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesCommercialAnalyticsReadModel($db);
     $db->prepare('UPDATE tn_client_cases SET expected_close_at=? WHERE organization_id=? AND assigned_user_id=? AND currency="USD" AND status="active"')->execute(['2026-12-10',$org,$owner]);
