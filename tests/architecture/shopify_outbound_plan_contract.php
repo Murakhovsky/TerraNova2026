@@ -8,7 +8,7 @@ use Domains\ProductManagement\Infrastructure\Shopify\ShopifyOutboundPlanFactory 
 $org='tenant-series-01';$conn=str_repeat('b',32);$id=str_repeat('a',32);
 $native=['product_id'=>$id,'name'=>'ARC Desk Lamp','description'=>'AI concept: not yet manufactured.',
     'variants'=>[['sku'=>'SERIES01-L01']]];
-$draft=Planner::draftProduct($org,$conn,$native,'390.00');
+$draft=Planner::draftProduct($org,$conn,$native,'390.00','USD');
 $vars=$draft['variables'];
 if($vars['input']['status']!=='DRAFT'||$draft['publishable']!==false
     ||$draft['requires_approved_action']!==true
@@ -17,7 +17,7 @@ if($vars['input']['status']!=='DRAFT'||$draft['publishable']!==false
     ||!str_starts_with($vars['input']['descriptionHtml'],'<p>AI concept')) {
     throw new RuntimeException('Shopify S3 draft invariant failed.');
 }
-$changed=Planner::draftProduct('tenant-other',$conn,$native,'390.00');
+$changed=Planner::draftProduct('tenant-other',$conn,$native,'390.00','USD');
 if($changed['variables']['identifier']===$vars['identifier']) {
     throw new RuntimeException('Shopify deterministic handle must be tenant-specific.');
 }
@@ -39,9 +39,14 @@ $reject=static function(callable $run):void {
     try {$run();} catch(DomainException) {return;}
     throw new RuntimeException('Invalid or unsafe Shopify operation was not rejected.');
 };
-$reject(static fn()=>Planner::draftProduct($org,$conn,$native,'299.00'));
+$reject(static fn()=>Planner::draftProduct($org,$conn,$native,'299.00','USD'));
+$reject(static fn()=>Planner::draftProduct($org,$conn,$native,'390.00','UAH'));
+$reject(static fn()=>Planner::draftProduct($org,$conn,$native,'390.00','EUR'));
+if(($draft['canonical_currency']??null)!=='USD'||($draft['required_shop_currency']??null)!=='USD') {
+    throw new RuntimeException('Shopify outbound plan must pin the shop-currency contract.');
+}
 $reject(static fn()=>Planner::draftProduct($org,$conn,
-    [...$native,'variants'=>[['sku'=>'SERIES01-L01'],['sku'=>'SERIES01-L02']]],'390.00'));
+    [...$native,'variants'=>[['sku'=>'SERIES01-L01'],['sku'=>'SERIES01-L02']]],'390.00','USD'));
 $reject(static fn()=>Planner::publicationRequest($org,$conn,'other-id','gid://shopify/Publication/456'));
 $reject(static fn()=>Planner::verifyDraftReadback(
     ['data'=>['product'=>[...$readback['data']['product'],'status'=>'ACTIVE']]],
