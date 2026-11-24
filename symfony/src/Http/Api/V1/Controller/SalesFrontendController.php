@@ -141,7 +141,7 @@ final readonly class SalesFrontendController
             $request,
             SalesFrontendMutationCommand::APPROVAL,
             $id,
-            ['decision' => 'approve', ...$this->input($request)],
+            [...$this->input($request), 'decision' => 'approve'],
         );
     }
 
@@ -151,7 +151,7 @@ final readonly class SalesFrontendController
             $request,
             SalesFrontendMutationCommand::APPROVAL,
             $id,
-            ['decision' => 'reject', ...$this->input($request)],
+            [...$this->input($request), 'decision' => 'reject'],
         );
     }
 
