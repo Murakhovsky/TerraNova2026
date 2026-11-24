@@ -84,7 +84,7 @@ final class ProductManagementShopifyOperatorCommand extends Command
                     'current'=>$current,
                     'configured_enabled'=>$configured,
                     'enabled'=>$enabled,
-                ],Command::SUCCESS);
+                ],$enabled?Command::SUCCESS:Command::FAILURE);
             }
             if (!$this->modules->isEnabled($org,'product_management')) {
                 throw new DomainException('Product Management module not activated for tenant.');
