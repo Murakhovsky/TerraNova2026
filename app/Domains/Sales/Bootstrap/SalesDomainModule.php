@@ -70,6 +70,7 @@ final readonly class SalesDomainModule implements
         private AssignDealOwner $assignDealOwner,
         private ScheduleLeadFollowup $scheduleLeadFollowup,
         private \Domains\Sales\Automation\Action\QueueSalesOfferDeliveryHandler $offerDelivery,
+        private \Domains\Sales\Automation\Action\QueueSalesActivityReminderHandler $activityReminders,
     ) {
     }
 
@@ -91,6 +92,7 @@ final readonly class SalesDomainModule implements
             AssignOwnerHandler::TYPE, RequestDocumentHandler::TYPE, ScheduleMeetingHandler::TYPE,
             ...SendMessageHandler::TYPES, ...ScheduleFollowupHandler::TYPES,
             \Domains\Sales\Automation\Action\QueueSalesOfferDeliveryHandler::TYPE,
+            \Domains\Sales\Automation\Action\QueueSalesActivityReminderHandler::TYPE,
         ];
     }
 
@@ -98,6 +100,7 @@ final readonly class SalesDomainModule implements
     {
         return [
             $this->offerDelivery,
+            $this->activityReminders,
             new CreateFollowupTaskHandler($this->crm),
             new CreateLeadFollowupTaskHandler($this->scheduleLeadFollowup),
             new UpdateDealHandler($this->deals),

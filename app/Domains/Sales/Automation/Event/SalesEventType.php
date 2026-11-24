@@ -6,6 +6,16 @@ namespace Domains\Sales\Automation\Event;
 /** Canonical event names that integrations, detectors and Sales operations may publish through the Kernel EventBus. */
 final class SalesEventType
 {
+    public const ACTIVITY_RECORDED = 'sales.activity.recorded';
+    public const ACTIVITY_COMPLETED = 'sales.activity.completed';
+    public const ACTIVITY_CANCELLED = 'sales.activity.cancelled';
+    public const ACTIVITY_RESCHEDULED = 'sales.activity.rescheduled';
+    public const ACTIVITY_REMINDER_DUE = 'sales.activity.reminder.due';
+    public const OFFER_CREATED = 'sales.offer.created';
+    public const OFFER_REVISED = 'sales.offer.revised';
+    public const OFFER_STATE_CHANGED = 'sales.offer.state_changed';
+    public const NEGOTIATION_RECORDED = 'sales.negotiation.recorded';
+    public const OFFER_DELIVERY_QUEUED = 'sales.offer.delivery.queued';
     public const LEAD_CONTACTED = 'sales.lead.contacted';
     public const LEAD_QUALIFIED = 'sales.lead.qualified';
     public const LEAD_DISQUALIFIED = 'sales.lead.disqualified';
@@ -27,6 +37,7 @@ final class SalesEventType
     public static function all(): array
     {
         return [
+            self::ACTIVITY_RECORDED, self::ACTIVITY_COMPLETED, self::ACTIVITY_CANCELLED, self::ACTIVITY_RESCHEDULED, self::ACTIVITY_REMINDER_DUE, self::OFFER_CREATED, self::OFFER_REVISED, self::OFFER_STATE_CHANGED, self::NEGOTIATION_RECORDED, self::OFFER_DELIVERY_QUEUED,
             self::LEAD_CONTACTED, self::LEAD_QUALIFIED, self::LEAD_DISQUALIFIED,
             self::DEAL_WON, self::DEAL_LOST, self::DEAL_STUCK, self::DEAL_OWNER_ASSIGNED,
             self::MESSAGE_RECEIVED, self::MESSAGE_SENT,

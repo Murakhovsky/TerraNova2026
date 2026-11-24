@@ -26,7 +26,7 @@ final readonly class MysqlSalesScheduledActivityRepository implements SalesSched
     public function read(string $org,string $kind,int $target,int $activity):?array
     {
         [$t,$a,$fk,$types]=$this->table($kind);
-        return $this->one("SELECT a.id,a.activity_type,a.title,a.body,a.due_at,a.completed_at,a.cancelled_at,a.cancellation_reason FROM $a a JOIN $t t ON t.id=a.$fk WHERE t.organization_id=? AND t.id=? AND a.id=? AND a.activity_type IN ($types)".($kind==='deal'?' AND a.organization_id=t.organization_id':'').($this->connection->inTransaction()?' FOR UPDATE':''),[$org,$target,$activity]);
+        return $this->one("SELECT a.id,a.activity_type,a.title,a.body,a.due_at,a.completed_at,a.cancelled_at,a.cancellation_reason,COALESCE(a.user_id,t.assigned_user_id) owner_id FROM $a a JOIN $t t ON t.id=a.$fk WHERE t.organization_id=? AND t.id=? AND a.id=? AND a.activity_type IN ($types)".($kind==='deal'?' AND a.organization_id=t.organization_id':'').($this->connection->inTransaction()?' FOR UPDATE':''),[$org,$target,$activity]);
     }
     public function transition(string $org,string $kind,int $target,int $activity,string $operation,?string $due,?string $reason,int $actor):void
     {
@@ -51,7 +51,7 @@ final readonly class MysqlSalesScheduledActivityRepository implements SalesSched
         $q->execute($args);$next=$q->fetchColumn();
         $this->connection->prepare("UPDATE $t SET next_contact_at=?,updated_at=NOW() WHERE organization_id=? AND id=?")->execute([$next===false?null:$next,$org,$target]);
     }
-    public function overdue(string $org,string $now,int $limit):array
+    public function overdue(string $org,string $now,int $limit,bool $unannounced=false):array
     {
         $limit=max(1,min(200,$limit));
         $q=$this->connection->prepare('SELECT * FROM (
@@ -62,8 +62,13 @@ final readonly class MysqlSalesScheduledActivityRepository implements SalesSched
             SELECT "deal",d.id,a.id,a.activity_type,a.due_at,COALESCE(a.user_id,d.assigned_user_id)
             FROM tn_client_case_activities a JOIN tn_client_cases d ON d.id=a.client_case_id AND d.organization_id=a.organization_id
             WHERE d.organization_id=? AND d.status NOT IN ("closed","lost") AND a.activity_type IN ("task","followup","meeting","viewing") AND a.completed_at IS NULL AND a.cancelled_at IS NULL AND a.due_at<=?
-            ) pending ORDER BY due_at,target_type,activity_id LIMIT '.$limit);
-        $q->execute([$org,$now,$org,$now]);return $q->fetchAll(PDO::FETCH_ASSOC)?:[];
+            ) pending '.($unannounced?' WHERE NOT EXISTS (SELECT 1 FROM sales_operation_receipts r WHERE r.organization_id=? AND r.operation_type="activity.reminder.due" AND r.idempotency_key=SHA2(CONCAT(pending.target_type,":",pending.target_id,":",pending.activity_id,":",pending.due_at,":",COALESCE(pending.owner_id,0)),256))':'').' ORDER BY due_at,target_type,activity_id LIMIT '.$limit);
+        $args=[$org,$now,$org,$now];if($unannounced)$args[]=$org;
+        $q->execute($args);return $q->fetchAll(PDO::FETCH_ASSOC)?:[];
+    }
+    public function owner(string $org,int $user):?array
+    {
+        return $this->one('SELECT u.id,u.email,u.full_name FROM tn_users u JOIN cos_organization_memberships m ON m.organization_id=u.organization_id AND m.user_id=u.id WHERE u.organization_id=? AND u.id=? AND u.status="active" AND m.status="ACTIVE"'.($this->connection->inTransaction()?' FOR UPDATE':''),[$org,$user]);
     }
     private function one(string $sql,array $args):?array
     {
