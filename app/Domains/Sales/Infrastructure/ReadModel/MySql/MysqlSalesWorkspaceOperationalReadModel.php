@@ -135,8 +135,8 @@ final readonly class MysqlSalesWorkspaceOperationalReadModel implements SalesWor
             . 'WHEN c.priority IN ("high","urgent") THEN "Review high-priority deal" ELSE "Continue planned next action" END ai_recommendation '
             . 'FROM tn_client_cases c INNER JOIN tn_people p ON p.id=c.person_id AND p.organization_id=c.organization_id '
             . 'LEFT JOIN tn_users u ON u.id=c.assigned_user_id AND u.organization_id=c.organization_id '
-            . 'LEFT JOIN sales_pipeline_stages s ON s.id=c.stage_id AND s.organization_id=c.organization_id '
-            . 'LEFT JOIN sales_deal_stage_history h ON h.id=(SELECT h2.id FROM sales_deal_stage_history h2 WHERE h2.organization_id=c.organization_id AND h2.deal_id=CAST(c.id AS CHAR) AND h2.pipeline_id=c.pipeline_id AND h2.to_stage_id=c.stage_id AND h2.left_at IS NULL ORDER BY COALESCE(h2.entered_at,h2.projected_at) DESC,h2.id DESC LIMIT 1) '
+            . 'LEFT JOIN sales_pipeline_stages s ON s.id=c.stage_id AND s.organization_id=c.organization_id AND s.pipeline_id=c.pipeline_id '
+            . 'LEFT JOIN sales_deal_stage_history h ON h.id=(SELECT h2.id FROM sales_deal_stage_history h2 WHERE CONVERT(h2.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci=CONVERT(c.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci AND CONVERT(h2.deal_id USING utf8mb4) COLLATE utf8mb4_unicode_ci=CONVERT(CAST(c.id AS CHAR) USING utf8mb4) COLLATE utf8mb4_unicode_ci AND CONVERT(h2.pipeline_id USING utf8mb4) COLLATE utf8mb4_unicode_ci=CONVERT(c.pipeline_id USING utf8mb4) COLLATE utf8mb4_unicode_ci AND CONVERT(h2.to_stage_id USING utf8mb4) COLLATE utf8mb4_unicode_ci=CONVERT(c.stage_id USING utf8mb4) COLLATE utf8mb4_unicode_ci AND h2.left_at IS NULL ORDER BY COALESCE(h2.entered_at,h2.projected_at) DESC,h2.id DESC LIMIT 1) '
             . 'WHERE ' . implode(' AND ', $where) . ' ORDER BY COALESCE(s.sort_order,0),c.updated_at DESC LIMIT '
             . $this->limit($filters['limit'] ?? 100)
             . ' OFFSET ' . $this->offset($filters['offset'] ?? 0),
