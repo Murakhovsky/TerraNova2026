@@ -81,6 +81,8 @@ final readonly class SalesOrderLifecycleService
                 }
             }elseif($operation==='cancel'){
                 if(!in_array($status,['placed','confirmed'],true))throw new DomainException('Only placed or confirmed orders may be cancelled.');
+                // Use the same stock lock order as fulfillment and release across orders.
+                usort($allocations,fn($a,$b)=>[$byLine[$a['line_no']]['variant_id'],$a['location_id']??'',$a['allocation_id']]<=>[$byLine[$b['line_no']]['variant_id'],$b['location_id']??'',$b['allocation_id']]);
                 foreach($allocations as $a){
                     $qty=$a['quantity']-$a['fulfilled']-$a['cancelled'];
                     if($qty>0){$effects[]=$this->settle($org,$actor,$id,$revision,'release',$a,$qty,$correlation);$a['cancelled']+=$qty;$this->lifecycle->updateAllocation($org,$id,$a);}
