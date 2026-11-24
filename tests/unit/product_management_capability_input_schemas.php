@@ -10,9 +10,18 @@ foreach($raw['contributions']['capability_contracts'] as $definition) {
     $cap=CapabilityContract::fromArray($definition);
     $contracts[$cap->id]=$cap;
 }
-if(count($contracts)!==50)throw new RuntimeException('Missing typed PM contracts.');
+if(count($contracts)!==59)throw new RuntimeException('Missing typed PM contracts.');
 $validator=new CapabilityJsonInputValidator();
 $good=[
+ 'product_management.attribute.define'=>['code'=>'material','name'=>'Material','value_type'=>'enum','choices'=>['oak','walnut']],
+ 'product_management.attribute.search'=>['limit'=>30],
+ 'product_management.attribute.category.bind'=>['category_id'=>str_repeat('a',32),'code'=>'material','is_required'=>true,'is_axis'=>true],
+ 'product_management.attribute.category.get'=>['category_id'=>str_repeat('a',32)],
+ 'product_management.attribute.product.set'=>['product_id'=>str_repeat('a',32),'expected_revision'=>1,'values'=>[['code'=>'material','value'=>'oak']]],
+ 'product_management.attribute.product.get'=>['product_id'=>str_repeat('a',32)],
+ 'product_management.attribute.product.filter'=>['code'=>'material','value'=>'oak'],
+ 'product_management.variant.matrix.preview'=>['product_id'=>str_repeat('a',32),'sku_prefix'=>'SKU','axes'=>[['code'=>'material','choices'=>['oak']]]],
+ 'product_management.variant.matrix.create'=>['product_id'=>str_repeat('a',32),'sku_prefix'=>'SKU','axes'=>[['code'=>'material','choices'=>['oak']]],'expected_revision'=>1],
  'product_management.stock.count.session.apply'=>['target_type'=>'product_stock_count_session','target_id'=>str_repeat('a',32),'parameters'=>['location_id'=>str_repeat('b',32),'source_ref'=>'count:ACT-1','rows'=>[['variant_id'=>str_repeat('c',32),'counted'=>'0','expected_revision'=>0]]]],
  'product_management.stock.count.session.get'=>['session_id'=>str_repeat('a',32)],
  'product_management.stock.count.session.candidates'=>['location_id'=>str_repeat('a',32),'limit'=>50],
@@ -59,6 +68,10 @@ $good=[
 ];
 foreach($good as $id=>$input) $validator->validate($contracts[$id],$input);
 $bad=[
+ 'product_management.attribute.define'=>[['code'=>'MATERIAL','name'=>'Material','value_type'=>'enum'],['code'=>'material','name'=>'Material','value_type'=>'unknown']],
+ 'product_management.attribute.product.set'=>[['product_id'=>str_repeat('a',32),'expected_revision'=>0,'values'=>[['code'=>'material','value'=>'oak']]],['product_id'=>str_repeat('a',32),'expected_revision'=>1,'values'=>[['code'=>'material','value'=>['oak']]]]],
+ 'product_management.variant.matrix.preview'=>[['product_id'=>str_repeat('a',32),'sku_prefix'=>'SKU','axes'=>[]]],
+ 'product_management.variant.matrix.create'=>[['product_id'=>str_repeat('a',32),'sku_prefix'=>'SKU','axes'=>[['code'=>'material','choices'=>['oak']]]]],
  'product_management.stock.count.session.apply'=>[['target_type'=>'product_stock_count_session','target_id'=>str_repeat('a',32),'parameters'=>['location_id'=>str_repeat('b',32),'source_ref'=>'count:ACT-1','rows'=>[]]]],
  'product_management.stock.count.session.get'=>[['session_id'=>'invalid']],
  'product_management.stock.count.session.candidates'=>[['location_id'=>str_repeat('a',32),'limit'=>51]],
