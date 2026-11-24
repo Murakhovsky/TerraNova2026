@@ -65,4 +65,15 @@ $loc=$products->createLocation($org,'ATTR-WH','Warehouse','location',$actor,$tra
 $products->recordMovement($org,$vid,$loc,'3','receipt','QA','stock',$actor,$trace);
 $assert($products->balance($org,$vid,$loc)['on_hand']==='3.000000'&&$products->balance($org,$p['variant_id'],$loc)['on_hand']==='0.000000','independent stock identity');
 $assert(count($products->getProduct($org,$id)['variants'])===5,'no duplicate writes');
-echo "Product Management typed attributes, category sets, filtering, revision and matrix native MySQL PASS.\n";
+$second=$products->createProduct($org,['name'=>'Second furniture','sku'=>'SECOND'.$tag,'type'=>'stock'],'second',$actor,$trace)['product_id'];
+$products->assignCategory($org,$second,$category,'assign-second',$actor,$trace);
+$r1=$products->productAttributes($org,$id);$r2=$products->productAttributes($org,$second);
+$targets=[['product_id'=>$id,'expected_revision'=>$r1['revision']],['product_id'=>$second,'expected_revision'=>$r2['revision']]];
+$stale=$targets;usort($stale,fn($a,$b)=>strcmp($a['product_id'],$b['product_id']));$stale[1]['expected_revision']++;
+$patch=[['code'=>'notes','value'=>'Bulk changed']];
+$deny(fn()=>$products->bulkSetAttributes($org,$stale,$patch,'stale-bulk',$actor,$trace),'stale second target');
+$assert($products->productAttributes($org,$id)===$r1&&$products->productAttributes($org,$second)===$r2,'bulk rollback');
+$bulk=$products->bulkSetAttributes($org,$targets,$patch,'bulk',$actor,$trace);
+$assert(count($bulk['items'])===2&&$bulk===$products->bulkSetAttributes($org,array_reverse($targets),$patch,'bulk',$actor,$trace),'bulk exact replay');
+$assert(count($products->filterAttributes($org,'notes','Bulk changed'))===2,'both bulk targets independently readable');
+echo "Product Management typed attributes, category sets, filtering, bulk editing, revision and matrix native MySQL PASS.\n";
