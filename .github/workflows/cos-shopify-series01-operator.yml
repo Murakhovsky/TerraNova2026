@@ -1,0 +1,73 @@
+name: COS Shopify SERIES01 supervised connection
+on:
+  workflow_dispatch:
+    inputs:
+      organization:
+        description: 'Exact existing COS tenant ID'
+        required: true
+        type: string
+        default: default
+      operation:
+        description: 'preflight/provision/pull/status/candidates'
+        required: true
+        type: choice
+        default: preflight
+        options: [preflight, provision, status, pull, candidates]
+      connection_id:
+        description: '32-char connection ID for pull/status/candidates'
+        type: string
+        required: false
+permissions:
+  contents: read
+concurrency:
+  group: cos-shopify-series01-${{ inputs.organization }}
+  cancel-in-progress: false
+jobs:
+  operator:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment: AWS TN2026
+    timeout-minutes: 8
+    env:
+      ORG: ${{ inputs.organization }}
+      ACTION: ${{ inputs.operation }}
+      CONNECTION: ${{ inputs.connection_id }}
+      DEV_HOST: ${{ secrets.DEV_HOST }}
+      DEV_USER: ${{ secrets.DEV_USER }}
+      DEV_PORT: ${{ secrets.DEV_PORT }}
+      DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+    steps:
+      - name: Input contract
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$ORG" =~ ^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,39}$ ]] || exit 2
+          case "$ACTION" in
+            preflight|provision) [[ -z "$CONNECTION" ]] || exit 2 ;;
+            pull|status|candidates) [[ "$CONNECTION" =~ ^[a-f0-9]{32}$ ]] || exit 2 ;;
+            *) exit 2 ;;
+          esac
+          for n in DEV_HOST DEV_USER DEV_PORT DEV_SSH_KEY; do
+            [[ -n "${!n:-}" ]] || { echo "Missing $n"; exit 2; }
+          done
+          [[ "$DEV_PORT" =~ ^[0-9]{1,5}$ ]] || exit 2
+      - name: Configure SSH
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$DEV_SSH_KEY" > "$HOME/.ssh/cos_series01_key"
+          chmod 600 "$HOME/.ssh/cos_series01_key"
+          ssh-keyscan -T 10 -p "$DEV_PORT" -H "$DEV_HOST" > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test -s "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+      - name: Execute exact supervised COS Shopify command
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          cmd=(sudo -n bash /opt/cos/bin/shopify-series01-operator.sh "$ORG" "$ACTION")
+          if [[ -n "$CONNECTION" ]]; then cmd+=("$CONNECTION"); fi
+          printf -v remote_command '%q ' "${cmd[@]}"
+          ssh -T -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes \
+            -i "$HOME/.ssh/cos_series01_key" -p "$DEV_PORT" \
+            "$DEV_USER@$DEV_HOST" "$remote_command"
