@@ -12,6 +12,21 @@ final readonly class MysqlSalesTeamScope implements SalesTeamScopeInterface
 {
     public function __construct(private PDO $connection,private SalesWorkspaceScopeInterface $scope,private SalesAccessControlInterface $access) {}
 
+    public function ledMembers(string $org,int $actor):array
+    {
+        $this->scope->resolve($org,$actor,'self',null);
+        $q=$this->connection->prepare('SELECT DISTINCT m.user_id FROM sales_team_members a
+            JOIN sales_teams t ON t.organization_id=a.organization_id AND t.id=a.team_id AND t.status="ACTIVE"
+            JOIN sales_team_members m ON m.organization_id=a.organization_id AND m.team_id=a.team_id AND m.status="ACTIVE"
+            JOIN tn_users u ON u.organization_id=m.organization_id AND u.id=m.user_id AND u.status="active"
+            JOIN cos_organization_memberships om ON om.organization_id=m.organization_id AND om.user_id=m.user_id AND om.status="ACTIVE" AND om.role IN ("manager","admin")
+            WHERE a.organization_id=? AND a.user_id=? AND a.role="LEAD" AND a.status="ACTIVE" ORDER BY m.user_id LIMIT 1001');
+        $q->execute([$org,$actor]);$ids=array_values(array_unique([$actor,...array_map('intval',$q->fetchAll(PDO::FETCH_COLUMN))]));
+        sort($ids,SORT_NUMERIC);
+        if (count($ids)>1000) throw new DomainException('Sales team exceeds supported report bound.');
+        return $ids;
+    }
+
     public function members(string $org,int $actor,string $team):array
     {
         $this->scope->resolve($org,$actor,'self',null);
