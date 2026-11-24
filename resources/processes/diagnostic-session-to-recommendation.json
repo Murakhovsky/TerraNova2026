@@ -22,21 +22,22 @@
   "steps": [
     {
       "id": "methodology",
-      "label": "Draft and publish methodology version",
+      "label": "Validate, regress and publish prepared methodology version",
       "kind": "operation",
       "owner": "methodology author",
       "domain": "diagnostic",
-      "capability": null,
-      "capability_gap": "missing-domain-capability",
+      "capability": "diagnostic.methodology.publish",
       "critical": true,
       "runtime": [
         {
-          "type": "use_case",
-          "ref": "DraftDiagnosticPack"
+          "type": "source",
+          "path": "app/Domains/Diagnostic/Application/Service/MethodologyStudioService.php",
+          "symbol": "function publish("
         },
         {
-          "type": "use_case",
-          "ref": "PublishDiagnosticPack"
+          "type": "source",
+          "path": "symfony/src/Infrastructure/Capability/DiagnosticMethodologyPublishAdapter.php",
+          "symbol": "DiagnosticMethodologyPublishAdapter"
         }
       ]
     },

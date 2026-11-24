@@ -1,0 +1,80 @@
+<?php
+declare(strict_types=1);
+
+use App\Application\Capability\CanonicalCapabilityGateway;
+use App\Infrastructure\Capability\DiagnosticMethodologyCompileAdapter;
+use App\Persistence\Federation\FederationCapabilityBindingResolver;
+use Domains\Diagnostic\Application\Service\MethodologyStudioService;
+use Domains\Diagnostic\Application\Service\DiagnosticMethodologyAccess;
+use Tests\Support\InMemoryMethodologyStudioRepository;
+use Kernel\Identity\Model\OrganizationRole;
+use Kernel\Module\ActiveModuleResolver;
+use Kernel\Module\CanonicalCapabilityCatalog;
+use Kernel\Module\Contract\ModuleStateRepositoryInterface;
+use Kernel\Module\DomainModuleRegistry;
+use Kernel\Module\ModuleCatalog;
+use Kernel\Module\ModuleDefinition;
+use Kernel\Shared\Domain\OrganizationId;
+use Kernel\Shared\Domain\UserId;
+use Kernel\Tenant\Model\Permission;
+use Kernel\Tenant\Model\TenantContext;
+use Kernel\Tenant\Model\TenantPermissions;
+
+$root = dirname(__DIR__, 2);
+require $root . '/vendor/autoload.php';
+spl_autoload_register(static function (string $name) use ($root): void {
+    if (!str_starts_with($name, 'App\\')) return;
+    $file = $root . '/symfony/src/' . str_replace('\\', '/', substr($name, 4)) . '.php';
+    if (is_file($file)) require $file;
+});
+$module = require $root . '/app/Domains/Diagnostic/module.php';
+$moduleCatalog = new ModuleCatalog([ModuleDefinition::fromArray($module)]);
+$catalog = new CanonicalCapabilityCatalog($moduleCatalog);
+$state = new class implements ModuleStateRepositoryInterface {
+    public bool $enabled = true;
+    public function enabledOverride(string $org, string $module): ?bool { return $this->enabled; }
+    public function setEnabled(string $org, string $module, bool $enabled): void { $this->enabled = $enabled; }
+};
+$active = new ActiveModuleResolver($moduleCatalog, $state);
+$resolver = new FederationCapabilityBindingResolver($catalog, new DomainModuleRegistry([]), $active);
+require_once $root.'/tests/Support/InMemoryMethodologyStudioRepository.php';
+$repo=new InMemoryMethodologyStudioRepository();
+$studio=new MethodologyStudioService($repo);
+$org='tenant-a';$pack='sales-studio';$version='0.2.0';
+$studio->create($org,['slug'=>$pack,'name'=>'Sales Diagnostic','domain'=>'Sales','methodology_version'=>$version],'31');
+$source=json_decode(file_get_contents($root.'/resources/diagnostic/sales/0.1.0/sales-diagnostic-pack.json'),true,512,JSON_THROW_ON_ERROR);
+$map=['sections'=>'AREA','criteria'=>'CRITERION','facts'=>'FACT','metrics'=>'METRIC','questions'=>'QUESTION','evidence_requirements'=>'EVIDENCE_REQUIREMENT','rules'=>'RULE','dependencies'=>'DEPENDENCY','recommendations'=>'RECOMMENDATION','benchmarks'=>'BENCHMARK','scoring'=>'SCORING'];
+foreach($map as $key=>$type)foreach($source[$key]??[] as $i=>$entity)$studio->saveEntity($org,$pack,$version,$type,$entity+['order'=>$i],'31');
+$repo->versionsData[$org][$pack][$version]['organization_id']=$org;
+$db=new PDO('sqlite::memory:',null,null,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);
+$db->exec('CREATE TABLE diagnostic_user_permissions (organization_id TEXT,user_id INTEGER,permission TEXT,allowed INTEGER)');
+$db->exec('CREATE TABLE cos_organization_memberships (organization_id TEXT,user_id INTEGER,role TEXT,status TEXT)');
+$db->exec('CREATE TABLE diagnostic_role_permissions (role TEXT,permission TEXT)');
+$db->exec("INSERT INTO diagnostic_user_permissions VALUES ('tenant-a',31,'diagnostic.methodology.edit',1),('tenant-a',32,'diagnostic.methodology.edit',0),('tenant-b',31,'diagnostic.methodology.edit',1)");
+$access=new DiagnosticMethodologyAccess($db);
+$gateway=new CanonicalCapabilityGateway($catalog,$active,$resolver,[new DiagnosticMethodologyCompileAdapter($studio,$repo,$access)]);
+$actor=static fn(string $org,string $role='manager',string $id='31')=>new TenantContext(UserId::fromString($id),OrganizationId::fromString($org),OrganizationRole::fromString($role),[Permission::fromString(TenantPermissions::ACCESS),Permission::fromString(TenantPermissions::MANAGE)]);
+$manager=$actor($org);
+$reject=static function(callable $call):void{try{$call();}catch(DomainException){return;}throw new RuntimeException('Unsafe compilation accepted.');};
+$input=['pack_id'=>$pack,'methodology_version'=>$version];
+$cap='diagnostic.methodology.compile';
+$call=static fn(array $input)=> $gateway->invoke($manager,$cap,$input,'human_api','','trace');
+$before=serialize([$repo->versionsData,$repo->packsData,$repo->entityData,$repo->audits,$repo->results]);
+$result=$call($input);
+if($result!==$call($input)||$result['pack_id']!==$pack||$result['methodology_version']!==$version||$result['runtime_version']!==2000||$result['status']!=='DRAFT'||!preg_match('/^[a-f0-9]{64}$/D',$result['content_hash']))throw new RuntimeException('Invalid compilation receipt.');
+if(serialize([$repo->versionsData,$repo->packsData,$repo->entityData,$repo->audits,$repo->results])!==$before)throw new RuntimeException('Read-only compile mutated methodology.');
+$reject(fn()=> $gateway->invoke($actor($org,'manager','32'),$cap,$input,'human_api','','trace'));
+$reject(fn()=> $gateway->invoke($actor('tenant-b'),$cap,$input,'human_api','','trace'));
+$reject(fn()=> $gateway->invoke($actor($org,'viewer'),$cap,$input,'human_api','','trace'));
+$reject(fn()=> $call([...$input,'organization_id'=>'tenant-b']));
+$reject(fn()=> $call([...$input,'methodology_version'=>'0.0.0']));
+$reject(fn()=> $call([...$input,'methodology_version'=>'0.1.1000']));
+$reject(fn()=> $call([...$input,'methodology_version'=>'0.3.0']));
+$repo->versionsData[$org][$pack][$version]['status']='PUBLISHED';
+$repo->versionsData[$org][$pack][$version]['content_hash']=$result['content_hash'];
+if($call($input)['status']!=='PUBLISHED')throw new RuntimeException('Published snapshot failed hash verification.');
+$repo->versionsData[$org][$pack][$version]['content_hash']=str_repeat('0',64);
+$reject(fn()=> $call($input));
+$state->enabled=false;
+$reject(fn()=> $call($input));
+echo "Diagnostic methodology compile permission, isolation and read-only fingerprint PASS.\n";

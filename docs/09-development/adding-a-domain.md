@@ -146,3 +146,7 @@ Domain готовий, коли:
 `docs/.vitepress/das-001-legacy-surface.json` фіксує точні старі descriptive IDs і process references, а не дозвіл їх викликати. Нормалізований ID або посилання вилучається з цього реєстру в тому самому PR; descriptive ceiling зменшується. Не видаляти чинні access/UI identifiers без аудиту споживачів. Для суворого контролю завершення боргу виконується `npm run docs:domain-zero-debt`; команда навмисно повертає ненульовий код, поки є legacy surface або process gaps.
 
 У pull request CI порівнює реєстри з точним SHA базової гілки: додавання або підміна legacy ID, descriptive process reference чи process gap блокуються навіть при одночасному редагуванні manifest і реєстру. Допускається погашення боргу, а не його перенесення на інший ID.
+
+### Diagnostic Methodology Studio: транзакційна межа
+
+Studio mutation commands використовують спільний tenant-scoped lock та транзакцію repository; validation, regression evidence, native compiled revision, publication status, activation і audit комітяться разом. Існуюча published native revision не перезаписується, active version не архівується до перемикання. Повторна публікація не виконує повторної активації. Це hardening наявної межі, а не новий публічний Capability Contract; окреме runtime acceptance залишається обов'язковим.

@@ -5,6 +5,14 @@ use Domains\Diagnostic\Application\Contract\MethodologyStudioRepositoryInterface
 final class InMemoryMethodologyStudioRepository implements MethodologyStudioRepositoryInterface
 {
  public array $packsData=[],$versionsData=[],$entityData=[],$scenarioData=[],$results=[],$audits=[];
+ private bool $inMutation=false;
+ public function withMutation(string $organizationId,callable $operation):mixed
+ {
+  if($this->inMutation)return $operation();
+  $snapshot=[$this->packsData,$this->versionsData,$this->entityData,$this->scenarioData,$this->results,$this->audits];
+  $this->inMutation=true;
+  try{return $operation();}catch(\Throwable $e){[$this->packsData,$this->versionsData,$this->entityData,$this->scenarioData,$this->results,$this->audits]=$snapshot;throw $e;}finally{$this->inMutation=false;}
+ }
  public function packs(string $o):array{return array_values($this->packsData[$o]??[]);}public function pack(string $o,string $p):?array{return $this->packsData[$o][$p]??null;}public function savePack(string $o,array $p):void{$this->packsData[$o][$p['id']]=$p+['pack_id'=>$p['id'],'active_version'=>null,'active_methodology_version'=>null];}
  public function versions(string $o,string $p):array{return array_values($this->versionsData[$o][$p]??[]);}public function version(string $o,string $p,string $v):?array{return $this->versionsData[$o][$p][$v]??null;}public function saveVersion(string $o,array $v):void{$this->versionsData[$o][$v['pack_id']][$v['methodology_version']]=array_merge($this->versionsData[$o][$v['pack_id']][$v['methodology_version']]??[],$v);}public function activate(string $o,string $p,string $mv,int $v):void{$this->packsData[$o][$p]['active_version']=$v;$this->packsData[$o][$p]['active_methodology_version']=$mv;}public function publishCompiled(string $o,array $p,int $rv,string $json,string $hash):void{$this->packsData[$o][$p['pack_id']]['compiled'][$rv]=['json'=>$json,'hash'=>$hash];}
  public function entities(string $o,string $p,string $v):array{return array_values($this->entityData[$o][$p][$v]??[]);}public function entity(string $o,string $p,string $v,string $t,string $id):?array{return $this->entityData[$o][$p][$v][$t.':'.$id]??null;}public function saveEntity(string $o,string $p,string $v,string $t,string $id,array $payload,int $position,bool $enabled):void{$this->entityData[$o][$p][$v][$t.':'.$id]=['entity_type'=>$t,'entity_id'=>$id,'position'=>$position,'enabled'=>$enabled,'payload'=>$payload];}public function deleteEntity(string $o,string $p,string $v,string $t,string $id):void{unset($this->entityData[$o][$p][$v][$t.':'.$id]);}

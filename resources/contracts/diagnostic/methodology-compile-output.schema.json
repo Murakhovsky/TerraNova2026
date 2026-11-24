@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "title": "DiagnosticMethodologyCompileOutputV1",
+  "required": [
+    "pack_id",
+    "methodology_version",
+    "runtime_version",
+    "status",
+    "content_hash"
+  ],
+  "properties": {
+    "pack_id": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 191,
+      "pattern": "^[a-z][a-z0-9-]+$"
+    },
+    "methodology_version": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 11,
+      "pattern": "^(0|[1-9][0-9]{0,2})\\.(0|[1-9][0-9]{0,2})\\.(0|[1-9][0-9]{0,2})$"
+    },
+    "runtime_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "DRAFT",
+        "VALIDATING",
+        "READY",
+        "PUBLISHED"
+      ]
+    },
+    "content_hash": {
+      "type": "string",
+      "minLength": 64,
+      "maxLength": 64,
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}
