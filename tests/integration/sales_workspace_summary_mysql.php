@@ -293,6 +293,7 @@ try{
     $reject(fn()=>$gateway->invoke($manager,'sales.order.create',$orderInput,'trusted_read','no-write-'.$token,'order-test'));
     $q=$db->prepare('SELECT payload FROM sales_order_evidence WHERE organization_id=? AND order_id=?');$q->execute([$org,$orderId]);$events=$q->fetchAll(PDO::FETCH_COLUMN);
     $fact=json_decode($events[0],true,512,JSON_THROW_ON_ERROR);
+    $check(json_decode(json_encode($orderRepo->placement($org,$orderId),JSON_THROW_ON_ERROR),true)===$fact&&$orderRepo->placement('foreign-'.$token,$orderId)===null,'Cross-domain placement evidence scope failed.');
     $check(count($events)===1&&$fact['event_type']==='sales.commerce.order.placed'&&$fact['realized_revenue']===null&&$fact['financial_evidence_reference']===null&&$fact['attribution_status']==='unresolved'&&$fact['attribution_observations']['utm_campaign']==='test-campaign','Placement fabricated attribution or financial fact.');
     $check($writes->quickUpdateOpportunity($ownedId,['priority'=>'high'],$owner,'p4-own')->ok,'Guarded own write failed.');
     $check($read->deal($org,$ownedId)['priority']==='high','Guarded write did not change native state.');
