@@ -292,8 +292,19 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
 
     public function today(string $organizationId, int $ownerId): array
     {
-        $ownerSql = $ownerId > 0 ? ' AND c.assigned_user_id = :owner_id' : '';
-        $base = ['organization_id' => $organizationId] + ($ownerId > 0 ? ['owner_id' => $ownerId] : []);
+        return $this->todayForOwners($organizationId,$ownerId>0?[$ownerId]:null);
+    }
+
+    /** Null means authorized tenant population, [] means no records. */
+    public function todayForOwners(string $organizationId,?array $owners):array
+    {
+        if ($owners!==null) {
+            if (!array_is_list($owners)||count($owners)>1000) throw new \DomainException('Invalid Sales Today population.');
+            foreach ($owners as $id) if (!is_int($id)||$id<1) throw new \DomainException('Invalid Sales Today owner.');
+        }
+        $population=$owners===null?'':($owners===[]?' AND 1=0':' AND %s.assigned_user_id IN ('.implode(',',$owners).')');
+        $ownerSql=$population===''?'':sprintf($population,'c');
+        $base=['organization_id'=>$organizationId];
         $query = fn (string $condition): array => $this->all(
             'SELECT c.id, c.public_id, c.title, p.full_name customer, c.priority, c.next_contact_at, c.last_activity_at '
             . 'FROM tn_client_cases c INNER JOIN tn_people p ON p.id = c.person_id AND p.organization_id = c.organization_id '
@@ -301,8 +312,8 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
             . ' ORDER BY c.next_contact_at IS NULL, c.next_contact_at, c.updated_at DESC LIMIT 20',
             $base,
         );
-        $activityOwnerSql = $ownerId > 0 ? ' AND c.assigned_user_id = :activity_owner_id' : '';
-        $activityBase = ['activity_org' => $organizationId] + ($ownerId > 0 ? ['activity_owner_id' => $ownerId] : []);
+        $activityOwnerSql=$ownerSql;
+        $activityBase=['activity_org'=>$organizationId];
         $activities = fn (string $type, string $condition): array => $this->all(
             'SELECT c.id, c.public_id, c.title, p.full_name customer, c.priority, a.id activity_id, a.title activity_title, a.due_at '
             . 'FROM tn_client_case_activities a INNER JOIN tn_client_cases c ON c.id=a.client_case_id AND c.organization_id=a.organization_id '
@@ -311,8 +322,8 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
             . ' ORDER BY a.due_at IS NULL,a.due_at,c.updated_at DESC LIMIT 20',
             $activityBase,
         );
-        $communicationOwnerSql = $ownerId > 0 ? ' AND d.assigned_user_id=:communication_owner_id' : '';
-        $communicationParams = ['communication_org' => $organizationId] + ($ownerId > 0 ? ['communication_owner_id' => $ownerId] : []);
+        $communicationOwnerSql=$population===''?'':sprintf($population,'d');
+        $communicationParams=['communication_org'=>$organizationId];
 
         return [
             'must_do' => $query('c.next_contact_at BETWEEN CURRENT_DATE() AND CURRENT_DATE() + INTERVAL 1 DAY'),
@@ -328,10 +339,10 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
             ),
             'meetings' => $activities('meeting', 'a.due_at BETWEEN CURRENT_DATE() AND CURRENT_DATE()+INTERVAL 1 DAY'),
             'followups' => $activities('followup', 'a.due_at <= CURRENT_DATE()+INTERVAL 1 DAY'),
-            'ai_recommended' => $ownerId > 0 ? [] : $this->safeAll(
+            'ai_recommended' => $owners!==null ? [] : $this->safeAll(
                 'SELECT a.id action_id, a.type, a.target_id deal_id, a.status, a.risk_level, a.parameters, d.reason, d.confidence '
-                . 'FROM cos_actions a LEFT JOIN cos_decisions d ON d.source_id = a.source_id '
-                . 'WHERE a.organization_id = :organization_id AND a.target_type IN ("deal", "client_case") '
+                . 'FROM cos_actions a LEFT JOIN cos_decisions d ON d.source_id = a.source_id AND d.organization_id=a.organization_id '
+                . 'WHERE a.organization_id = :organization_id AND a.type LIKE "sales.%" AND a.target_type IN ("deal", "client_case") '
                 . 'AND a.status IN ("PROPOSED", "PENDING_APPROVAL", "QUEUED") ORDER BY a.created_at DESC LIMIT 20',
                 ['organization_id' => $organizationId],
             ),
