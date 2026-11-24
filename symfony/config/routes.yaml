@@ -3735,6 +3735,18 @@ cos_marketing_creative_revise:
   methods: [POST]
   requirements: { id: 'mkt-[a-f0-9]{24}', creativeId: 'mkcr-[a-f0-9]{24}' }
 
+cos_marketing_paid_plan_create:
+  path: /marketing/campaigns/{id}/paid-plans
+  controller: App\Web\Marketing\MarketingPageController::createPaidPlan
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}' }
+
+cos_marketing_paid_goal_propose:
+  path: /marketing/campaigns/{id}/paid-plans/{planId}/goals
+  controller: App\Web\Marketing\MarketingPageController::proposePaidGoal
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}', planId: 'mkpl-[a-f0-9]{24}' }
+
 cos_marketing_analyst_plan_propose:
   path: /marketing/campaigns/{id}/analyst-plans
   controller: App\Web\Marketing\MarketingPageController::proposeAnalystPlan

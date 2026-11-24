@@ -38,7 +38,7 @@ final readonly class ApprovedMetaPaidLifecycle
                 throw new DomainException('Accepted provider identity, credential or Creative binding changed.');
             }
         }
-        $requestHash=hash('sha256',json_encode([$action->type,$p],JSON_THROW_ON_ERROR));
+        $requestHash=self::commandHash($action->type,$p);
         $command=$this->journal->beginCommand($org,$id,$operation,$action->id,$requestHash);
         if(!$command['fresh'])throw new DomainException('Command already admitted; no external replay.');
         try{
@@ -86,6 +86,12 @@ final readonly class ApprovedMetaPaidLifecycle
             $this->journal->finish($org,$id,$operation,$action->id,null);
             throw new DomainException('Meta command uncertain or blocked after admission; reconcile native journal and Ads Manager.');
         }
+    }
+
+    public static function commandHash(string $type,array $parameters):string
+    {
+        ksort($parameters);
+        return hash('sha256',json_encode([$type,$parameters],JSON_THROW_ON_ERROR));
     }
 
     private function stage(string $org,string $plan,Action $action,string $op,callable $write,callable $read):string

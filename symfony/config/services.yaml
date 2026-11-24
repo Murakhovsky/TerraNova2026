@@ -2701,7 +2701,9 @@ services:
     alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingAnalystRunStore
   Domains\Marketing\Application\Service\MarketingAnalystReviewService: ~
   Domains\Marketing\Automation\Action\MarketingAnalystRunHandler: ~
-  Domains\Marketing\Bootstrap\MarketingDomainModule: ~
+  Domains\Marketing\Bootstrap\MarketingDomainModule:
+    arguments:
+      $paid: '@Domains\Marketing\Automation\Action\MarketingPaidLifecycleHandler'
   marketingDomainModule:
     alias: Domains\Marketing\Bootstrap\MarketingDomainModule
   Domains\Marketing\Infrastructure\Hermes\HermesAnalystConfigurationRegistry:
@@ -2744,6 +2746,7 @@ services:
   Domains\Marketing\Application\Contract\MarketingFinanceFundingReadPort:
     alias: App\Infrastructure\Marketing\FinanceFundingReadAdapter
   Domains\Marketing\Application\Service\MarketingPaidLaunchPlanService: ~
+  Domains\Marketing\Application\Service\MarketingPaidOperationsReadService: ~
   Domains\Marketing\Application\Contract\MarketingPaidExposureClaimPort:
     alias: App\Infrastructure\Marketing\FinancePaidExposureClaimAdapter
   Domains\Marketing\Infrastructure\Meta\MetaPaidExecutionProfiles:
@@ -3990,6 +3993,7 @@ services:
         - '@App\Persistence\ProductManagement\ProductImportRunOutcomeProvider'
         - '@App\Persistence\ProductManagement\ShopifyImportRunOutcomeProvider'
         - '@App\Persistence\Marketing\MarketingAnalystRunOutcomeProvider'
+        - '@App\Persistence\Marketing\MarketingPaidGoalOutcomeProvider'
         - '@Domains\Growth\Application\Service\GrowthInboundResponseOutcomeEvidenceProvider'
         - '@App\Persistence\Federation\FederationGrowthRunLinkedOutcomeEvidenceProvider'
         - '@cos.federation.native_origin.research'

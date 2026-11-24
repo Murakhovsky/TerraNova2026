@@ -114,6 +114,12 @@
                 csrfToken: csrfToken, planningKey: planningKey
             } only %}
 
+            {% include 'experience/marketing/paid_funding_workspace.html.twig' with {
+                campaign: c, accounts: accounts, adsets: adsets, plans: paidPlans, selected: selectedPaidPlan,
+                status: paidStatus, funding: paidFunding, spend: paidSpend, error: paidError,
+                csrfToken: csrfToken, planningKey: planningKey, query: query
+            } only %}
+
             <h3>Creative drafts</h3>
             <p>Planning records only. Product availability, landing URL, regulatory compliance and media ownership have NOT been verified. Nothing here creates or activates an ad.</p>
             <form method="post" action="/marketing/campaigns/{{ c.id|url_encode }}/creatives" class="cos-page__stack">

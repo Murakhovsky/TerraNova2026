@@ -153,6 +153,12 @@ Finance реалізує one-shot exposure claim під тими самими lo
 
 `COS_MARKETING_META_EXECUTION_PROFILES_JSON` за замовчуванням порожня; `COS_MARKETING_META_ACTIVATION_ENABLED` false. Профіль має окремий write credential, accepted existing Creative, explicit general-retail, exclusive-account control і billing-cap evidence refs, expiry до 30 днів. Ці refs є операторськими attestations, не автоматичним доказом hard cap або відповідності Meta policy. Незалежне live staging приймання, перевірка remote response shapes, drift, фактичного billing cap і worker timeout обов'язкові до ввімкнення. P0 лише UTC future traffic/automatic placements, один AdSet/Ad. Не використовується для special categories. Ручний emergency pause залишається обов'язковим при невизначеній зовнішній операції. Жоден production write не виконаний.
 
+## M3.6–M3.7: Звірка джерела й робочий простір
+
+`marketing.paid.operation.status` повертає локальні journal states та configuration fingerprint без secrets і без live claims. `marketing.paid.spend.compare` використовує лише підтверджений native Campaign binding і власний Marketing spend snapshot exact account/campaign/currency/UTC/window. Порівнює decimal source spend з plan minor cap, не підтверджує invoice, Expense, settlement чи повернення резерву. Claimed Finance funds залишаються RESERVED до окремого фінансового settlement з незалежно перевіреною billing evidence.
+
+Campaign Workspace дозволяє створити funding candidate, вибрати Finance references, переглянути журнал, подати окремі Goal/Plan proposals для create_paused, activate, pause та порівняти source spend. Ніякого direct provider write. Run-scoped Goal outcome provider перевіряє canonical Action attestation, exact plan/request hash та native historical command receipt. Це доказ recorded configured state, не результат реклами. Live activation disabled by default; unknown result вимагає operator reconciliation; якщо конфігурація недоступна або минула acceptance expiry, аварійна pause виконується уповноваженим оператором в Ads Manager. Незалежне staging acceptance та реальні billing documents ще відсутні.
+
 ## Надійність імпорту та операційна черга
 
 Meta read-only sync об'єднує імпорт Campaign/AdSet/Ad, Insights, `last_synced_at` і запис `SUCCEEDED` в **одну MySQL-транзакцію**. Невалідний рядок Insights або помилка посеред import викликає rollback без часткових campaign/metrics; окремий `tests/integration/marketing_meta_atomic_mysql.php` перевіряє це на справжній MySQL.

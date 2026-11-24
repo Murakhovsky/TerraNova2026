@@ -130,7 +130,7 @@ final readonly class MysqlFinanceBudgetRepository implements FinanceBudgetReposi
             $receipt=$this->receipt($org,'release',$key,$hash);
             if($receipt!==null)return $this->requireReservation($org,$receipt);
             if($row['state']!=='RESERVED')throw new DomainException('Only an outstanding reservation can be released.');
-            if($this->exposure($org,$reservationId)!==null)throw new DomainException('Claimed provider exposure requires independent reconciliation; release is blocked.');
+            if($this->readExposure($org,$reservationId,true)!==null)throw new DomainException('Claimed provider exposure requires independent reconciliation; release is blocked.');
             $this->connection->prepare("UPDATE cos_finance_budget_reservations SET state='RELEASED',released_at=UTC_TIMESTAMP(6) WHERE organization_id=? AND id=?")
                 ->execute([$org,$reservationId]);
             $this->connection->prepare('UPDATE cos_finance_budget_envelopes SET reserved_minor=reserved_minor-?,revision=revision+1 WHERE organization_id=? AND id=?')
@@ -157,10 +157,12 @@ final readonly class MysqlFinanceBudgetRepository implements FinanceBudgetReposi
         });
     }
 
-    public function exposure(string $org,string $reservationId):?array
+    public function exposure(string $org,string $reservationId):?array{return $this->readExposure($org,$reservationId,false);}
+
+    private function readExposure(string $org,string $reservationId,bool $locked):?array
     {
         $q=$this->connection->prepare('SELECT reservation_id,envelope_id,source_ref,action_id,actor_id,request_hash,plan_hash,amount_minor,currency,created_at
-            FROM cos_finance_paid_exposure_claims WHERE organization_id=? AND reservation_id=?');
+            FROM cos_finance_paid_exposure_claims WHERE organization_id=? AND reservation_id=?'.($locked?' FOR UPDATE':''));
         $q->execute([$org,$reservationId]);$row=$q->fetch(PDO::FETCH_ASSOC);
         if(!is_array($row))return null;
         $row['amount_minor']=(int)$row['amount_minor'];
@@ -176,7 +178,7 @@ final readonly class MysqlFinanceBudgetRepository implements FinanceBudgetReposi
             $e=$this->lockedEnvelope($org,$envelopeId);
             $r=$this->lockedReservation($org,$reservationId);
             if($r['envelope_id']!==$envelopeId)throw new DomainException('Exposure envelope mismatch.');
-            $existing=$this->exposure($org,$reservationId);
+            $existing=$this->readExposure($org,$reservationId,true);
             if($existing!==null){
                 if(!hash_equals($existing['request_hash'],$hash))throw new DomainException('Reservation already claimed by another exposure.');
                 // Replay cannot authorize a second external mutation.

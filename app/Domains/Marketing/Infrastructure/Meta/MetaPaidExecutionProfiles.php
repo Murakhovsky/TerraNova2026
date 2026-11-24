@@ -9,6 +9,20 @@ final readonly class MetaPaidExecutionProfiles
 {
     public function __construct(private string $profilesJson='{}',private bool $activationEnabled=false){}
 
+    /** A local configuration fingerprint, not remote acceptance or execution authority. */
+    public function readiness(string $org,array $plan):array
+    {
+        $result=['configuration_hash'=>null,'profile_configured'=>false,'activation_configured'=>false,'provider_cap_verified'=>false];
+        try{
+            if(strlen($this->profilesJson)>65536)return $result;
+            $all=json_decode($this->profilesJson,true,16,JSON_THROW_ON_ERROR);$p=$all[$org][$plan['id']]??null;
+            if(!is_array($p)||array_is_list($p))return $result;
+            ksort($p);$hash=hash('sha256',json_encode([$org,$plan['id'],$p],JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES));
+            $this->accepted($org,$plan,$hash);
+            return [...$result,'configuration_hash'=>$hash,'profile_configured'=>true,'activation_configured'=>$this->activationEnabled];
+        }catch(\Throwable){return $result;}
+    }
+
     public function accepted(string $org,array $plan,string $hash,bool $activation=false):array
     {
         if(strlen($this->profilesJson)>65536)throw new DomainException('Meta profile registry too large.');

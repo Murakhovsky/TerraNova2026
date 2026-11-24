@@ -9,6 +9,14 @@ use PDO;
 final readonly class MysqlMarketingPaidLaunchPlanStore implements MarketingPaidLaunchPlanStore
 {
     public function __construct(private PDO $connection){}
+    public function listForCampaign(string $org,string $campaign,int $limit=50):array
+    {
+        if($limit<1||$limit>100)throw new DomainException('Invalid paid plan list bound.');
+        $q=$this->connection->prepare('SELECT id FROM marketing_paid_launch_plans WHERE organization_id=? AND campaign_id=? ORDER BY created_at DESC,id DESC LIMIT '.$limit);
+        $q->execute([$org,$campaign]);$rows=[];
+        foreach($q->fetchAll(PDO::FETCH_COLUMN) as $id){$row=$this->get($org,(string)$id);if($row!==null)$rows[]=$row;}
+        return $rows;
+    }
     public function byKey(string $org,string $key):?array{return $this->read($org,'idempotency_key',$key);}
     public function get(string $org,string $id):?array{return $this->read($org,'id',$id);}
     public function create(string $org,string $actor,string $key,string $requestHash,array $plan):array

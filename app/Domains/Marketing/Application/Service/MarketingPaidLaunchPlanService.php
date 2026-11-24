@@ -36,6 +36,13 @@ final readonly class MarketingPaidLaunchPlanService
         return self::project($this->plans->create($org,$actor->userId()->value(),$key,$hash,$plan));
     }
 
+    public function listForCampaign(TenantContext $actor,string $campaign):array
+    {
+        $org=$this->guard($actor);
+        if($this->campaigns->get($actor,$campaign)===null)throw new DomainException('Campaign unavailable.');
+        return array_map(self::project(...),$this->plans->listForCampaign($org,$campaign));
+    }
+
     public function get(TenantContext $actor,string $id):array
     {
         return self::project($this->requirePlan($actor,$id));

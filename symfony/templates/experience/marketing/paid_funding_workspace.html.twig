@@ -1,0 +1,61 @@
+<section class="cos-panel" aria-label="Paid funding and execution">
+    <h3>Paid placement · Funding and operations</h3>
+    <p>Prepare a bounded funding candidate; all provider commands require independent approval in COS Goals. No direct advertising execution.</p>
+    {% if campaign.status == 'DRAFT' and accounts is not empty and adsets is not empty %}
+        <form method="post" action="/marketing/campaigns/{{ campaign.id|url_encode }}/paid-plans" class="cos-page__stack">
+            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+            <input type="hidden" name="idempotency_key" value="{{ planningKey }}-paid">
+            <input type="hidden" name="campaign_revision" value="{{ campaign.revision }}">
+            <label>AdSet revision <select name="adset_pin" class="form-control" required>
+                {% for item in adsets %}{% if not item.pins_stale %}<option value="{{ item.id }}:{{ item.revision }}">{{ item.content.name }} · r{{ item.revision }}</option>{% endif %}{% endfor %}
+            </select></label>
+            <label>Ad account revision <select name="account_pin" class="form-control" required>
+                {% for account in accounts %}<option value="{{ account.id }}:{{ account.revision }}">{{ account.ad_account_id }} · {{ account.currency }} · {{ account.timezone }}</option>{% endfor %}
+            </select></label>
+            <label>Start date UTC <input name="period_start" type="date" class="form-control" required></label>
+            <label>End date UTC (inclusive) <input name="period_end" type="date" class="form-control" required></label>
+            <button class="btn btn-outline-primary" type="submit">Create funding candidate</button>
+        </form>
+    {% endif %}
+    <h4>Funding candidates</h4>
+    {% for plan in plans %}
+        <p><a href="?paid_plan={{ plan.id|url_encode }}">{{ plan.id }}</a> · {{ plan.period_start }}–{{ plan.period_end }} · {{ plan.lifetime_minor }} minor units {{ plan.currency }}</p>
+    {% else %}<p>No funding candidate.</p>{% endfor %}
+    {% if error %}<p role="alert">{{ error }}</p>{% endif %}
+    {% if selected and status %}
+        <h4>Selected {{ selected.id }}</h4>
+        <p>Finance envelope source reference: <code>{{ selected.id }}</code>. Reservation operation key: <code>{{ selected.finance_operation_key }}</code>. Required reserve: {{ selected.lifetime_minor }} minor units {{ selected.currency }}.</p>
+        <form method="get" class="cos-page__stack">
+            <input type="hidden" name="paid_plan" value="{{ selected.id }}">
+            <label>Finance envelope ID <input class="form-control" name="envelope_id" pattern="finb-[a-f0-9]{24}" value="{{ query.envelope_id|default('') }}" required></label>
+            <label>Finance reservation ID <input class="form-control" name="reservation_id" pattern="finr-[a-f0-9]{24}" value="{{ query.reservation_id|default('') }}" required></label>
+            <button class="btn btn-outline-secondary" type="submit">Check Finance funding</button>
+        </form>
+        {% if funding %}<p>Finance observation: {{ funding.status }}. Not activation authority.</p>{% endif %}
+        <p>Deployment configuration: {{ status.profile_configured ? 'configured' : 'not configured' }}. Activation rollout: {{ status.activation_configured ? 'configured' : 'disabled' }}. Live verification: no.</p>
+        {% for op in status.operations %}<p>{{ op.operation }} · {{ op.state }} · {{ op.provider_id ?? 'no provider ID' }}</p>{% endfor %}
+        {% if status.manual_reconciliation_required %}<p role="alert">Uncertain operation. Reconcile in Ads Manager; no blind retry. Use authorized emergency pause outside COS if needed.</p>{% endif %}
+        {% if status.profile_configured and not status.manual_reconciliation_required %}
+            {% for operation in ['create_paused','activate','pause'] %}
+                {% if operation != 'activate' or (status.activation_configured and funding and funding.funding_observed) %}
+                    <form method="post" action="/marketing/campaigns/{{ campaign.id|url_encode }}/paid-plans/{{ selected.id|url_encode }}/goals" class="cos-page__stack">
+                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                        <input type="hidden" name="idempotency_key" value="{{ planningKey }}-{{ operation }}">
+                        <input type="hidden" name="operation" value="{{ operation }}">
+                        {% if operation == 'activate' %}
+                            <input type="hidden" name="envelope_id" value="{{ funding.envelope_id }}">
+                            <input type="hidden" name="reservation_id" value="{{ funding.reservation_id }}">
+                        {% endif %}
+                        <button class="btn btn-outline-primary" type="submit">Propose {{ operation }} in COS Goals</button>
+                    </form>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+        <form method="get" class="cos-page__stack">
+            <input type="hidden" name="paid_plan" value="{{ selected.id }}">
+            <label>Campaign spend snapshot ID <input class="form-control" name="spend_snapshot" pattern="mis-[a-f0-9]{24}" required></label>
+            <button class="btn btn-outline-secondary" type="submit">Compare reported spend</button>
+        </form>
+        {% if spend %}<p>{{ spend.status }} · {{ spend.reported_spend_decimal }} {{ spend.currency }}. No settlement or funds release.</p>{% endif %}
+    {% endif %}
+</section>

@@ -337,6 +337,8 @@ Manifest capabilities не задекларовані.
 - `marketing.paid.meta.campaign.activate`;
 - `marketing.paid.meta.campaign.create_paused`;
 - `marketing.paid.meta.campaign.pause`;
+- `marketing.paid.operation.status`;
+- `marketing.paid.spend.compare`;
 - `marketing.paid.spend.evidence.get`;
 - `marketing.paid.sync.history`;
 - `marketing.paid.sync.request`;

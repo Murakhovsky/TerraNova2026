@@ -16,6 +16,9 @@ use App\Infrastructure\Marketing\HermesAnalystReadinessService;
 use App\Persistence\Marketing\MarketingAnalystPlanProposalService;
 use Domains\Marketing\Application\Service\MarketingProductDraftCheckService;
 use Domains\Marketing\Application\Service\MarketingPaidReadService;
+use Domains\Marketing\Application\Service\MarketingPaidLaunchPlanService;
+use Domains\Marketing\Application\Service\MarketingPaidOperationsReadService;
+use App\Persistence\Marketing\MarketingPaidGoalProposalService;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
 use Kernel\Tenant\Model\TenantContext;
@@ -41,6 +44,9 @@ final readonly class MarketingPageController
         private MarketingAnalystReviewService $analystReviews,
         private HermesAnalystReadinessService $analystReadiness,
         private MarketingAnalystPlanProposalService $analystPlans,
+        private MarketingPaidLaunchPlanService $paidPlans,
+        private MarketingPaidOperationsReadService $paidOperations,
+        private MarketingPaidGoalProposalService $paidGoals,
     ){}
 
     public function overview(Request $request):Response {return $this->render($request,'overview');}
@@ -78,6 +84,36 @@ final readonly class MarketingPageController
         catch(Throwable $e){error_log('marketing.workspace.create_failed '.$e::class);return new Response('Draft creation failed; check operation receipt before resubmitting.',503);}
     }
 
+
+    public function createPaidPlan(Request $request,string $id):Response
+    {
+        $actor=$this->manager();if($actor instanceof Response)return $actor;
+        if(!$this->csrf->isValid($request))return new Response('CSRF validation failed',400);
+        try{
+            $form=$request->request->all();
+            [$adset,$adsetRevision]=MarketingWorkspacePlanningInput::analystPin($form,'adset_pin','mkas-');
+            [$account,$accountRevision]=MarketingWorkspacePlanningInput::analystPin($form,'account_pin','mads-');
+            $plan=$this->paidPlans->create($actor,$id,MarketingWorkspacePlanningInput::revision($form,'campaign_revision'),$adset,$adsetRevision,
+                $account,$accountRevision,MarketingWorkspacePlanningInput::field($form,'period_start'),MarketingWorkspacePlanningInput::field($form,'period_end'),
+                MarketingWorkspacePlanningInput::field($form,'idempotency_key'));
+            return new RedirectResponse('/marketing/campaigns/'.$id.'?paid_plan='.$plan['id'],303);
+        }catch(DomainException $e){return new Response('Paid plan blocked: '.$e->getMessage(),422);}
+        catch(Throwable){return new Response('Paid plan unavailable; inspect native receipt.',503);}
+    }
+
+    public function proposePaidGoal(Request $request,string $id,string $planId):Response
+    {
+        $actor=$this->manager();if($actor instanceof Response)return $actor;
+        if(!$this->csrf->isValid($request))return new Response('CSRF validation failed',400);
+        try{
+            if($this->paidPlans->get($actor,$planId)['campaign_id']!==$id)throw new DomainException('Paid plan campaign mismatch.');
+            $form=$request->request->all();$e=MarketingWorkspacePlanningInput::field($form,'envelope_id');$r=MarketingWorkspacePlanningInput::field($form,'reservation_id');
+            $this->paidGoals->propose($actor,$planId,MarketingWorkspacePlanningInput::field($form,'operation'),
+                MarketingWorkspacePlanningInput::field($form,'idempotency_key'),$e===''?null:$e,$r===''?null:$r);
+            return new RedirectResponse('/workspace/goals',303);
+        }catch(DomainException $e){return new Response('Paid proposal blocked: '.$e->getMessage(),422);}
+        catch(Throwable){return new Response('Paid proposal unavailable; inspect Goals.',503);}
+    }
 
     public function saveAudience(Request $request,string $id):Response
     {
@@ -292,8 +328,21 @@ final readonly class MarketingPageController
         $actor=$this->manager();
         if($actor instanceof Response)return $actor;
         try {
+            $paidPlans=[];$selectedPaidPlan=null;$paidStatus=null;$paidFunding=null;$paidSpend=null;$paidError=null;
             $creatives=[];$proposals=[];$audiences=[];$adsets=[];$analystRuns=[];$analystOffset=0;$analystRuntime=null;$productCheck=null;$productCheckError=null;$productPage=null;$productSearchError=null;
             if($section==='campaign'&&is_array($selected)&&is_string($selected['id']??null)){
+                $paidPlans=$this->paidPlans->listForCampaign($actor,$selected['id']);
+                if($request->query->has('paid_plan')){
+                    try{
+                        $selectedPaidPlan=$this->paidPlans->get($actor,(string)$request->query->get('paid_plan'));
+                        if($selectedPaidPlan['campaign_id']!==$selected['id']){$selectedPaidPlan=null;throw new DomainException('Paid plan mismatch.');}
+                        $paidStatus=$this->paidOperations->status($actor,$selectedPaidPlan['id']);
+                        $envelope=(string)$request->query->get('envelope_id','');$reservation=(string)$request->query->get('reservation_id','');
+                        if($envelope!==''||$reservation!=='')$paidFunding=$this->paidPlans->funding($actor,$selectedPaidPlan['id'],$envelope,$reservation);
+                        $snapshot=(string)$request->query->get('spend_snapshot','');
+                        if($snapshot!=='')$paidSpend=$this->paidOperations->compareSpend($actor,$selectedPaidPlan['id'],$snapshot);
+                    }catch(DomainException){$paidError='Paid plan, funding or spend evidence unavailable for this exact scope.';}
+                }
                 $creatives=$this->planning->creatives($actor,$selected['id']);
                 $proposals=$this->planning->proposals($actor,$selected['id']);
                 $audiences=$this->planning->audiences($actor);
@@ -384,6 +433,7 @@ final readonly class MarketingPageController
                 'providerHierarchy'=>$providerHierarchy,
                 'observations'=>$observations,'selectedCampaign'=>$selected,'accountId'=>$accountId,
                 'from'=>$from,'to'=>$to,'csrfToken'=>$this->csrf->token($request),
+                'paidPlans'=>$paidPlans,'selectedPaidPlan'=>$selectedPaidPlan,'paidStatus'=>$paidStatus,'paidFunding'=>$paidFunding,'paidSpend'=>$paidSpend,'paidError'=>$paidError,
                 'creatives'=>$creatives,'proposals'=>$proposals,'audiences'=>$audiences,'adsets'=>$adsets,
                 'analystRuns'=>$analystRuns,'analystOffset'=>$analystOffset,'analystRuntime'=>$analystRuntime,
                 'productCheck'=>$productCheck,'productCheckError'=>$productCheckError,
