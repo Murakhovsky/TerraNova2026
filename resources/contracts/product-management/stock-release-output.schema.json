@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ProductManagementStockReleaseOutputV1",
+  "type": "object",
+  "required": [
+    "reservation_id",
+    "variant_id",
+    "location_id",
+    "quantity",
+    "source_ref",
+    "status",
+    "reason",
+    "balance"
+  ],
+  "properties": {
+    "reservation_id": {
+      "type": "string"
+    },
+    "variant_id": {
+      "type": "string"
+    },
+    "location_id": {
+      "type": "string"
+    },
+    "quantity": {
+      "type": "string"
+    },
+    "source_ref": {
+      "type": "string"
+    },
+    "status": {
+      "const": "released"
+    },
+    "reason": {
+      "type": "string"
+    },
+    "balance": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": false
+}
