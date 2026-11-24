@@ -16,7 +16,18 @@
     "recognized_revenue_confirmed",
     "roas",
     "profit",
-    "causal_attribution"
+    "causal_attribution",
+    "cost_per_captured_lead",
+    "cost_per_captured_won_deal",
+    "sales_calendar",
+    "sales_cutoff",
+    "qualified_leads",
+    "linked_deals",
+    "lead_to_won_percent",
+    "unknown_value_count",
+    "missing_source_count",
+    "source_drift_count",
+    "channels"
   ],
   "properties": {
     "campaign_id": {
@@ -37,10 +48,12 @@
       "type": "string"
     },
     "model": {
-      "type": "string"
+      "type": "string",
+      "const": "utm-exact-v1"
     },
     "coverage": {
-      "type": "string"
+      "type": "string",
+      "const": "CAPTURED_NATIVE_LEADS_ONLY"
     },
     "leads": {
       "type": "integer",
@@ -109,6 +122,74 @@
         "null"
       ],
       "minimum": 0
+    },
+    "sales_calendar": {
+      "type": "string",
+      "const": "NATIVE_STORED_CALENDAR"
+    },
+    "sales_cutoff": {
+      "type": "string"
+    },
+    "qualified_leads": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "linked_deals": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "lead_to_won_percent": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "unknown_value_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "missing_source_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "source_drift_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "channels": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source",
+          "medium",
+          "leads",
+          "qualified_leads",
+          "won_deals"
+        ],
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "medium": {
+            "type": "string"
+          },
+          "leads": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "qualified_leads": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "won_deals": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
     }
-  }
+  },
+  "additionalProperties": false
 }

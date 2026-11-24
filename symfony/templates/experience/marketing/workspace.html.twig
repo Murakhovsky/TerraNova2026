@@ -298,6 +298,7 @@
                 </article>
             {% else %}<p>No imported Meta hierarchy. Connect and sync an authorized account to see provider campaigns, ad sets and ads.</p>{% endfor %}
         </section>
+        {% include 'experience/marketing/media_analytics.html.twig' %}
         {% include 'experience/marketing/attribution_analytics.html.twig' %}
     {% elseif section == 'actions' %}
         <section class="cos-panel"><h2>Blocked paid operations</h2>

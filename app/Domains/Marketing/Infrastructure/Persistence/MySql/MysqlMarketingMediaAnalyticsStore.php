@@ -33,7 +33,8 @@ final readonly class MysqlMarketingMediaAnalyticsStore implements MarketingMedia
     public function commit(string $org,string $actor,string $key,string $requestHash,array $account,string $grain,string $from,string $to,array $rows):array
     {
         if($this->connection->inTransaction())throw new DomainException('Nested media analytics import denied.');
-        $rows=MarketingMediaAnalyticsPolicy::sanitize($account,$grain,$from,$to,$rows);
+        $providerRows=$rows;
+        $rows=MarketingMediaAnalyticsPolicy::sanitize($account,$grain,$from,$to,$providerRows);
         $this->connection->beginTransaction();
         try{
             // Same account lock as native Marketing snapshot writer. Account changes during remote fetch fail closed.
@@ -45,7 +46,7 @@ final readonly class MysqlMarketingMediaAnalyticsStore implements MarketingMedia
                 if(!hash_equals($requestHash,$old['request_hash']))throw new DomainException('Media import key conflict.');
                 $this->connection->commit();return $this->project($old);
             }
-            $count=$this->snapshots->importInsights($org,$account['id'],$grain,$from,$to,$rows);
+            $count=$this->snapshots->importInsights($org,$account['id'],$grain,$from,$to,$providerRows);
             if($count!==count($rows))throw new DomainException('Incomplete native media import.');
             $field=['account'=>'account_id','campaign'=>'campaign_id','adset'=>'adset_id','ad'=>'ad_id'][$grain];
             $evidence=[];$attribution=hash('sha256','meta-default-adset-attribution-v1');

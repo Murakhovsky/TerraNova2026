@@ -57,6 +57,21 @@ final readonly class MarketingPageController
     public function campaigns(Request $request):Response {return $this->render($request,'campaigns');}
     public function accounts(Request $request):Response {return $this->render($request,'accounts');}
     public function performance(Request $request):Response {return $this->render($request,'performance');}
+    public function syncMediaAnalytics(Request $request):Response
+    {
+        $actor=$this->manager();if($actor instanceof Response)return $actor;
+        if(!$this->csrf->isValid($request))return new Response('CSRF validation failed',400);
+        try{
+            $f=$request->request->all();$input=['account_id'=>MarketingWorkspacePlanningInput::field($f,'media_account'),
+                'grain'=>MarketingWorkspacePlanningInput::field($f,'media_grain'),'window_start'=>MarketingWorkspacePlanningInput::field($f,'media_from'),
+                'window_end'=>MarketingWorkspacePlanningInput::field($f,'media_to')];
+            $this->capabilityGateway->invoke($actor,'marketing.analytics.media.sync',$input,
+                'human_ui',MarketingWorkspacePlanningInput::field($f,'idempotency_key'),'m4-media-'.bin2hex(random_bytes(12)));
+            return new RedirectResponse('/marketing/performance?'.http_build_query(['media_account'=>$input['account_id'],
+                'media_grain'=>$input['grain'],'media_from'=>$input['window_start'],'media_to'=>$input['window_end']]),303);
+        }catch(DomainException $e){return new Response('Media read import blocked: '.$e->getMessage(),422);}
+        catch(Throwable){return new Response('Media read import unavailable; inspect source and native receipt.',503);}
+    }
     public function captureAttribution(Request $request):Response
     {
         $actor=$this->manager();if($actor instanceof Response)return $actor;
@@ -510,6 +525,20 @@ final readonly class MarketingPageController
                     }
                 }catch(Throwable $e){$analyticsError='Analytics scope unavailable: verify active source modules, exact campaign, dates and source references.';}
             }
+            $mediaAnalytics=null;$mediaError=null;
+            if($section==='performance'&&$request->query->has('media_account')){
+                try{
+                    $q=$request->query->all();$bf=MarketingWorkspacePlanningInput::field($q,'media_baseline_from');
+                    $bt=MarketingWorkspacePlanningInput::field($q,'media_baseline_to');
+                    $mediaAnalytics=$this->capabilityGateway->invoke($actor,'marketing.analytics.media.report',
+                        ['account_id'=>MarketingWorkspacePlanningInput::field($q,'media_account'),
+                            'grain'=>MarketingWorkspacePlanningInput::field($q,'media_grain'),
+                            'window_start'=>MarketingWorkspacePlanningInput::field($q,'media_from'),
+                            'window_end'=>MarketingWorkspacePlanningInput::field($q,'media_to'),
+                            'baseline_from'=>$bf===''?null:$bf,'baseline_to'=>$bt===''?null:$bt],
+                        'human_ui','','m4-media-'.bin2hex(random_bytes(12)));
+                }catch(Throwable){$mediaError='No complete media receipt or comparable baseline for the exact scope. Import the required window.';}
+            }
             $role=$actor->role()->value();
             $titles=[
                 'overview'=>'Marketing Overview','campaigns'=>'Marketing Campaigns',
@@ -542,6 +571,7 @@ final readonly class MarketingPageController
                 'query'=>$request->query->all(),'analytics'=>$analytics,'analyticsDiscovery'=>$analyticsDiscovery,
                 'analyticsTracking'=>$analyticsTracking,'analyticsPlans'=>$analyticsPlans,'analyticsError'=>$analyticsError,
                 'analyticsFrom'=>$analyticsFrom,'analyticsTo'=>$analyticsTo,'captureReceipt'=>$captureReceipt,
+                'mediaAnalytics'=>$mediaAnalytics,'mediaError'=>$mediaError,
             ]),200,['Content-Type'=>'text/html; charset=UTF-8','Cache-Control'=>'no-store, private','X-Robots-Tag'=>'noindex, nofollow']);
         }catch(Throwable $e){
             error_log('marketing.workspace.read_failed '.$e::class);

@@ -24,6 +24,10 @@ final readonly class MysqlMarketingAttributionStore implements MarketingAttribut
             $q=$this->connection->prepare('UPDATE marketing_attribution_capture_intents SET receipt_json=? WHERE organization_id=? AND idempotency_key=? AND receipt_json IS NULL');
             $q->execute([json_encode($result,JSON_THROW_ON_ERROR),$org,$key]);
             if($q->rowCount()!==1)throw new DomainException('Attribution capture receipt lost.');
+            $q=$this->connection->prepare('SELECT receipt_json FROM marketing_attribution_capture_intents WHERE organization_id=? AND idempotency_key=?');
+            $q->execute([$org,$key]);$stored=$q->fetchColumn();
+            if(!is_string($stored))throw new DomainException('Attribution capture receipt readback missing.');
+            $result=json_decode($stored,true,32,JSON_THROW_ON_ERROR);
             $this->connection->commit();return $result;
         }catch(\Throwable $e){if($this->connection->inTransaction())$this->connection->rollBack();throw $e;}
     }
