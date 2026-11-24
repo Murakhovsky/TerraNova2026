@@ -142,7 +142,7 @@ final class SalesDealPresenter
                 ['label' => 'Value', 'value' => $this->money($deal['value'] ?? 0, $currency)],
                 ['label' => 'Weighted', 'value' => $this->money($deal['weighted_value'] ?? 0, $currency)],
                 ['label' => 'Probability', 'value' => (string) ((int) ($deal['probability'] ?? 0)) . '%'],
-                ['label' => 'Days in stage', 'value' => (string) ((int) ($deal['days_in_stage'] ?? 0)) . ' d'],
+                ['label' => 'Days in stage', 'value' => isset($deal['days_in_stage'])?((!empty($deal['stage_age_estimated'])?'~':'').(int)$deal['days_in_stage'].' d'):'—'],
             ],
             nextContact: (string) ($deal['next_contact_at'] ?? 'Not set'),
             attentionReason: (string) ($deal['attention_reason'] ?? 'No attention signal'),
