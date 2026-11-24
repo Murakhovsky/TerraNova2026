@@ -13,6 +13,7 @@
         <a class="btn btn-outline-secondary" href="/product-management">Каталог</a>
         <a class="btn btn-outline-secondary" href="/product-management/categories">Категорії</a>
         <a class="btn btn-outline-secondary" href="/product-management/price-lists">Прайс-листи</a>
+        <a class="btn btn-outline-secondary" href="/product-management/attributes">Атрибути</a>
     </nav>
     {% if notice == 'created' or notice == 'updated' %}
         <p role="status" class="alert alert-success">Операцію збережено. Дані повторно прочитані з Domain.</p>
@@ -70,9 +71,14 @@
             </form>
         </section>
 
+    {% elseif section == 'attributes' %}
+        {% include 'experience/product_management/attributes.html.twig' %}
+    {% elseif section == 'product-attributes' %}
+        {% include 'experience/product_management/product_attributes.html.twig' %}
     {% elseif section == 'product' %}
         <section class="cos-panel">
             <h2>{{ product.name }}</h2>
+            <a href="/product-management/products/{{ product.product_id }}/attributes">Характеристики та матриця варіацій</a>
             <p>Тип: {{ product.product_type }} · Статус: {{ product.status }} · Ревізія: {{ product.revision }}</p>
             <p>Ідентифікатор: <code>{{ product.product_id }}</code></p>
             {% if product.status != 'archived' %}
