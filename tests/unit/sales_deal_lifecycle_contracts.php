@@ -16,4 +16,10 @@ $row=['id'=>7,'organization_id'=>'tenant-a','pipeline_id'=>'p','stage_id'=>'s','
 $a=DealStateSnapshot::fromNative($row,'tenant-a',7);
 $check(!isset($a['lost_reason_note']) && $a['revision']!==DealStateSnapshot::fromNative([...$row,'currency'=>'USD'],'tenant-a',7)['revision'],'Revision or redaction failed.');
 $deny(fn()=>DealStateSnapshot::fromNative($row,'tenant-b',7));
-echo "Sales lifecycle and commercial model contracts PASS.\n";
+$conditions=[['field'=>'deal_value','operator'=>'gte','value'=>'100.00'],['field'=>'currency','operator'=>'eq','value'=>'EUR'],['field'=>'assigned_user_id','operator'=>'present']];
+$check(\Domains\Sales\Domain\Policy\PipelineTransitionConditions::satisfied($conditions,$row),'Matching conditions denied.');
+$check(!\Domains\Sales\Domain\Policy\PipelineTransitionConditions::satisfied($conditions,[...$row,'deal_value'=>'99.99']),'Exact value threshold bypassed.');
+$check(!\Domains\Sales\Domain\Policy\PipelineTransitionConditions::satisfied($conditions,[...$row,'assigned_user_id'=>null]),'Missing owner bypassed.');
+$check(!\Domains\Sales\Domain\Policy\PipelineTransitionConditions::satisfied([['field'=>'arbitrary','operator'=>'eval','value'=>'anything']],$row),'Unknown predicate accepted.');
+$deny(fn()=>\Domains\Sales\Domain\Policy\PipelineTransitionConditions::validate([['field'=>'deal_value','operator'=>'gte','value'=>100.00]]));
+echo "Sales lifecycle, pipeline predicates and commercial model contracts PASS.\n";

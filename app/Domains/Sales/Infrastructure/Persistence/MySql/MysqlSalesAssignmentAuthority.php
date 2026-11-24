@@ -74,7 +74,7 @@ final readonly class MysqlSalesAssignmentAuthority implements SalesAssignmentAut
     {
         $q=$this->connection->prepare('SELECT 1 FROM tn_users u INNER JOIN cos_organization_memberships m
             ON m.organization_id=u.organization_id AND m.user_id=u.id AND m.status="ACTIVE"
-            WHERE u.organization_id=? AND u.id=? AND u.status="active" LIMIT 1');
+            WHERE u.organization_id=? AND u.id=? AND u.status="active" LIMIT 1'.($this->connection->inTransaction()?' FOR UPDATE':''));
         $q->execute([$organizationId,$userId]);
         return $q->fetchColumn()!==false;
     }
@@ -100,7 +100,7 @@ final readonly class MysqlSalesAssignmentAuthority implements SalesAssignmentAut
              WHERE user.organization_id = :organization_id
                AND user.id = :user_id
                AND user.status = "active"
-             LIMIT 1'
+             LIMIT 1'.($this->connection->inTransaction()?' FOR UPDATE':'')
         );
         $statement->execute(['organization_id' => $organizationId, 'user_id' => $userId]);
         return $statement->fetchColumn() !== false;
@@ -111,7 +111,7 @@ final readonly class MysqlSalesAssignmentAuthority implements SalesAssignmentAut
         $statement = $this->connection->prepare(
             'SELECT 1 FROM sales_user_capabilities
              WHERE organization_id = :organization_id AND user_id = :user_id
-               AND capability = :capability AND status = "ACTIVE" LIMIT 1'
+               AND capability = :capability AND status = "ACTIVE" LIMIT 1'.($this->connection->inTransaction()?' FOR UPDATE':'')
         );
         $statement->execute([
             'organization_id' => $organizationId,

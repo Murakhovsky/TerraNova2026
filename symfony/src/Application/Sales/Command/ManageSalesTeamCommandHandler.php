@@ -44,6 +44,7 @@ final readonly class ManageSalesTeamCommandHandler implements CommandHandlerInte
                 if (!is_string($id)||preg_match('/^[a-f0-9]{32}$/D',$id)!==1) throw new RuntimeException('Team creation returned no native identity.');
                 $done=$hash.':'.$id;
             } elseif ($op==='update') {
+                if ($this->read($org,$id)['assignment_mode']!=='MANUAL') throw new DomainException('Existing non-manual assignment mode requires its own configuration operation.');
                 $this->teams->updateTeam($org,$id,['name'=>$input['name'],'status'=>$input['status'],'assignment_mode'=>'MANUAL'],$input['configuration_version'],(string)$actor);
                 $done='done:'.$hash;
             } else {

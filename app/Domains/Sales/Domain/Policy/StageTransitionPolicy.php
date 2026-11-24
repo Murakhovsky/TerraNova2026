@@ -16,8 +16,7 @@ final class StageTransitionPolicy
         if($current->isTerminal)return StageTransitionResult::denied('A terminal stage cannot be left by a regular transition.');
         if($transition===null)return StageTransitionResult::denied('Pipeline transition is not configured.');
         if($transition->pipelineId!==$pipeline->id||$transition->fromStageId!==$current->id||$transition->toStageId!==$target->id)return StageTransitionResult::denied('Pipeline transition does not match the requested stages.');
-        // Until typed predicates exist, do not silently ignore configured conditions.
-        if ($transition->conditions!==[]) return StageTransitionResult::denied('Configured transition conditions are unsupported.');
+        if (!PipelineTransitionConditions::satisfied($transition->conditions,$deal)) return StageTransitionResult::denied('Configured transition conditions are invalid or not satisfied.');
         if (in_array((string)($deal['status']??''),['closed','lost'],true)) return StageTransitionResult::denied('Terminal deal cannot be reopened by a regular transition.');
         return StageTransitionResult::allowed($transition);
     }
