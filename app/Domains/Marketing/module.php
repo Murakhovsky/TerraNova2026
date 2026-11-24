@@ -28,6 +28,16 @@ $manifest = [
         ],
         'cross_domain_contracts' => [
             [
+                'contract' => 'Domains\\Marketing\\Application\\Contract\\MarketingSalesAttributionReadPort',
+                'role' => 'requires', 'counterpart' => 'sales', 'kind' => 'synchronous_port',
+                'purpose' => 'Read minimal native lead UTM and linked won deal facts; no Sales mutation or contact data exposure.',
+            ],
+            [
+                'contract' => 'Domains\\Marketing\\Application\\Contract\\MarketingFinanceAnalyticsReadPort',
+                'role' => 'requires', 'counterpart' => 'finance', 'kind' => 'synchronous_port',
+                'purpose' => 'Read native settled budget receipt bound to exact paid plan, without financial mutation.',
+            ],
+            [
                 'contract' => 'Domains\\Marketing\\Application\\Contract\\MarketingPaidExposureClaimPort',
                 'role' => 'requires', 'counterpart' => 'finance', 'kind' => 'synchronous_port',
                 'purpose' => 'Canonical activation worker requests one-shot Finance-owned exposure claim; no release or spend settlement.',
@@ -84,6 +94,9 @@ $manifest = [
             'marketing.paid.meta.campaign.create_paused',
             'marketing.paid.meta.campaign.activate',
             'marketing.paid.meta.campaign.pause',
+            'marketing.attribution.capture',
+            'marketing.attribution.tracking.get',
+            'marketing.analytics.report.get',
         ],
         'capability_contracts' => [],
     ],
@@ -98,6 +111,9 @@ foreach ([
     'marketing.paid.sync.history' => ['query', 'none', 'marketing/sync-history', 'cos.tenant.manage'],
     'marketing.paid.spend.evidence.get' => ['query', 'none', 'marketing/spend-evidence-get', 'cos.tenant.manage'],
     'marketing.paid.insights.query' => ['query', 'none', 'marketing/insights-query', 'cos.tenant.manage'],
+    'marketing.attribution.capture' => ['command', 'internal', 'marketing/attribution-capture', 'cos.tenant.manage'],
+    'marketing.attribution.tracking.get' => ['query', 'none', 'marketing/attribution-tracking', 'cos.tenant.manage'],
+    'marketing.analytics.report.get' => ['query', 'none', 'marketing/analytics-report', 'cos.tenant.manage'],
 ] as $id => [$kind, $sideEffect, $schema, $permission]) {
     $contracts[] = [
         'id' => $id,

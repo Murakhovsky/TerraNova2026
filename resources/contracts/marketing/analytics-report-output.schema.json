@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "campaign_id",
+    "plan_id",
+    "window_start",
+    "window_end",
+    "model",
+    "coverage",
+    "leads",
+    "won_deals",
+    "won_deal_value",
+    "media",
+    "settlement",
+    "recognized_revenue_confirmed",
+    "roas",
+    "profit",
+    "causal_attribution"
+  ],
+  "properties": {
+    "campaign_id": {
+      "type": "string",
+      "pattern": "^mkt-[a-f0-9]{24}$"
+    },
+    "plan_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^mkpl-[a-f0-9]{24}$"
+    },
+    "window_start": {
+      "type": "string"
+    },
+    "window_end": {
+      "type": "string"
+    },
+    "model": {
+      "type": "string"
+    },
+    "coverage": {
+      "type": "string"
+    },
+    "leads": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "won_deals": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "won_deal_value": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "currency",
+          "minor"
+        ],
+        "properties": {
+          "currency": {
+            "type": "string"
+          },
+          "minor": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "media": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "settlement": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "recognized_revenue_confirmed": {
+      "type": "boolean",
+      "const": false
+    },
+    "roas": {
+      "type": "null"
+    },
+    "profit": {
+      "type": "null"
+    },
+    "causal_attribution": {
+      "type": "boolean",
+      "const": false
+    }
+  }
+}

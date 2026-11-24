@@ -22,7 +22,7 @@ generated: true
 | `finance` | `0.2.2` | — | 11 |
 | `growth` | `0.50.0` | — | 92 |
 | `hr` | `0.1.0` | — | 0 |
-| `marketing` | `0.2.3` | — | 37 |
+| `marketing` | `0.2.3` | — | 40 |
 | `procurement` | `0.1.0` | — | 0 |
 | `product_management` | `0.1.0` | — | 28 |
 | `property` | `1.0.0` | `propertyModuleConfigurationProvisioner` | 25 |
@@ -82,7 +82,7 @@ generated: true
 
 - manifest: `app/Domains/Marketing/module.php`;
 - configuration provisioners: —;
-- capabilities: `marketing.campaign.search`, `marketing.campaign.get`, `marketing.campaign.create`, `marketing.paid.account.list`, `marketing.paid.sync.history`, `marketing.paid.spend.evidence.get`, `marketing.paid.insights.query`, `marketing.product.draft_check.get`, `marketing.product.selector.search`, `marketing.creative.create`, `marketing.creative.revise`, `marketing.creative.list`, `marketing.analyst.context.get`, `marketing.analyst.run.list`, `marketing.analyst.run.review`, `marketing.analyst.run.recover`, `marketing.analyst.runtime.status`, `marketing.analyst.run.request`, `marketing.analyst.proposal.submit`, `marketing.analyst.proposal.list`, `marketing.analyst.proposal.review`, `marketing.audience.save`, `marketing.audience.list`, `marketing.adset.save`, `marketing.adset.list`, `marketing.campaign.update`, `marketing.campaign.archive`, `marketing.paid.sync.request`, `marketing.paid.change.request`, `marketing.paid.operation.status`, `marketing.paid.spend.compare`, `marketing.paid.launch_plan.create`, `marketing.paid.launch_plan.get`, `marketing.paid.funding.check`, `marketing.paid.meta.campaign.create_paused`, `marketing.paid.meta.campaign.activate`, `marketing.paid.meta.campaign.pause`.
+- capabilities: `marketing.campaign.search`, `marketing.campaign.get`, `marketing.campaign.create`, `marketing.paid.account.list`, `marketing.paid.sync.history`, `marketing.paid.spend.evidence.get`, `marketing.paid.insights.query`, `marketing.product.draft_check.get`, `marketing.product.selector.search`, `marketing.creative.create`, `marketing.creative.revise`, `marketing.creative.list`, `marketing.analyst.context.get`, `marketing.analyst.run.list`, `marketing.analyst.run.review`, `marketing.analyst.run.recover`, `marketing.analyst.runtime.status`, `marketing.analyst.run.request`, `marketing.analyst.proposal.submit`, `marketing.analyst.proposal.list`, `marketing.analyst.proposal.review`, `marketing.audience.save`, `marketing.audience.list`, `marketing.adset.save`, `marketing.adset.list`, `marketing.campaign.update`, `marketing.campaign.archive`, `marketing.paid.sync.request`, `marketing.paid.change.request`, `marketing.paid.operation.status`, `marketing.paid.spend.compare`, `marketing.paid.launch_plan.create`, `marketing.paid.launch_plan.get`, `marketing.paid.funding.check`, `marketing.paid.meta.campaign.create_paused`, `marketing.paid.meta.campaign.activate`, `marketing.paid.meta.campaign.pause`, `marketing.attribution.capture`, `marketing.attribution.tracking.get`, `marketing.analytics.report.get`.
 
 ## `procurement`
 

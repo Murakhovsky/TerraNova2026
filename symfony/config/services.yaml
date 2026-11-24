@@ -2738,6 +2738,18 @@ services:
   Domains\Marketing\Application\Contract\MarketingPaidReadRepository:
     alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidReadRepository
   Domains\Marketing\Application\Service\MarketingPaidReadService: ~
+  Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingAttributionStore:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Marketing\Application\Contract\MarketingAttributionStore:
+    alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingAttributionStore
+  App\Infrastructure\Marketing\SalesAttributionReadAdapter: ~
+  Domains\Marketing\Application\Contract\MarketingSalesAttributionReadPort:
+    alias: App\Infrastructure\Marketing\SalesAttributionReadAdapter
+  App\Infrastructure\Marketing\FinanceAnalyticsReadAdapter: ~
+  Domains\Marketing\Application\Contract\MarketingFinanceAnalyticsReadPort:
+    alias: App\Infrastructure\Marketing\FinanceAnalyticsReadAdapter
+  Domains\Marketing\Application\Service\MarketingAnalyticsService: ~
   Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidLaunchPlanStore:
     arguments:
       $connection: '@cos.database.pdo'

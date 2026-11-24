@@ -321,6 +321,9 @@ Manifest capabilities не задекларовані.
 - `marketing.analyst.run.request`;
 - `marketing.analyst.run.review`;
 - `marketing.analyst.runtime.status`;
+- `marketing.analytics.report.get`;
+- `marketing.attribution.capture`;
+- `marketing.attribution.tracking.get`;
 - `marketing.audience.list`;
 - `marketing.audience.save`;
 - `marketing.campaign.archive`;
