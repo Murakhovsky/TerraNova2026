@@ -3815,6 +3815,11 @@ cos_marketing_media_analytics_sync:
   controller: App\Web\Marketing\MarketingPageController::syncMediaAnalytics
   methods: [POST]
 
+cos_marketing_commerce_attribution_capture:
+  path: /marketing/attribution/commerce/capture
+  controller: App\Web\Marketing\MarketingPageController::captureCommerceAttribution
+  methods: [POST]
+
 cos_marketing_attribution_capture:
   path: /marketing/attribution/capture
   controller: App\Web\Marketing\MarketingPageController::captureAttribution

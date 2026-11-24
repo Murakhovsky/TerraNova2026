@@ -28,6 +28,11 @@ $manifest = [
         ],
         'cross_domain_contracts' => [
             [
+                'contract' => 'Domains\\Marketing\\Application\\Contract\\MarketingCommerceFinancialReadPort',
+                'role' => 'requires', 'counterpart' => 'finance', 'kind' => 'synchronous_port',
+                'purpose' => 'Read independently confirmed order collection evidence, without payment authority or revenue inference.',
+            ],
+            [
                 'contract' => 'Domains\\Marketing\\Application\\Contract\\MarketingCommerceOrderReadPort',
                 'role' => 'requires', 'counterpart' => 'sales', 'kind' => 'synchronous_port',
                 'purpose' => 'Read native Order placement and independently observed UTM journey; no Sales write, payment or revenue assertion.',

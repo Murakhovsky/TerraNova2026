@@ -14,7 +14,8 @@ final readonly class MarketingCommerceAttributionService
 {
     public function __construct(private MarketingCampaignService $campaigns,private MarketingPaidLaunchPlanService $plans,
         private MarketingCommerceOrderReadPort $source,private MarketingCommerceAttributionStore $orders,
-        private MarketingAttributionStore $receipts,private ActiveModuleResolver $modules){}
+        private MarketingAttributionStore $receipts,private ActiveModuleResolver $modules,
+        private ?\Domains\Marketing\Application\Contract\MarketingCommerceFinancialReadPort $financial=null){}
     private function scope(TenantContext $actor,string $campaign,?string $plan):?array
     {
         if(!$actor->isManager()||!$actor->allows(TenantPermissions::ACCESS)||!$actor->allows(TenantPermissions::MANAGE)
@@ -62,7 +63,7 @@ final readonly class MarketingCommerceAttributionService
         MarketingAttributionPolicy::window($from,$to);$p=$this->scope($actor,$campaign,$plan);$org=$actor->organizationId()->value();
         $rows=$this->orders->list($org,$campaign,$plan,$from,$to);
         if(count($rows)>500)throw new DomainException('Commerce cohort exceeds 500 captured orders; narrow date window.');
-        $counts=[];$money=[];$count=0;$unresolved=0;$plans=[];
+        $counts=[];$money=[];$count=0;$unresolved=0;$plans=[];$confirmed=[];$financialCount=0;$financialInvalid=0;
         foreach($rows as $r){
             try{
                 $id=$r['plan_id'];$bound=$p;
@@ -77,11 +78,25 @@ final readonly class MarketingCommerceAttributionService
             $k=$fresh['channel'].'/'.$fresh['utm_source'].'/'.$fresh['utm_medium'].'/'.$fresh['basis'];
             $counts[$k]??=['channel'=>$fresh['channel'],'source'=>$fresh['utm_source'],'medium'=>$fresh['utm_medium'],'basis'=>$fresh['basis'],'orders'=>0];
             $counts[$k]['orders']++;
+            try{
+                $f=$this->financial?->financial($actor,$fresh['order_id']);
+                if($f!==null){
+                    $v=\Domains\Marketing\Domain\MarketingCommerceFinancialPolicy::verify($f,$org,$fresh['order_id'],$c);
+                    $confirmed[$c]??=['currency'=>$c,'captured_minor'=>0,'refunded_minor'=>0,'chargeback_minor'=>0,'net_collected_minor'=>0];
+                    foreach($v as $field=>$amount)$confirmed[$c][$field]+=$amount;
+                    $financialCount++;
+                }
+            }catch(DomainException){$financialInvalid++;}
         }
         ksort($money);ksort($counts);$totals=[];foreach($money as $currency=>$minor)$totals[]=['currency'=>$currency,'minor'=>$minor];
+        ksort($confirmed);$complete=$count>0&&$count===$financialCount&&$unresolved===0;
+        $net=$complete?array_map(static fn(array $v)=>['currency'=>$v['currency'],'minor'=>$v['net_collected_minor']],array_values($confirmed)):null;
         return ['model'=>Policy::MODEL,'campaign_id'=>$campaign,'plan_id'=>$plan,'window_start'=>$from,'window_end'=>$to,
             'coverage'=>'CAPTURED_PLACEMENTS_ONLY','placed_orders'=>$count,'unresolved_captured_orders'=>$unresolved,
-            'placed_order_value'=>$totals,'channels'=>array_values($counts),'recognized_revenue'=>null,'net_cash_received'=>null,
+            'placed_order_value'=>$totals,'channels'=>array_values($counts),'recognized_revenue'=>null,'net_cash_received'=>$net,
+            'financial_evidence_count'=>$financialCount,'financial_evidence_invalid_count'=>$financialInvalid,
+            'financial_evidence_status'=>$complete?'COMPLETE_CAPTURED_COHORT':($financialCount>0?'PARTIAL':($count>0||$unresolved>0?'NO_EVIDENCE':'NO_CAPTURED_ORDERS')),
+            'confirmed_financial_totals'=>array_values($confirmed),
             'roas'=>null,'causal_attribution'=>false,'deduplicated_against_deals'=>false];
     }
 }

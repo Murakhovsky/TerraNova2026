@@ -15,6 +15,7 @@
         <label>UTM medium (optional; paid plan: paid_social) <input name="analytics_medium" class="form-control" value="{{ query.analytics_medium|default('') }}" placeholder="organic"></label>
         <label>Paid campaign snapshot ID <input name="analytics_snapshot" class="form-control" value="{{ query.analytics_snapshot|default('') }}" pattern="mis-[a-f0-9]{24}"></label>
         <label>Finance reservation ID <input name="analytics_reservation" class="form-control" value="{{ query.analytics_reservation|default('') }}" pattern="finr-[a-f0-9]{24}"></label>
+        <label>Inspect native Order ID (optional) <input name="commerce_order_id" class="form-control" pattern="[a-f0-9]{32}" value="{{ query.commerce_order_id|default('') }}"></label>
         <button class="btn btn-outline-primary">Run exact-scope report</button>
         <button class="btn btn-outline-secondary" name="analytics_discover" value="1">Discover native Sales leads</button>
     </form>
@@ -62,5 +63,35 @@
         {% if analytics.settlement %}<p>Settled budget: {{ analytics.settlement.committed_minor }} committed, {{ analytics.settlement.released_minor }} released minor units {{ analytics.settlement.currency }}. Action {{ analytics.settlement.action_id }}.</p>
         {% else %}<p>No matched settlement receipt in this report.</p>{% endif %}
         <p>ROAS, net profit and recognized revenue unavailable without complete attribution and independent accounting evidence.</p>
+    {% endif %}
+    <h3>Commerce Order Attribution</h3>
+    <p>Native Orders only. Exact UTM source observations are not causal proof. Order placement amounts are not accounting revenue. Orders and Deals are not added together.</p>
+    {% if commerceError %}<p role="alert">{{ commerceError }}</p>{% endif %}
+    {% if commerceInspect %}
+        <p>Order inspection: {{ commerceInspect.state }}.{% if commerceInspect.evidence %} {{ commerceInspect.evidence.basis }} · {{ commerceInspect.evidence.utm_source }}/{{ commerceInspect.evidence.utm_medium }} · {{ commerceInspect.evidence.placed_total_minor }} minor units {{ commerceInspect.evidence.currency }}.{% endif %}</p>
+    {% endif %}
+    {% if commerceReceipt %}
+        <h4>Order capture receipt</h4>
+        {% for item in commerceReceipt.results %}<p>Order {{ item.order_id }} · {{ item.state }} · {{ item.evidence_id|default('no evidence') }}</p>{% endfor %}
+    {% endif %}
+    {% if commerceReport %}
+        <p>{{ commerceReport.window_start }}–{{ commerceReport.window_end }} · {{ commerceReport.coverage }} · {{ commerceReport.placed_orders }} attributed placed Orders · {{ commerceReport.unresolved_captured_orders }} unresolved captured Orders.</p>
+        {% for v in commerceReport.placed_order_value %}<p>Placed order value: {{ v.minor }} minor units {{ v.currency }} (not collected cash).</p>{% endfor %}
+        <table class="table"><thead><tr><th>Channel</th><th>UTM</th><th>Basis</th><th>Placed Orders</th></tr></thead><tbody>
+        {% for c in commerceReport.channels %}<tr><td>{{ c.channel }}</td><td>{{ c.source }}/{{ c.medium }}</td><td>{{ c.basis }}</td><td>{{ c.orders }}</td></tr>{% else %}<tr><td colspan="4">No captured placement evidence in this scope.</td></tr>{% endfor %}
+        </tbody></table>
+        <h4>Finance collection evidence</h4>
+        <p>{{ commerceReport.financial_evidence_status }} · verified {{ commerceReport.financial_evidence_count }} of {{ commerceReport.placed_orders }} captured Orders; invalid {{ commerceReport.financial_evidence_invalid_count }}.</p>
+        {% for v in commerceReport.confirmed_financial_totals %}<p>{{ v.currency }} (minor units): captured {{ v.captured_minor }}, refunds {{ v.refunded_minor }}, chargebacks {{ v.chargeback_minor }}, net collected {{ v.net_collected_minor }}.</p>{% endfor %}
+        {% if commerceReport.net_cash_received is null %}<p>Complete captured-cohort net collection unavailable. Partial evidence is not total revenue.</p>{% endif %}
+        <p>Recognized revenue, net profit and ROAS are not established by placement or payment evidence alone.</p>
+        <form method="post" action="/marketing/attribution/commerce/capture?{{ query|url_encode }}" class="cos-page__stack">
+            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+            <input type="hidden" name="campaign_id" value="{{ commerceReport.campaign_id }}">
+            <input type="hidden" name="plan_id" value="{{ commerceReport.plan_id|default('') }}">
+            <input type="hidden" name="idempotency_key" value="{{ planningKey }}-commerce">
+            <label>Capture 1–50 native Order IDs <textarea name="order_ids" class="form-control" required maxlength="1700">{{ query.commerce_order_id|default('') }}</textarea></label>
+            <button class="btn btn-outline-primary">Record exact commerce attribution</button>
+        </form>
     {% endif %}
 </section>

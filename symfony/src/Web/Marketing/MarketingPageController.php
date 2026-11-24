@@ -72,6 +72,21 @@ final readonly class MarketingPageController
         }catch(DomainException $e){return new Response('Media read import blocked: '.$e->getMessage(),422);}
         catch(Throwable){return new Response('Media read import unavailable; inspect source and native receipt.',503);}
     }
+    public function captureCommerceAttribution(Request $request):Response
+    {
+        $actor=$this->manager();if($actor instanceof Response)return $actor;
+        if(!$this->csrf->isValid($request))return new Response('CSRF validation failed',400);
+        try{
+            $f=$request->request->all();$campaign=MarketingWorkspacePlanningInput::field($f,'campaign_id');
+            $plan=MarketingWorkspacePlanningInput::field($f,'plan_id');$ids=MarketingWorkspacePlanningInput::field($f,'order_ids');
+            if(strlen($ids)>1700)throw new DomainException('Order attribution batch exceeds input bound.');
+            $receipt=$this->capabilityGateway->invoke($actor,'marketing.attribution.commerce.capture',
+                ['campaign_id'=>$campaign,'plan_id'=>$plan===''?null:$plan,'order_ids'=>preg_split('/[\s,]+/',$ids,-1,PREG_SPLIT_NO_EMPTY)?:[]],
+                'human_ui',MarketingWorkspacePlanningInput::field($f,'idempotency_key'),'commerce-'.bin2hex(random_bytes(12)));
+            return $this->render($request,'performance',null,null,$receipt);
+        }catch(DomainException){return new Response('Commerce attribution blocked; verify exact native Order scope.',422);}
+        catch(Throwable){return new Response('Commerce attribution unavailable; inspect native receipt.',503);}
+    }
     public function captureAttribution(Request $request):Response
     {
         $actor=$this->manager();if($actor instanceof Response)return $actor;
@@ -395,7 +410,7 @@ final readonly class MarketingPageController
         catch(Throwable $e){error_log('marketing.workspace.sync_failed '.$e::class);return new Response('Meta read sync failed; existing snapshots were retained.',503);}
     }
 
-    private function render(Request $request,string $section,?array $selected=null,?array $captureReceipt=null):Response
+    private function render(Request $request,string $section,?array $selected=null,?array $captureReceipt=null,?array $commerceReceipt=null):Response
     {
         $actor=$this->manager();
         if($actor instanceof Response)return $actor;
@@ -525,6 +540,20 @@ final readonly class MarketingPageController
                     }
                 }catch(Throwable $e){$analyticsError='Analytics scope unavailable: verify active source modules, exact campaign, dates and source references.';}
             }
+            $commerceReport=null;$commerceInspect=null;$commerceError=null;
+            if($section==='performance'&&$request->query->has('analytics_campaign')){
+                try{
+                    $q=$request->query->all();$c=MarketingWorkspacePlanningInput::field($q,'analytics_campaign');
+                    $p=MarketingWorkspacePlanningInput::field($q,'analytics_plan');$p=$p===''?null:$p;
+                    $base=['campaign_id'=>$c,'plan_id'=>$p];
+                    $trace='commerce-'.bin2hex(random_bytes(12));
+                    $commerceReport=$this->capabilityGateway->invoke($actor,'marketing.analytics.commerce.report',
+                        [...$base,'window_start'=>$analyticsFrom,'window_end'=>$analyticsTo],'human_ui','',$trace);
+                    $oid=MarketingWorkspacePlanningInput::field($q,'commerce_order_id');
+                    if($oid!=='')$commerceInspect=$this->capabilityGateway->invoke($actor,'marketing.attribution.commerce.inspect',
+                        [...$base,'order_id'=>$oid],'human_ui','',$trace);
+                }catch(Throwable){$commerceError='Native commerce attribution source or selected scope is unavailable. No zero-sales claim is made.';}
+            }
             $mediaAnalytics=null;$mediaError=null;
             if($section==='performance'&&$request->query->has('media_account')){
                 try{
@@ -572,6 +601,7 @@ final readonly class MarketingPageController
                 'analyticsTracking'=>$analyticsTracking,'analyticsPlans'=>$analyticsPlans,'analyticsError'=>$analyticsError,
                 'analyticsFrom'=>$analyticsFrom,'analyticsTo'=>$analyticsTo,'captureReceipt'=>$captureReceipt,
                 'mediaAnalytics'=>$mediaAnalytics,'mediaError'=>$mediaError,
+                'commerceReport'=>$commerceReport,'commerceInspect'=>$commerceInspect,'commerceError'=>$commerceError,'commerceReceipt'=>$commerceReceipt,
             ]),200,['Content-Type'=>'text/html; charset=UTF-8','Cache-Control'=>'no-store, private','X-Robots-Tag'=>'noindex, nofollow']);
         }catch(Throwable $e){
             error_log('marketing.workspace.read_failed '.$e::class);

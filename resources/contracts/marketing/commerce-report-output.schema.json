@@ -17,7 +17,11 @@
     "net_cash_received",
     "roas",
     "causal_attribution",
-    "deduplicated_against_deals"
+    "deduplicated_against_deals",
+    "financial_evidence_count",
+    "financial_evidence_invalid_count",
+    "financial_evidence_status",
+    "confirmed_financial_totals"
   ],
   "properties": {
     "model": {
@@ -128,7 +132,32 @@
       "type": "null"
     },
     "net_cash_received": {
-      "type": "null"
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "currency",
+          "minor"
+        ],
+        "properties": {
+          "currency": {
+            "type": "string",
+            "enum": [
+              "USD",
+              "EUR",
+              "UAH"
+            ]
+          },
+          "minor": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
     },
     "roas": {
       "type": "null"
@@ -140,6 +169,63 @@
     "deduplicated_against_deals": {
       "type": "boolean",
       "const": false
+    },
+    "financial_evidence_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "financial_evidence_invalid_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "financial_evidence_status": {
+      "type": "string",
+      "enum": [
+        "COMPLETE_CAPTURED_COHORT",
+        "PARTIAL",
+        "NO_EVIDENCE",
+        "NO_CAPTURED_ORDERS"
+      ]
+    },
+    "confirmed_financial_totals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "currency",
+          "captured_minor",
+          "refunded_minor",
+          "chargeback_minor",
+          "net_collected_minor"
+        ],
+        "properties": {
+          "currency": {
+            "type": "string",
+            "enum": [
+              "USD",
+              "EUR",
+              "UAH"
+            ]
+          },
+          "captured_minor": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "refunded_minor": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "chargeback_minor": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "net_collected_minor": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
     }
   }
 }

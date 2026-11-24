@@ -150,3 +150,51 @@ $commerceSource->available=false;$blocked=false;
 try{$commerce->report($actor,$c2,null,'2026-01-01','2026-01-02');}catch(DomainException){$blocked=true;}
 $assert($blocked,'Missing commerce source misrepresented as zero.');
 echo "Marketing M4.10 commerce exact placement, delayed source fixture, atomic receipts, currency and conflict PASS\n";
+
+$commerceSource->available=true;
+$commerceSource->facts[$org][$shopId]['journey']=['state'=>'observed','evidence_hash'=>str_repeat('f',64),'model'=>'shopify-last-visit-utm-v1','visit_at'=>'2026-01-01T10:00:00.000000Z',...$tag];
+$financial=new class implements \Domains\Marketing\Application\Contract\MarketingCommerceFinancialReadPort{
+    public array $facts=[];
+    public function financial(\Kernel\Tenant\Model\TenantContext $actor,string $orderId):?array{return $this->facts[$orderId]??null;}
+};
+$financial->facts[$orderId]=['schema_version'=>'1.0.0','organization_id'=>$org,'order_id'=>$orderId,'currency'=>'EUR','evidence_reference'=>'fixture-finance-1','revision'=>1,
+    'captured_amount'=>'100.00','refunded_amount'=>'15.00','chargeback_amount'=>'5.00','net_collected_amount'=>'80.00','outstanding_amount'=>'25.50'];
+$withFinance=new \Domains\Marketing\Application\Service\MarketingCommerceAttributionService($campaignService,$plans,$commerceSource,$commerceStore,$store,$modules,$financial);
+$f=$withFinance->report($actor,$c2,null,'2026-01-01','2026-01-02');
+$assert($f['financial_evidence_status']==='PARTIAL'&&$f['net_cash_received']===null&&$f['confirmed_financial_totals'][0]['net_collected_minor']===8000,'Partial Finance evidence promoted to complete cash.');
+$financial->facts[$shopId]=[...$financial->facts[$orderId],'order_id'=>$shopId,'currency'=>'USD','captured_amount'=>'20.00','refunded_amount'=>'0.00','chargeback_amount'=>'0.00','net_collected_amount'=>'20.00','outstanding_amount'=>'0.00'];
+$f=$withFinance->report($actor,$c2,null,'2026-01-01','2026-01-02');
+$assert($f['financial_evidence_status']==='COMPLETE_CAPTURED_COHORT'&&$f['net_cash_received']===[['currency'=>'EUR','minor'=>8000],['currency'=>'USD','minor'=>2000]]&&$f['recognized_revenue']===null&&$f['roas']===null,'Exact confirmed collection coverage invalid.');
+$financial->facts[$shopId]['net_collected_amount']='99.00';
+$f=$withFinance->report($actor,$c2,null,'2026-01-01','2026-01-02');
+$assert($f['financial_evidence_invalid_count']===1&&$f['net_cash_received']===null,'Broken collection arithmetic accepted.');
+echo "Marketing Commerce Finance contract fixtures: partial, exact net collection, separate currency and invalid evidence PASS\n";
+// Real repository readback runs only on unified Sales/Marketing checkout; explicitly report missing dependency.
+if(interface_exists(\Domains\Sales\Application\Contract\SalesOrderJourneyStore::class)){
+    $nativeRepo=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository($db);
+    $nativeId=bin2hex(random_bytes(16));$eventId=bin2hex(random_bytes(16));
+    $placement=$fact($nativeId,$eventId,'shopify','EUR','25.00',[])['placement'];
+    $placement['store_reference']=str_repeat('a',32);$placement['external_order_id']='gid://shopify/Order/123';
+    $placement['deal_id']=null;$placement['correlation_id']='m4-commerce-native-test';
+    $db->beginTransaction();
+    try{
+        $nativeRepo->create($org,['order_id'=>$nativeId,'owner_id'=>42,'deal_id'=>null,'customer_id'=>null,'channel'=>'shopify',
+            'store_reference'=>$placement['store_reference'],'external_order_id'=>$placement['external_order_id'],'currency'=>'EUR',
+            'subtotal'=>'25.00','discount'=>'0.00','tax'=>'0.00','tax_included'=>false,'shipping'=>'0.00','total'=>'25.00',
+            'attribution'=>[],'placed_at'=>'2026-01-02 10:00:00.000000','created_by'=>42],
+            [['line_no'=>1,'sku'=>'FIXTURE','title'=>'Fixture','product_id'=>null,'variant_id'=>null,'quantity'=>1,'unit_price'=>'25.00','subtotal'=>'25.00']],$placement);
+        $nativeRepo->recordJourney($org,$nativeId,$placement['store_reference'],$placement['external_order_id'],
+            ['model'=>'shopify-last-visit-utm-v1','visit_at'=>'2026-01-01T10:00:00.000000Z',...$tag]);
+        $db->commit();
+    }catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}
+    $nativeSource=new \App\Infrastructure\Marketing\CommerceOrderReadAdapter($modules,$nativeRepo,$nativeRepo);
+    $nativeCommerce=new \Domains\Marketing\Application\Service\MarketingCommerceAttributionService($campaignService,$plans,$nativeSource,$commerceStore,$store,$modules);
+    $r=$nativeCommerce->capture($actor,$c2,null,[$nativeId],'m4-native-order-join');
+    $assert($r['results'][0]['state']==='RECORDED','Native Sales -> Marketing commerce integration failed.');
+    echo "Marketing M4.10 native Sales repository -> Marketing attribution PASS\n";
+}else{
+    $adapter=new \App\Infrastructure\Marketing\CommerceOrderReadAdapter($modules);
+    $missing=false;try{$adapter->assertAvailable($actor);}catch(DomainException){$missing=true;}
+    $assert($missing,'Absent Sales commerce package did not fail closed.');
+    echo "Marketing M4.10 combined native Sales repository acceptance DEFERRED: source branch not installed\n";
+}
