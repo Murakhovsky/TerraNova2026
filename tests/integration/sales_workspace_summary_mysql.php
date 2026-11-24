@@ -90,6 +90,16 @@ try{
     $check($otherForecast['unscheduled']['deal_count']===1,'Forecast other owner scope invalid.');
     $reject(fn()=>$analytics->forecast($org,$owner,$pid,'2026-02-30','2026-03-02'));
     $reject(fn()=>$analytics->forecast($org,$owner,$pid,'2026-12-01','2026-12-01'));
+    $analyticsService=new \Domains\Sales\Application\Service\SalesCommercialAnalyticsService($scope,$analytics);
+    $analyticsInput=['pipeline_id'=>$pid,'from'=>'2026-12-01','to'=>'2027-01-01'];
+    $check($analyticsService->read($org,$owner,'forecast',$analyticsInput)===$analytics->forecast($org,$owner,$pid,'2026-12-01','2027-01-01'),'Scoped analytics application parity failed.');
+    $reject(fn()=>$analyticsService->read($org,$owner,'forecast',$analyticsInput+['scope'=>'tenant']));
+    $reject(fn()=>$analyticsService->read($org,$owner,'outcomes',$analyticsInput+['scope'=>'owner','owner_id'=>$other]));
+    $reject(fn()=>$analyticsService->read('foreign-'.$token,$owner,'forecast',$analyticsInput));
+    $db->prepare('INSERT INTO sales_user_capabilities(organization_id,user_id,capability,status,granted_by,created_at,updated_at) VALUES (?,?, "sales.director.view","ACTIVE",?,NOW(6),NOW(6))')->execute([$org,$owner,(string)$owner]);
+    $check($analyticsService->read($org,$owner,'forecast',$analyticsInput+['scope'=>'tenant'])['owner_id']===null,'Director analytics scope failed.');
+    $db->prepare('DELETE FROM sales_user_capabilities WHERE organization_id=? AND user_id=? AND capability="sales.director.view"')->execute([$org,$owner]);
+    $reject(fn()=>$analyticsService->read($org,$owner,'forecast',$analyticsInput+['scope'=>'tenant']));
     $dash=$read->dashboard($org,$owner);$check($dash['kpis']['pipeline_value']===null&&$dash['kpis']['money_by_currency']===$summary['money_by_currency']&&$dash['metrics']===[],'Dashboard parity/tenant leakage.');
     $operational=new MysqlSalesWorkspaceOperationalReadModel($db,$read);
     $pipelines=$operational->pipelines($org);$p=array_values(array_filter($pipelines,fn($x)=>$x['id']===$pid))[0];
