@@ -52,7 +52,7 @@ final readonly class ProductManagementImportPlanController
         try {
             $result=$this->proposals->propose($tenant,$batchId,$digest,$rowsDigest);
             $response=new JsonResponse(['ok'=>true,'data'=>$result],201);
-            return $this->private($response);
+            return $this->privateResponse($response);
         } catch(DomainException $e) {
             return $this->reply(409,'immutable_preview_or_plan_conflict');
         } catch(Throwable $e) {
@@ -63,10 +63,10 @@ final readonly class ProductManagementImportPlanController
 
     private function reply(int $status,string $error):JsonResponse
     {
-        return $this->private(new JsonResponse(['ok'=>false,'error'=>$error],$status));
+        return $this->privateResponse(new JsonResponse(['ok'=>false,'error'=>$error],$status));
     }
 
-    private function private(JsonResponse $response):JsonResponse
+    private function privateResponse(JsonResponse $response):JsonResponse
     {
         $response->headers->set('Cache-Control','private, no-store');
         $response->headers->set('X-Robots-Tag','noindex, nofollow');
