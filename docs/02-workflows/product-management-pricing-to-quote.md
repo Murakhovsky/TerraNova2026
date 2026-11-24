@@ -17,6 +17,10 @@ process_id: product_management.pricing-to-quote
 - Quantity tier is resolved in explicit currency without FX
 - Price history remains readable
 
+## Учасники
+
+- Product manager
+
 ## Тригер
 
 A known SKU needs a currency-specific wholesale offer.
@@ -36,3 +40,7 @@ A known SKU needs a currency-specific wholesale offer.
 ## Контроль і recovery
 
 Модель описує один допустимий бізнес-сценарій, не новий виконавчий рушій. Tenant і capability contract перевіряються до кожної операції. Для action-bound кроків незалежні Plan та Action approvals і Platform Workflow обов'язкові. При невідомому результаті — native readback та контрольоване врегулювання, не сліпий повтор. Послідовність не є однією глобальною транзакцією. Source verification не підтверджує production acceptance. Shopify не потрібний.
+
+## Карта коду
+
+- `app/Domains/ProductManagement/Application/Service/PricingService.php`
