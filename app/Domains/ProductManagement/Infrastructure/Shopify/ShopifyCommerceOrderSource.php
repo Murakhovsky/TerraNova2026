@@ -18,6 +18,7 @@ query COSCommerceOrder($id: ID!) {
   order(id: $id) {
     id createdAt updatedAt cancelledAt test edited taxesIncluded
     displayFinancialStatus displayFulfillmentStatus
+    customerJourneySummary { ready lastVisit { occurredAt utmParameters { source medium campaign } } }
     originalTotalPriceSet { shopMoney { amount currencyCode } }
     totalPriceSet { shopMoney { amount currencyCode } }
     currentTotalPriceSet { shopMoney { amount currencyCode } }
@@ -76,6 +77,8 @@ GQL;
         $cancelled=$raw['cancelledAt']===null?null:self::time($raw['cancelledAt']);
         $items=$this->allLines($c['shop_domain'],$token,$externalId,$updated,$raw['lineItems']??null);
         $raw['lineItems']=$items;
+        $journey=self::journey($raw['customerJourneySummary']??null,$created);
+        unset($raw['customerJourneySummary']); // Journey readiness may change independently of the Order updatedAt.
         $reason=null;$terms=null;
         if($raw['test'])$reason='test_order';
         elseif($raw['edited']||$cancelled!==null||$current!==$original||$beforeReturns!==$original||in_array($financial,['REFUNDED','PARTIALLY_REFUNDED','VOIDED'],true))$reason='historical_or_changed_terms';
@@ -116,7 +119,7 @@ GQL;
         $providerHash=hash('sha256',json_encode($raw,JSON_THROW_ON_ERROR));
         return ['provider_hash'=>$providerHash,'channel'=>'shopify','store_reference'=>$connection,'external_order_id'=>$externalId,'created_at'=>$created,'updated_at'=>$updated,
             'financial_status'=>$financial,'fulfillment_status'=>$fulfillment,'cancelled_at'=>$cancelled,'test'=>$raw['test'],'edited'=>$raw['edited'],'tax_included'=>$raw['taxesIncluded'],
-            'currency'=>$currency,'original_total'=>$original,'current_total'=>$current,'terms'=>$terms,'blocked_reason'=>$reason];
+            'currency'=>$currency,'original_total'=>$original,'current_total'=>$current,'terms'=>$terms,'blocked_reason'=>$reason,'journey'=>$journey];
     }
 
     public function page(string $org,string $channel,string $connection,?string $cursor,?string $cutoff=null):array
@@ -194,6 +197,20 @@ GQL;
             $page=$order['lineItems']??null;
         }
         throw new DomainException('Shopify order line pagination exhausted.');
+    }
+
+    /** No raw landing URL, identifiers, contact fields or arbitrary UTM values leave the provider boundary. */
+    private static function journey(mixed $summary,string $placed):?array
+    {
+        if(!is_array($summary)||($summary['ready']??null)!==true)return null;
+        $v=$summary['lastVisit']??null;$u=$v['utmParameters']??null;
+        if(!is_array($v)||!is_array($u))return null;
+        $source=$u['source']??null;$medium=$u['medium']??null;$campaign=$u['campaign']??null;
+        foreach([$source,$medium] as $s)if(!is_string($s)||!preg_match('/^[a-z0-9][a-z0-9_.-]{0,63}$/D',$s))return null;
+        if(!is_string($campaign)||!preg_match('/^(?:mkt|mkpl)-[a-f0-9]{24}$/D',$campaign))return null;
+        try{$at=self::time($v['occurredAt']??null);}catch(DomainException){return null;}
+        if($at>$placed)return null;
+        return ['model'=>'shopify-last-visit-utm-v1','visit_at'=>$at,'utm_source'=>$source,'utm_medium'=>$medium,'utm_campaign'=>$campaign];
     }
 
     private static function assertOrderScope(array $data):void

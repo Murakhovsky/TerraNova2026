@@ -121,6 +121,7 @@ return [
             'app/migrations/20261125_009005_sales_order_source_reconciliation.sql',
             'app/migrations/20261125_009006_sales_order_sync_runs.sql',
             'app/migrations/20261125_009008_sales_order_lifecycle.sql',
+            'app/migrations/20261125_009009_sales_order_journey_evidence.sql',
         ],
         'capability_contracts' => [
             [

@@ -3267,6 +3267,10 @@ services:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository
   Domains\Sales\Application\Contract\SalesCommerceOrderEvidencePort:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository
+  Domains\Sales\Application\Contract\SalesOrderJourneyStore:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository
+  Domains\Sales\Application\Contract\SalesCommerceOrderJourneyReadPort:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository
   Domains\Sales\Application\Service\SalesOrderService: ~
   Domains\Sales\Application\Service\SalesOrderLifecycleService: ~
   Domains\Sales\Application\Contract\SalesOrderLifecycleRepositoryInterface:

@@ -72,6 +72,7 @@ try{
     $shopStore->map($org,$conn,'product','gid://shopify/Product/41',str_repeat('a',32));
     $shopStore->map($org,$conn,'variant','gid://shopify/ProductVariant/42',str_repeat('b',32));
     $http=new class implements \Domains\ProductManagement\Infrastructure\Shopify\ShopifyHttpTransportInterface {
+        public bool $journeyReady=false;public string $journeyCampaign='mkt-aaaaaaaaaaaaaaaaaaaaaaaa';
         public int $reads=0;public string $updated='2026-11-24T10:00:00Z';public string $financial='PAID';
         public string $current='120.00';public bool $edited=false;public bool $fail=false;public bool $unmapped=false;public bool $truncated=false;public bool $multi=false;public bool $revisionShift=false;public bool $pageMode=false;public bool $temporaryFailure=false;
         public function post(string $url,array $headers,string $body):array
@@ -98,6 +99,7 @@ try{
                         'variant'=>['id'=>'gid://shopify/ProductVariant/42'],'originalUnitPriceSet'=>$money('60.00')]],'pageInfo'=>['hasNextPage'=>false,'endCursor'=>null]]];
             }else{
                 $data['order']=['id'=>$request['variables']['id'],'createdAt'=>'2026-11-24T09:00:00Z','updatedAt'=>$this->updated,'cancelledAt'=>null,'test'=>false,
+                    'customerJourneySummary'=>['ready'=>$this->journeyReady,'lastVisit'=>['occurredAt'=>'2026-11-24T08:00:00Z','utmParameters'=>['source'=>'meta','medium'=>'paid_social','campaign'=>$this->journeyCampaign]]],
                     'edited'=>$this->edited,'taxesIncluded'=>true,'displayFinancialStatus'=>$this->financial,'displayFulfillmentStatus'=>'UNFULFILLED',
                     'originalTotalPriceSet'=>$money('120.00'),'totalPriceSet'=>$money('120.00'),'currentTotalPriceSet'=>$money($this->current),
                     'totalDiscountsSet'=>$money('0.00'),'totalTaxSet'=>$money('20.00'),'totalShippingPriceSet'=>$money('0.00'),
@@ -117,7 +119,7 @@ try{
         new \Domains\ProductManagement\Infrastructure\Shopify\ShopifyReadClient($http),
         new \Domains\ProductManagement\Infrastructure\Shopify\ShopifyClientCredentials($http),$active,$productRefs);
     $reconcile=new \Domains\Sales\Application\Service\SalesOrderReconciliationService($source,
-        new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderSourceRepository($db),$orderRepo,$receipts,$guard,$orderService,$references);
+        new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderSourceRepository($db),$orderRepo,$receipts,$guard,$orderService,$references,$orderRepo);
     $syncTx=new \Infrastructure\Platform\Persistence\MySql\Transaction\TransactionManager($db);
     $syncEvents=new \Kernel\Event\EventBus(new class implements \Kernel\Event\Contract\EventStoreInterface {
         public function append(\Kernel\Event\DomainEvent $event):void{}
@@ -405,6 +407,20 @@ try{
     $reject(fn()=>$runSource([...$sourceInput,'external_order_id'=>'gid://shopify/Order/12346','delivery_id'=>$delivery],'import-'.$token));
     $same=$runSource($sourceInput,'same-'.$token);
     $check($same['outcome']==='unchanged'&&$same['order_id']===$externalOrderId,'Source identity duplicated across keys.');
+    $check($orderRepo->journey($org,$externalOrderId)===null,'Unready journey accepted.');
+    $http->journeyReady=true;
+    $late=$runSource($sourceInput,'journey-ready-'.$token);
+    $j=$orderRepo->journey($org,$externalOrderId);
+    $check($late['outcome']==='unchanged'&&$j['state']==='observed'&&$j['utm_campaign']===$http->journeyCampaign
+        &&$orderRepo->journey('foreign-'.$token,$externalOrderId)===null,'Delayed ready journey or tenant fence failed.');
+    $runSource($sourceInput,'journey-repeat-'.$token);
+    $check($orderRepo->journey($org,$externalOrderId)===$j,'Journey duplicate changed evidence.');
+    $http->journeyCampaign='mkpl-bbbbbbbbbbbbbbbbbbbbbbbb';
+    $runSource($sourceInput,'journey-conflict-'.$token);
+    $check($orderRepo->journey($org,$externalOrderId)===['state'=>'conflict'],'Conflicting journey silently reassigned.');
+    $http->journeyReady=false;
+    $check($orderRepo->placement($org,$externalOrderId)['realized_revenue']===null,'Journey implied financial revenue.');
+    echo "Sales O5 Shopify delayed journey, independent order revision, tenant, replay and conflict PASS.\n";
     $http->financial='REFUNDED';$http->current='0.00';$http->updated='2026-11-24T11:00:00Z';
     $observed=$runSource($sourceInput,'newer-'.$token);
     $check($observed['outcome']==='observed'&&$orderService->read($org,$owner,$externalOrderId)['order']===$externalOrder,'Provider update overwrote canonical terms.');

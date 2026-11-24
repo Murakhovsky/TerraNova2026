@@ -17,7 +17,8 @@ final readonly class SalesOrderReconciliationService
     private const PERMISSION='sales.admin.integrations.manage';
     public function __construct(private CommerceOrderSourcePort $source,private SalesOrderSourceRepositoryInterface $sources,
         private SalesOrderRepositoryInterface $orders,private SalesMutationReceiptRepositoryInterface $receipts,
-        private SalesMutationGuard $guard,private SalesOrderService $native,private SalesOfferReferencePort $references){}
+        private SalesMutationGuard $guard,private SalesOrderService $native,private SalesOfferReferencePort $references,
+        private \Domains\Sales\Application\Contract\SalesOrderJourneyStore $journeys){}
 
     public function page(string $org,int $actor,string $channel,string $connection,?string $cursor):array
     {
@@ -94,6 +95,9 @@ final readonly class SalesOrderReconciliationService
             }
             $observation=array_intersect_key($snapshot,array_flip(['channel','store_reference','external_order_id','created_at','updated_at','financial_status','fulfillment_status','cancelled_at','test','edited','tax_included','currency','original_total','current_total']));
             $this->sources->observe($org,$sourceId,$updated,$hash,$observation,$outcome,$reason,$id,$advance);
+            // Journey readiness is independent of immutable order placement and provider order updatedAt.
+            if($id!==null&&$advance&&in_array($outcome,['imported','observed','unchanged'],true)&&is_array($snapshot['journey']??null))
+                $this->journeys->recordJourney($org,$id,$connection,$external,$snapshot['journey']);
             // Existing native order + successful observation: acknowledge only the pointer, not downstream lifecycle.
             if($delivery!==null&&$id!==null&&in_array($outcome,['imported','observed','unchanged'],true))
                 $this->source->acknowledge($org,$channel,$connection,$delivery,$external);
