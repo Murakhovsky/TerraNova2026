@@ -25,6 +25,7 @@ final readonly class SalesLeadsController
     public function __construct(
         private Environment $twig,
         private QueryBusInterface $queries,
+        private \App\Security\SalesRequestScope $scope,
         private TenantContextProviderInterface $tenants,
         private WorkspaceShellFactory $shells,
         private PagePresentationFactory $pages,
@@ -122,7 +123,7 @@ final readonly class SalesLeadsController
         }
 
         return array_values(array_filter(
-            $users,
+            $this->scope->ownerOptions($tenant->organizationId()->value(),$users),
             static fn (mixed $user): bool => is_array($user)
                 && strtolower((string) ($user['status'] ?? '')) === 'active'
                 && in_array(
