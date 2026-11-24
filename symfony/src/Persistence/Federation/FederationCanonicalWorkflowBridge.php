@@ -219,8 +219,11 @@ final readonly class FederationCanonicalWorkflowBridge
                 }
             }
             $id=new WorkflowRunIdentity($org,$runId);
+            // Kernel policy evidence stores correlation_id in VARCHAR(40). Keep the full Run ID
+            // on the workflow; derive a stable tenant-scoped correlation shared by all its Actions.
+            $correlation='fed:'.substr(hash('sha256',$org."\0".$runId),0,32);
             $draft=new WorkflowRunDraft($id,$definition->id,$definition->version,$inputDigest,
-                $actor->userId()->value(),'federation:'.$runId,$planId,$approvalId,$digest,$definition);
+                $actor->userId()->value(),$correlation,$planId,$approvalId,$digest,$definition);
             if ($this->coordinator !== null) $this->coordinator->start($draft,$actor);
             else $this->workflow->create($draft,$actor);
             // Zero writes to cos_federation_runs/steps, no Action submission.
