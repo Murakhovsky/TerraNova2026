@@ -150,4 +150,28 @@ $assert($audit['status']==='OK'&&$audit['complete']===true,'Count correction rec
 $statement=$pdo->prepare('SELECT COUNT(*) FROM cos_event_outbox o JOIN cos_events e ON e.id=o.event_id WHERE e.organization_id=? AND e.type=?');
 $statement->execute([$org,'product_management.stock.count_applied']);
 $assert((int)$statement->fetchColumn()===3,'Count events/outbox exactly once per confirmed document');
-echo "Product Management E5 manual reservation/release and approved count MySQL acceptance passed.\n";
+// Session failure after a valid first line must roll back every native change.
+$v2=$products->createProduct($org,['name'=>'Second counted SKU','sku'=>'SECOND'.strtoupper($tag),'type'=>'stock'],'count-second-'.$tag,'42','count-test')['variant_id'];
+$products->recordMovement($org,$v2,$loc,'5','receipt','session-seed','session-seed-'.$tag,'42','count-test');
+$sessionHandler=new \Domains\ProductManagement\Automation\Action\ProductStockCountSessionApplyHandler($products,$modules);
+$makeSession=static function(string $tenant,string $id,array $rows,string $source,\Kernel\Action\ActionStatus $status=\Kernel\Action\ActionStatus::Running)use($loc):\Kernel\Action\Action{
+    return new \Kernel\Action\Action(bin2hex(random_bytes(16)),$tenant,'product_management.stock.count.session.apply',
+        'product_stock_count_session',$id,['location_id'=>$loc,'source_ref'=>$source,'rows'=>$rows],
+        'USER','42','APPROVAL_REQUIRED','HIGH','wf:'.hash('sha256',$id),new DateTimeImmutable(),$status,'session-test');
+};
+$rows=[['variant_id'=>$v,'counted'=>'1','expected_revision'=>(int)$products->balance($org,$v,$loc)['revision']],
+       ['variant_id'=>$v2,'counted'=>'4','expected_revision'=>(int)$products->balance($org,$v2,$loc)['revision']]];
+$rows=\Domains\ProductManagement\Application\Service\ProductManagementService::countSessionRows($rows);
+$badRows=$rows;$badRows[1]['expected_revision']++;
+$badId=bin2hex(random_bytes(16));$before1=$products->balance($org,$v,$loc);$before2=$products->balance($org,$v2,$loc);
+$assert(!$sessionHandler->execute($makeSession($org,$badId,$badRows,'count:BAD-SESSION'))->successful,'Stale second session row rejected');
+$assert($products->countSession($org,$badId)===null&&$products->balance($org,$v,$loc)===$before1&&$products->balance($org,$v2,$loc)===$before2,'Atomic rollback of first row');
+$id=bin2hex(random_bytes(16));$action=$makeSession($org,$id,$rows,'count:SESSION-1');
+$assert(!$sessionHandler->execute($makeSession($org,$id,$rows,'count:SESSION-1',\Kernel\Action\ActionStatus::PendingApproval))->successful,'Pending session denied');
+$assert(!$sessionHandler->execute($makeSession($other,$id,$rows,'count:SESSION-1'))->successful,'Foreign session denied');
+$assert(!$sessionHandler->execute($makeSession($org,$id,[$rows[0],$rows[0]],'count:SESSION-1'))->successful,'Duplicate SKU denied');
+$assert($sessionHandler->execute($action)->successful&&$sessionHandler->execute($makeSession($org,$id,array_reverse($rows),'count:SESSION-1'))->successful,'Session canonical replay');
+$assert($products->countSession($org,$id)['row_count']===2&&$products->countSession($other,$id)===null,'Session evidence isolation');
+$assert($products->balance($org,$v,$loc)['on_hand']==='1.000000'&&$products->balance($org,$v2,$loc)['on_hand']==='4.000000','Both count rows applied');
+$assert((new \Domains\ProductManagement\Infrastructure\Persistence\MySqlStockReconciliationAudit($pdo))->audit($org)['status']==='OK','Session ledger reconciled');
+echo "Product Management E5 reservations, counts and atomic sessions native MySQL acceptance passed.\n";
