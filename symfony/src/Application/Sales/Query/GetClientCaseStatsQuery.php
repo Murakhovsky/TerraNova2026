@@ -8,7 +8,7 @@ use Kernel\Shared\Domain\OrganizationId;
 
 final readonly class GetClientCaseStatsQuery implements QueryInterface
 {
-    public function __construct(public OrganizationId $organizationId)
+    public function __construct(public OrganizationId $organizationId,public ?int $actorId=null)
     {
     }
 }
