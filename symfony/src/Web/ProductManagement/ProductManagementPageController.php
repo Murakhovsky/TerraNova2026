@@ -90,7 +90,10 @@ final readonly class ProductManagementPageController
             }
             $listCode=strtoupper(trim((string)$request->query->get('list_code','')));
             $listVariantId=trim((string)$request->query->get('list_variant',''));
-            $list=null;$listPrice=null;$listVariant=null;$listHistory=null;$tiers=[];$quote=null;
+            $list=null;$listPrice=null;$listVariant=null;$listHistory=null;$tiers=[];$quote=null;$tierHistory=[];
+            $tierHistoryMinimum=trim((string)$request->query->get('tier_history_min',''));
+            $tierHistoryPage=filter_var($request->query->get('tier_history_page','1'),FILTER_VALIDATE_INT);
+            if($tierHistoryPage===false||$tierHistoryPage<1||$tierHistoryPage>333334)return new Response('Invalid tier history page.',422);
             $quoteQty=trim((string)$request->query->get('quote_qty','1'));
             $tierPage=filter_var($request->query->get('tier_page','1'),FILTER_VALIDATE_INT);
             if($tierPage===false||$tierPage<1||$tierPage>333334)return new Response('Invalid tier page.',422);
@@ -109,6 +112,11 @@ final readonly class ProductManagementPageController
                     return new Response('Invalid quote quantity.',422);
                 $scope=['list_id'=>$list['list_id'],'variant_id'=>$listVariantId];
                 $tiers=$this->read($actor,'price.list.tier.search',$scope+['limit'=>30,'offset'=>($tierPage-1)*30])['items']??[];
+                if($tierHistoryMinimum!==''){
+                    if(!preg_match('/^(0|[1-9][0-9]{0,13})(\.[0-9]{1,6})?$/D',$tierHistoryMinimum)||preg_match('/^0(?:\.0+)?$/D',$tierHistoryMinimum))
+                        return new Response('Invalid tier history quantity.',422);
+                    $tierHistory=$this->read($actor,'price.list.tier.history.search',$scope+['min_quantity'=>$tierHistoryMinimum,'limit'=>30,'offset'=>($tierHistoryPage-1)*30])['items']??[];
+                }
                 $quote=$this->read($actor,'price.resolve',$scope+['currency'=>$list['currency'],'quantity'=>$quoteQty]);
                 $listHistory=$this->read($actor,'price.list.history.search',['list_id'=>$list['list_id'],'variant_id'=>$listVariantId,'limit'=>30,'offset'=>($listHistoryPage-1)*30]);
             }
@@ -117,7 +125,7 @@ final readonly class ProductManagementPageController
                 'priceCurrency'=>$currency,'pricePage'=>$pricePage,
                 'priceHasNext'=>count($product['variants']??[])>$pricePage*30,
                 'priceHistory'=>$history,'historyVariant'=>$historyVariant,'historyPage'=>$historyPage,
-                'selectedList'=>$list,'listPrice'=>$listPrice,'listVariant'=>$listVariant,'listHistory'=>$listHistory,'listHistoryPage'=>$listHistoryPage,'tiers'=>$tiers,'tierPage'=>$tierPage,'quote'=>$quote,'quoteQty'=>$quoteQty,
+                'selectedList'=>$list,'listPrice'=>$listPrice,'listVariant'=>$listVariant,'listHistory'=>$listHistory,'listHistoryPage'=>$listHistoryPage,'tiers'=>$tiers,'tierPage'=>$tierPage,'quote'=>$quote,'quoteQty'=>$quoteQty,'tierHistory'=>$tierHistory,'tierHistoryMinimum'=>$tierHistoryMinimum,'tierHistoryPage'=>$tierHistoryPage,
             ]);
         } catch (Throwable $e) {
             error_log('product_management.workspace.detail_unavailable '.$e::class);
