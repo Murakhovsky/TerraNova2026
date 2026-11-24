@@ -95,6 +95,7 @@ domain_id: sales
         "sales.analytics.outcomes.read",
         "sales.analytics.stages.read",
         "sales.workspace.summary.read",
+        "sales.workspace.team.summary.read",
         "sales.workspace.leads.list",
         "sales.workspace.deals.list",
         "sales.workspace.deal.timeline.read"
