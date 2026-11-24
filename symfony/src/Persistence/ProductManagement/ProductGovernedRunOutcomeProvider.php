@@ -96,6 +96,40 @@ final readonly class ProductGovernedRunOutcomeProvider implements RunScopedGoalO
                     &&$m['quantity_delta']===self::decimal($delta,6)&&$m['movement_type']===$kind&&$m['source_ref']===$p['source_ref']&&$m['actor_ref']===$actor,'immutable movement');
                 $ids=['product_management:stock_movement:'.$m['movement_id']];
                 break;
+            case 'category.create':
+                $id=$r['category_id']??null;
+                $fresh=$this->db->fetchAssociative('SELECT name,slug,parent_id FROM pm_categories WHERE organization_id=? AND category_id=?',[$org,$id]);
+                $this->require($fresh!==false&&$fresh['name']===ProductRules::name($p['name'])&&$fresh['slug']===ProductRules::slug($p['slug'])
+                    &&$fresh['parent_id']===($p['parent_id']??null)&&$r['slug']===$fresh['slug']&&$r['parent_id']===$fresh['parent_id'],'category identity and parent');
+                $ids=['product_management:category:'.$id];
+                break;
+            case 'category.assign':
+                $this->require(($r['product_id']??null)===$p['product_id']&&($r['category_id']??null)===$p['category_id']
+                    &&(int)$this->db->fetchOne('SELECT COUNT(*) FROM pm_product_categories WHERE organization_id=? AND product_id=? AND category_id=?',[$org,$p['product_id'],$p['category_id']])===1,'native category assignment');
+                $ids=['product_management:product:'.$p['product_id'],'product_management:category:'.$p['category_id']];
+                break;
+            case 'translation.upsert':
+                $fresh=$this->db->fetchAssociative('SELECT name,description FROM pm_product_translations WHERE organization_id=? AND product_id=? AND locale=?',[$org,$p['product_id'],$p['locale']]);
+                $this->require($fresh!==false&&($r['product_id']??null)===$p['product_id']&&($r['locale']??null)===$p['locale']
+                    &&$fresh['name']===ProductRules::name($p['name'])&&$fresh['description']===($p['description']??null)
+                    &&$r['name']===$fresh['name']&&$r['description']===$fresh['description'],'native localized fields');
+                $ids=['product_management:translation:'.$p['product_id'].':'.$p['locale']];
+                break;
+            case 'variant.create':
+                $id=$r['variant_id']??null;
+                $fresh=$this->db->fetchAssociative('SELECT product_id,sku,uom,track_inventory,status FROM pm_variants WHERE organization_id=? AND variant_id=?',[$org,$id]);
+                $this->require($fresh!==false&&$fresh['product_id']===$p['product_id']&&$r['product_id']===$p['product_id']
+                    &&$fresh['sku']===ProductRules::sku($p['sku'])&&$r['sku']===$fresh['sku']&&$fresh['uom']===($p['uom']??'pcs')
+                    &&(bool)$fresh['track_inventory']===($p['track_inventory']??true)&&$fresh['status']==='active','native created variant');
+                $ids=['product_management:variant:'.$id];
+                break;
+            case 'location.create':
+                $id=$r['location_id']??null;
+                $fresh=$this->db->fetchAssociative('SELECT code,name,status FROM pm_locations WHERE organization_id=? AND location_id=?',[$org,$id]);
+                $this->require($fresh!==false&&$fresh['code']===ProductRules::code($p['code'])&&$r['code']===$fresh['code']
+                    &&$fresh['name']===ProductRules::name($p['name'])&&$fresh['status']==='active','native warehouse location');
+                $ids=['product_management:location:'.$id];
+                break;
             case 'product.update':
             case 'product.archive':
                 $id=$p['product_id'];

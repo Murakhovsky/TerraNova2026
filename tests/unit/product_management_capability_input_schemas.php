@@ -10,9 +10,14 @@ foreach($raw['contributions']['capability_contracts'] as $definition) {
     $cap=CapabilityContract::fromArray($definition);
     $contracts[$cap->id]=$cap;
 }
-if(count($contracts)!==79)throw new RuntimeException('Missing typed PM contracts.');
+if(count($contracts)!==84)throw new RuntimeException('Missing typed PM contracts.');
 $validator=new CapabilityJsonInputValidator();
 $good=[
+ 'product_management.governed.category.create'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['name'=>'QA','slug'=>'qa']],
+ 'product_management.governed.category.assign'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['product_id'=>str_repeat('a',32),'category_id'=>str_repeat('b',32)]],
+ 'product_management.governed.translation.upsert'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['product_id'=>str_repeat('a',32),'locale'=>'uk','name'=>'QA']],
+ 'product_management.governed.variant.create'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['product_id'=>str_repeat('a',32),'sku'=>'QA']],
+ 'product_management.governed.location.create'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['code'=>'QA','name'=>'Warehouse']],
  'product_management.governed.product.update'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['product_id'=>str_repeat('a',32),'expected_revision'=>1,'name'=>'New']],
  'product_management.governed.product.archive'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['product_id'=>str_repeat('a',32),'expected_revision'=>1]],
  'product_management.governed.variant.update'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['variant_id'=>str_repeat('a',32),'expected_revision'=>1,'barcode'=>'QA']],
