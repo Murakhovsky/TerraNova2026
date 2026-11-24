@@ -10,9 +10,13 @@ foreach($raw['contributions']['capability_contracts'] as $definition) {
     $cap=CapabilityContract::fromArray($definition);
     $contracts[$cap->id]=$cap;
 }
-if(count($contracts)!==40)throw new RuntimeException('Missing typed PM contracts.');
+if(count($contracts)!==44)throw new RuntimeException('Missing typed PM contracts.');
 $validator=new CapabilityJsonInputValidator();
 $good=[
+ 'product_management.price.list.entry.remove'=>['list_id'=>str_repeat('a',32),'variant_id'=>str_repeat('b',32),'expected_revision'=>1],
+ 'product_management.price.list.tier.set'=>['list_id'=>str_repeat('a',32),'variant_id'=>str_repeat('b',32),'min_quantity'=>'10.5','amount'=>null,'expected_revision'=>1],
+ 'product_management.price.list.tier.search'=>['list_id'=>str_repeat('a',32),'variant_id'=>str_repeat('b',32),'limit'=>30],
+ 'product_management.price.resolve'=>['variant_id'=>str_repeat('b',32),'currency'=>'EUR','quantity'=>'12.5'],
  'product_management.stock.reservation.search'=>['variant_id'=>str_repeat('a',32),'location_id'=>str_repeat('b',32),'limit'=>30],
  'product_management.stock.reserve'=>['variant_id'=>str_repeat('a',32),'location_id'=>str_repeat('b',32),'quantity'=>'2.500000','source_ref'=>'manual:ORDER-1'],
  'product_management.stock.release'=>['reservation_id'=>str_repeat('a',32),'reason'=>'Order cancelled'],
@@ -49,6 +53,9 @@ $good=[
 ];
 foreach($good as $id=>$input) $validator->validate($contracts[$id],$input);
 $bad=[
+ 'product_management.price.list.entry.remove'=>[['list_id'=>str_repeat('a',32),'variant_id'=>str_repeat('b',32),'expected_revision'=>0]],
+ 'product_management.price.list.tier.set'=>[['list_id'=>str_repeat('a',32),'variant_id'=>str_repeat('b',32),'min_quantity'=>'-1','amount'=>'3','expected_revision'=>0],['list_id'=>str_repeat('a',32),'variant_id'=>str_repeat('b',32),'min_quantity'=>'1','amount'=>3,'expected_revision'=>0]],
+ 'product_management.price.resolve'=>[['variant_id'=>str_repeat('b',32),'currency'=>'EUR','quantity'=>'1','organization_id'=>'foreign']],
  'product_management.stock.reservation.search'=>[['variant_id'=>str_repeat('a',32),'location_id'=>str_repeat('b',32),'limit'=>101],['variant_id'=>str_repeat('a',32),'location_id'=>str_repeat('b',32),'organization_id'=>'other']],
  'product_management.stock.reserve'=>[['variant_id'=>str_repeat('a',32),'location_id'=>str_repeat('b',32),'quantity'=>'1','source_ref'=>'sales:FORGED'],['variant_id'=>str_repeat('a',32),'location_id'=>str_repeat('b',32),'quantity'=>'-1','source_ref'=>'manual:X']],
  'product_management.stock.release'=>[['reservation_id'=>'invalid','reason'=>'X'],['reservation_id'=>str_repeat('a',32),'reason'=>'X','actor_id'=>'forged']],
