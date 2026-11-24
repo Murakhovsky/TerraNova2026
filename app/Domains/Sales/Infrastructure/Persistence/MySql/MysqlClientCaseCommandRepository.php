@@ -58,8 +58,21 @@ final readonly class MysqlClientCaseCommandRepository implements ClientCaseComma
 
     public function inboundRequest(string $organizationId, int $requestId): ?array
     {
+        return $this->readInboundRequest($organizationId, $requestId, false);
+    }
+
+    public function lockInboundRequest(string $organizationId, int $requestId): ?array
+    {
+        if (!$this->connection->inTransaction()) {
+            throw new \LogicException('Inbound request lock requires an active transaction.');
+        }
+        return $this->readInboundRequest($organizationId, $requestId, true);
+    }
+
+    private function readInboundRequest(string $organizationId, int $requestId, bool $lock): ?array
+    {
         $request = $this->one('SELECT l.* FROM tn_leads l
-            WHERE l.id = :id AND l.organization_id = :organization_id LIMIT 1',
+            WHERE l.id = :id AND l.organization_id = :organization_id LIMIT 1' . ($lock ? ' FOR UPDATE' : ''),
             ['id' => $requestId, 'organization_id' => $organizationId]);
         if ($request === null) return null;
         $property = $this->properties->property((int) ($request['property_id'] ?? 0));
