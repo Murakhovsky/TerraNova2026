@@ -20,7 +20,7 @@ final readonly class SalesOrderLifecycleService
     public function __construct(private SalesOrderRepositoryInterface $orders,private SalesOrderLifecycleRepositoryInterface $lifecycle,
         private SalesMutationReceiptRepositoryInterface $receipts,private SalesMutationGuard $guard,
         private SalesMutationAuthorityInterface $authority,private SalesEntityScopeService $scope,
-        private OrderInventoryPort $inventory,private ActiveModuleResolver $modules){}
+        private OrderInventoryPort $inventory,private ActiveModuleResolver $modules,private \Domains\Sales\Application\Contract\SalesOrderSourceRepositoryInterface $sources){}
 
     public function read(string $org,int $actor,string $id):array
     {
@@ -155,6 +155,7 @@ final readonly class SalesOrderLifecycleService
         $reserved=0;foreach($allocations as $a)$reserved+=$a['quantity']-$a['fulfilled']-$a['cancelled'];
         $external=$order['channel']!=='native';
         return ['order_id'=>$order['order_id'],'status'=>$order['status'],'revision'=>$order['revision'],'inventory_authority'=>$external?'external_review':'local',
+            'external_observation'=>$external?$this->sources->latestForOrder($org,$order['order_id']):null,
             'ordered_quantity'=>$total,'allocated_pending_quantity'=>$reserved,'fulfilled_quantity'=>$fulfilled,'returned_quantity'=>$returned,
             'cancelled_quantity'=>$order['status']==='cancelled'?$total-$fulfilled:0,
             'unallocated_quantity'=>$order['status']==='cancelled'?0:$total-$fulfilled-$reserved,

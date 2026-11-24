@@ -129,7 +129,7 @@ try{
     $sync=new \Domains\Sales\Application\Service\SalesOrderSyncService($syncRepo,$source,$reconcile,$guard,$syncQueue,
         new \Infrastructure\Platform\ReadModel\MySql\MysqlAsyncOperationReadModel($db),$active);
     $syncHandler=new \Domains\Sales\Automation\Job\SalesOrderSyncJobHandler($sync);
-    $lifecycle=new \Domains\Sales\Application\Service\SalesOrderLifecycleService($orderRepo,$orderRepo,$receipts,$guard,$authority,$entityScope,$productStore,$active);
+    $lifecycle=new \Domains\Sales\Application\Service\SalesOrderLifecycleService($orderRepo,$orderRepo,$receipts,$guard,$authority,$entityScope,$productStore,$active,new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderSourceRepository($db));
     $gateway=new CanonicalCapabilityGateway($catalog,$active,new FederationCapabilityBindingResolver($catalog,new DomainModuleRegistry([]),$active),[
         new SalesWorkspaceSummaryAdapter($scope,$read),
         new \App\Infrastructure\Capability\SalesWorkspaceLeadsListAdapter($scoped),
@@ -551,7 +551,7 @@ try{
     $twoFulfilled=$life('fulfill',$two,3,'dispatch-two',['items'=>array_map(fn($a)=>['allocation_id'=>$a['allocation_id'],'quantity'=>$a['quantity']],$twoAlloc['allocations'])]);
     $check($twoFulfilled['status']==='completed'&&$twoFulfilled['fulfillment_state']==='fulfilled'&&$balance($locA)['on_hand']==='5.000000'&&$balance($locB)['on_hand']==='1.000000','Complete fulfillment balances mismatch.');
     $externalLifecycle=$life('confirm',$externalOrderId,1,'external-confirm');
-    $check($externalLifecycle['inventory_authority']==='external_review'&&$externalLifecycle['fulfillment_state']==='external_review','External order ownership not explicit.');
+    $check($externalLifecycle['inventory_authority']==='external_review'&&$externalLifecycle['fulfillment_state']==='external_review'&&$externalLifecycle['external_observation']['provider_fulfillment_status']==='UNFULFILLED'&&$externalLifecycle['external_observation']['provider_financial_status']==='PAID','External order ownership not explicit.');
     $atomicReject(fn()=>$life('allocate',$externalOrderId,2,'external-double-reserve',['items'=>[['line_no'=>1,'location_id'=>$locA,'quantity'=>1]]]));
     $atomicReject(fn()=>$gateway->invoke($actor($org,$other),'sales.order.lifecycle.cancel',['order_id'=>$one,'expected_revision'=>9,'reference'=>'foreign'],'human_api','foreign-o3-'.$token,'o3'));
     $atomicReject(fn()=>$gateway->invoke($actor('foreign-'.$token,$owner),'sales.order.lifecycle.read',['order_id'=>$one],'trusted_read','','o3'));

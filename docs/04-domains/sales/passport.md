@@ -181,7 +181,7 @@ Human UI/API, AI/Hermes та CRON можуть отримувати доступ
 
 ## 8. Процеси та результати
 
-Process Registry: `sales.lead-to-managed-case`, `sales.request-to-property-match`.
+Process Registry: `sales.lead-to-managed-case`, `sales.request-to-property-match`, `sales.order-to-fulfillment`.
 Покриття означає **описану процесну модель**, не успішний користувацький сценарій.
 
 ## 9. Tenant, Policy та Security

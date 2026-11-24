@@ -137,6 +137,53 @@
     },
     "replayed": {
       "type": "boolean"
+    },
+    "external_observation": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "provider_updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "provider_fulfillment_status": {
+          "type": "string"
+        },
+        "provider_financial_status": {
+          "type": "string"
+        },
+        "provider_cancelled_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reconciliation_outcome": {
+          "type": "string"
+        },
+        "review_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "source_id",
+        "provider_updated_at",
+        "provider_fulfillment_status",
+        "provider_financial_status",
+        "provider_cancelled_at",
+        "reconciliation_outcome",
+        "review_reason"
+      ],
+      "additionalProperties": false
     }
   },
   "required": [
@@ -153,7 +200,8 @@
     "fulfillment_state",
     "return_state",
     "allocations",
-    "replayed"
+    "replayed",
+    "external_observation"
   ],
   "additionalProperties": false
 }
