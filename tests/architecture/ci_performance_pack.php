@@ -34,7 +34,7 @@ $required = [
     'tags: cos-symfony-php:local',
     'tags: cos-nginx:latest',
     'needs: [runtime, federation-mysql, capital-markets-unit]',
-    'if: github.event_name == \'workflow_dispatch\' && github.ref == \'refs/heads/main\' && inputs.deploy_dev == true',
+    'if: github.ref == \'refs/heads/main\' && (github.event_name == \'push\' || (github.event_name == \'workflow_dispatch\' && inputs.deploy_dev == true))',
     'CI_TIMING_JOB: Federation MySQL',
     'CI_TIMING_JOB: Capital Markets Pack',
     'CI_TIMING_JOB: runtime',
@@ -58,7 +58,7 @@ if (str_contains($workflow, 'docker compose build php nginx')
     throw new RuntimeException('CI performance pack weakened a critical gate or timing evidence.');
 }
 
-$deployGate = "if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.deploy_dev == true";
+$deployGate = "if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy_dev == true))";
 $docsWorkflow = (string) file_get_contents($root.'/.github/workflows/docs.yml');
 $docsGate = "if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.deploy_docs == true";
 if (substr_count($workflow, $deployGate) !== 2
@@ -68,7 +68,7 @@ if (substr_count($workflow, $deployGate) !== 2
     || substr_count($docsWorkflow, $docsGate) !== 1
     || str_contains($docsWorkflow, "if: github.event_name == 'push' && github.ref == 'refs/heads/main'")
     || !str_contains($docsWorkflow, 'deploy_docs:')) {
-    throw new RuntimeException('Explicit manual main deployment gates missing or auto-deployment unexpectedly reenabled.');
+    throw new RuntimeException('Main-only auto-deployment or explicit manual dev deployment gate missing.');
 }
 
 echo "CI Performance Pack safety contracts passed (parallel independent gates, BuildKit cache, complete deploy needs, measured stages).\n";
