@@ -20,11 +20,19 @@
           "type": "null"
         }
       ]
+    },
+    "historical_access": {
+      "type": "string",
+      "enum": [
+        "all_orders_scope",
+        "provider_limited"
+      ]
     }
   },
   "required": [
     "order_ids",
-    "next_cursor"
+    "next_cursor",
+    "historical_access"
   ],
   "additionalProperties": false
 }
