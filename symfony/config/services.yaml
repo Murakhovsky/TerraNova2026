@@ -2865,6 +2865,18 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
+  App\Web\ProductManagement\ProductInventoryController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\ProductManagement\ProductImportController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\ProductManagement\ProductGovernedPlanController:
+    public: true
+    tags: ['controller.service_arguments']
+
   # Product Management E0: domain stays tenant-disabled until explicit activation.
   Domains\ProductManagement\Automation\Action\ProductImportApplyHandler: ~
   Domains\ProductManagement\Automation\Action\ProductStockCountApplyHandler: ~

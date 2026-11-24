@@ -8,6 +8,7 @@ $module=$read('app/Domains/ProductManagement/module.php');
 $provider=$read('symfony/src/Web/Experience/Extension/Provider/ProductManagementWebProvider.php');
 $routes=$read('symfony/config/routes.yaml');
 $workflow=$read('.github/workflows/runtime.yml');
+$services=$read('symfony/config/services.yaml');
 $store=$read('app/Domains/ProductManagement/Infrastructure/Persistence/MySqlProductManagementStore.php');
 $adapter=$read('symfony/src/Infrastructure/Capability/ProductLocationSearchAdapter.php');
 $assert=static function(bool $good,string $msg):void{
@@ -50,4 +51,9 @@ $assert(!str_contains($controller,'applyApprovedStockCount'),'Workspace must not
 $assert(str_contains($controller,'stock.count.session.candidates')&&str_contains($controller,'stock.count.session.get')
     &&str_contains($controller,'$this->sessionPlans->propose(')&&str_contains($twig,'id="stock-session"')
     &&str_contains($routes,'cos_product_management_stock_count_session_propose:'),'Canonical mass inventory session workspace missing.');
+// Every explicit Product route controller must be callable by Symfony's container.
+foreach(['ProductManagementPageController','ProductInventoryController','ProductImportController','ProductGovernedPlanController'] as $class){
+    $service='  App\\Web\\ProductManagement\\'.$class.":\n    public: true\n    tags: ['controller.service_arguments']";
+    $assert(str_contains($services,$service),'Missing callable Product controller service: '.$class);
+}
 echo "Product Management inventory Workspace architecture passed.\n";
