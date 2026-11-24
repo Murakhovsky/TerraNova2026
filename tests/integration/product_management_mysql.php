@@ -226,6 +226,11 @@ $assert($prices->resolvePrice($org,$variant,'USD','20',$retailId)['source']==='n
 $reject(static fn()=> $prices->setTier($org,$retailId,$variant,'20','8',0,'pm-tier-stale-'.$token,'ci-user','ci-pm'),'Tier stale revision');
 $removedTier=$prices->setTier($org,$retailId,$variant,'20.000000',null,1,'pm-tier-remove-'.$token,'ci-user','ci-pm');
 $assert($removedTier['price']===null && $removedTier['revision']===2,'Tier removal tombstone');
+$tierHistory=$prices->tierHistory($org,$retailId,$variant,'20');
+$assert(count($tierHistory)===2 && $tierHistory[0]['new_amount']===null && $tierHistory[0]['old_amount']==='9.0000' && $tierHistory[0]['revision']===2,'Tier removal history');
+$assert($prices->tierHistory($org,$retailId,$variant,'20',1,1)[0]['new_amount']==='9.0000','Tier history pagination');
+$assert($prices->tierHistory($other,$retailId,$variant,'20')===[],'Tier history tenant isolation');
+$assert(count($prices->tierHistory($org,$retailId,$variant,'10'))===1,'Threshold identity isolation');
 $assert($prices->resolvePrice($org,$variant,'EUR','20',$retailId)['price']==='12.0000','Removed tier excluded');
 $removedEntry=$prices->removeListPrice($org,$retailId,$variant,1,'pm-entry-remove-'.$token,'ci-user','ci-pm');
 $assert($removedEntry['price']===null && $removedEntry['revision']===2,'Entry removal retains revision');
