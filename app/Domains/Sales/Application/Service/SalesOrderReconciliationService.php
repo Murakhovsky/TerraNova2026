@@ -89,13 +89,13 @@ final readonly class SalesOrderReconciliationService
             }elseif(($snapshot['test']??null)!==false){$outcome='blocked';$reason='test_order';}
             else {
                 // Current provider facts are stored but never overwrite canonical placed terms or Finance/stock state.
-                $reason=null;
+                // Preserve the reason for downstream review without asserting a business transition.
                 if($latest!==null&&$updated===$latest)$outcome='unchanged';
             }
-            $observation=array_intersect_key($snapshot,array_flip(['channel','store_reference','external_order_id','created_at','updated_at','financial_status','fulfillment_status','cancelled_at','test','currency','original_total','current_total']));
+            $observation=array_intersect_key($snapshot,array_flip(['channel','store_reference','external_order_id','created_at','updated_at','financial_status','fulfillment_status','cancelled_at','test','edited','tax_included','currency','original_total','current_total']));
             $this->sources->observe($org,$sourceId,$updated,$hash,$observation,$outcome,$reason,$id,$advance);
             // Existing native order + successful observation: acknowledge only the pointer, not downstream lifecycle.
-            if($delivery!==null&&$id!==null&&in_array($outcome,['imported','observed','unchanged','stale'],true))
+            if($delivery!==null&&$id!==null&&in_array($outcome,['imported','observed','unchanged'],true))
                 $this->source->acknowledge($org,$channel,$connection,$delivery,$external);
             if(!$this->receipts->complete($org,$op,$key,$pending,$fingerprint))throw new RuntimeException('Order reconciliation receipt completion failed.');
             return $this->result($org,$actor,$sourceId,$id,$outcome,$reason,false);
