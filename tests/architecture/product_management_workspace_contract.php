@@ -63,4 +63,7 @@ $assert(str_contains($pricing,'Base price revision conflict.')&&str_contains($pr
     'Pricing must fence revision and archived lifecycle at Domain writer.');
 $assert(str_contains($controller,'price_readback_uncertain')&&str_contains($twig,'price.revision')&&str_contains($twig,'priceCurrency'),
     'Multi-currency pricing requires observed revision and independent receipt readback.');
+$assert(str_contains($controller,'price.history.search')&&str_contains($twig,'id="price-history"')
+    &&str_contains($pricing,'WHERE organization_id=:org AND variant_id=:variant AND currency=:currency'),
+    'Price history requires canonical query, native tenant scope and Workspace projection.');
 echo "Product Management E7/P0 catalog workspace architecture passed.\n";
