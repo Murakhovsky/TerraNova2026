@@ -42,7 +42,7 @@ final readonly class GetClientCaseWorkspaceQueryHandler implements QueryHandlerI
             // Intelligence is optional; core Client Case work must remain available without it.
         }
 
-        $pipelines = $this->sales->pipelines($organizationId);
+        $pipelines = $this->sales->pipelines($organizationId,$owner);
 
         $result = [
             'case' => $case,
