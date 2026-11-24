@@ -5,6 +5,7 @@ use App\Application\Capability\CanonicalCapabilityGateway;
 use App\Application\Integration\Command\RecoverCrmInboxCommand;
 use App\Application\Integration\Command\ProcessCrmInboxNowCommand;
 use App\Application\Integration\Command\ProcessCrmInboxNowCommandHandler;
+use App\Infrastructure\Capability\SalesCrmInboxProcessAdapter;
 use App\Application\Integration\Command\RecoverCrmInboxCommandHandler;
 use App\Application\Integration\IntegrationMutationAudit;
 use App\Infrastructure\Capability\SalesCrmInboxStatusAdapter;
@@ -157,7 +158,7 @@ try{
     $managerId=(int)$a->lastInsertId();
     $a->prepare('INSERT INTO cos_organization_memberships (organization_id,user_id,role,status) VALUES (?,?,?,?)')->execute([$org,$managerId,'manager','ACTIVE']);
     $handler=new RecoverCrmInboxCommandHandler($repo,new MysqlSalesMutationReceiptRepository($a),$tx,new IntegrationMutationAudit(new MysqlAuditRepository($a)));
-    $bus=new SymfonyCommandBus(new MessageBus([new HandleMessageMiddleware(new HandlersLocator([RecoverCrmInboxCommand::class=>[$handler]]))]));
+    $bus=new SymfonyCommandBus(new MessageBus([new HandleMessageMiddleware(new HandlersLocator([RecoverCrmInboxCommand::class=>[$handler],ProcessCrmInboxNowCommand::class=>[new ProcessCrmInboxNowCommandHandler($repo,$processor)]]))]));
     $moduleCatalog=new ModuleCatalog([ModuleDefinition::fromArray(require dirname(__DIR__,2).'/app/Domains/Sales/module.php')]);
     $catalog=new CanonicalCapabilityCatalog($moduleCatalog);
     $state=new class implements ModuleStateRepositoryInterface {
@@ -166,7 +167,7 @@ try{
     };
     $active=new ActiveModuleResolver($moduleCatalog,$state);
     $gateway=new CanonicalCapabilityGateway($catalog,$active,new FederationCapabilityBindingResolver($catalog,new DomainModuleRegistry([]),$active),
-        [new SalesCrmInboxStatusAdapter($repo),new SalesCrmInboxRecoverAdapter($bus)]);
+        [new SalesCrmInboxStatusAdapter($repo),new SalesCrmInboxRecoverAdapter($bus),new SalesCrmInboxProcessAdapter($bus)]);
     $actor=static fn(string $tenant,string $role='manager')=>new TenantContext(UserId::fromString((string)$managerId),OrganizationId::fromString($tenant),OrganizationRole::fromString($role),[Permission::fromString(TenantPermissions::ACCESS),Permission::fromString(TenantPermissions::MANAGE)]);
     $manager=$actor($org);
     $observation=$gateway->invoke($manager,'sales.crm.inbox.status',['inbox_id'=>$dead],'trusted_read','',$correlation);
@@ -186,12 +187,13 @@ try{
     $denied(fn()=>$recover($input,'different-'.$token));
     $denied(fn()=>$recover([...$input,'reason'=>'configuration_repaired'],$key));
     $current=$repo->status($org,$dead);
-    $processHandler=new ProcessCrmInboxNowCommandHandler($repo,$processor);
-    $makeProcess=static fn(string $revision,string $key)=>new ProcessCrmInboxNowCommand(OrganizationId::fromString($org),$managerId,$dead,$revision,$key,$correlation);
-    $denied(fn()=>$processHandler($makeProcess(str_repeat('0',64),'stale')));
-    $check($read($dead)['status']==='RECEIVED','Stale process changed native item.');
-    $check($processHandler($makeProcess($current['revision'],'process'))===['inbox_id'=>$dead,'status'=>'COMPLETED','replayed'=>false],'Native CRM processing receipt missing.');
-    $check($processHandler($makeProcess($current['revision'],'another-key'))===['inbox_id'=>$dead,'status'=>'COMPLETED','replayed'=>true],'Completed item replay failed.');
+    $processHandler=static fn(array $data,string $key,string $origin='human_api')=>$gateway->invoke($manager,'sales.crm.inbox.process',$data,$origin,$key,$correlation);
+    $makeProcess=static fn(string $revision)=>['inbox_id'=>$dead,'revision'=>$revision];
+    $denied(fn()=>$processHandler($makeProcess(str_repeat('0',64)),'stale'));
+    $denied(fn()=>$processHandler($makeProcess($current['revision']),'ai','ai'));
+    $check($read($dead)['status']==='RECEIVED','Denied process changed native item.');
+    $check($processHandler($makeProcess($current['revision']),'process')===['inbox_id'=>$dead,'status'=>'COMPLETED','replayed'=>false],'Native CRM processing receipt missing.');
+    $check($processHandler($makeProcess($current['revision']),'another-key')===['inbox_id'=>$dead,'status'=>'COMPLETED','replayed'=>true],'Completed item replay failed.');
     $check((int)$read($dead)['attempts']===1,'Replay duplicated claim.');
     $check($recover($input,$key)===[...$receipt,'replayed'=>true] && $read($dead)['status']==='COMPLETED','Recovery replay reset a completed item.');
     $q=$b->prepare("SELECT COUNT(*) FROM cos_audit_log WHERE organization_id=? AND subject_id=? AND action='sales.crm.inbox.recover' AND JSON_UNQUOTE(JSON_EXTRACT(metadata,'$.reason_code'))='mapping_repaired'");

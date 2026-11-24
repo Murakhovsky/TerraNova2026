@@ -27,7 +27,8 @@ domain_id: sales
       "id": "crm_inbox",
       "capability_ids": [
         "sales.crm.inbox.status",
-        "sales.crm.inbox.recover"
+        "sales.crm.inbox.recover",
+        "sales.crm.inbox.process"
       ]
     },
     {

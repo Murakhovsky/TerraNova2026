@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 use App\Application\Capability\CanonicalCapabilityGateway;
 use App\Application\Integration\Command\RecoverCrmInboxCommand;
+use App\Application\Integration\Command\ProcessCrmInboxNowCommand;
+use App\Infrastructure\Capability\SalesCrmInboxProcessAdapter;
 use App\Infrastructure\Capability\SalesCrmInboxStatusAdapter;
 use App\Infrastructure\Capability\SalesCrmInboxRecoverAdapter;
 use App\Persistence\Federation\FederationCapabilityBindingResolver;
@@ -53,12 +55,16 @@ $read=new class($id,$revision) implements CrmInboxRecoveryRepositoryInterface {
 $bus=new class implements CommandBusInterface {
     public array $calls=[];public bool $bad=false;
     public function dispatch(CommandInterface $command):mixed {
+        if ($command instanceof ProcessCrmInboxNowCommand) {
+            $this->calls[]=$command;
+            return ['inbox_id'=>$command->inboxId,'status'=>$this->bad?'PROCESSING':'COMPLETED','replayed'=>false];
+        }
         if (!$command instanceof RecoverCrmInboxCommand) throw new LogicException('Unexpected command.');
         $this->calls[]=$command;
         return ['inbox_id'=>$this->bad?str_repeat('f',32):$command->inboxId,'requeued'=>true,'replayed'=>false,'payload'=>'private'];
     }
 };
-$gateway=new CanonicalCapabilityGateway($catalog,$active,$resolver,[new SalesCrmInboxStatusAdapter($read),new SalesCrmInboxRecoverAdapter($bus)]);
+$gateway=new CanonicalCapabilityGateway($catalog,$active,$resolver,[new SalesCrmInboxStatusAdapter($read),new SalesCrmInboxRecoverAdapter($bus),new SalesCrmInboxProcessAdapter($bus)]);
 $actor=static fn(string $org,string $role='manager',bool $manage=true)=>new TenantContext(
     UserId::fromString('31'),OrganizationId::fromString($org),OrganizationRole::fromString($role),
     $manage?[Permission::fromString(TenantPermissions::ACCESS),Permission::fromString(TenantPermissions::MANAGE)]:[Permission::fromString(TenantPermissions::ACCESS)],
@@ -83,7 +89,11 @@ $result=$gateway->invoke($manager,$recover,$input,'human_ui','key','trace');
 $check($result===['inbox_id'=>$id,'requeued'=>true,'replayed'=>false],'Wrong recovery receipt.');
 $command=$bus->calls[0];
 $check($command->organizationId->value()==='tenant-a' && $command->actorId===31 && $command->revision===$revision && $command->idempotencyKey==='key','Recovery identity not server derived.');
+$process=['inbox_id'=>$id,'revision'=>$revision];
+$reject(fn()=>$gateway->invoke($manager,'sales.crm.inbox.process',$process,'ai','key','trace'));
+$check($gateway->invoke($manager,'sales.crm.inbox.process',$process,'human_api','key','trace')===['inbox_id'=>$id,'status'=>'COMPLETED','replayed'=>false],'Processing receipt invalid.');
 $bus->bad=true;
+$reject(fn()=>$gateway->invoke($manager,'sales.crm.inbox.process',$process,'human_api','key','trace'));
 $reject(fn()=>$gateway->invoke($manager,$recover,$input,'human_api','key','trace'));
 $read->row['organization_id']='tenant-b';
 $reject(fn()=>$gateway->invoke($manager,$status,['inbox_id'=>$id],'trusted_read','','trace'));

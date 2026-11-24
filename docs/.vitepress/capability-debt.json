@@ -22,16 +22,6 @@
       "target_capability": "sales.lead.intake"
     },
     {
-      "id": "sales.lead-to-managed-case:crm-inbox",
-      "process_id": "sales.lead-to-managed-case",
-      "step_id": "crm-inbox",
-      "gap_type": "missing-domain-capability",
-      "owner_domain": "sales",
-      "severity": "medium",
-      "resolution": "declare-domain-capability",
-      "target_capability": "sales.crm.inbox.process"
-    },
-    {
       "id": "sales.lead-to-managed-case:canonical-state",
       "process_id": "sales.lead-to-managed-case",
       "step_id": "canonical-state",

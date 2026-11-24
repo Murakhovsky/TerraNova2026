@@ -39,8 +39,7 @@
       "kind": "operation",
       "owner": "Sales automation",
       "domain": "sales",
-      "capability": null,
-      "capability_gap": "missing-domain-capability",
+      "capability": "sales.crm.inbox.process",
       "critical": false,
       "runtime": [
         { "type": "use_case", "ref": "ProcessCrmInbox" }
