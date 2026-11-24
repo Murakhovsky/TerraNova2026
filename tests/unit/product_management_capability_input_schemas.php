@@ -10,9 +10,17 @@ foreach($raw['contributions']['capability_contracts'] as $definition) {
     $cap=CapabilityContract::fromArray($definition);
     $contracts[$cap->id]=$cap;
 }
-if(count($contracts)!==65)throw new RuntimeException('Missing typed PM contracts.');
+if(count($contracts)!==73)throw new RuntimeException('Missing typed PM contracts.');
 $validator=new CapabilityJsonInputValidator();
 $good=[
+ 'product_management.governed.product.create'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['name'=>'Product','sku'=>'SKU']],
+ 'product_management.governed.variant.matrix.create'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['product_id'=>str_repeat('a',32),'axes'=>[['code'=>'color','choices'=>['red']]],'sku_prefix'=>'SKU','expected_revision'=>1]],
+ 'product_management.governed.attribute.product.bulk_set'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['products'=>[['product_id'=>str_repeat('a',32),'expected_revision'=>1]],'values'=>[['code'=>'color','value'=>'red']]]],
+ 'product_management.governed.price.base.set'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['variant_id'=>str_repeat('a',32),'currency'=>'USD','amount'=>'100','expected_revision'=>0]],
+ 'product_management.governed.stock.receive'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['variant_id'=>str_repeat('a',32),'location_id'=>str_repeat('a',32),'quantity'=>'1','source_ref'=>'QA']],
+ 'product_management.governed.stock.issue'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['variant_id'=>str_repeat('a',32),'location_id'=>str_repeat('a',32),'quantity'=>'1','source_ref'=>'QA']],
+ 'product_management.governed.stock.reserve'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['variant_id'=>str_repeat('a',32),'location_id'=>str_repeat('a',32),'quantity'=>'1','source_ref'=>'manual:QA']],
+ 'product_management.governed.stock.release'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['reservation_id'=>str_repeat('a',32),'reason'=>'QA']],
  'product_management.analytics.summary.get'=>['currency'=>'USD'],
  'product_management.analytics.stock.search'=>['risk'=>'low','low'=>'1','high'=>'100'],
  'product_management.analytics.movement.search'=>['from'=>'2026-11-01','to'=>'2026-12-01'],
@@ -74,6 +82,9 @@ $good=[
 ];
 foreach($good as $id=>$input) $validator->validate($contracts[$id],$input);
 $bad=[
+ 'product_management.governed.price.base.set'=>[['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['variant_id'=>str_repeat('a',32),'currency'=>'USD','amount'=>'1']]],
+ 'product_management.governed.stock.receive'=>[['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['variant_id'=>str_repeat('a',32),'location_id'=>str_repeat('a',32),'quantity'=>'1','source_ref'=>'QA','organization_id'=>'foreign']]],
+ 'product_management.governed.product.create'=>[['target_type'=>'wrong','target_id'=>str_repeat('a',32),'parameters'=>['name'=>'X','sku'=>'X']]],
  'product_management.analytics.summary.get'=>[['currency'=>'usd'],['currency'=>'USD','organization_id'=>'foreign']],
  'product_management.analytics.stock.search'=>[['risk'=>'unknown'],['limit'=>101]],
  'product_management.analytics.movement.search'=>[['from'=>'2026-11-01'],['from'=>'bad','to'=>'2026-12-01']],
