@@ -213,6 +213,26 @@ try{
     $directorController=(new ReflectionClass(\App\Web\Sales\SalesDirectorController::class))->newInstanceWithoutConstructor();
     $request=\Symfony\Component\HttpFoundation\Request::create('/sales/director');
     $httpDenied(fn()=>$subscriber->authorize(new \Symfony\Component\HttpKernel\Event\ControllerEvent($kernel,[$directorController,'index'],$request,\Symfony\Component\HttpKernel\HttpKernelInterface::MAIN_REQUEST)),403);
+    // Current-stage aging uses the matching native history entry, not case creation time.
+    $operational=new MysqlSalesWorkspaceOperationalReadModel($db,$read);
+    $check($operational->deal($org,$ownedId)['days_in_stage']===null,'Unknown stage age was fabricated.');
+    $entered=(string)$db->query('SELECT DATE_SUB(NOW(),INTERVAL 5 DAY)')->fetchColumn();
+    $stageInsert->execute(['fixture-open-'.$token,$org,(string)$ownedId,$pid,null,$stage,'FIXTURE',$entered,null,null,'COMPLETE']);
+    $age=$operational->deal($org,$ownedId);
+    $check($age['days_in_stage']!==null&&$age['days_in_stage']>=4&&!$age['stage_age_estimated'],'Complete current stage age missing.');
+    $cards=$operational->deals($org,['q'=>$age['public_id'],'owner_id'=>$owner,'limit'=>10]);
+    $card=array_values(array_filter($cards,static fn(array $row):bool=>(int)$row['id']===$ownedId));
+    $check(count($card)===1&&$card[0]['days_in_stage']!==null&&(int)$card[0]['days_in_stage']>=4,'Pipeline aging projection diverged.');
+    $db->prepare('DELETE FROM sales_deal_stage_history WHERE organization_id=? AND id=?')->execute([$org,'fixture-open-'.$token]);
+    // Director display consumes exact canonical facts, including values beyond float precision.
+    $director=(new \App\Web\Sales\SalesDirectorPresenter())->present(['canonical'=>[
+        'summary'=>['money_by_currency'=>[['currency'=>'USD','pipeline_value'=>'9007199254740993.01','weighted_value'=>'1256.26']]],
+        'outcomes'=>['win_rate_percent'=>'50.00','booked_by_currency'=>[['currency'=>'USD','booked_value'=>'999.99']]],
+        'forecast'=>['buckets'=>[['bucket'=>'in_period','money_by_currency'=>[['currency'=>'USD','pipeline_value'=>'2512.51','weighted_value'=>'1256.26']]]]],
+        'conversion'=>$cohort,'stages'=>$history,
+    ]],30,30,$pid);
+    $moneyRow=$director->executiveGrid->page->rows[0];
+    $check($moneyRow['pipeline']==='9 007 199 254 740 993.01 USD'&&$moneyRow['booked']==='999.99 USD'&&$moneyRow['forecast']==='2 512.51 USD','Director exact decimal presentation failed.');
     // P4 atomic legacy facade: real native factory, same PDO and transaction.
     $nativeFactory=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesWriteServiceFactory(
         $db,new \Domains\Property\Infrastructure\ReadModel\MySql\MysqlPropertyReferencePort($db),
