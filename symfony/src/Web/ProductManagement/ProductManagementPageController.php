@@ -178,6 +178,30 @@ final readonly class ProductManagementPageController
                 $found=false;foreach($this->read($actor,'attribute.category.get',['category_id'=>$category])['items'] as $row)
                     if($row['code']===$code&&$row['is_required']===$input['is_required']&&$row['is_axis']===$input['is_axis'])$found=true;
                 if(!$found||$receipt!=$input)return new Response('Binding receipt unverified.',503);
+            }elseif($action==='bulk'){
+                if($request->request->get('confirm_bulk')!=='yes')return new Response('Explicit bulk confirmation required.',422);
+                $selected=$request->request->all('selected');$revisions=$request->request->all('revisions');$targets=[];
+                foreach($selected as $id){
+                    if(!is_string($id))throw new DomainException('Invalid product selection.');
+                    $rev=filter_var($revisions[$id]??null,FILTER_VALIDATE_INT);
+                    if($rev===false||$rev<1)throw new DomainException('Invalid product revision.');
+                    $targets[]=['product_id'=>$id,'expected_revision'=>$rev];
+                }
+                $values=json_decode((string)$request->request->get('values',''),true,32,JSON_THROW_ON_ERROR);
+                $receipt=$this->write($actor,'attribute.product.bulk_set',['products'=>$targets,'values'=>$values],$request);
+                if(count($receipt['items']??[])!==count($targets))return new Response('Bulk receipt incomplete.',503);
+                $expected=array_column($targets,'expected_revision','product_id');
+                foreach($receipt['items'] as $item){
+                    $id=$item['product_id'];
+                    if(!isset($expected[$id])||$item['revision']!==$expected[$id]+1)return new Response('Bulk identity unverified.',503);
+                    unset($expected[$id]);
+                    $after=$this->read($actor,'attribute.product.get',['product_id'=>$id]);
+                    if(!$after['found']||$after['revision']!==$item['revision'])return new Response('Bulk revision unverified.',503);
+                    $map=[];foreach($after['items'] as $row)$map[$row['code']]=$row['value'];
+                    foreach($item['values'] as $row)
+                        if(!array_key_exists($row['code'],$map)||$map[$row['code']]!==$row['value'])return new Response('Bulk value unverified.',503);
+                }
+                if($expected!==[])return new Response('Bulk result incomplete.',503);
             }else return new Response('Invalid attribute action.',422);
             return $this->go('/product-management/attributes?notice=updated&category='.rawurlencode($category));
         }catch(DomainException|\InvalidArgumentException){return new Response('Attribute mutation rejected.',422);}
