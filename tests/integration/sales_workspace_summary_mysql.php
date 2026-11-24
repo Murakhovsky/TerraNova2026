@@ -301,3 +301,43 @@ try{
     $reject(fn()=>$reportCall('outcomes'));
     echo "Sales S5 scoped exact summary, redacted lists and timeline PASS.\n";
 }finally{$db->rollBack();}
+
+
+// Two physical connections, committed isolated fixture: prove row locks, not just
+// rejection against an uncommitted fixture visible only on the first connection.
+$lockActor=0;$lockPerson=0;$lockDeal=0;
+$db2=new PDO(sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',getenv('DB_HOST')?:'127.0.0.1',(int)(getenv('DB_PORT')?:3306),getenv('DB_DATABASE')?:'cos'),getenv('DB_USERNAME')?:'cos',getenv('DB_PASSWORD')?:'',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);
+$db2->exec('SET SESSION innodb_lock_wait_timeout=1');
+try {
+    $db->beginTransaction();
+    $lockActor=$makeUser('lock');
+    $db->prepare('INSERT INTO sales_user_capabilities(organization_id,user_id,capability,status,granted_by,created_at,updated_at) VALUES (?,?,?,"ACTIVE",?,NOW(6),NOW(6))')->execute([$org,$lockActor,'sales.workspace.use',(string)$lockActor]);
+    $db->prepare('INSERT INTO tn_people(organization_id,public_id,full_name) VALUES (?,?,?)')->execute([$org,'LP-'.$token,'Lock fixture']);
+    $lockPerson=(int)$db->lastInsertId();
+    $db->prepare('INSERT INTO tn_client_cases(organization_id,public_id,person_id,type,title,status,stage,pipeline_id,stage_id,priority,assigned_user_id,currency) VALUES (?,?,?,"buy","Lock fixture","active","new",?,?,"normal",?,"USD")')->execute([$org,'LD-'.$token,$lockPerson,$pid,$stage,$lockActor]);
+    $lockDeal=(int)$db->lastInsertId();
+    $db->commit();
+    $locked=static function(callable $competing)use($check):void {
+        try {$competing();} catch(PDOException $e) {
+            $check((int)($e->errorInfo[1]??0)===1205,'Unexpected competing transaction error: '.$e->getMessage());return;
+        }
+        throw new RuntimeException('Competing mutation bypassed the authorization lock.');
+    };
+    $guard->run($org,$lockActor,function()use($db2,$org,$lockActor,$lockDeal,$locked):void{
+        $locked(fn()=>$db2->prepare('UPDATE tn_client_cases SET assigned_user_id=NULL WHERE organization_id=? AND id=?')->execute([$org,$lockDeal]));
+        $locked(fn()=>$db2->prepare('DELETE FROM sales_user_capabilities WHERE organization_id=? AND user_id=? AND capability="sales.workspace.use"')->execute([$org,$lockActor]));
+        $locked(fn()=>$db2->prepare('DELETE FROM cos_organization_memberships WHERE organization_id=? AND user_id=?')->execute([$org,$lockActor]));
+    },'deal',$lockDeal);
+    $db2->prepare('DELETE FROM sales_user_capabilities WHERE organization_id=? AND user_id=? AND capability="sales.workspace.use"')->execute([$org,$lockActor]);
+    $reject(fn()=>$guard->run($org,$lockActor,static fn()=>null,'deal',$lockDeal));
+    echo "Sales two-connection authorization lock and revocation PASS.\n";
+} finally {
+    if($db->inTransaction())$db->rollBack();
+    if($lockDeal>0)$db->prepare('DELETE FROM tn_client_cases WHERE organization_id=? AND id=?')->execute([$org,$lockDeal]);
+    if($lockPerson>0)$db->prepare('DELETE FROM tn_people WHERE organization_id=? AND id=?')->execute([$org,$lockPerson]);
+    if($lockActor>0){
+        $db->prepare('DELETE FROM sales_user_capabilities WHERE organization_id=? AND user_id=?')->execute([$org,$lockActor]);
+        $db->prepare('DELETE FROM cos_organization_memberships WHERE organization_id=? AND user_id=?')->execute([$org,$lockActor]);
+        $db->prepare('DELETE FROM tn_users WHERE organization_id=? AND id=?')->execute([$org,$lockActor]);
+    }
+}
