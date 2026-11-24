@@ -49,7 +49,7 @@ generated: true
 | Signal → Qualified Opportunity Handoff | 6/6 | 6/6 | 0/6 | 0/6 | 6/6 | 6/6 | 0/6 | 5/5 | 0/5 |
 | Property Submission → Publication | 6/6 | 6/6 | 0/6 | 0/6 | 6/6 | 6/6 | 0/6 | 6/6 | 0/6 |
 | Opportunity → Property Reservation | 7/7 | 7/7 | 0/7 | 3/7 | 7/7 | 7/7 | 3/7 | 7/7 | 3/7 |
-| Sales Lead → Managed Case | 8/8 | 0/8 | 8/8 | 0/8 | 8/8 | 8/8 | 3/8 | 6/6 | 3/6 |
+| Sales Lead → Managed Case | 8/8 | 1/8 | 7/8 | 0/8 | 8/8 | 8/8 | 3/8 | 6/6 | 3/6 |
 | Sales Request → Property Match | 5/5 | 3/5 | 2/5 | 1/5 | 5/5 | 5/5 | 1/5 | 4/4 | 1/4 |
 | Service Request → Ticket Close | 7/7 | 7/7 | 0/7 | 0/7 | 7/7 | 7/7 | 0/7 | 6/6 | 0/6 |
 

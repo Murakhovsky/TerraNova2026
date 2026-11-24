@@ -6,6 +6,9 @@ use App\Application\Sales\Command\ConvertSalesLeadToOpportunityCommand;
 use App\Application\Sales\Command\CreateSalesLeadCommand;
 use App\Application\Sales\Command\ReceivePublicLeadCommand;
 use App\Application\Sales\Command\ReceivePublicLeadCommandHandler;
+use App\Application\Sales\Command\UpdateSalesLeadCommand;
+use App\Application\Sales\Command\UpdateSalesLeadCommandHandler;
+use App\Infrastructure\Capability\SalesLeadQualificationAdapter;
 use App\Application\Sales\Command\CreateSalesLeadCommandHandler;
 use App\Infrastructure\Capability\SalesLeadCreateAdapter;
 use App\Application\Sales\Command\ConvertSalesLeadToOpportunityCommandHandler;
@@ -64,6 +67,7 @@ try {
         ConvertSalesLeadToOpportunityCommand::class => [$handler],
         CreateSalesLeadCommand::class => [new CreateSalesLeadCommandHandler($factory)],
         ReceivePublicLeadCommand::class => [new ReceivePublicLeadCommandHandler($factory)],
+        UpdateSalesLeadCommand::class => [new UpdateSalesLeadCommandHandler($factory)],
     ]))]));
     $module = new ModuleCatalog([ModuleDefinition::fromArray(require $root.'/app/Domains/Sales/module.php')]);
     $catalog = new CanonicalCapabilityCatalog($module);
@@ -74,7 +78,7 @@ try {
     $active = new ActiveModuleResolver($module,$state);
     $resolver = new FederationCapabilityBindingResolver($catalog,new DomainModuleRegistry([]),$active);
     $read = new MysqlSalesWorkspaceReadModel($db);
-    $gateway = new CanonicalCapabilityGateway($catalog,$active,$resolver,[new SalesClientCaseCreateAdapter($bus,$read),new SalesLeadCreateAdapter($bus,$read)]);
+    $gateway = new CanonicalCapabilityGateway($catalog,$active,$resolver,[new SalesClientCaseCreateAdapter($bus,$read),new SalesLeadCreateAdapter($bus,$read),new SalesLeadQualificationAdapter($bus,$read)]);
     $actor = static fn(string $tenant,string $role='manager') => new TenantContext(
         UserId::fromString((string)$userId),OrganizationId::fromString($tenant),OrganizationRole::fromString($role),
         [Permission::fromString(TenantPermissions::ACCESS),Permission::fromString(TenantPermissions::MANAGE)],
@@ -143,7 +147,22 @@ try {
     $check((int)$q->fetchColumn()===1,'Public replay duplicated case event/outbox.');
     $other=$submit([...$public,'submission_id'=>bin2hex(random_bytes(16))]);
     $check($other->ok && (int)$other->data['lead_id']!==$publicId,'New independent enquiry was suppressed.');
-    echo "Sales canonical conversion, authenticated and public intake native state and outbox PASS.\n";
+    $db->prepare('UPDATE tn_leads SET next_contact_at=? WHERE organization_id=? AND id=?')->execute(['2030-01-01 10:00:00',$org,$newId]);
+    $qualify=static fn(array $data,string $key,string $origin='human_api')=>$gateway->invoke($manager,'sales.lead.qualify',$data,$origin,$key,'trace-qualification');
+    $step=['lead_id'=>$newId,'expected_status'=>'new','target_status'=>'contacted'];
+    $reject(fn()=>$qualify($step,'ai','ai'));
+    $check($qualify($step,'contact')===['lead_id'=>$newId,'status'=>'contacted','replayed'=>false],'Qualification not recorded.');
+    $check($qualify($step,'contact-repeat')===['lead_id'=>$newId,'status'=>'contacted','replayed'=>true],'Qualification replay not recognized.');
+    $check($read->lead($org,$newId)['next_contact_at']==='2030-01-01 10:00:00','Qualification erased next contact.');
+    $reject(fn()=>$qualify([...$step,'target_status'=>'qualified'],'stale'));
+    $check($qualify([...$step,'expected_status'=>'contacted','target_status'=>'qualified'],'qualify')['status']==='qualified','Qualification progression failed.');
+    $check($qualify([...$step,'expected_status'=>'qualified','target_status'=>'disqualified'],'disqualify')['status']==='disqualified','Disqualification failed.');
+    $reject(fn()=>$gateway->invoke($manager,'sales.client_case.create',['lead_id'=>$newId],'human_api','terminal','trace'));
+    $q=$db->prepare('SELECT COUNT(*) FROM cos_events e INNER JOIN cos_event_outbox o ON o.event_id=e.id WHERE e.organization_id=? AND e.aggregate_id=? AND e.type=?');
+    foreach(['sales.lead.contacted','sales.lead.qualified','sales.lead.disqualified'] as $type){
+        $q->execute([$org,(string)$newId,$type]);$check((int)$q->fetchColumn()===1,'Missing or duplicate qualification event '.$type);
+    }
+    echo "Sales canonical conversion, authenticated/public intake and qualification native state and outbox PASS.\n";
 } finally {
     if ($db->inTransaction()) $db->rollBack();
 }

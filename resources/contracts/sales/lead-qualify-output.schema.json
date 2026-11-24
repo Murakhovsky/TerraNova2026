@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SalesLeadQualifyOutputV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "lead_id",
+    "status",
+    "replayed"
+  ],
+  "properties": {
+    "lead_id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "contacted",
+        "qualified",
+        "disqualified"
+      ]
+    },
+    "replayed": {
+      "type": "boolean"
+    }
+  }
+}

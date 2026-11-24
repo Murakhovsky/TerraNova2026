@@ -203,7 +203,7 @@ final readonly class SalesWriteService implements SalesWriteServiceInterface
         if ($changes === []) return ClientCaseCommandResult::failure('no_changes');
 
         if (array_key_exists('expected_status',$input)) {
-            if (!is_string($input['expected_status']) || !isset($changes['status'])) return ClientCaseCommandResult::failure('invalid_qualification_transition');
+            if (array_diff(array_keys($input),['expected_status','status'])!==[] || !is_string($input['expected_status']) || !isset($changes['status'])) return ClientCaseCommandResult::failure('invalid_qualification_transition');
             $changes['expected_status']=$input['expected_status'];
         }
         $changes['activity_type'] = SalesActivityType::StatusChange->value;
