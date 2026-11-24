@@ -452,6 +452,50 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
         return array_map(static function(array $row):array{$row['revision']=(int)$row['revision'];return $row;},$stmt->fetchAll(PDO::FETCH_ASSOC));
     }
 
+    /** Native count document + correction ledger + receipt and event commit together. */
+    public function applyStockCount(string $org,string $countId,string $variantId,string $locationId,string $counted,int $expectedRevision,string $source,string $key,string $actor,string $correlation):array
+    {
+        return $this->mutate($org,'stock.count.apply',$key,[$countId,$variantId,$locationId,$counted,$expectedRevision,$source],$actor,$correlation,
+            function()use($org,$countId,$variantId,$locationId,$counted,$expectedRevision,$source,$key,$actor):array{
+                $variant=$this->one('SELECT v.track_inventory,v.status,p.status AS product_status FROM pm_variants v JOIN pm_products p ON p.organization_id=v.organization_id AND p.product_id=v.product_id WHERE v.organization_id=? AND v.variant_id=? FOR UPDATE',[$org,$variantId]);
+                if($variant===null||(int)$variant['track_inventory']!==1||$variant['status']!=='active'||$variant['product_status']==='archived')
+                    throw new DomainException('Active trackable Variant required.');
+                $this->assertShopifyLocalOwnership($org,'variant',$variantId);
+                $loc=$this->one('SELECT status FROM pm_locations WHERE organization_id=? AND location_id=? FOR UPDATE',[$org,$locationId]);
+                if($loc===null||$loc['status']!=='active')throw new DomainException('Active tenant stock location required.');
+                $this->execute('INSERT IGNORE INTO pm_stock_balances (organization_id,variant_id,location_id,revision) VALUES (?,?,?,0)',[$org,$variantId,$locationId]);
+                $old=$this->one('SELECT on_hand,reserved,revision,CAST(CAST(? AS DECIMAL(20,6))-on_hand AS DECIMAL(20,6)) AS delta,
+                    (CAST(? AS DECIMAL(20,6))>=reserved) AS bounds_ok FROM pm_stock_balances WHERE organization_id=? AND variant_id=? AND location_id=? FOR UPDATE',
+                    [$counted,$counted,$org,$variantId,$locationId]);
+                if($old===null||(int)$old['revision']!==$expectedRevision||(int)$old['bounds_ok']!==1)
+                    throw new DomainException('Stock changed since count or count is below reserved quantity.');
+                $this->execute('UPDATE pm_stock_balances SET on_hand=?,revision=revision+1 WHERE organization_id=? AND variant_id=? AND location_id=?',
+                    [$counted,$org,$variantId,$locationId]);
+                $movement=null;
+                if($old['delta']!=='0.000000'){
+                    $movement=bin2hex(random_bytes(16));
+                    $this->execute('INSERT INTO pm_stock_movements (organization_id,movement_id,variant_id,location_id,quantity_delta,movement_type,source_ref,idempotency_key,actor_ref) VALUES (?,?,?,?,?,?,?,?,?)',
+                        [$org,$movement,$variantId,$locationId,$old['delta'],'adjustment',$source,$key,$actor]);
+                }
+                $this->execute('INSERT INTO pm_stock_counts (organization_id,count_id,variant_id,location_id,source_ref,counted,previous_on_hand,reserved,delta,expected_revision,result_revision,movement_id,action_key,actor_ref)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                    [$org,$countId,$variantId,$locationId,$source,$counted,$old['on_hand'],$old['reserved'],$old['delta'],$expectedRevision,$expectedRevision+1,$movement,$key,$actor]);
+                $result=$this->getStockCount($org,$countId);
+                if($result===null)throw new DomainException('Count receipt missing.');
+                return $result;
+            },'product_management.stock.count_applied','StockCount');
+    }
+
+    public function getStockCount(string $org,string $countId):?array
+    {
+        $row=$this->one('SELECT count_id,variant_id,location_id,source_ref,counted,previous_on_hand,reserved,delta,expected_revision,result_revision,movement_id,action_key,actor_ref,created_at
+            FROM pm_stock_counts WHERE organization_id=? AND count_id=?',[$org,$countId]);
+        if($row!==null){
+            $row['expected_revision']=(int)$row['expected_revision'];$row['result_revision']=(int)$row['result_revision'];
+        }
+        return $row;
+    }
+
     public function stockBalance(string $organizationId, string $variantId, string $locationId): array
     {
         $variant=$this->one('SELECT track_inventory FROM pm_variants WHERE organization_id=? AND variant_id=?',[$organizationId,$variantId]);
@@ -483,7 +527,7 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
                 return json_decode((string)$existing['result_json'],true,flags:JSON_THROW_ON_ERROR);
             }
             $result=$callback();
-            $id=(string)($result['product_id']??$result['reservation_id']??$result['variant_id']??$result['category_id']??$result['location_id']??$result['movement_id']??bin2hex(random_bytes(16)));
+            $id=(string)($result['product_id']??$result['count_id']??$result['reservation_id']??$result['variant_id']??$result['category_id']??$result['location_id']??$result['movement_id']??bin2hex(random_bytes(16)));
             $event=new DomainEvent(bin2hex(random_bytes(16)),$org,$eventType,$aggregateType,$id,
                 ['operation'=>$operation,'result'=>$result],new EventMetadata(strlen($correlation)<=40?$correlation:substr(hash('sha256',$correlation),0,40),null,str_starts_with($actor,'shopify:')?'INTEGRATION':'USER',$actor),new \DateTimeImmutable('now',new \DateTimeZone('UTC')));
             $this->events->append($event); // writes cos_events + cos_event_outbox in this same transaction
