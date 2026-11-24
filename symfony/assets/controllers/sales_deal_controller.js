@@ -228,12 +228,10 @@ export default class extends Controller {
         );
 
         if (id && !['COMPLETED', 'REJECTED', 'RUNNING', 'PENDING_APPROVAL'].includes(status)) {
-            const bar = this.node('div', 'cos-action-bar cos-action-bar--start');
-            bar.append(this.decisionButton('Execute', 'execute', 'cos-button cos-button--primary cos-button--sm'));
-            if (status === 'PROPOSED') {
-                bar.append(this.decisionButton('Dismiss', 'dismiss', 'cos-button cos-button--ghost cos-button--sm'));
-            }
-            card.append(bar);
+            // S5 intentionally does not expose a bypass around governed Action admission.
+            const note = this.node('p', 'cos-card__copy', 'Виконання доступне лише через керований COS Workflow.');
+            note.dataset.salesGovernedRequired = '';
+            card.append(note);
         }
 
         return card;
