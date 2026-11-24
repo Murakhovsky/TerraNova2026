@@ -163,9 +163,9 @@ SELECT COUNT(*) total,
  COALESCE(SUM(CASE WHEN c.id IS NOT NULL AND EXISTS (
  SELECT 1 FROM cos_events e WHERE
  CONVERT(e.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci=CONVERT(l.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
- AND e.aggregate_type='lead' AND e.aggregate_id=CAST(l.id AS CHAR)
+ AND e.aggregate_type='lead' AND CONVERT(e.aggregate_id USING utf8mb4) COLLATE utf8mb4_unicode_ci=CONVERT(CAST(l.id AS CHAR) USING utf8mb4) COLLATE utf8mb4_unicode_ci
  AND e.type='sales.lead.changed'
- AND JSON_UNQUOTE(JSON_EXTRACT(e.payload,'$.changes.client_case_id.to'))=CAST(c.id AS CHAR)
+ AND CONVERT(JSON_UNQUOTE(JSON_EXTRACT(e.payload,'$.changes.client_case_id.to')) USING utf8mb4) COLLATE utf8mb4_unicode_ci=CONVERT(CAST(c.id AS CHAR) USING utf8mb4) COLLATE utf8mb4_unicode_ci
  AND e.occurred_at>=l.created_at
  ) THEN 1 ELSE 0 END),0) evidenced
 FROM tn_leads l LEFT JOIN tn_client_cases c ON c.id=l.client_case_id
