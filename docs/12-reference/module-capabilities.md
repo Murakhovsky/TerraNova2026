@@ -498,6 +498,7 @@ Manifest capabilities не задекларовані.
 - `sales.offer.transition`;
 - `sales.pipeline.stage.manage`;
 - `sales.property_match.record`;
+- `sales.reports.data.read`;
 - `sales.team.manage`;
 - `sales.team.read`;
 - `sales.workspace.deal.timeline.read`;
