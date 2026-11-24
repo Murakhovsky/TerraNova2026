@@ -39,7 +39,7 @@ final readonly class SalesFrontendMutationCommandHandler implements CommandHandl
             throw new DomainException('Authenticated actor is invalid.');
         }
 
-        if (in_array($command->operation,[SalesFrontendMutationCommand::APPROVAL,SalesFrontendMutationCommand::ACTION],true)) {
+        if ($command->operation===SalesFrontendMutationCommand::ACTION) {
             throw new DomainException('Legacy direct action execution requires governed workflow.');
         }
         if (in_array($command->operation,[SalesFrontendMutationCommand::MEETING,SalesFrontendMutationCommand::COMPLETE_ACTIVITY,
@@ -236,15 +236,21 @@ final readonly class SalesFrontendMutationCommandHandler implements CommandHandl
             throw new DomainException('Pending approval not found.');
         }
 
+        $action=$this->actions->find($organizationId,$approval->actionId);
+        if ($action===null||!str_starts_with($action->type,'sales.')||$action->targetType!=='deal'||$action->targetId===null||$action->status!==ActionStatus::PendingApproval) {
+            throw new DomainException('Sales approval unavailable.');
+        }
+        $dealId=$this->positiveInt($action->targetId,'Invalid deal id.');
+        return $this->guard->run($organizationId,$command->actorId,function()use($command,$organizationId,$approvalId,$approval,$decision):array{
         $note = ($note = trim((string) ($command->input['note'] ?? ''))) !== '' ? $note : null;
         if ($decision === 'approve') {
             $this->approvals->approve($organizationId, $approvalId, (string) $command->actorId, $note);
-            $this->commands->dispatch(new ExecuteSalesActionCommand($organizationId, $approval->actionId));
             return ['status' => 'APPROVED', 'action_id' => $approval->actionId];
         }
 
         $this->approvals->reject($organizationId, $approvalId, (string) $command->actorId, $note);
         return ['status' => 'REJECTED', 'action_id' => $approval->actionId];
+        },'deal',$dealId);
     }
 
     /** @return array<string,mixed> */
