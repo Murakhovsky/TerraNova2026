@@ -55,7 +55,7 @@ $manifest = [
                 'purpose' => 'Search current tenant-scoped Product variants and read base price facts for Marketing draft planning, without Product SQL or launch authorization.',
             ],
         ],
-        'migration_files' => ['app/migrations/20261119_000152_marketing_foundation.sql','app/migrations/20261119_000154_marketing_planning_m2.sql','app/migrations/20261124_000162_marketing_audience_adsets.sql','app/migrations/20261124_000163_marketing_analyst_execution.sql','app/migrations/20261124_000164_marketing_analyst_decisions.sql','app/migrations/20261124_000165_marketing_paid_launch_plans.sql','app/migrations/20261124_000167_marketing_paid_operation_journal.sql','app/migrations/20261124_000192_marketing_m4_attribution_intents.sql'],
+        'migration_files' => ['app/migrations/20261119_000152_marketing_foundation.sql','app/migrations/20261119_000154_marketing_planning_m2.sql','app/migrations/20261124_000162_marketing_audience_adsets.sql','app/migrations/20261124_000163_marketing_analyst_execution.sql','app/migrations/20261124_000164_marketing_analyst_decisions.sql','app/migrations/20261124_000165_marketing_paid_launch_plans.sql','app/migrations/20261124_000167_marketing_paid_operation_journal.sql','app/migrations/20261124_000192_marketing_m4_attribution_intents.sql','app/migrations/20261124_000193_marketing_media_analytics.sql'],
         'capabilities' => [
             'marketing.campaign.search',
             'marketing.campaign.get',
@@ -98,6 +98,8 @@ $manifest = [
             'marketing.attribution.discover',
             'marketing.attribution.tracking.get',
             'marketing.analytics.report.get',
+            'marketing.analytics.media.report',
+            'marketing.analytics.media.sync',
         ],
         'capability_contracts' => [],
     ],
@@ -115,6 +117,8 @@ foreach ([
     'marketing.attribution.discover' => ['query', 'none', 'marketing/attribution-discover', 'cos.tenant.manage'],
     'marketing.attribution.capture' => ['command', 'internal', 'marketing/attribution-capture', 'cos.tenant.manage'],
     'marketing.attribution.tracking.get' => ['query', 'none', 'marketing/attribution-tracking', 'cos.tenant.manage'],
+    'marketing.analytics.media.report' => ['query', 'none', 'marketing/media-analytics-report', 'cos.tenant.manage'],
+    'marketing.analytics.media.sync' => ['command', 'internal', 'marketing/media-analytics-sync', 'cos.tenant.manage'],
     'marketing.analytics.report.get' => ['query', 'none', 'marketing/analytics-report', 'cos.tenant.manage'],
 ] as $id => [$kind, $sideEffect, $schema, $permission]) {
     $contracts[] = [

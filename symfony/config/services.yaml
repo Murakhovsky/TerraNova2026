@@ -2750,6 +2750,12 @@ services:
   Domains\Marketing\Application\Contract\MarketingFinanceAnalyticsReadPort:
     alias: App\Infrastructure\Marketing\FinanceAnalyticsReadAdapter
   Domains\Marketing\Application\Service\MarketingAnalyticsService: ~
+  Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingMediaAnalyticsStore:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Marketing\Application\Contract\MarketingMediaAnalyticsStore:
+    alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingMediaAnalyticsStore
+  Domains\Marketing\Application\Service\MarketingMediaAnalyticsService: ~
   Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidLaunchPlanStore:
     arguments:
       $connection: '@cos.database.pdo'

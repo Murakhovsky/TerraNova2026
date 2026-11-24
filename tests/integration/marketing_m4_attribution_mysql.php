@@ -95,3 +95,18 @@ $db->prepare("UPDATE tn_leads SET utm_medium='email' WHERE organization_id=? AND
 $r=$analytics->report($actor,$c2,null,'2026-01-01','2026-01-02',null,null);
 $assert($r['leads']===0&&$r['source_drift_count']===1,'Revised native UTM not quarantined.');
 echo "Marketing M4 native Sales lead, discovery, won deal, currency, PII and drift E2E PASS\n";
+
+$account=$accounts->registerAccount($org,'env://META_M4_FIXTURE',['ad_account_id'=>'act_'.random_int(1000000000,9999999999),'currency'=>'USD','timezone'=>'UTC','connection_status'=>'READ_ONLY','capability_scope'=>['ads_read']]);
+$providerAccount=substr($account['ad_account_id'],4);
+$mediaStore=new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingMediaAnalyticsStore($db,$accounts);
+$base=['account_id'=>$providerAccount,'campaign_id'=>'90001','date_start'=>'2026-01-01','date_stop'=>'2026-01-03','spend'=>'1.234567','impressions'=>'100','clicks'=>'5'];
+$run=$mediaStore->commit($org,'42','m4-media-key',hash('sha256','media'),$account,'campaign','2026-01-01','2026-01-03',[$base]);
+$assert(count($run['rows'])===1&&$run['rows'][0]['reported_spend_decimal']==='1.234567'&&$run['rows'][0]['source_revision']===1,'Native media receipt missing.');
+$changed=$mediaStore->commit($org,'42','m4-media-key-2',hash('sha256','media2'),$account,'campaign','2026-01-01','2026-01-03',[[...$base,'spend'=>'2.345678']]);
+$assert($changed['rows'][0]['source_revision']===2&&$mediaStore->get($org,$run['id'])['rows'][0]['reported_spend_decimal']==='1.234567'
+    &&$mediaStore->get($other,$run['id'])===null,'Immutable batch or tenant fence failed.');
+$empty=$mediaStore->commit($org,'42','m4-media-key-3',hash('sha256','media3'),$account,'campaign','2026-01-01','2026-01-03',[]);
+$assert($empty['rows']===[]&&$mediaStore->latest($org,$account['id'],'campaign','2026-01-01','2026-01-03')['id']===$empty['id'],'Empty complete batch inherited old rows.');
+$ad=$mediaStore->commit($org,'42','m4-media-ad-key',hash('sha256','media-ad'),$account,'ad','2026-01-01','2026-01-03',[[...$base,'ad_id'=>'90002']]);
+$assert($ad['grain']==='ad'&&$ad['rows'][0]['external_id']==='90002','Native ad-grain receipt failed.');
+echo "Marketing M4 immutable complete provider batch, revised/empty scope, ad grain and tenant MySQL PASS\n";

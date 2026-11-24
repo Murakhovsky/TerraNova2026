@@ -248,6 +248,8 @@ generated: true
 | `marketing` | `app/migrations/20261124_000167_marketing_paid_operation_journal.sql` | `marketing_paid_operation_journal` |
 | `marketing` | `app/migrations/20261124_000192_marketing_m4_attribution_intents.sql` | `marketing_attribution_capture_intents` |
 | `marketing` | `app/migrations/20261124_000192_marketing_m4_attribution_intents.sql` | `marketing_attribution_evidence` |
+| `marketing` | `app/migrations/20261124_000193_marketing_media_analytics.sql` | `marketing_media_analytics_runs` |
+| `marketing` | `app/migrations/20261124_000193_marketing_media_analytics.sql` | `marketing_paid_accounts` |
 | `product_management` | `app/migrations/20261118_000152_product_management_catalog.sql` | `pm_categories` |
 | `product_management` | `app/migrations/20261118_000152_product_management_catalog.sql` | `pm_media_refs` |
 | `product_management` | `app/migrations/20261118_000152_product_management_catalog.sql` | `pm_operation_receipts` |
