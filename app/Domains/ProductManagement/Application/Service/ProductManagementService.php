@@ -213,7 +213,7 @@ final readonly class ProductManagementService
         if (!in_array($kind, ['receipt','issue'], true)) throw new DomainException('Invalid movement type.');
         if ($kind === 'receipt' && str_starts_with($delta, '-')) throw new DomainException('Receipt must add stock.');
         if ($kind === 'issue' && !str_starts_with($delta, '-')) throw new DomainException('Issue must remove stock.');
-        if (trim($source) === '' || strlen($source) > 191) throw new DomainException('Documented source_ref required.');
+        if (trim($source) === '' || strlen($source) > 191 || str_starts_with(strtolower(trim($source)),'sales-order:')) throw new DomainException('Documented source_ref required.');
         return $this->store->postMovement($organizationId, $variantId, $locationId, ProductRules::quantity($delta, true), $kind, $source, $key, $actor, $correlation);
     }
 
@@ -225,7 +225,7 @@ final readonly class ProductManagementService
             if (!preg_match('/^[a-f0-9]{32}$/D',$id)) throw new DomainException('Invalid transfer identifier.');
         }
         if($fromLocation===$toLocation)throw new DomainException('Stock transfer needs two distinct locations.');
-        if(trim($source)===''||strlen($source)>191)throw new DomainException('Transfer requires a bounded source document.');
+        if(trim($source)===''||strlen($source)>191||str_starts_with(strtolower(trim($source)),'sales-order:'))throw new DomainException('Transfer requires a bounded source document.');
         return $this->store->transferStock($org,$variantId,$fromLocation,$toLocation,
             ProductRules::quantity($quantity),$source,$key,$actor,$correlation);
     }
