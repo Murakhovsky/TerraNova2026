@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Sales\Query;
 
 use Domains\Sales\Application\Contract\SalesTeamAdministrationInterface;
+use App\Security\SalesRequestScope;
 use Domains\Sales\Application\Contract\SalesWorkspaceOperationalReadModelInterface;
 use Kernel\Application\Query\QueryHandlerInterface;
 
@@ -13,6 +14,7 @@ final readonly class GetSalesPipelineWorkspaceQueryHandler implements QueryHandl
     public function __construct(
         private SalesWorkspaceOperationalReadModelInterface $sales,
         private SalesTeamAdministrationInterface $teams,
+        private SalesRequestScope $scope,
     ) {
     }
 
@@ -30,11 +32,14 @@ final readonly class GetSalesPipelineWorkspaceQueryHandler implements QueryHandl
             'q',
         ]));
         $filters['limit'] = 100;
+        $org=$query->organizationId->value();
+        $owner=$this->scope->ownerFor($org,$filters['owner_id']??null);
+        $filters['owner_id']=$owner;
 
         return [
-            'pipelines' => $this->sales->pipelines($query->organizationId->value()),
+            'pipelines' => $this->sales->pipelines($org,$owner),
             'deals' => $this->sales->deals($query->organizationId->value(), $filters),
-            'owners' => $this->teams->users($query->organizationId->value()),
+            'owners' => $this->scope->ownerOptions($org,$this->teams->users($org)),
         ];
     }
 }
