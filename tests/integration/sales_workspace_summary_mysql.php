@@ -233,6 +233,30 @@ try{
     ]],30,30,$pid);
     $moneyRow=$director->executiveGrid->page->rows[0];
     $check($moneyRow['pipeline']==='9 007 199 254 740 993.01 USD'&&$moneyRow['booked']==='999.99 USD'&&$moneyRow['forecast']==='2 512.51 USD','Director exact decimal presentation failed.');
+    // Compound projections must scope the population before LIMIT and aggregation.
+    $caseFactory=new \Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModelFactory(
+        $db,new \Domains\Property\Infrastructure\ReadModel\MySql\MysqlPropertyReferencePort($db));
+    $ownCases=$caseFactory->forOwner($org,$owner);
+    $check($ownCases->stats()['all']===254,'Client Case stats widened or truncated.');
+    $check($ownCases->case($otherId)===null&&$ownCases->case($ownedId)!==null,'Client Case detail scope failed.');
+    $check(!in_array($otherId,array_map('intval',array_column($ownCases->openCaseOptions(),'id')),true),'Foreign link target leaked.');
+    $db->prepare('UPDATE tn_leads SET client_case_id=? WHERE organization_id=? AND id=?')->execute([$otherId,$org,$leadId]);
+    $check(!in_array($leadId,array_map('intval',array_column($ownCases->inboundInbox([]),'id')),true),'Cross-owner linked lead exposed.');
+    $inboxStats=$ownCases->inboundInboxStats();
+    $check(array_sum($inboxStats['status'])===$inboxStats['total']&&array_sum($inboxStats['intent'])===$inboxStats['total'],'Inbox statistics have different populations.');
+    $db->prepare('UPDATE tn_leads SET client_case_id=? WHERE organization_id=? AND id=?')->execute([$ownedId,$org,$leadId]);
+    $db->prepare('UPDATE tn_client_cases SET next_contact_at=NOW()-INTERVAL 2 DAY WHERE organization_id=? AND id=?')->execute([$org,$otherId]);
+    $db->prepare('UPDATE tn_client_cases SET next_contact_at=NOW()-INTERVAL 1 DAY WHERE organization_id=? AND id=?')->execute([$org,$ownedId]);
+    $teamScope=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesTeamScope($db,$scope,new MysqlSalesAccessControl($db));
+    $check($teamScope->ledMembers($org,$owner)===[$owner],'Disabled team still authorized Today.');
+    $db->prepare('UPDATE sales_teams SET status="ACTIVE" WHERE organization_id=? AND id=?')->execute([$org,$teamId]);
+    $members=$teamScope->ledMembers($org,$owner);
+    $check(in_array($other,$members,true),'Active team member missing.');
+    $selfToday=$read->todayForOwners($org,[$owner]);$teamToday=$read->todayForOwners($org,$members);
+    $check(!in_array($otherId,array_map('intval',array_column($selfToday['overdue'],'id')),true),'Foreign Today item leaked.');
+    $check(in_array($otherId,array_map('intval',array_column($teamToday['overdue'],'id')),true),'Team Today missing authorized item.');
+    foreach($read->todayForOwners($org,[]) as $section)$check($section===[],'Empty Today population widened.');
+    $db->prepare('UPDATE sales_teams SET status="DISABLED" WHERE organization_id=? AND id=?')->execute([$org,$teamId]);
     // P4 atomic legacy facade: real native factory, same PDO and transaction.
     $nativeFactory=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesWriteServiceFactory(
         $db,new \Domains\Property\Infrastructure\ReadModel\MySql\MysqlPropertyReferencePort($db),
@@ -243,6 +267,8 @@ try{
     $grant->execute([$org,$owner,'sales.workspace.use',(string)$owner]);
     $check($writes->quickUpdateOpportunity($ownedId,['priority'=>'high'],$owner,'p4-own')->ok,'Guarded own write failed.');
     $check($read->deal($org,$ownedId)['priority']==='high','Guarded write did not change native state.');
+    $shared=$writes->updateOpportunity($ownedId,['full_name'=>'Forbidden shared contact edit'],$owner);
+    $check(!$shared->ok&&$shared->code==='sales_access_denied','Shared contact edited through owned case.');
     $foreignBefore=$read->deal($org,$otherId);
     $denied=$writes->quickUpdateOpportunity($otherId,['priority'=>'urgent'],$owner,'p4-foreign');
     $check(!$denied->ok&&$denied->code==='sales_access_denied'&&$read->deal($org,$otherId)['priority']===$foreignBefore['priority'],'Foreign mutation bypass.');
