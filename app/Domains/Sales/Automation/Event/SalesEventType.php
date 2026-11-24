@@ -24,6 +24,7 @@ final class SalesEventType
     public const DEAL_STUCK = 'sales.deal.stuck';
     public const DEAL_OWNER_ASSIGNED = 'sales.deal.owner_assigned';
     public const MESSAGE_RECEIVED = 'sales.message.received';
+    public const MESSAGE_RECORDED = 'sales.message.recorded';
     public const MESSAGE_SENT = 'sales.message.sent';
     public const MEETING_COMPLETED = 'sales.meeting.completed';
     public const FOLLOWUP_CREATED = 'sales.followup.created';
@@ -40,7 +41,7 @@ final class SalesEventType
             self::ACTIVITY_RECORDED, self::ACTIVITY_COMPLETED, self::ACTIVITY_CANCELLED, self::ACTIVITY_RESCHEDULED, self::ACTIVITY_REMINDER_DUE, self::OFFER_CREATED, self::OFFER_REVISED, self::OFFER_STATE_CHANGED, self::NEGOTIATION_RECORDED, self::OFFER_DELIVERY_QUEUED,
             self::LEAD_CONTACTED, self::LEAD_QUALIFIED, self::LEAD_DISQUALIFIED,
             self::DEAL_WON, self::DEAL_LOST, self::DEAL_STUCK, self::DEAL_OWNER_ASSIGNED,
-            self::MESSAGE_RECEIVED, self::MESSAGE_SENT,
+            self::MESSAGE_RECEIVED, self::MESSAGE_RECORDED, self::MESSAGE_SENT,
             self::MEETING_COMPLETED, self::FOLLOWUP_CREATED, self::FOLLOWUP_COMPLETED,
             self::FOLLOWUP_MISSED, self::TASK_CREATED, self::TASK_COMPLETED, self::NO_ACTIVITY_DETECTED,
         ];

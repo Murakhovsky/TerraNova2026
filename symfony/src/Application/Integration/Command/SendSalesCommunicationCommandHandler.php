@@ -115,7 +115,7 @@ final readonly class SendSalesCommunicationCommandHandler implements CommandHand
                 $organizationId,
                 $command->actorId,
                 $command->correlationId,
-                'sales.communication.sent',
+                ($result->data['delivery_state']??null)==='local_recorded'?'sales.communication.recorded':'sales.communication.sent',
                 (string) $command->opportunityId,
                 [
                     'channel' => $channel,
@@ -148,6 +148,8 @@ final readonly class SendSalesCommunicationCommandHandler implements CommandHand
         return [
             'replayed' => true,
             'delivery_token' => $parts[2] ?? null,
+            'recipient_delivery_verified' => false,
+            'delivery_state' => 'receipt_only',
         ];
     }
 }

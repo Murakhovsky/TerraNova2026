@@ -30,7 +30,7 @@ final readonly class SendMessageHandler implements IdempotentExternalActionHandl
         ), ['purpose' => 'sales_message'], $action->sourceType, $action->sourceId);
 
         return $result->successful
-            ? ExecutionResult::success(['message_id' => $result->externalId, ...$result->data], ['messages_sent' => 1])
+            ? ExecutionResult::success(['message_id' => $result->externalId, ...$result->data], ($result->data['delivery_state']??null)==='local_recorded'?['messages_recorded'=>1,'messages_sent'=>0]:['messages_sent'=>1])
             : ExecutionResult::failure($result->error ?? 'Message delivery failed.', $result->data);
     }
 }

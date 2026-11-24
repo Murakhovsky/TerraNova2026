@@ -3176,6 +3176,13 @@ services:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesScheduledActivityRepository
   Domains\Sales\Application\Service\SalesScheduledActivityService: ~
 
+  Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesCrmReconciliationReadModel:
+    arguments:
+      $connection: '@cos.database.pdo'
+      $references: '@Infrastructure\Platform\Persistence\ExternalReferenceStoreInterface'
+  Domains\Sales\Application\Contract\SalesCrmReconciliationReadPort:
+    alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesCrmReconciliationReadModel
+
   Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesActivityEvidenceReadModel:
     arguments:
       $connection: '@cos.database.pdo'

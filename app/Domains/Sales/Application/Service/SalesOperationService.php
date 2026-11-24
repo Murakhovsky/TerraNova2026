@@ -30,10 +30,10 @@ final readonly class SalesOperationService
         string $actorType = 'SYSTEM',
         string $actorId = 'system',
     ): OperationResult {
-        $sent = $this->gateway->send($command);
-        if (!$sent->successful) return $sent;
-
-        return $this->transactions->transactional(function () use ($command, $metadata, $actorType, $actorId, $sent): OperationResult {
+        return $this->transactions->transactional(function () use ($command, $metadata, $actorType, $actorId): OperationResult {
+            $sent = $this->gateway->send($command);
+            if (!$sent->successful) return $sent;
+            $local=($sent->data['delivery_state']??null)==='local_recorded';
             $externalId = $sent->externalId ?? $command->idempotencyKey;
             $communicationId = $this->operations->recordOutboundCommunication(
                 $command->organizationId,
@@ -42,15 +42,15 @@ final readonly class SalesOperationService
                 $command->body,
                 $externalId,
                 $command->idempotencyKey,
-                $metadata,
+                [...$metadata,'delivery_state'=>$local?'local_recorded':($sent->data['delivery_state']??'unverified')],
             );
-            if ($communicationId === null) return OperationResult::success($externalId, ['duplicate' => true]);
+            if ($communicationId === null) return OperationResult::success($externalId, [...$sent->data,'duplicate' => true]);
 
             $correlationId = substr(hash('sha256', $command->idempotencyKey), 0, 32);
             $this->events->publish(new DomainEvent(
                 bin2hex(random_bytes(16)),
                 $command->organizationId,
-                SalesEventType::MESSAGE_SENT,
+                $local?SalesEventType::MESSAGE_RECORDED:SalesEventType::MESSAGE_SENT,
                 'deal',
                 $command->dealReference,
                 [
@@ -62,7 +62,7 @@ final readonly class SalesOperationService
                 new EventMetadata($correlationId, null, $actorType, $actorId),
                 new DateTimeImmutable(),
             ));
-            return OperationResult::success($externalId, ['communication_id' => $communicationId]);
+            return OperationResult::success($externalId, [...$sent->data,'communication_id' => $communicationId]);
         });
     }
 
