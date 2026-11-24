@@ -462,6 +462,10 @@ Manifest capabilities не задекларовані.
 - `sales.admin.teams.manage`;
 - `sales.admin.view`;
 - `sales.client_case.create`;
+- `sales.analytics.conversion.read`;
+- `sales.analytics.forecast.read`;
+- `sales.analytics.outcomes.read`;
+- `sales.analytics.stages.read`;
 - `sales.create_task`;
 - `sales.crm.inbox.process`;
 - `sales.crm.inbox.recover`;
