@@ -230,6 +230,31 @@ final readonly class ProductManagementService
             ProductRules::quantity($quantity),$source,$key,$actor,$correlation);
     }
 
+    /** Tenant-authorized manual reservation only. Cross-domain Order ownership is not assumed. */
+    public function reserveStock(string $org,string $variantId,string $locationId,string $qty,string $source,string $key,string $actor,string $correlation):array
+    {
+        $this->scope($org,$key,$actor,$correlation);
+        foreach([$variantId,$locationId] as $id) {
+            if (!preg_match('/^[a-f0-9]{32}$/D',$id)) throw new DomainException('Invalid reservation identifier.');
+        }
+        if (!preg_match('#^manual:[A-Za-z0-9._:/-]{1,150}$#D',$source)) {
+            throw new DomainException('Manual reservation requires a distinct manual: document reference.');
+        }
+        return $this->store->reserveStock($org,$variantId,$locationId,ProductRules::quantity($qty),$source,$key,$actor,$correlation);
+    }
+
+    /** Full release only; no automatic expiry or phantom Sales order. */
+    public function releaseStock(string $org,string $reservationId,string $reason,string $key,string $actor,string $correlation):array
+    {
+        $this->scope($org,$key,$actor,$correlation);
+        if (!preg_match('/^[a-f0-9]{32}$/D',$reservationId)) throw new DomainException('Invalid reservation identifier.');
+        $reason=trim($reason);
+        if ($reason===''||strlen($reason)>191||preg_match('/[\\x00-\\x1f]/',$reason)) {
+            throw new DomainException('Reservation release requires a bounded reason.');
+        }
+        return $this->store->releaseStock($org,$reservationId,$reason,$key,$actor,$correlation);
+    }
+
     /** @return array<string,mixed> */
     public function balance(string $organizationId, string $variantId, string $locationId): array
     {

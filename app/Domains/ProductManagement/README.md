@@ -410,3 +410,18 @@ B's secret. The default legacy single-store resolver remains temporarily
 available for the existing operator pilot and should not be used when
 onboarding multiple stores. This changes neither Shopify source-of-truth
 ownership nor the E4 prohibition on remote writes.
+
+## E5 P1 — ручне резервування, без зовнішнього Order writer
+
+`stock.reserve` та `stock.release` публікуються як tenant-manager
+capabilities із типовими Kernel permissions/idempotency. Резерв не змінює
+`on_hand` і не створює фізичний stock movement; `available` виводиться
+як `on_hand-reserved`. Реліз скидає тільки `reserved`.
+
+Операції атомарні в одному PDO transaction, ідентичність origin
+`(tenant,source_ref,variant,location)` унікальна, повторення того самого
+idempotency key повертає початковий receipt. У першому вертикальному
+зрізі дозволено тільки `manual:` source reference. SalesOrder/OrderLine
+не існує як підтверджений зовнішній контракт, і автоматичне резервування
+від Sales/OMS, automatic expiry та partial release **не дозволені**.
+Рішення описане в ADR-0017.

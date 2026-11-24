@@ -49,6 +49,8 @@ domain_id: product_management
         "product_management.stock.receive",
         "product_management.stock.issue",
         "product_management.stock.transfer",
+        "product_management.stock.reserve",
+        "product_management.stock.release",
         "product_management.stock.movement.search"
       ]
     },

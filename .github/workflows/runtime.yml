@@ -107,6 +107,10 @@ jobs:
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
         run: php tests/integration/product_management_mysql.php
+      - name: Product Management E5 manual stock reservations MySQL
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/integration/product_management_stock_reservation_mysql.php
       - name: Product Management Shopify read-only MySQL mock acceptance
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php

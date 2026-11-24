@@ -44,5 +44,9 @@ interface ProductManagementStoreInterface
     /** @return array<string,mixed> */
     public function transferStock(string $org,string $variantId,string $fromLocation,string $toLocation,string $qty,string $source,string $key,string $actor,string $correlation):array;
     /** @return array<string,mixed> */
+    public function reserveStock(string $org,string $variantId,string $locationId,string $qty,string $source,string $key,string $actor,string $correlation):array;
+    /** @return array<string,mixed> */
+    public function releaseStock(string $org,string $reservationId,string $reason,string $key,string $actor,string $correlation):array;
+    /** @return array<string,mixed> */
     public function stockBalance(string $organizationId, string $variantId, string $locationId): array;
 }
