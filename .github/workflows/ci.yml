@@ -86,6 +86,10 @@ jobs:
         run: php tests/unit/diagnostic_session_start_capability.php
       - name: Diagnostic canonical evidence capture capability
         run: php tests/unit/diagnostic_evidence_capture_capability.php
+      - name: Diagnostic canonical terminal session completion
+        run: php tests/unit/diagnostic_session_complete_capability.php
+      - name: Diagnostic native report summary capability
+        run: php tests/unit/diagnostic_report_summary_capability.php
       - name: Canonical Property capability input validation
         run: php tests/unit/canonical_capability_property_input_validation.php
       - name: Canonical Capability Gateway invocation boundaries

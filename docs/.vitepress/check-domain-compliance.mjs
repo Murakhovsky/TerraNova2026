@@ -48,8 +48,17 @@ function coreContractErrors(domain, contract) {
   if (!nonempty(contract?.lifecycle)) errors.push('missing lifecycle');
   if (!Array.isArray(contract?.tests) || !contract.tests.length) errors.push('missing test references');
   if (contract?.kind === 'query' && contract?.side_effect_level !== 'none') errors.push('query claims side effects');
+  const prefix = contract?.execution_binding?.split(':')[0];
+  if (contract?.kind === 'query' && !['query','read'].includes(prefix)) errors.push('query uses mutation binding');
+  if (contract?.kind === 'command' && !['command','action'].includes(prefix)) errors.push('command uses read binding');
+  if (['external','financial','irreversible'].includes(contract?.side_effect_level) && prefix !== 'action') errors.push('high-risk mutation bypasses Action');
+  if (!['none','internal','external','financial','irreversible'].includes(contract?.side_effect_level)) errors.push('invalid side effect level');
+  if (contract?.side_effect_level !== 'none' && (contract?.idempotency !== 'required' ||
+      !Number.isInteger(contract?.timeout_policy?.seconds) || contract.timeout_policy.seconds < 1 ||
+      !Number.isInteger(contract?.retry_policy?.max_attempts) || contract.retry_policy.max_attempts < 1 ||
+      !nonempty(contract?.failure_contract))) errors.push('mutation missing idempotency/timeout/retry/failure contract');
   if (contract?.execution_binding?.startsWith('action:') &&
-      ['external', 'financial'].includes(contract?.side_effect_level) &&
+      ['external', 'financial', 'irreversible'].includes(contract?.side_effect_level) &&
       (contract?.approval_policy !== 'required' || contract?.idempotency !== 'required')) {
     errors.push('governed Action lacks required approval/idempotency');
   }
@@ -130,11 +139,15 @@ function selfTest() {
   const sample = {id:'demo.act', owner_domain:'demo', kind:'command', version:'1.0.0',
     execution_binding:'action:demo.act', permission:'cos.tenant.manage',
     input_schema:'schema.json', output_schema:'schema.json', lifecycle:'experimental',
-    tests:['test.php'], side_effect_level:'external', approval_policy:'required', idempotency:'required' };
+    tests:['test.php'], side_effect_level:'external', approval_policy:'required', idempotency:'required',
+    timeout_policy:{seconds:30}, retry_policy:{max_attempts:1}, failure_contract:'Reconcile before retry' };
   if (coreContractErrors('demo', sample).length) throw new Error('valid sample rejected');
   if (!coreContractErrors('other', sample).includes('owner_domain mismatch')) throw new Error('foreign ownership undetected');
   if (!coreContractErrors('demo', {...sample, approval_policy:'none'}).some(e=>e.includes('approval'))) throw new Error('unapproved Action undetected');
   if (!coreContractErrors('demo', {...sample, execution_binding:''}).some(e=>e.includes('binding'))) throw new Error('unbound contract undetected');
+  if (!coreContractErrors('demo', {...sample, execution_binding:'command:demo.act'}).some(e=>e.includes('bypasses Action'))) throw new Error('high-risk direct binding undetected');
+  if (!coreContractErrors('demo', {...sample, execution_binding:'read:demo.act'}).some(e=>e.includes('command uses read'))) throw new Error('command/read mismatch undetected');
+  if (!coreContractErrors('demo', {...sample, failure_contract:''}).some(e=>e.includes('mutation missing'))) throw new Error('missing failure contract undetected');
   console.log('DAS-001 compliance gate negative fixtures PASS');
 }
 

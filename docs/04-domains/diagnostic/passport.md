@@ -2,7 +2,7 @@
 title: Diagnostic — паспорт домену COS
 description: Стандартизований паспорт відповідальності, компонентів, контрактів і готовності домену Diagnostic.
 status: draft
-updated: 2026-11-19
+updated: 2026-11-24
 kind: domain
 contract: domain-v1
 domain_id: diagnostic
@@ -19,7 +19,8 @@ domain_id: diagnostic
     {
       "id": "sessions",
       "capability_ids": [
-        "diagnostic.session.start"
+        "diagnostic.session.start",
+        "diagnostic.session.complete"
       ]
     },
     {
@@ -37,7 +38,8 @@ domain_id: diagnostic
     {
       "id": "evaluation",
       "capability_ids": [
-        "diagnostic.traceability"
+        "diagnostic.traceability",
+        "diagnostic.report.summary.get"
       ]
     }
   ],

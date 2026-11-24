@@ -12,36 +12,6 @@
       "target_capability": "diagnostic.methodology.manage"
     },
     {
-      "id": "diagnostic.session-to-recommendation:evaluation",
-      "process_id": "diagnostic.session-to-recommendation",
-      "step_id": "evaluation",
-      "gap_type": "missing-domain-capability",
-      "owner_domain": "diagnostic",
-      "severity": "high",
-      "resolution": "declare-domain-capability",
-      "target_capability": "diagnostic.evaluation.run"
-    },
-    {
-      "id": "diagnostic.session-to-recommendation:result",
-      "process_id": "diagnostic.session-to-recommendation",
-      "step_id": "result",
-      "gap_type": "missing-domain-capability",
-      "owner_domain": "diagnostic",
-      "severity": "high",
-      "resolution": "declare-domain-capability",
-      "target_capability": "diagnostic.result.record"
-    },
-    {
-      "id": "diagnostic.session-to-recommendation:complete",
-      "process_id": "diagnostic.session-to-recommendation",
-      "step_id": "complete",
-      "gap_type": "missing-domain-capability",
-      "owner_domain": "diagnostic",
-      "severity": "high",
-      "resolution": "declare-domain-capability",
-      "target_capability": "diagnostic.session.complete"
-    },
-    {
       "id": "diagnostic.session-to-recommendation:decision",
       "process_id": "diagnostic.session-to-recommendation",
       "step_id": "decision",

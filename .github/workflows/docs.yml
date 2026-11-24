@@ -61,6 +61,8 @@ jobs:
     steps:
       - name: Checkout canonical main source
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -104,6 +106,8 @@ jobs:
         run: npm run docs:generate:check
 
       - name: Check documentation integrity
+        env:
+          DAS001_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
         run: npm run docs:check
 
       - name: Build documentation
