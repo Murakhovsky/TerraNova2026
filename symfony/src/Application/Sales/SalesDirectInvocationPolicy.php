@@ -2,7 +2,8 @@
 declare(strict_types=1);
 namespace App\Application\Sales;
 
-use App\Application\Capability\Contract\CapabilityInvocationPolicyInterface;
+use App\Application\Capability\Contract\TransactionalCapabilityInvocationPolicyInterface;
+use Domains\Sales\Application\Service\SalesMutationGuard;
 use DomainException;
 use Domains\Sales\Application\Contract\SalesAccessControlInterface;
 use Domains\Sales\Application\Contract\SalesOfferRepositoryInterface;
@@ -11,11 +12,27 @@ use Domains\Sales\Model\SalesCapability;
 use Kernel\Module\CapabilityContract;
 use Kernel\Tenant\Model\TenantContext;
 
-final readonly class SalesDirectInvocationPolicy implements CapabilityInvocationPolicyInterface
+final readonly class SalesDirectInvocationPolicy implements TransactionalCapabilityInvocationPolicyInterface
 {
     public function __construct(private SalesEntityScopeService $scope,private SalesAccessControlInterface $access,
-        private SalesOfferRepositoryInterface $offers) {}
+        private SalesOfferRepositoryInterface $offers,private SalesMutationGuard $guard) {}
     public function supports(string $owner):bool {return $owner==='sales';}
+
+    public function execute(TenantContext $actor,CapabilityContract $contract,array $input,callable $operation):mixed
+    {
+        $org=$actor->organizationId()->value();$user=(int)$actor->userId()->value();
+        $id=$contract->id;
+        $permission=match(true){
+            $id==='sales.team.manage'=>SalesCapability::AdminTeamsManage->value,
+            str_starts_with($id,'sales.crm.inbox.')=>SalesCapability::AdminIntegrationsManage->value,
+            default=>SalesCapability::WorkspaceUse->value,
+        };
+        $kind=isset($input['deal_id'])?'deal':(isset($input['lead_id'])?'lead':null);
+        $entity=$kind===null?null:(int)$input[$kind.'_id'];
+        // Native AssignDealOwner enforces its dedicated assignment policy on the same locked deal.
+        return $this->guard->run($org,$user,$operation,$kind,$entity,null,$permission,
+            isset($input['offer_id'])?(string)$input['offer_id']:null);
+    }
 
     public function authorize(TenantContext $actor,CapabilityContract $contract,array $input):void
     {
