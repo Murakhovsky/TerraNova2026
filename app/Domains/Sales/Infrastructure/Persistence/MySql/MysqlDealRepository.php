@@ -33,6 +33,8 @@ final readonly class MysqlDealRepository implements DealRepositoryInterface, Dea
             if ($commercial) {
                 $row=$this->getForStageChange($organizationId,$dealReference);
                 if ($row===null || in_array((string)$row['status'],['closed','lost'],true)) return OperationResult::failure('Terminal deal commercial terms are immutable.');
+                $accepted=(new MysqlSalesOfferRepository($this->connection))->acceptedForDeal($organizationId,(int)$dealReference);
+                if($accepted!==null&&((string)$accepted['total']!==$values['deal_value']||$accepted['currency']!==$values['currency']))return OperationResult::failure('Accepted offer fixes Deal commercial terms.');
             }
             $sets = [];
             $parameters = ['id' => $dealReference, 'organization_id' => $organizationId];

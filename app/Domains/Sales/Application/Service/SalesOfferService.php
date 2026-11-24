@@ -47,7 +47,7 @@ final readonly class SalesOfferService
             }
             if(in_array($native['status'],['closed','lost'],true))throw new DomainException('Terminal deal cannot change offers.');
             $accepted=$this->offers->acceptedForDeal($org,$deal);
-            if($accepted!==null)throw new DomainException('An accepted offer already fixes commercial terms for this deal.');
+            if($accepted!==null&&!($operation==='transition'&&$input['offer_id']!==$accepted['offer_id']&&in_array($input['target_status'],['withdrawn','expired','rejected'],true)))throw new DomainException('An accepted offer already fixes commercial terms for this deal.');
             $before=null;$kind=$operation;$from=null;$to='draft';$version=1;$revision=1;
             $evidence=$input['evidence_reference']??null;$note=$input['note']??null;
             if($operation==='create'){
@@ -73,7 +73,10 @@ final readonly class SalesOfferService
                     if($to==='expired'&&!$expired)throw new DomainException('Offer is not expired.');
                     if(in_array($to,['presented','accepted'],true)&&$expired)throw new DomainException('Offer terms expired; revise before proceeding.');
                     if(in_array($to,['presented','accepted','rejected'],true)&&$evidence===null)throw new DomainException('Operator-recorded customer interaction reference required.');
-                    if(in_array($to,['presented','accepted'],true))$this->verifyReferences($org,$before['lines']);
+                    if(in_array($to,['presented','accepted'],true)){
+                        if($before['direction']!=='sales')throw new DomainException('Customer counteroffer requires a sales-issued revision.');
+                        $this->verifyReferences($org,$before['lines']);
+                    }
                     if($to==='accepted'){
                         if($before['direction']==='customer')throw new DomainException('Customer counteroffer must be adopted into a sales-issued revision before acceptance.');
                         $result=$this->commercial->execute($org,(string)$deal,$before['total'],$before['currency'],(string)$actor,$correlation);

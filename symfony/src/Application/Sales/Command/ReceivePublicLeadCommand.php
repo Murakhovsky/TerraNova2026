@@ -14,6 +14,8 @@ final readonly class ReceivePublicLeadCommand implements CommandInterface
         public OrganizationId $organizationId,
         public array $input,
         public string $sourcePage,
+        public ?int $actorId=null,
+        public ?string $correlationId=null,
     ) {
     }
 }

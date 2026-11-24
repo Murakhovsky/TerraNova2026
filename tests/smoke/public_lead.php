@@ -36,7 +36,7 @@ $attachments = [];
 $cases = new class($attachments) implements InboundCaseResolverInterface {
     public function __construct(private array &$attachments) {}
     public function resolvePropertyId(mixed $value): ?int { return (int) $value > 0 ? (int) $value : null; }
-    public function resolvePersonAndCase(array $input): array { return ['person_id' => 7, 'client_case_id' => 9]; }
+    public function resolvePersonAndCase(array $input,?int $actorId=null,?string $correlationId=null): array { return ['person_id' => 7, 'client_case_id' => 9]; }
     public function attachRequest(int $caseId, int $requestId): void { $this->attachments[] = [$caseId, $requestId]; }
 };
 

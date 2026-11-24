@@ -8,7 +8,7 @@ interface InboundCaseResolverInterface
     public function resolvePropertyId(mixed $value): ?int;
 
     /** @return array{person_id:int|null,client_case_id:int|null} */
-    public function resolvePersonAndCase(array $input): array;
+    public function resolvePersonAndCase(array $input,?int $actorId=null,?string $correlationId=null): array;
 
     public function attachRequest(int $caseId, int $requestId): void;
 }

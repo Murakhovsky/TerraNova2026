@@ -43,11 +43,11 @@ final readonly class SalesWriteService implements SalesWriteServiceInterface
     ) {
     }
 
-    public function receivePublicLead(array $input,string $sourcePage): ClientCaseCommandResult
+    public function receivePublicLead(array $input,string $sourcePage,?int $actorId=null,?string $correlationId=null): ClientCaseCommandResult
     {
-        $result=$this->publicLeads->execute($input,$sourcePage);
+        $result=$this->publicLeads->execute($input,$sourcePage,$actorId,$correlationId);
         return $result->ok
-            ? ClientCaseCommandResult::success($result->code,['lead_id'=>$result->leadId])
+            ? ClientCaseCommandResult::success($result->code,['lead_id'=>$result->leadId,...($actorId===null?[]:['replayed'=>$result->replayed])])
             : ClientCaseCommandResult::failure($result->code);
     }
     public function createOpportunity(array $input,int $actorId): ClientCaseCommandResult { return $this->cases->create($input,['id'=>$actorId]); }

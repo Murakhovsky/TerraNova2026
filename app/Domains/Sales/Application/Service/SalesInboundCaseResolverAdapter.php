@@ -9,9 +9,9 @@ final readonly class SalesInboundCaseResolverAdapter implements InboundCaseResol
 {
     public function __construct(private SalesInboundService $inbound) {}
     public function resolvePropertyId(mixed $value): ?int { return $this->inbound->resolvePropertyId($value); }
-    public function resolvePersonAndCase(array $input): array
+    public function resolvePersonAndCase(array $input,?int $actorId=null,?string $correlationId=null): array
     {
-        $result=$this->inbound->ensureCase($input);
+        $result=$this->inbound->ensureCase($input,$actorId===null?null:['id'=>$actorId],$correlationId);
         if(!$result->ok) throw new DomainException('Public lead case resolution failed: '.$result->code);
         return [
             'person_id'=>isset($result->data['person_id'])?(int)$result->data['person_id']:null,

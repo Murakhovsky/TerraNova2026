@@ -26,8 +26,9 @@ final readonly class ReceivePublicLead
     ) {
     }
 
-    public function execute(array $input, string $sourcePage): PublicLeadResult
+    public function execute(array $input, string $sourcePage,?int $actorId=null,?string $correlationId=null): PublicLeadResult
     {
+        if ($actorId!==null&&($actorId<1||$sourcePage!=='operator-intake'||trim((string)$correlationId)==='')) return PublicLeadResult::rejected('invalid_operator');
         foreach (['website','full_name','name','phone','email','role','deal_type','request_type','message','comment','telegram','request_intent','submission_id','property_id'] as $field) {
             if (isset($input[$field]) && !is_string($input[$field]) && !($field==='property_id' && is_int($input[$field]))) return PublicLeadResult::rejected('invalid_input');
         }
@@ -64,19 +65,19 @@ final readonly class ReceivePublicLead
             'message'=>$message!==''?$message:null,'source_page'=>$sourcePage,'request_intent'=>$intent,
         ];
         $caseInput=$lead+['telegram'=>$telegram!==''?$telegram:null];
-        $fingerprint=hash('sha256',json_encode($caseInput,JSON_THROW_ON_ERROR));
-        $operation='public.lead.create';
+        $fingerprint=hash('sha256',json_encode($actorId===null?$caseInput:['actor_id'=>$actorId,'lead'=>$caseInput],JSON_THROW_ON_ERROR));
+        $operation=$actorId===null?'public.lead.create':'operator.lead.intake';
 
-        return $this->transactions->transactional(function()use($caseInput,$lead,$sourcePage,$key,$fingerprint,$operation):PublicLeadResult{
+        return $this->transactions->transactional(function()use($caseInput,$lead,$sourcePage,$key,$fingerprint,$operation,$actorId,$correlationId):PublicLeadResult{
             $pending='pending:'.bin2hex(random_bytes(16));
             if (!$this->receipts->claim($this->organizationId,$operation,$key,$pending)) {
                 $existing=$this->receipts->find($this->organizationId,$operation,$key);
                 if ($existing===null || preg_match('/^([a-f0-9]{64}):([1-9][0-9]*)$/D',$existing,$m)!==1
                     || !hash_equals($m[1],$fingerprint) || (string)(int)$m[2]!==$m[2]
                     || !$this->leads->existsForUpdate($this->organizationId,(int)$m[2])) return PublicLeadResult::rejected('submission_conflict');
-                return PublicLeadResult::accepted((int)$m[2]);
+                return PublicLeadResult::accepted((int)$m[2],true);
             }
-            $case=$this->cases->resolvePersonAndCase($caseInput);
+            $case=$this->cases->resolvePersonAndCase($caseInput,$actorId,$correlationId);
             $leadId=$this->leads->create($this->organizationId,[
                 'person_id'=>$case['person_id'],'client_case_id'=>$case['client_case_id'],
             ]+$lead);
@@ -84,7 +85,7 @@ final readonly class ReceivePublicLead
             $this->events->publish(LeadCreated::create(
                 bin2hex(random_bytes(16)),$this->organizationId,(string)$leadId,
                 ['client_case_id'=>$case['client_case_id'],'source_page'=>$sourcePage,'status'=>LeadStatus::New->value],
-                new EventMetadata(bin2hex(random_bytes(16)),null,'SYSTEM','public-web'),
+                new EventMetadata($correlationId??bin2hex(random_bytes(16)),null,$actorId===null?'SYSTEM':'USER',$actorId===null?'public-web':(string)$actorId),
             ));
             if (!$this->leads->existsForUpdate($this->organizationId,$leadId)
                 || !$this->receipts->complete($this->organizationId,$operation,$key,$pending,$fingerprint.':'.$leadId)) {

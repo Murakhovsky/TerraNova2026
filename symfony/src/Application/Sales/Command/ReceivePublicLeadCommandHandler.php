@@ -17,7 +17,7 @@ final readonly class ReceivePublicLeadCommandHandler implements CommandHandlerIn
     {
         $result = $this->writes
             ->forOrganization($command->organizationId->value())
-            ->receivePublicLead($command->input, $command->sourcePage);
+            ->receivePublicLead($command->input, $command->sourcePage,$command->actorId,$command->correlationId);
 
         return $result->ok
             ? SalesMutationResult::success($result->code, $result->data)

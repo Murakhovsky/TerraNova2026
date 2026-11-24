@@ -234,13 +234,13 @@ final readonly class SalesInboundService
         });
     }
 
-    public function ensureCase(array $input, ?array $user = null): ClientCaseCommandResult
+    public function ensureCase(array $input, ?array $user = null,?string $correlationId=null): ClientCaseCommandResult
     {
         $name = ClientCaseInput::limit((string) ($input['full_name'] ?? $input['name'] ?? ''), 160);
         $phone = ClientCaseInput::nullable((string) ($input['phone'] ?? ''), 50);
         $email = ClientCaseInput::email((string) ($input['email'] ?? ''));
         if ($name === '' || ($phone === null && $email === null)) return ClientCaseCommandResult::failure('contact_required', ['person_id' => null, 'client_case_id' => null]);
-        return $this->transactions->transactional(function () use ($input, $user, $name, $phone, $email): ClientCaseCommandResult {
+        return $this->transactions->transactional(function () use ($input, $user, $name, $phone, $email,$correlationId): ClientCaseCommandResult {
             $personId = ClientCasePeople::findOrCreate($this->commands, $this->organizationId, [
                 'full_name' => $name, 'phone' => $phone, 'email' => $email,
                 'telegram' => ClientCaseInput::nullable((string) ($input['telegram'] ?? ''), 80), 'notes' => null,
@@ -248,7 +248,7 @@ final readonly class SalesInboundService
             $caseInput = [
                 'full_name' => $name, 'type' => ClientCaseInput::caseTypeFromInbound($input), 'title' => ClientCaseInput::caseTitleFromInbound($input, $name),
                 'status' => ClientCaseStatus::Active->value, 'priority' => SalesPriority::Normal->value,
-                'source' => 'site-inbound-request', 'description' => ClientCaseInput::text((string) ($input['message'] ?? $input['comment'] ?? '')), 'currency' => SalesCurrency::Usd->value,
+                'source' => isset($user['id'])?'operator-inbound-request':'site-inbound-request', 'description' => ClientCaseInput::text((string) ($input['message'] ?? $input['comment'] ?? '')), 'currency' => SalesCurrency::Usd->value,
             ];
             $case = ClientCaseInput::caseData($caseInput, $name, null, null, null);
             $caseId = $this->commands->createCase($this->organizationId, $personId, $case);
@@ -259,8 +259,8 @@ final readonly class SalesInboundService
                 'pipeline_id' => $created['pipeline_id'] ?? null,
                 'stage_id' => $created['stage_id'] ?? null,
                 'stage' => (string) ($created['stage'] ?? ''),
-                'source' => 'site-inbound-request',
-            ], ClientCaseEvents::metadata($user)));
+                'source' => isset($user['id'])?'operator-inbound-request':'site-inbound-request',
+            ], ClientCaseEvents::metadata($user,$correlationId)));
             return ClientCaseCommandResult::success('created', ['person_id' => $personId, 'client_case_id' => $caseId]);
         });
     }

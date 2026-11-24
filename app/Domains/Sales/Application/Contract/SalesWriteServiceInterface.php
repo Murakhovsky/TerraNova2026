@@ -11,7 +11,7 @@ use Domains\Sales\Application\DTO\OperationResult;
 interface SalesWriteServiceInterface
 {
     /** @param array<string,mixed> $input */
-    public function receivePublicLead(array $input, string $sourcePage): ClientCaseCommandResult;
+    public function receivePublicLead(array $input, string $sourcePage,?int $actorId=null,?string $correlationId=null): ClientCaseCommandResult;
 
     /** @param array<string,mixed> $input */
     public function createOpportunity(array $input, int $actorId): ClientCaseCommandResult;
