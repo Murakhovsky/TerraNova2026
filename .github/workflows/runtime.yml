@@ -165,6 +165,10 @@ jobs:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
           COS_TEST_PM_SESSION_FULL: "1"
         run: php tests/integration/product_management_count_session_goal_e2e_mysql.php
+      - name: Product Management typed attributes and variant matrix native MySQL acceptance
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/integration/product_management_attributes_mysql.php
       - name: Product Management approved CSV Action native MySQL acceptance
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
@@ -996,7 +1000,7 @@ jobs:
         run: |
           CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
           test -n "$CHROME_BIN"
-          CHROME_PATH="$CHROME_BIN" node tests/browser/sales_workspace.mjs"
+          CHROME_PATH="$CHROME_BIN" node tests/browser/sales_workspace.mjs
 
       - name: Product Management functional browser acceptance
         env:
