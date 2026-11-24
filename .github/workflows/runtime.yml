@@ -155,6 +155,11 @@ jobs:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
           COS_TEST_PM_CSV_FULL: "1"
         run: php tests/integration/product_management_approved_goal_e2e_mysql.php
+      - name: Product Management canonical approved physical stock count MySQL E2E
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+          COS_TEST_PM_COUNT_FULL: "1"
+        run: php tests/integration/product_management_stock_count_goal_e2e_mysql.php
       - name: Product Management approved CSV Action native MySQL acceptance
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
