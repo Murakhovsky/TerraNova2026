@@ -352,7 +352,7 @@ try{
     $grant->execute([$org,$owner,'sales.admin.integrations.manage',(string)$owner]);
     $readSource=static fn(string $cap,array $input)=>$gateway->invoke($manager,$cap,$input,'trusted_read','','source-test');
     $page=$readSource('sales.order.source.page.read',['channel'=>'shopify','connection_id'=>$conn]);
-    $check($page===['order_ids'=>['gid://shopify/Order/12345'],'next_cursor'=>null],'Shopify backfill page mismatch.');
+    $check($page===['order_ids'=>['gid://shopify/Order/12345'],'next_cursor'=>null,'historical_access'=>'provider_limited'],'Shopify backfill page mismatch.');
     $delivery='delivery-'.$token;$raw='{"id":12345,"email":"must-not-store@example.test"}';
     $signature=base64_encode(hash_hmac('sha256',$raw,'order-fixture-secret',true));
     $gid=\Domains\ProductManagement\Infrastructure\Shopify\ShopifyOrderWebhookEvidence::extractVerified($raw,$signature,'order-fixture-secret','orders/paid');
