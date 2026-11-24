@@ -13,7 +13,7 @@ use PDO;
  * records a decision. This is deliberately NOT a Domain Action handler.
  * Other action families keep their existing authority policies.
  */
-final readonly class FederationPlanApprovalAuthority
+final readonly class FederationPlanApprovalAuthority implements \Kernel\Approval\Contract\ApprovalAuthorityInterface
 {
     public function __construct(private PDO $connection) {}
 
