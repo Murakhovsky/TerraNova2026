@@ -39,4 +39,8 @@ $assert(str_contains($provider,"'/product-management/stock'")
     'Inventory Workspace routes or guarded forms not registered.');
 $assert(str_contains($workflow,'php tests/architecture/product_management_stock_workspace_contract.php'),
     'Runtime architecture gate missing.');
+foreach(['stock.reservation.search','reservation_readback_uncertain','confirm_release'] as $required)
+    $assert(str_contains($controller,$required),'Reservation Workspace missing: '.$required);
+$assert(str_contains($routes,'cos_product_management_stock_reservation:')&&str_contains($twig,'name="reservation_id"'),
+    'Reservation requires guarded canonical route and identity.');
 echo "Product Management inventory Workspace architecture passed.\n";
