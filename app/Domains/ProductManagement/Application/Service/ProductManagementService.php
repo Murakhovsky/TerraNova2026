@@ -276,6 +276,44 @@ final readonly class ProductManagementService
         return $this->store->searchReservations($org,$variantId,$locationId,$reservationId,$limit,$offset);
     }
 
+    /** Sole application entry for a count correction; ordinary recordMovement still rejects adjustment. */
+    public function applyApprovedStockCount(\Kernel\Action\Action $action):array
+    {
+        $p=$action->parameters;
+        if($action->type!=='product_management.stock.count.apply'||$action->status!==\Kernel\Action\ActionStatus::Running
+            ||$action->sourceType!=='USER'||!ctype_digit($action->sourceId)||(int)$action->sourceId<1
+            ||$action->executionMode!=='APPROVAL_REQUIRED'||$action->riskLevel!=='HIGH'
+            ||$action->targetType!=='product_stock_count'||!is_string($action->targetId)
+            ||!preg_match('/^[a-f0-9]{32}$/D',$action->targetId)
+            ||!is_string($action->idempotencyKey)||!preg_match('/^wf:[a-f0-9]{64}$/D',$action->idempotencyKey)
+            ||count($p)!==5||!is_string($p['variant_id']??null)||!is_string($p['location_id']??null)
+            ||!is_string($p['counted']??null)||!is_int($p['expected_revision']??null)||!is_string($p['source_ref']??null))
+            throw new DomainException('Running approved stock count Action required.');
+        $org=$action->organizationId;$key=$action->idempotencyKey;$actor=$action->sourceId;$trace=$action->correlationId!==''?$action->correlationId:$action->id;
+        $this->scope($org,$key,$actor,$trace);
+        foreach([$p['variant_id'],$p['location_id']] as $id)
+            if(!preg_match('/^[a-f0-9]{32}$/D',$id))throw new DomainException('Invalid stock count scope.');
+        $counted=self::countQuantity($p['counted']);
+        if($p['expected_revision']<0||!preg_match('#^count:[A-Za-z0-9._:/-]{1,150}$#D',$p['source_ref']))
+            throw new DomainException('Stock count requires revision and a count document reference.');
+        return $this->store->applyStockCount($org,$action->targetId,$p['variant_id'],$p['location_id'],$counted,$p['expected_revision'],$p['source_ref'],$key,$actor,$trace);
+    }
+
+    public static function countQuantity(string $quantity):string
+    {
+        if(!preg_match('/^(0|[1-9][0-9]{0,13})(\.[0-9]{1,6})?$/D',$quantity))
+            throw new DomainException('Physical count must be nonnegative DECIMAL(20,6).');
+        [$whole,$fraction]=array_pad(explode('.',$quantity,2),2,'');
+        return $whole.'.'.str_pad($fraction,6,'0');
+    }
+
+    public function stockCount(string $org,string $countId):?array
+    {
+        $this->tenant($org);
+        if(!preg_match('/^[a-f0-9]{32}$/D',$countId))throw new DomainException('Invalid stock count identity.');
+        return $this->store->getStockCount($org,$countId);
+    }
+
     public function balance(string $organizationId, string $variantId, string $locationId): array
     {
         $this->tenant($organizationId);
