@@ -5,6 +5,7 @@ namespace Domains\ProductManagement\Application\Service;
 
 use Domains\ProductManagement\Application\Contract\ProductManagementStoreInterface;
 use Domains\ProductManagement\Domain\ProductRules;
+use Domains\ProductManagement\Domain\AttributeRules;
 use DomainException;
 
 /**
@@ -361,6 +362,61 @@ final readonly class ProductManagementService
         $this->tenant($org);
         if(!preg_match('/^[a-f0-9]{32}$/D',$countId))throw new DomainException('Invalid stock count identity.');
         return $this->store->getStockCount($org,$countId);
+    }
+
+    public function defineAttribute(string $org,array $in,string $key,string $actor,string $trace):array
+    {
+        $this->scope($org,$key,$actor,$trace);
+        return $this->store->defineAttribute($org,AttributeRules::definition($in),$key,$actor,$trace);
+    }
+    private function attributePage(string $org,int $limit,int $offset):void
+    {
+        $this->tenant($org);
+        if($limit<1||$limit>100||$offset<0||$offset>10000000)throw new DomainException('Invalid attribute pagination.');
+    }
+    private function attributeId(string $id):void
+    {
+        if(!preg_match('/^[a-f0-9]{32}$/D',$id))throw new DomainException('Invalid catalog identity.');
+    }
+    public function attributes(string $org,int $limit=30,int $offset=0):array
+    {
+        $this->attributePage($org,$limit,$offset);return $this->store->attributes($org,$limit,$offset);
+    }
+    public function bindAttribute(string $org,string $category,string $code,bool $required,bool $axis,string $key,string $actor,string $trace):array
+    {
+        $this->scope($org,$key,$actor,$trace);$this->attributeId($category);
+        return $this->store->bindAttribute($org,$category,AttributeRules::code($code),$required,$axis,$key,$actor,$trace);
+    }
+    public function categoryAttributes(string $org,string $category):array
+    {
+        $this->tenant($org);$this->attributeId($category);return $this->store->categoryAttributes($org,$category);
+    }
+    public function setAttributes(string $org,string $product,array $rows,int $revision,string $key,string $actor,string $trace):array
+    {
+        $this->scope($org,$key,$actor,$trace);$this->attributeId($product);
+        if($revision<1)throw new DomainException('Product revision required.');
+        return $this->store->setAttributes($org,$product,AttributeRules::changes($rows),$revision,$key,$actor,$trace);
+    }
+    public function productAttributes(string $org,string $product):array
+    {
+        $this->tenant($org);$this->attributeId($product);return $this->store->productAttributes($org,$product);
+    }
+    public function filterAttributes(string $org,string $code,mixed $value,int $limit=30,int $offset=0):array
+    {
+        $this->attributePage($org,$limit,$offset);
+        if($value===null)throw new DomainException('Filter requires an explicit value.');
+        return $this->store->filterAttributes($org,AttributeRules::code($code),$value,$limit,$offset);
+    }
+    public function variantMatrix(string $org,string $product,array $axes,string $prefix):array
+    {
+        $this->tenant($org);$this->attributeId($product);
+        return $this->store->variantMatrix($org,$product,AttributeRules::matrix($axes,$prefix));
+    }
+    public function createMatrix(string $org,string $product,array $axes,string $prefix,int $revision,string $uom,bool $track,string $key,string $actor,string $trace):array
+    {
+        $this->scope($org,$key,$actor,$trace);$this->attributeId($product);
+        if($revision<1||!preg_match('/^[a-zA-Z][a-zA-Z0-9_-]{0,15}$/D',$uom))throw new DomainException('Matrix revision and UOM required.');
+        return $this->store->createMatrix($org,$product,AttributeRules::matrix($axes,$prefix),$revision,$uom,$track,$key,$actor,$trace);
     }
 
     public function balance(string $organizationId, string $variantId, string $locationId): array
