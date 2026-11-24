@@ -20,7 +20,7 @@ generated: true
 | --- | ---: | --- |
 | `both` | 48 | Capability присутня і в runtime catalogue, і в manifest. |
 | `runtime-only` | 3 | Runtime може перевіряти capability, але manifest її не декларує. |
-| `manifest-only` | 221 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
+| `manifest-only` | 222 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
 
 ## Каталог
 

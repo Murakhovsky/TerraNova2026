@@ -19,6 +19,16 @@ return [
         'extension_services' => [],
         'cross_domain_contracts' => [
             [
+                'contract' => 'Domains\\Finance\\Application\\Contract\\MarketingPaidSettlementReadPort',
+                'role' => 'requires', 'counterpart' => 'marketing', 'kind' => 'synchronous_port',
+                'purpose' => 'Read immutable terminal paid plan and latest campaign snapshot, locked during settlement.',
+            ],
+            [
+                'contract' => 'Domains\\Finance\\Application\\Contract\\DocumentsPaidSettlementReadPort',
+                'role' => 'requires', 'counterpart' => 'documents', 'kind' => 'synchronous_port',
+                'purpose' => 'Read tenant-owned uploaded document version and verified bytes without Documents mutation.',
+            ],
+            [
                 'contract' => 'Domains\\Finance\\Application\\Contract\\MarketingSpendEvidenceReadPort',
                 'role' => 'requires',
                 'counterpart' => 'marketing',

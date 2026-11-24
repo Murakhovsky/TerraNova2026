@@ -120,3 +120,5 @@ P0: прийняти typed Finance→Marketing bridge лише після indepe
 
 
 F1.2 — приватний readback порт між Marketing і Finance. Він навмисно не є public Capability до F1.3 canonical approved Action; D2 не підвищується автоматично.
+
+Компонент `paid_settlement` володіє незалежним рев'ю документа, бюджетним ledger та контрактом `finance.ad_spend.settlement.commit`. Два окремі порти `MarketingPaidSettlementReadPort` і `DocumentsPaidSettlementReadPort` забезпечують read-only інтеграцію через Symfony, без прямого міждоменного SQL. Приймання D3/D4 та фактичне підтвердження Meta залишаються окремими воротами випуску.
