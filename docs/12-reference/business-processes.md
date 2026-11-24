@@ -26,7 +26,7 @@ generated: true
 | Signal → Qualified Opportunity Handoff | `growth` | `to-be` | `source-verified` | 6 | 0 | 6/6 | 6/6 | 6/6 | 5/5 | 0/5 | [Відкрити workflow](../02-workflows/growth-opportunity-candidate-to-handoff.md) |
 | Property Submission → Publication | `property` | `as-is` | `source-verified` | 6 | 0 | 6/6 | 6/6 | 6/6 | 6/6 | 0/6 | [Відкрити workflow](../02-workflows/property-submission-to-publication.md) |
 | Opportunity → Property Reservation | `real_estate` | `as-is` | `source-verified` | 7 | 3 | 7/7 | 7/7 | 7/7 | 7/7 | 3/7 | [Відкрити workflow](../02-workflows/real-estate-opportunity-to-reservation.md) |
-| Sales Lead → Managed Case | `sales` | `as-is` | `source-verified` | 8 | 0 | 8/8 | 7/8 | 8/8 | 6/6 | 3/6 | [Відкрити workflow](../02-workflows/sales-lead-to-managed-case.md) |
+| Sales Lead → Managed Case | `sales` | `as-is` | `source-verified` | 8 | 0 | 8/8 | 8/8 | 8/8 | 6/6 | 3/6 | [Відкрити workflow](../02-workflows/sales-lead-to-managed-case.md) |
 | Sales Request → Property Match | `sales` | `as-is` | `source-verified` | 5 | 1 | 5/5 | 5/5 | 5/5 | 4/4 | 1/4 | [Відкрити workflow](../02-workflows/sales-request-to-property-match.md) |
 | Service Request → Ticket Close | `service` | `as-is` | `source-verified` | 7 | 0 | 7/7 | 7/7 | 7/7 | 6/6 | 0/6 | [Відкрити workflow](../02-workflows/service-request-to-close.md) |
 
@@ -49,7 +49,7 @@ generated: true
 | Signal → Qualified Opportunity Handoff | 6/6 | 6/6 | 0/6 | 0/6 | 6/6 | 6/6 | 0/6 | 5/5 | 0/5 |
 | Property Submission → Publication | 6/6 | 6/6 | 0/6 | 0/6 | 6/6 | 6/6 | 0/6 | 6/6 | 0/6 |
 | Opportunity → Property Reservation | 7/7 | 7/7 | 0/7 | 3/7 | 7/7 | 7/7 | 3/7 | 7/7 | 3/7 |
-| Sales Lead → Managed Case | 8/8 | 7/8 | 1/8 | 0/8 | 8/8 | 8/8 | 3/8 | 6/6 | 3/6 |
+| Sales Lead → Managed Case | 8/8 | 8/8 | 0/8 | 0/8 | 8/8 | 8/8 | 3/8 | 6/6 | 3/6 |
 | Sales Request → Property Match | 5/5 | 5/5 | 0/5 | 1/5 | 5/5 | 5/5 | 1/5 | 4/4 | 1/4 |
 | Service Request → Ticket Close | 7/7 | 7/7 | 0/7 | 0/7 | 7/7 | 7/7 | 0/7 | 6/6 | 0/6 |
 
@@ -301,10 +301,10 @@ generated: true
 - **Schema:** `v4`
 - **Domain:** `sales`
 - **Бізнес-стан:** `as-is`
-- **Покриття capabilities:** 7/8 кроків
+- **Покриття capabilities:** 8/8 кроків
 - **Cross-domain кроки:** 0/8
 - **Derived verification:** `source-verified`
-- **Тригер:** Inbound public lead or external CRM webhook
+- **Тригер:** Inbound public or operator-entered form, or signed external CRM webhook (provider admission is an authenticated ingress boundary)
 - **Workflow:** [Sales Lead → Managed Case](../02-workflows/sales-lead-to-managed-case.md)
 
 **Результати**
@@ -317,7 +317,7 @@ generated: true
 
 | Крок | Owner | Domain | Capability / gap | Вид | Критичний | Executable / evidence mapping |
 | --- | --- | --- | --- | --- | --- | --- |
-| Lead intake | Sales automation | `sales` | gap: `missing-domain-capability` | `operation` | так | use_case `ReceivePublicLead` [source]<br>use_case `ReceiveCrmWebhook` [source] |
+| Accept inbound form through Sales intake | Sales automation | `sales` | `sales.lead.intake` | `operation` | так | use_case `ReceivePublicLead` [source]<br>source `symfony/src/Infrastructure/Capability/SalesLeadIntakeAdapter.php` · `ReceivePublicLeadCommand` [source] |
 | Process durable CRM inbox | Sales automation | `sales` | `sales.crm.inbox.process` | `operation` | ні | use_case `ProcessCrmInbox` [source] |
 | Manage canonical Lead lifecycle | Sales automation | `sales` | `sales.lead.state.manage` | `state` | так | source `app/Domains/Sales/Application/Service/SalesInboundService.php` · `updateRequest(` [source] |
 | Assign owner | manager | `sales` | `sales.deal.owner.assign` | `operation` | так | use_case `AssignDealOwner` [source]<br>event `sales.deal.owner_assigned` [runtime] |

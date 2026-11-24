@@ -20,7 +20,7 @@ generated: true
 | --- | ---: | --- |
 | `both` | 48 | Capability присутня і в runtime catalogue, і в manifest. |
 | `runtime-only` | 3 | Runtime може перевіряти capability, але manifest її не декларує. |
-| `manifest-only` | 217 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
+| `manifest-only` | 225 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
 
 ## Каталог
 
@@ -87,6 +87,7 @@ generated: true
 | `finance` | `finance.budget.reservation.list` | ні | так | `manifest-only` | — | `app/Domains/Finance/module.php` |
 | `finance` | `finance.budget.reservation.release` | ні | так | `manifest-only` | — | `app/Domains/Finance/module.php` |
 | `finance` | `finance.budget.reservation.reserve` | ні | так | `manifest-only` | — | `app/Domains/Finance/module.php` |
+| `finance` | `finance.sales.commercial_evidence.read` | ні | так | `manifest-only` | — | `app/Domains/Finance/module.php` |
 | `growth` | `growth.account.brief` | ні | так | `manifest-only` | — | `app/Domains/Growth/module.php` |
 | `growth` | `growth.account.discover` | ні | так | `manifest-only` | — | `app/Domains/Growth/module.php` |
 | `growth` | `growth.account.enrich` | ні | так | `manifest-only` | — | `app/Domains/Growth/module.php` |
@@ -280,8 +281,15 @@ generated: true
 | `sales` | `sales.followup.schedule` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.inbound.request.read` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.lead.create` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.lead.intake` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.lead.qualify` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.lead.state.manage` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.negotiation.record` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.offer.create` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.offer.list` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.offer.read` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.offer.revise` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.offer.transition` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.pipeline.stage.manage` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.property_match.record` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.team.manage` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |

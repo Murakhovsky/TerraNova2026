@@ -109,6 +109,7 @@ COS-DOMAIN-PASSPORT-DATA -->
 | `leads` | Функціональний розділ `sales`; деталізація capabilities потребує owner review | UNKNOWN |
 | `deals` | Функціональний розділ `sales`; деталізація capabilities потребує owner review | UNKNOWN |
 | `teams` | Sales team configuration and membership | UNKNOWN |
+| `offers` | Immutable quoted terms, negotiations and accepted commercial evidence | UNKNOWN |
 | `activities` | Функціональний розділ `sales`; деталізація capabilities потребує owner review | UNKNOWN |
 
 Компоненти не можуть незалежно активуватися без окремо підтвердженого ModuleLifecycle contract.

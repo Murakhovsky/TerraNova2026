@@ -19,7 +19,7 @@ generated: true
 | `diagnostic` | `1.0.0` | — | 10 |
 | `documents` | `0.1.0` | — | 3 |
 | `federation` | `1.0.0` | — | 1 |
-| `finance` | `0.2.2` | — | 8 |
+| `finance` | `0.2.2` | — | 9 |
 | `growth` | `0.50.0` | — | 92 |
 | `hr` | `0.1.0` | — | 0 |
 | `marketing` | `0.1.2` | — | 14 |
@@ -27,7 +27,7 @@ generated: true
 | `product_management` | `0.1.0` | — | 28 |
 | `property` | `1.0.0` | `propertyModuleConfigurationProvisioner` | 25 |
 | `real_estate` | `1.0.0` | — | 6 |
-| `sales` | `1.0.0` | `salesModuleConfigurationProvisioner` | 32 |
+| `sales` | `1.0.0` | `salesModuleConfigurationProvisioner` | 39 |
 | `service` | `1.0.0` | — | 7 |
 
 ## `capital_markets`
@@ -64,7 +64,7 @@ generated: true
 
 - manifest: `app/Domains/Finance/module.php`;
 - configuration provisioners: —;
-- capabilities: `finance.budget.envelope.draft.create`, `finance.budget.envelope.get`, `finance.budget.reservation.list`, `finance.budget.envelope.activate`, `finance.budget.reservation.reserve`, `finance.budget.reservation.release`, `finance.budget.envelope.freeze`, `finance.ad_spend.reconciliation.status`.
+- capabilities: `finance.sales.commercial_evidence.read`, `finance.budget.envelope.draft.create`, `finance.budget.envelope.get`, `finance.budget.reservation.list`, `finance.budget.envelope.activate`, `finance.budget.reservation.reserve`, `finance.budget.reservation.release`, `finance.budget.envelope.freeze`, `finance.ad_spend.reconciliation.status`.
 
 ## `growth`
 
@@ -112,7 +112,7 @@ generated: true
 
 - manifest: `app/Domains/Sales/module.php`;
 - configuration provisioners: `salesModuleConfigurationProvisioner`;
-- capabilities: `sales.activity.record`, `sales.activity.complete`, `sales.activity.reschedule`, `sales.followup.schedule`, `sales.property_match.record`, `sales.team.read`, `sales.team.manage`, `sales.lead.state.manage`, `sales.deal.state.read`, `sales.deal.owner.assign`, `sales.deal.commercial.set`, `sales.pipeline.stage.manage`, `sales.deal.outcome.record`, `sales.lead.qualify`, `sales.crm.inbox.process`, `sales.crm.inbox.status`, `sales.crm.inbox.recover`, `sales.lead.create`, `sales.client_case.create`, `sales.create_task`, `sales.deal.won.observation`, `sales.inbound.request.read`, `sales.workspace.use`, `sales.director.view`, `sales.admin.view`, `sales.admin.pipeline.manage`, `sales.admin.rules.manage`, `sales.admin.agents.manage`, `sales.admin.policies.manage`, `sales.admin.teams.manage`, `sales.admin.integrations.manage`, `sales.admin.audit.view`.
+- capabilities: `sales.lead.intake`, `sales.offer.create`, `sales.offer.revise`, `sales.offer.transition`, `sales.negotiation.record`, `sales.offer.read`, `sales.offer.list`, `sales.activity.record`, `sales.activity.complete`, `sales.activity.reschedule`, `sales.followup.schedule`, `sales.property_match.record`, `sales.team.read`, `sales.team.manage`, `sales.lead.state.manage`, `sales.deal.state.read`, `sales.deal.owner.assign`, `sales.deal.commercial.set`, `sales.pipeline.stage.manage`, `sales.deal.outcome.record`, `sales.lead.qualify`, `sales.crm.inbox.process`, `sales.crm.inbox.status`, `sales.crm.inbox.recover`, `sales.lead.create`, `sales.client_case.create`, `sales.create_task`, `sales.deal.won.observation`, `sales.inbound.request.read`, `sales.workspace.use`, `sales.director.view`, `sales.admin.view`, `sales.admin.pipeline.manage`, `sales.admin.rules.manage`, `sales.admin.agents.manage`, `sales.admin.policies.manage`, `sales.admin.teams.manage`, `sales.admin.integrations.manage`, `sales.admin.audit.view`.
 
 ## `service`
 

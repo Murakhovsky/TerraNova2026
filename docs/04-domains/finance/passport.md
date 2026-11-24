@@ -69,6 +69,7 @@ Finance є єдиним authoritative writer для BudgetEnvelope, Reservation,
 | --- | --- | --- |
 | `budgets` | BudgetEnvelope, Reservations, ревізії, ідемпотентні фінансові події | 7 F1 типізованих контрактів |
 | `spend_observations` | Незмінні ревізійні спостереження джерела | 1 типізований статус звіряння |
+| `sales_commercial_evidence` | Read-only accepted Sales quote evidence, no settlement | 1 typed query |
 
 Наведені компоненти не є незалежно installable Domain.
 
@@ -122,3 +123,5 @@ P0: прийняти typed Finance→Marketing bridge лише після indepe
 
 
 F1.2 — приватний readback порт між Marketing і Finance. Він навмисно не є public Capability до F1.3 canonical approved Action; D2 не підвищується автоматично.
+
+Sales accepted quote evidence is a read-only source observation via `SalesCommercialEvidencePort`; it does not establish collected revenue or an accounting posting. D2 remains limited to F1/F1.1.
