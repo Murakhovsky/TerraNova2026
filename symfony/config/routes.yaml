@@ -21,6 +21,25 @@ cos_product_management_import_propose:
   methods: [POST]
   requirements: { id: '[a-f0-9]{32}' }
 
+cos_product_management_attributes:
+  path: /product-management/attributes
+  controller: App\Web\ProductManagement\ProductManagementPageController::attributes
+  methods: [GET]
+cos_product_management_attributes_change:
+  path: /product-management/attributes
+  controller: App\Web\ProductManagement\ProductManagementPageController::changeAttributes
+  methods: [POST]
+cos_product_management_product_attributes:
+  path: /product-management/products/{id}/attributes
+  controller: App\Web\ProductManagement\ProductManagementPageController::productAttributes
+  methods: [GET]
+  requirements: { id: '[a-f0-9]{32}' }
+cos_product_management_product_attributes_change:
+  path: /product-management/products/{id}/attributes
+  controller: App\Web\ProductManagement\ProductManagementPageController::changeProductAttributes
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
 cos_product_management_stock:
   path: /product-management/stock
   controller: App\Web\ProductManagement\ProductInventoryController::index
