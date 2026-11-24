@@ -1,0 +1,137 @@
+{
+  "schema_version": 4,
+  "id": "product_management.pricing-to-quote",
+  "title": "Product Pricing → Verified Quote",
+  "domain": "product_management",
+  "state": "as-is",
+  "workflow": "02-workflows/product-management-pricing-to-quote.md",
+  "trigger": "A known SKU needs a currency-specific wholesale offer",
+  "outcomes": [
+    "Base and explicit list prices are revisioned",
+    "Quantity tier is resolved in explicit currency without FX",
+    "Price history remains readable"
+  ],
+  "actors": [
+    "Product manager"
+  ],
+  "steps": [
+    {
+      "id": "base",
+      "label": "Set base price",
+      "kind": "operation",
+      "owner": "Product manager",
+      "domain": "product_management",
+      "capability": "product_management.price.base.set",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Application/Service/PricingService.php",
+          "symbol": "public function set("
+        }
+      ]
+    },
+    {
+      "id": "list",
+      "label": "Create price list",
+      "kind": "operation",
+      "owner": "Product manager",
+      "domain": "product_management",
+      "capability": "product_management.price.list.create",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Application/Service/PricingService.php",
+          "symbol": "public function createList("
+        }
+      ]
+    },
+    {
+      "id": "entry",
+      "label": "Set price list entry",
+      "kind": "operation",
+      "owner": "Product manager",
+      "domain": "product_management",
+      "capability": "product_management.price.list.entry.set",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Application/Service/PricingService.php",
+          "symbol": "public function setListPrice("
+        }
+      ]
+    },
+    {
+      "id": "tier",
+      "label": "Set quantity tier",
+      "kind": "operation",
+      "owner": "Product manager",
+      "domain": "product_management",
+      "capability": "product_management.price.list.tier.set",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Application/Service/PricingService.php",
+          "symbol": "public function setTier("
+        }
+      ]
+    },
+    {
+      "id": "quote",
+      "label": "Resolve explicit quote",
+      "kind": "outcome",
+      "owner": "Product manager",
+      "domain": "product_management",
+      "capability": "product_management.price.resolve",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Application/Service/PricingService.php",
+          "symbol": "public function resolvePrice("
+        }
+      ]
+    },
+    {
+      "id": "history",
+      "label": "Read tier change history",
+      "kind": "state",
+      "owner": "Product manager",
+      "domain": "product_management",
+      "capability": "product_management.price.list.tier.history.search",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Application/Service/PricingService.php",
+          "symbol": "public function tierHistory("
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "base",
+      "to": "list"
+    },
+    {
+      "from": "list",
+      "to": "entry"
+    },
+    {
+      "from": "entry",
+      "to": "tier"
+    },
+    {
+      "from": "tier",
+      "to": "quote"
+    },
+    {
+      "from": "quote",
+      "to": "history"
+    }
+  ]
+}
