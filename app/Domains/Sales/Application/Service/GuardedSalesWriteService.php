@@ -24,16 +24,20 @@ final readonly class GuardedSalesWriteService implements SalesWriteServiceInterf
     public function createOpportunity(array $input,int $actorId):ClientCaseCommandResult
     {
         return $this->result(fn()=>$this->guard->run($this->org,$actorId,
-            fn()=>$this->native->createOpportunity($input,$actorId),targetOwner:$this->owner($input,$actorId),
-            permission:'sales.director.view'));
+            function()use($input,$actorId):ClientCaseCommandResult{
+                $this->contact($input,$actorId);
+                return $this->native->createOpportunity([...$input,'assigned_user_id'=>$this->owner($input,$actorId)],$actorId);
+            },targetOwner:$this->owner($input,$actorId)));
     }
 
     public function updateOpportunity(int $opportunityId,array $input,int $actorId):ClientCaseCommandResult
     {
-        // Full person/case edit remains privileged until shared-person edit semantics are separated.
         return $this->result(fn()=>$this->guard->run($this->org,$actorId,
-            fn()=>$this->native->updateOpportunity($opportunityId,$input,$actorId),'deal',$opportunityId,
-            $this->owner($input),permission:'sales.director.view'));
+            function()use($opportunityId,$input,$actorId):ClientCaseCommandResult{
+                $this->authority->casePerson($this->org,$actorId,$opportunityId);
+                $this->contact($input,$actorId);
+                return $this->native->updateOpportunity($opportunityId,$input,$actorId);
+            },'deal',$opportunityId,$this->owner($input)));
     }
 
     public function attachInboundRequest(int $opportunityId,int $leadId,int $actorId):ClientCaseCommandResult
@@ -74,7 +78,10 @@ final readonly class GuardedSalesWriteService implements SalesWriteServiceInterf
     public function convertLeadToOpportunity(int $leadId,array $input,int $actorId,string $correlationId):ClientCaseCommandResult
     {
         return $this->result(fn()=>$this->guard->run($this->org,$actorId,
-            fn()=>$this->native->convertLeadToOpportunity($leadId,[...$input,'owner_id'=>$this->owner($input,$actorId)],$actorId,$correlationId),'lead',$leadId,$this->owner($input,$actorId)));
+            function()use($leadId,$input,$actorId,$correlationId):ClientCaseCommandResult{
+                $this->authority->leadContact($this->org,$actorId,$leadId);
+                return $this->native->convertLeadToOpportunity($leadId,[...$input,'assigned_user_id'=>$this->owner($input,$actorId)],$actorId,$correlationId);
+            },'lead',$leadId,$this->owner($input,$actorId)));
     }
 
     public function addOpportunityActivity(int $opportunityId,array $input,int $actorId,string $correlationId):ClientCaseCommandResult
@@ -111,6 +118,13 @@ final readonly class GuardedSalesWriteService implements SalesWriteServiceInterf
     {
         try {return $operation();}
         catch (SalesMutationDenied) {return ClientCaseCommandResult::failure('sales_access_denied');}
+    }
+
+    private function contact(array $input,int $actor):void
+    {
+        $this->authority->contact($this->org,$actor,
+            \Domains\Sales\Application\Support\ClientCaseInput::email((string)($input['email']??'')),
+            \Domains\Sales\Application\Support\ClientCaseInput::nullable((string)($input['phone']??''),50));
     }
 
     private function owner(array $input,?int $default=null):?int
