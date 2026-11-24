@@ -73,7 +73,10 @@ WITH params AS (SELECT ? AS org,? AS loc,CAST(? AS DECIMAL(20,6)) AS low_thresho
  scope AS (SELECT e.*,l.location_id,l.code location_code,CAST(COALESCE(b.on_hand,0) AS DECIMAL(20,6)) on_hand,CAST(COALESCE(b.reserved,0) AS DECIMAL(20,6)) reserved,CAST(COALESCE(b.on_hand-b.reserved,0) AS DECIMAL(20,6)) available,x.low_threshold,x.high_threshold,(b.variant_id IS NOT NULL) balance_present FROM eligible e JOIN params x ON x.org=e.organization_id JOIN pm_locations l ON l.organization_id=e.organization_id AND (x.loc IS NULL OR l.location_id=x.loc) LEFT JOIN pm_stock_balances b ON b.organization_id=e.organization_id AND b.variant_id=e.variant_id AND b.location_id=l.location_id WHERE l.status='active' AND (b.variant_id IS NOT NULL OR x.loc IS NOT NULL))
 SELECT variant_id,sku,uom,product_id,name,location_id,location_code,on_hand,reserved,available,balance_present FROM scope WHERE low_threshold<high_threshold AND
 SQL;
-        if((float)$low >= (float)$high)throw new DomainException('Low threshold must be below high threshold.');
+        $normalize=static function(string $q):string{[$a,$b]=array_pad(explode('.',$q,2),2,'');return str_pad($a,14,'0',STR_PAD_LEFT).str_pad($b,6,'0');};
+        if(strcmp($normalize($low),$normalize($high))>=0)throw new DomainException('Low threshold must be below high threshold.');
+        if($location!==null&&$this->rows("SELECT location_id FROM pm_locations WHERE organization_id=? AND location_id=? AND status='active'",[$org,$location])===[])
+            throw new DomainException('Unknown active tenant location.');
         $rows=$this->rows($sql.' '.$where.' ORDER BY available,variant_id,location_id LIMIT '.$limit.' OFFSET '.$offset,[$org,$location,$low,$high]);
         return ['items'=>array_map(static function(array $r):array{$r['balance_present']=(bool)$r['balance_present'];return $r;},$rows),'limit'=>$limit,'offset'=>$offset,'scope'=>$location===null?'recorded_active_positions':'selected_active_location_all_tracked_skus','threshold_basis'=>'operator_quantity_not_forecast'];
     }
