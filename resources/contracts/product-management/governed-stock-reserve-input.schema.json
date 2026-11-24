@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Governed stock-reserve input",
+  "type": "object",
+  "required": [
+    "target_type",
+    "target_id",
+    "parameters"
+  ],
+  "properties": {
+    "target_type": {
+      "type": "string",
+      "const": "product_governed_operation"
+    },
+    "target_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "parameters": {
+      "type": "object",
+      "required": [
+        "variant_id",
+        "location_id",
+        "quantity",
+        "source_ref"
+      ],
+      "properties": {
+        "variant_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        },
+        "location_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        },
+        "quantity": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 21,
+          "pattern": "^(?:0|[1-9][0-9]{0,13})(?:\\.[0-9]{1,6})?$"
+        },
+        "source_ref": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 157,
+          "pattern": "^manual:[A-Za-z0-9._:/-]{1,150}$"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
