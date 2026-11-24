@@ -382,7 +382,9 @@ try {
         public function exists(string $key):bool{return $key===$this->key;}
         public function delete(string $key):void{throw new DomainException('Fixture read only.');}
     };
-    $source=new \App\Infrastructure\Finance\NativePaidSettlementSourceAdapter($read,$documents,$storage,$modules,$pdo);
+    $source=new \App\Infrastructure\Finance\NativePaidSettlementSourceAdapter(
+        new \App\Infrastructure\Finance\MarketingPaidSettlementReadAdapter($read),
+        new \App\Infrastructure\Finance\DocumentsPaidSettlementReadAdapter(new \Domains\Documents\Application\Service\VerifiedUploadedPdfReadService($documents,$storage,$modules,$pdo)));
     $reviews=new \Domains\Finance\Application\Service\FinancePaidSettlementReviewService($financeRepo,$financeRepo,$source,$reviewStore,$policy,$modules);
     $reviewActor=new TenantContext(UserId::fromString($reviewer),OrganizationId::fromString($org),OrganizationRole::fromString('manager'),
         [Permission::fromString(TenantPermissions::ACCESS),Permission::fromString(TenantPermissions::MANAGE)]);

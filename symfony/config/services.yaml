@@ -2879,17 +2879,22 @@ services:
       $connection: '@cos.database.pdo'
   Domains\Finance\Application\Contract\FinancePaidSettlementReviewStore:
     alias: Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinancePaidSettlementReviewStore
-  App\Infrastructure\Finance\NativePaidSettlementSourceAdapter:
+  Domains\Documents\Application\Service\VerifiedUploadedPdfReadService:
     arguments:
       $connection: '@cos.database.pdo'
+  App\Infrastructure\Finance\MarketingPaidSettlementReadAdapter: ~
+  Domains\Finance\Application\Contract\MarketingPaidSettlementReadPort:
+    alias: App\Infrastructure\Finance\MarketingPaidSettlementReadAdapter
+  App\Infrastructure\Finance\DocumentsPaidSettlementReadAdapter: ~
+  Domains\Finance\Application\Contract\DocumentsPaidSettlementReadPort:
+    alias: App\Infrastructure\Finance\DocumentsPaidSettlementReadAdapter
+  App\Infrastructure\Finance\NativePaidSettlementSourceAdapter: ~
   Domains\Finance\Application\Contract\FinancePaidSettlementSourcePort:
     alias: App\Infrastructure\Finance\NativePaidSettlementSourceAdapter
   Domains\Finance\Application\Service\FinancePaidSettlementReviewService: ~
   Domains\Finance\Application\Service\FinancePaidSettlementStatusService: ~
-  App\Application\Capability\FinancePaidSettlementStatusAdapter:
-    tags: ['cos.capability.invoker']
-  App\Application\Capability\FinancePaidSettlementReviewAdapter:
-    tags: ['cos.capability.invoker']
+  App\Application\Capability\FinancePaidSettlementStatusAdapter: ~
+  App\Application\Capability\FinancePaidSettlementReviewAdapter: ~
   Domains\Finance\Application\Contract\FinancePaidSettlementEvidencePort:
     alias: Domains\Finance\Application\Service\FinancePaidSettlementReviewService
   Domains\Finance\Application\Service\ApprovedFinancePaidSettlementService: ~
