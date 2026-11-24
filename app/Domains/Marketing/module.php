@@ -28,6 +28,11 @@ $manifest = [
         ],
         'cross_domain_contracts' => [
             [
+                'contract' => 'Domains\\Marketing\\Application\\Contract\\MarketingFinanceFundingReadPort',
+                'role' => 'requires', 'counterpart' => 'finance', 'kind' => 'synchronous_port',
+                'purpose' => 'Observe Finance-owned envelope and reservation against immutable Marketing funding candidate; no financial mutation or execution authority.',
+            ],
+            [
                 'contract' => 'Domains\\Marketing\\Application\\Contract\\MarketingProductDraftReadPort',
                 'role' => 'requires',
                 'counterpart' => 'product_management',
@@ -35,7 +40,7 @@ $manifest = [
                 'purpose' => 'Search current tenant-scoped Product variants and read base price facts for Marketing draft planning, without Product SQL or launch authorization.',
             ],
         ],
-        'migration_files' => ['app/migrations/20261119_000152_marketing_foundation.sql','app/migrations/20261119_000154_marketing_planning_m2.sql','app/migrations/20261124_000162_marketing_audience_adsets.sql','app/migrations/20261124_000163_marketing_analyst_execution.sql','app/migrations/20261124_000164_marketing_analyst_decisions.sql'],
+        'migration_files' => ['app/migrations/20261119_000152_marketing_foundation.sql','app/migrations/20261119_000154_marketing_planning_m2.sql','app/migrations/20261124_000162_marketing_audience_adsets.sql','app/migrations/20261124_000163_marketing_analyst_execution.sql','app/migrations/20261124_000164_marketing_analyst_decisions.sql','app/migrations/20261124_000165_marketing_paid_launch_plans.sql'],
         'capabilities' => [
             'marketing.campaign.search',
             'marketing.campaign.get',
@@ -66,6 +71,9 @@ $manifest = [
             'marketing.campaign.archive',
             'marketing.paid.sync.request',
             'marketing.paid.change.request',
+            'marketing.paid.launch_plan.create',
+            'marketing.paid.launch_plan.get',
+            'marketing.paid.funding.check',
             'marketing.paid.meta.campaign.create_paused',
             'marketing.paid.meta.campaign.activate',
             'marketing.paid.meta.campaign.pause',
@@ -157,6 +165,9 @@ foreach ([
     'marketing.analyst.proposal.submit' => ['command','internal','marketing/analyst-proposal-submit'],
     'marketing.analyst.proposal.list' => ['query','none','marketing/analyst-proposal-list'],
     'marketing.analyst.proposal.review' => ['command','internal','marketing/analyst-proposal-review'],
+    'marketing.paid.launch_plan.create' => ['command','internal','marketing/paid-launch-plan-create'],
+    'marketing.paid.launch_plan.get' => ['query','none','marketing/paid-launch-plan-get'],
+    'marketing.paid.funding.check' => ['query','none','marketing/paid-funding-check'],
 ] as $id => [$kind,$sideEffect,$schema]) {
     $contracts[] = [
         'id' => $id,

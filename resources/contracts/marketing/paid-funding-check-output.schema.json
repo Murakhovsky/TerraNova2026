@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "plan_id": {
+      "type": "string",
+      "pattern": "^mkpl-[a-f0-9]{24}$"
+    },
+    "envelope_id": {
+      "type": "string",
+      "pattern": "^finb-[a-f0-9]{24}$"
+    },
+    "reservation_id": {
+      "type": "string",
+      "pattern": "^finr-[a-f0-9]{24}$"
+    },
+    "plan_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "SOURCE_STALE",
+        "FUNDING_NOT_MATCHED",
+        "FINANCE_UNAVAILABLE",
+        "RESERVATION_OBSERVED_NOT_AUTHORIZED"
+      ]
+    },
+    "funding_observed": {
+      "type": "boolean"
+    },
+    "finance_revision": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1
+    },
+    "finance_action_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "provider_write_authorized": {
+      "type": "boolean",
+      "const": false
+    },
+    "paid_activation_approved": {
+      "type": "boolean",
+      "const": false
+    },
+    "spend_confirmed": {
+      "type": "boolean",
+      "const": false
+    }
+  },
+  "required": [
+    "plan_id",
+    "envelope_id",
+    "reservation_id",
+    "plan_hash",
+    "status",
+    "funding_observed",
+    "finance_revision",
+    "finance_action_id",
+    "provider_write_authorized",
+    "paid_activation_approved",
+    "spend_confirmed"
+  ],
+  "additionalProperties": false
+}

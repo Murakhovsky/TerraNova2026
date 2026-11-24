@@ -97,7 +97,7 @@ foreach($manifest['contributions']['capability_contracts'] as $raw){
     $c=CapabilityContract::fromArray($raw);
     $contracts[$c->id]=$c;
 }
-$expect(count($contracts)===25,'Marketing M0/M1 seven, six M2a and two Product Queries expected.');
+$expect(count($contracts)===28,'Marketing M0/M1 seven, six M2a and two Product Queries expected.');
 $validator=new CapabilityJsonInputValidator();
 $validator->validate($contracts['marketing.audience.save'],['name'=>'Broad local market','target_spec'=>$target]);
 $validator->validate($contracts['marketing.adset.save'],['campaign_id'=>'mkt-'.str_repeat('a',24),'campaign_revision'=>1,...$ad]);
@@ -247,5 +247,15 @@ foreach([['profile_url'=>'https://HERMES.example.com/p/mkt-test','credential_ref
 }
 $defaultProfile=new $profilesClass(json_encode(['tenant-a'=>[...$configRaw,'profile_url'=>'https://hermes.example.com/p/default']],JSON_THROW_ON_ERROR));
 $blocked(static fn()=> $defaultProfile->forTenant('tenant-a'),'Default profile accepted.');
+$fundingPolicy=\Domains\Marketing\Domain\MarketingPaidFundingPolicy::class;
+$expect($fundingPolicy::budget('12.50','USD','2026-12-01','2026-12-03')===['days'=>3,'daily_minor'=>1250,'lifetime_minor'=>3750],'Minor unit funding arithmetic incorrect.');
+foreach([['1.001','USD','2026-12-01','2026-12-03'],['12.50','JPY','2026-12-01','2026-12-03'],
+    ['0','USD','2026-12-01','2026-12-03'],['12.50','USD','2026-12-01','2027-01-02']] as $bad){
+    $blocked(static fn()=> $fundingPolicy::budget(...$bad),'Invalid funding amount/window accepted.');
+}
+$launchInput=['campaign_id'=>'mkt-'.str_repeat('a',24),'campaign_revision'=>1,'adset_id'=>'mkas-'.str_repeat('b',24),
+    'adset_revision'=>1,'account_id'=>'mads-'.str_repeat('c',24),'account_revision'=>1,'period_start'=>'2026-12-01','period_end'=>'2026-12-03'];
+$validator->validate($contracts['marketing.paid.launch_plan.create'],$launchInput);
+$blocked(static fn()=> $validator->validate($contracts['marketing.paid.launch_plan.create'],[...$launchInput,'lifetime_minor'=>1]),'Caller overrode derived funding.');
 echo "Marketing M2 typed planning policy, provenance, CSRF and boundary PASS\n";
 

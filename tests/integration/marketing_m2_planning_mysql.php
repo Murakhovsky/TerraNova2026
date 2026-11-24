@@ -294,5 +294,49 @@ $assert($mockBudgetRuntime->calls===1,'Over-budget turn reached runtime.');
 $denied(static fn()=> $extended->request($actor,$campaignId,1,$creativeId,4,null,null,'hermes-fenced-01',str_repeat('f',64)),
     'Approved stale context hash admitted.');
 $assert($runStore->byKey($orgA,'hermes-fenced-01')===null,'Stale approval created run receipt.');
+// M3 native funding candidate uses a current AdSet revision after the M2 stale review test.
+$set3=$repo->saveAdset($orgA,$campaignId,1,'101',$set['id'],2,[...$ad,'audience_revision'=>2,
+    'creatives'=>[['creative_id'=>$creativeId,'revision'=>4]]],'m3-adset-repin-01');
+$paidAccounts=new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidReadRepository($db);
+$account=$paidAccounts->registerAccount($orgA,'env://TEST_META_CREDENTIAL',['ad_account_id'=>'act_'.random_int(100000000,999999999),
+    'currency'=>'USD','timezone'=>'Europe/Kyiv','connection_status'=>'READ_ONLY','capability_scope'=>['ads_read']]);
+$financeRepo=new \Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceBudgetRepository($db);
+$financePolicy=new \Domains\Finance\Domain\BudgetControlPolicy();
+$financeService=new \Domains\Finance\Application\Service\FinanceBudgetControlService($financeRepo,$financePolicy);
+$fundModules=new \Kernel\Module\ActiveModuleResolver(new \Kernel\Module\ModuleCatalog([
+    \Kernel\Module\ModuleDefinition::fromArray(require $root.'/app/Domains/Marketing/module.php'),
+    \Kernel\Module\ModuleDefinition::fromArray(require $root.'/app/Domains/Finance/module.php')
+]),new class($orgA) implements \Kernel\Module\Contract\ModuleStateRepositoryInterface{
+    public function __construct(private string $org){}
+    public function enabledOverride(string $organizationId,string $moduleId):?bool{return $organizationId===$this->org;}
+    public function setEnabled(string $organizationId,string $moduleId,bool $enabled):void{}
+});
+$fundRead=new \App\Infrastructure\Marketing\FinanceFundingReadAdapter($financeService,$fundModules);
+$fundPlans=new \Domains\Marketing\Application\Service\MarketingPaidLaunchPlanService(
+    new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidLaunchPlanStore($db),
+    new \Domains\Marketing\Application\Service\MarketingCampaignService($campaigns,new MarketingDraftPolicy()),
+    new \Domains\Marketing\Application\Service\MarketingPlanningService($repo,$policy),$paidAccounts,$fundRead,$fundModules);
+$today=gmdate('Y-m-d');$end=gmdate('Y-m-d',time()+2*86400);
+$fundPlan=$fundPlans->create($actor,$campaignId,1,$set3['id'],3,$account['id'],1,$today,$end,'m3-plan-01');
+$assert($fundPlan['lifetime_minor']===3750&&!$fundPlan['provider_write_authorized'],'M3 amount or authority incorrect.');
+$assert($fundPlans->create($actor,$campaignId,1,$set3['id'],3,$account['id'],1,$today,$end,'m3-plan-01')['id']===$fundPlan['id'],'Plan replay failed.');
+$denied(static fn()=> $fundPlans->get($contextActor($orgB),$fundPlan['id']),'Foreign plan exposed.');
+$denied(static fn()=> $fundPlans->create($actor,$campaignId,1,$set3['id'],3,$account['id'],1,$today,$today,'m3-plan-01'),'Conflicting plan replay.');
+$budgetDraft=$financeService->createDraft($actor,['name'=>'M3 funding','source_domain'=>'marketing','source_ref'=>$fundPlan['id'],
+    'currency'=>'USD','period_start'=>$today,'period_end'=>$end,'limit_minor'=>3750],'m3-envelope-01');
+$missing=$fundPlans->funding($actor,$fundPlan['id'],$budgetDraft['id'],'finr-'.str_repeat('a',24));
+$assert(!$missing['funding_observed'],'Missing Finance reservation accepted.');
+// Test-local approved native Finance transitions. Real Workflow approval coverage belongs to Finance F1.
+$financeOps=new \Domains\Finance\Application\Service\ApprovedFinanceBudgetOperations($financeRepo,$financePolicy);
+$activeBudget=$financeOps->activate($orgA,$budgetDraft['id'],'202',str_repeat('a',32),'m3-trace',1,'m3-activate-01');
+$reservation=$financeOps->reserve($orgA,$budgetDraft['id'],'202',str_repeat('b',32),'m3-trace',3750,$activeBudget['revision'],
+    'marketing',$fundPlan['finance_operation_key'],'Fund bounded lifetime candidate','m3-reserve-01');
+$funded=$fundPlans->funding($actor,$fundPlan['id'],$budgetDraft['id'],$reservation['id']);
+$assert($funded['status']==='RESERVATION_OBSERVED_NOT_AUTHORIZED'&&$funded['funding_observed']
+    &&!$funded['paid_activation_approved']&&!$funded['provider_write_authorized'],'Funding observation falsely authorized or failed.');
+$financeOps->release($orgA,$reservation['id'],'202',str_repeat('c',32),'m3-trace','Release test reservation','m3-release-01');
+$assert(!$fundPlans->funding($actor,$fundPlan['id'],$budgetDraft['id'],$reservation['id'])['funding_observed'],'Released reservation remained funded.');
+$repo->reviseCreative($orgA,$creativeId,'101',4,[...$creativeData,'headline'=>'New revision after funding'],'m3-stale-creative-01');
+$assert($fundPlans->funding($actor,$fundPlan['id'],$budgetDraft['id'],$reservation['id'])['status']==='SOURCE_STALE','Stale funding plan not detected.');
 echo "Marketing M2 real MySQL two-person review, tenant fence, immutable Creative revisions, stale gate PASS\n";
 

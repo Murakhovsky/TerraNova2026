@@ -303,7 +303,7 @@ Manifest capabilities не задекларовані.
 - обробники jobs: —;
 - внески API routes: —;
 - постачальники конфігурації: —;
-- міграції: `app/migrations/20261119_000152_marketing_foundation.sql`, `app/migrations/20261119_000154_marketing_planning_m2.sql`, `app/migrations/20261124_000162_marketing_audience_adsets.sql`, `app/migrations/20261124_000163_marketing_analyst_execution.sql`, `app/migrations/20261124_000164_marketing_analyst_decisions.sql`.
+- міграції: `app/migrations/20261119_000152_marketing_foundation.sql`, `app/migrations/20261119_000154_marketing_planning_m2.sql`, `app/migrations/20261124_000162_marketing_audience_adsets.sql`, `app/migrations/20261124_000163_marketing_analyst_execution.sql`, `app/migrations/20261124_000164_marketing_analyst_decisions.sql`, `app/migrations/20261124_000165_marketing_paid_launch_plans.sql`.
 
 ### Задекларовані capabilities
 
@@ -330,7 +330,10 @@ Manifest capabilities не задекларовані.
 - `marketing.creative.revise`;
 - `marketing.paid.account.list`;
 - `marketing.paid.change.request`;
+- `marketing.paid.funding.check`;
 - `marketing.paid.insights.query`;
+- `marketing.paid.launch_plan.create`;
+- `marketing.paid.launch_plan.get`;
 - `marketing.paid.meta.campaign.activate`;
 - `marketing.paid.meta.campaign.create_paused`;
 - `marketing.paid.meta.campaign.pause`;

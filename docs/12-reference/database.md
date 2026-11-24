@@ -233,6 +233,8 @@ generated: true
 | `marketing` | `app/migrations/20261124_000163_marketing_analyst_execution.sql` | `marketing_campaigns` |
 | `marketing` | `app/migrations/20261124_000164_marketing_analyst_decisions.sql` | `marketing_analyst_run_decisions` |
 | `marketing` | `app/migrations/20261124_000164_marketing_analyst_decisions.sql` | `marketing_analyst_runs` |
+| `marketing` | `app/migrations/20261124_000165_marketing_paid_launch_plans.sql` | `marketing_campaigns` |
+| `marketing` | `app/migrations/20261124_000165_marketing_paid_launch_plans.sql` | `marketing_paid_launch_plans` |
 | `product_management` | `app/migrations/20261118_000152_product_management_catalog.sql` | `pm_categories` |
 | `product_management` | `app/migrations/20261118_000152_product_management_catalog.sql` | `pm_media_refs` |
 | `product_management` | `app/migrations/20261118_000152_product_management_catalog.sql` | `pm_operation_receipts` |
