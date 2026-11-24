@@ -20,14 +20,14 @@ final readonly class MysqlSalesWorkspaceScope implements SalesWorkspaceScopeInte
         if($owner===$actor||$director)return $owner;
         $q=$this->connection->prepare('SELECT 1 FROM sales_team_members a JOIN sales_teams t ON t.id=a.team_id AND t.organization_id=a.organization_id AND t.status="ACTIVE"
             JOIN sales_team_members m ON m.team_id=a.team_id AND m.organization_id=a.organization_id AND m.status="ACTIVE" AND m.user_id=?
-            WHERE a.organization_id=? AND a.user_id=? AND a.status="ACTIVE" AND a.role="LEAD" LIMIT 1');
+            WHERE a.organization_id=? AND a.user_id=? AND a.status="ACTIVE" AND a.role="LEAD" LIMIT 1'.($this->connection->inTransaction()?' FOR UPDATE':''));
         $q->execute([$owner,$org,$actor]);
         if($q->fetchColumn()===false)throw new DomainException('Sales owner outside authorized team scope.');
         return $owner;
     }
     private function active(string $org,int $user):bool
     {
-        $q=$this->connection->prepare('SELECT 1 FROM tn_users u JOIN cos_organization_memberships m ON m.organization_id=u.organization_id AND m.user_id=u.id AND m.status="ACTIVE" WHERE u.organization_id=? AND u.id=? AND u.status="active" AND m.role IN ("manager","admin") LIMIT 1');
+        $q=$this->connection->prepare('SELECT 1 FROM tn_users u JOIN cos_organization_memberships m ON m.organization_id=u.organization_id AND m.user_id=u.id AND m.status="ACTIVE" WHERE u.organization_id=? AND u.id=? AND u.status="active" AND m.role IN ("manager","admin") LIMIT 1'.($this->connection->inTransaction()?' FOR UPDATE':''));
         $q->execute([$org,$user]);return $q->fetchColumn()!==false;
     }
 }
