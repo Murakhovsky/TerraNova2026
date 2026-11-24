@@ -17,6 +17,11 @@ process_id: product_management.stock-to-reconciliation
 - Transfer is paired and reservations do not change physical stock
 - Read-only audit reports discrepancies without repair
 
+## Учасники
+
+- Warehouse manager
+- Independent reviewer
+
 ## Тригер
 
 Documented goods are received at a local warehouse.
@@ -36,3 +41,8 @@ Documented goods are received at a local warehouse.
 ## Контроль і recovery
 
 Модель описує один допустимий бізнес-сценарій, не новий виконавчий рушій. Tenant і capability contract перевіряються до кожної операції. Для action-bound кроків незалежні Plan та Action approvals і Platform Workflow обов'язкові. При невідомому результаті — native readback та контрольоване врегулювання, не сліпий повтор. Послідовність не є однією глобальною транзакцією. Source verification не підтверджує production acceptance. Shopify не потрібний.
+
+## Карта коду
+
+- `app/Domains/ProductManagement/Application/Service/ProductManagementService.php`
+- `app/Domains/ProductManagement/Infrastructure/Persistence/MySqlProductAnalytics.php`
