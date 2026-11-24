@@ -1,6 +1,6 @@
 ---
-title: DAS-001 - compliance gates and Stage 3 delivery
-description: Ownership, Process Registry, evidence and PR gate rules for unified main
+title: DAS-001 — контроль відповідності й відновлення розробки
+description: Вимоги до власників доменів, міждоменних контрактів, перевірок і повернення функцій на єдину базу main
 status: active
 updated: 2026-11-24
 kind: operations
