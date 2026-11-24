@@ -41,6 +41,21 @@ $read = new class implements SalesProposalLeadReadModelInterface {
         if ($organizationId === 'tenant-a' && $leadId === 7) {
             return ['id' => 7, 'organization_id' => 'tenant-a', 'full_name' => 'Test', 'status' => 'new', 'property_id' => 42];
         }
+        if ($leadId === 10) {
+            return ['id' => 10, 'organization_id' => 'tenant-b', 'status' => 'new'];
+        }
+        if ($leadId === 11) {
+            return ['id' => 7, 'organization_id' => $organizationId, 'status' => 'new'];
+        }
+        if ($leadId === 12) {
+            return ['id' => '12junk', 'organization_id' => $organizationId, 'status' => 'new'];
+        }
+        if ($leadId === 13) {
+            return ['id' => '13', 'organization_id' => $organizationId, 'status' => 'new'];
+        }
+        if ($leadId === 14) {
+            return ['organization_id' => $organizationId, 'status' => 'new'];
+        }
         return null;
     }
 };
@@ -76,4 +91,10 @@ $reject(static fn() => $gateway->invoke($viewer, 'sales.inbound.request.read', [
 $state->enabled = false;
 $reject(static fn() => $gateway->invoke($manager, 'sales.inbound.request.read', ['lead_id' => 7], 'trusted_read', '', 'sales-trace'));
 $check(count($read->calls) === 2, 'Denied operations reached Sales read model.');
+$state->enabled = true;
+foreach ([10, 11, 12, 14] as $mismatchedId) {
+    $reject(static fn() => $gateway->invoke($manager, 'sales.inbound.request.read', ['lead_id' => $mismatchedId], 'trusted_read', '', 'sales-trace'));
+}
+$pdoRow = $gateway->invoke($manager, 'sales.inbound.request.read', ['lead_id' => 13], 'trusted_read', '', 'sales-trace');
+$check($pdoRow['found'] === true && $pdoRow['request']['id'] === 13, 'Canonical decimal PDO identifier must remain compatible.');
 echo "Sales inbound request canonical capability PASS.\n";
