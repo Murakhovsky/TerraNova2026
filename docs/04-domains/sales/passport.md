@@ -89,6 +89,7 @@ domain_id: sales
     {
       "id": "workspace",
       "capability_ids": [
+        "sales.reports.data.read",
         "sales.analytics.conversion.read",
         "sales.analytics.forecast.read",
         "sales.analytics.outcomes.read",
