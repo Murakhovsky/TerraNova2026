@@ -83,6 +83,7 @@ final readonly class ShopifyClientCredentials
             'client_id'=>$material['client_id'],
             'client_secret'=>$material['client_secret'],
         ], '', '&', PHP_QUERY_RFC3986));
+        if(in_array($result['status'],[408,425,429,500,502,503,504],true))throw new ShopifyTransientReadFailure('Shopify OAuth temporarily unavailable.');
         if ($result['status'] !== 200) throw new DomainException('Shopify client credentials rejected.');
         $payload = json_decode($result['body'], true, flags: JSON_THROW_ON_ERROR);
         $token = $payload['access_token'] ?? null;
