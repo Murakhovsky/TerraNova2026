@@ -25,7 +25,7 @@ generated: true
 | `diagnostic` | Diagnostics | `1.0.0` | `1.0.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Diagnostic/module.php` |
 | `documents` | Documents | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Documents/module.php` |
 | `federation` | COS Federation | `1.0.0` | `1.0.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Federation/module.php` |
-| `finance` | Finance | `0.2.1` | `0.2.1` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Finance/module.php` |
+| `finance` | Finance | `0.2.2` | `0.2.2` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Finance/module.php` |
 | `growth` | Growth | `0.50.0` | `0.50.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Growth/module.php` |
 | `hr` | HR | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/HR/module.php` |
 | `marketing` | Marketing | `0.1.2` | `0.1.2` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Marketing/module.php` |
