@@ -79,7 +79,7 @@ $repository = new class($transactions) implements ClientCaseCommandRepositoryInt
     private int $nextPersonId = 100;
     private int $nextCaseId = 200;
     private array $inbound = [
-        40 => ['id' => 40, 'full_name' => 'Attach Lead', 'phone' => '+3801', 'email' => null, 'status' => 'new', 'client_case_id' => null, 'assigned_user_id' => null],
+        40 => ['id' => 40, 'next_contact_at'=>'2030-01-01 10:00:00', 'full_name' => 'Attach Lead', 'phone' => '+3801', 'email' => null, 'status' => 'new', 'client_case_id' => null, 'assigned_user_id' => null],
         41 => ['id' => 41, 'full_name' => 'Linked Lead', 'phone' => '+3802', 'email' => null, 'status' => 'new', 'client_case_id' => 10, 'assigned_user_id' => null],
         42 => ['id' => 42, 'full_name' => 'Create Lead', 'phone' => '+3803', 'email' => null, 'status' => 'new', 'client_case_id' => null, 'assigned_user_id' => null,
             'property_id' => 50, 'property_type_id' => 7, 'location_id' => 8, 'source_page' => '/listing', 'message' => 'Interested'],
@@ -105,7 +105,7 @@ $repository = new class($transactions) implements ClientCaseCommandRepositoryInt
     public function quickUpdate(string $organizationId, int $caseId, array $changes): bool { $this->writes[] = ['quick', $organizationId, $caseId, $changes]; return $caseId === 10; }
     public function addActivity(string $organizationId, int $caseId, int $personId, ?int $userId, array $activity): int { $this->writes[] = ['activity', $organizationId, $caseId, $personId, $userId, $activity]; return count($this->writes) + 1000; }
     public function clearNextContact(string $organizationId, int $caseId): void { $this->writes[] = ['clear', $organizationId, $caseId]; }
-    public function updateInboundRequest(string $organizationId, int $requestId, array $changes): bool { $this->writes[] = ['update_inbound', $organizationId, $requestId, $changes]; return isset($this->inbound[$requestId]); }
+    public function updateInboundRequest(string $organizationId, int $requestId, array $changes): bool { $this->writes[] = ['update_inbound', $organizationId, $requestId, $changes]; if(!isset($this->inbound[$requestId]))return false; $this->inbound[$requestId]=array_replace($this->inbound[$requestId],$changes); return true; }
     public function addLeadActivity(string $organizationId, int $requestId, ?int $userId, array $activity): int { $this->writes[] = ['lead_activity', $organizationId, $requestId, $userId, $activity]; return count($this->writes) + 2000; }
     public function syncCaseFromLead(string $organizationId, int $caseId, array $changes): bool { $this->writes[] = ['sync_case', $organizationId, $caseId, $changes]; return $caseId === 10; }
     public function attachInboundRequest(string $organizationId, int $caseId, int $personId, int $requestId, ?int $userId): bool
@@ -134,4 +134,14 @@ ensure(!$foreign->createCaseFromRequest(42, [], $user)->ok, 'Cross-tenant lead c
 ensure(count($repository->writes) === $writes && count($events) === $eventCount, 'Foreign conversion changed state.');
 ensure($repository->lockCalls === 6, 'Every conversion/attachment must lock the lead first.');
 foreach ($repository->writes as $write) ensure(($write[1] ?? null) === $organizationId, 'Write lost tenant scope.');
-echo "Sales lead conversion transaction and replay PASS.\n";
+$qualification=$inbound->updateRequest(40,['expected_status'=>'new','status'=>'contacted'],$user,'qualify-1');
+ensure($qualification->ok && $qualification->code==='updated','Qualification failed.');
+ensure($repository->inboundRequest($organizationId,40)['next_contact_at']==='2030-01-01 10:00:00','Qualification erased omitted next contact.');
+$writes=count($repository->writes);$eventCount=count($events);
+ensure($inbound->updateRequest(40,['expected_status'=>'new','status'=>'contacted'],$user,'qualify-replay')->code==='already_applied','Qualification replay failed.');
+ensure(count($repository->writes)===$writes && count($events)===$eventCount,'Qualification replay duplicated effects.');
+ensure(!$inbound->updateRequest(40,['expected_status'=>'new','status'=>'qualified'],$user,'stale')->ok,'Stale qualification accepted.');
+ensure($inbound->updateRequest(40,['expected_status'=>'contacted','status'=>'disqualified'],$user,'disqualify')->ok,'Disqualification failed.');
+ensure(!$inbound->updateRequest(40,['status'=>'new'],$user)->ok,'Terminal lead reopened without a dedicated command.');
+ensure(!$inbound->createCaseFromRequest(40,[],$user)->ok,'Disqualified lead was converted.');
+echo "Sales lead conversion, transactional qualification and replay PASS.\n";
