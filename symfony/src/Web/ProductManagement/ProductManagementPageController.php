@@ -133,6 +133,100 @@ final readonly class ProductManagementPageController
         }
     }
 
+    public function attributes(Request $request):Response
+    {
+        $actor=$this->manager();if($actor instanceof Response)return $actor;
+        try{
+            $category=trim((string)$request->query->get('category',''));
+            $page=filter_var($request->query->get('page','1'),FILTER_VALIDATE_INT);
+            if($page===false||$page<1||$page>100001)return new Response('Invalid page.',422);
+            $defs=$this->read($actor,'attribute.search',['limit'=>100,'offset'=>($page-1)*100])['items'];
+            $categories=$this->read($actor,'category.search',['limit'=>100])['items'];
+            $bindings=$category===''?[]:$this->read($actor,'attribute.category.get',['category_id'=>$category])['items'];
+            $filterCode=trim((string)$request->query->get('filter_code',''));$filterValue=(string)$request->query->get('filter_value','');$matches=[];
+            if($filterCode!==''){
+                $value=json_decode($filterValue,true,8,JSON_THROW_ON_ERROR);
+                $matches=$this->read($actor,'attribute.product.filter',['code'=>$filterCode,'value'=>$value,'limit'=>100,'offset'=>($page-1)*100])['items'];
+            }
+            return $this->render($request,$actor,'attributes',compact('defs','categories','category','bindings','page','filterCode','filterValue','matches'));
+        }catch(DomainException|\JsonException|\InvalidArgumentException){return new Response('Invalid attribute query.',422);}
+        catch(Throwable){return new Response('Attribute Workspace unavailable.',503);}
+    }
+    public function changeAttributes(Request $request):Response
+    {
+        $actor=$this->guardWrite($request);if($actor instanceof Response)return $actor;
+        $action=(string)$request->request->get('action','');
+        try{
+            $code=trim((string)$request->request->get('code',''));$category='';
+            if($action==='define'){
+                $unit=trim((string)$request->request->get('unit',''));$choices=trim((string)$request->request->get('choices',''));
+                $input=['code'=>$code,'name'=>trim((string)$request->request->get('name','')),'value_type'=>(string)$request->request->get('value_type',''),'unit'=>$unit===''?null:$unit,'choices'=>$choices===''?[]:array_map('trim',explode(',',$choices))];
+                $receipt=$this->write($actor,'attribute.define',$input,$request);
+                // Exact definition readback without relying on first page of the dictionary.
+                $found=false;
+                for($offset=0;$offset<=10000000;$offset+=100){
+                    $rows=$this->read($actor,'attribute.search',['limit'=>100,'offset'=>$offset])['items'];
+                    foreach($rows as $row)if($row['code']===$code){$found=$row==$receipt;break 2;}
+                    if(count($rows)<100)break;
+                    if($offset>=9900)break; // bounded verification, uncertain rather than blind success
+                }
+                if(!$found)return new Response('Definition receipt unverified. Reload before retrying.',503);
+            }elseif($action==='bind'){
+                $category=(string)$request->request->get('category_id','');
+                $input=['category_id'=>$category,'code'=>$code,'is_required'=>$request->request->get('is_required')==='1','is_axis'=>$request->request->get('is_axis')==='1'];
+                $receipt=$this->write($actor,'attribute.category.bind',$input,$request);
+                $found=false;foreach($this->read($actor,'attribute.category.get',['category_id'=>$category])['items'] as $row)
+                    if($row['code']===$code&&$row['is_required']===$input['is_required']&&$row['is_axis']===$input['is_axis'])$found=true;
+                if(!$found||$receipt!=$input)return new Response('Binding receipt unverified.',503);
+            }else return new Response('Invalid attribute action.',422);
+            return $this->go('/product-management/attributes?notice=updated&category='.rawurlencode($category));
+        }catch(DomainException|\InvalidArgumentException){return new Response('Attribute mutation rejected.',422);}
+        catch(Throwable){return new Response('Attribute outcome uncertain. Reload before retrying.',503);}
+    }
+    public function productAttributes(Request $request,string $id):Response
+    {
+        $actor=$this->manager();if($actor instanceof Response)return $actor;
+        try{
+            $product=$this->checkedProduct($actor,$id);if($product instanceof Response)return $product;
+            $attributes=$this->read($actor,'attribute.product.get',['product_id'=>$id]);
+            return $this->render($request,$actor,'product-attributes',['product'=>$product,'attributes'=>$attributes,'preview'=>null,'matrixInput'=>null]);
+        }catch(Throwable){return new Response('Product attributes unavailable.',503);}
+    }
+    public function changeProductAttributes(Request $request,string $id):Response
+    {
+        $actor=$this->guardWrite($request);if($actor instanceof Response)return $actor;
+        try{
+            $product=$this->checkedProduct($actor,$id);if($product instanceof Response)return $product;
+            $action=(string)$request->request->get('action','');
+            if($action==='set'){
+                $values=json_decode((string)$request->request->get('values',''),true,32,JSON_THROW_ON_ERROR);
+                $receipt=$this->write($actor,'attribute.product.set',['product_id'=>$id,'values'=>$values,'expected_revision'=>(int)$request->request->get('expected_revision',0)],$request);
+                if($receipt!=$this->read($actor,'attribute.product.get',['product_id'=>$id]))return new Response('Attribute readback uncertain.',503);
+            }elseif(in_array($action,['preview','matrix'],true)){
+                $axes=json_decode((string)$request->request->get('axes',''),true,32,JSON_THROW_ON_ERROR);
+                $input=['product_id'=>$id,'axes'=>$axes,'sku_prefix'=>trim((string)$request->request->get('sku_prefix',''))];
+                if($action==='preview'){
+                    $preview=$this->read($actor,'variant.matrix.preview',$input);
+                    $attributes=$this->read($actor,'attribute.product.get',['product_id'=>$id]);
+                    return $this->render($request,$actor,'product-attributes',['product'=>$product,'attributes'=>$attributes,'preview'=>$preview,'matrixInput'=>$input]);
+                }
+                if($request->request->get('confirm_matrix')!=='yes')return new Response('Explicit matrix confirmation required.',422);
+                $input+=['expected_revision'=>(int)$request->request->get('expected_revision',0),'uom'=>trim((string)$request->request->get('uom','pcs')),'track_inventory'=>$request->request->get('track_inventory')==='1'];
+                $receipt=$this->write($actor,'variant.matrix.create',$input,$request);
+                $fresh=$this->readProduct($actor,$id);
+                if($fresh===null||(int)$fresh['revision']!==$receipt['revision'])return new Response('Matrix receipt unverified.',503);
+                foreach($receipt['items'] as $item){
+                    $variant=$this->findVariant($fresh,$item['variant_id']);
+                    if($variant===null||$variant['sku']!==$item['sku'])return new Response('Matrix SKU readback unverified.',503);
+                    $options=json_decode((string)$variant['options_json'],true,32,JSON_THROW_ON_ERROR);ksort($options,SORT_STRING);
+                    if(hash('sha256',json_encode($options,JSON_THROW_ON_ERROR))!==$item['combination_hash'])return new Response('Matrix combination readback unverified.',503);
+                }
+            }else return new Response('Invalid attribute action.',422);
+            return $this->go('/product-management/products/'.$id.'/attributes?notice=updated');
+        }catch(DomainException|\JsonException|\InvalidArgumentException){return new Response('Attribute or matrix mutation rejected.',422);}
+        catch(Throwable){return new Response('Catalog outcome uncertain. Reload before retrying.',503);}
+    }
+
     public function priceLists(Request $request):Response
     {
         $actor=$this->manager();
@@ -742,7 +836,7 @@ final readonly class ProductManagementPageController
     private function render(Request $request,TenantContext $actor,string $section,array $data):Response
     {
         $label=match($section){
-            'catalog'=>'Каталог товарів','product'=>'Картка товару','categories'=>'Категорії','price-lists'=>'Прайс-листи',
+            'catalog'=>'Каталог товарів','product'=>'Картка товару','categories'=>'Категорії','price-lists'=>'Прайс-листи','attributes'=>'Атрибути','product-attributes'=>'Характеристики та варіації',
             default=>'Product Management',
         };
         $context=new WebExtensionContext(
