@@ -1392,6 +1392,8 @@ services:
       $connection: '@cos.database.pdo'
   Domains\Sales\Application\Contract\SalesTeamScopeInterface:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesTeamScope
+  Domains\Sales\Application\Contract\SalesTodayPopulationReadPort:
+    alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceReadModel
   Domains\Sales\Application\Contract\SalesTeamSummaryReadPort:
     alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceReadModel
   Domains\Sales\Application\Service\SalesTeamSummaryService: ~
