@@ -81,6 +81,8 @@ final readonly class ProductManagementDomainModule implements DomainModuleInterf
             'product_management.price_list.updated',
             'product_management.price_list.archived',
             'product_management.price_list.entry_updated',
+            'product_management.price_list.entry_removed',
+            'product_management.price_list.tier_changed',
         ];
     }
 }
