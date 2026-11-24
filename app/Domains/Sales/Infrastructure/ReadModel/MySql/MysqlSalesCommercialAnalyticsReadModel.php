@@ -6,13 +6,14 @@ namespace Domains\Sales\Infrastructure\ReadModel\MySql;
 use DateTimeImmutable;
 use DateTimeZone;
 use DomainException;
+use Domains\Sales\Application\Contract\SalesCommercialAnalyticsReadPort;
 use PDO;
 
 /**
  * Native commercial read model. No Finance balances, implicit FX or PII.
  * Caller must resolve live Sales authorization before passing the owner scope.
  */
-final readonly class MysqlSalesCommercialAnalyticsReadModel
+final readonly class MysqlSalesCommercialAnalyticsReadModel implements SalesCommercialAnalyticsReadPort
 {
     public function __construct(private PDO $connection) {}
 
