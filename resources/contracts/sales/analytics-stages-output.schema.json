@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "from": {
+      "type": "string"
+    },
+    "to_exclusive": {
+      "type": "string"
+    },
+    "owner_id": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "pipeline_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "basis": {
+      "type": "string",
+      "enum": [
+        "projected_stage_entry_history"
+      ]
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "pipeline_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "to_stage_id": {
+            "type": "string"
+          },
+          "from_stage_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "entry_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "distinct_deal_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "complete_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "partial_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "estimated_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "duration_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "average_duration_seconds": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+\\.[0-9]{2}$"
+          }
+        },
+        "required": [
+          "pipeline_id",
+          "to_stage_id",
+          "from_stage_id",
+          "entry_count",
+          "distinct_deal_count",
+          "complete_count",
+          "partial_count",
+          "estimated_count",
+          "duration_count",
+          "average_duration_seconds"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "from",
+    "to_exclusive",
+    "owner_id",
+    "pipeline_id",
+    "basis",
+    "items"
+  ],
+  "additionalProperties": false
+}
