@@ -47,4 +47,7 @@ $assert(str_contains($controller,'stock.count.get')&&str_contains($controller,'$
     &&str_contains($routes,'cos_product_management_stock_count_propose:')&&str_contains($twig,'name="expected_revision"'),
     'Count proposal must be revision-pinned and read through canonical query.');
 $assert(!str_contains($controller,'applyApprovedStockCount'),'Workspace must not invoke approved stock writer.');
+$assert(str_contains($controller,'stock.count.session.candidates')&&str_contains($controller,'stock.count.session.get')
+    &&str_contains($controller,'$this->sessionPlans->propose(')&&str_contains($twig,'id="stock-session"')
+    &&str_contains($routes,'cos_product_management_stock_count_session_propose:'),'Canonical mass inventory session workspace missing.');
 echo "Product Management inventory Workspace architecture passed.\n";
