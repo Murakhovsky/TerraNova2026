@@ -103,7 +103,11 @@ domain_id: product_management
         "product_management.governed.stock.reserve",
         "product_management.governed.stock.release",
         "product_management.governed.stock.transfer",
-        "product_management.governed.price.list.entry.set"
+        "product_management.governed.price.list.entry.set",
+        "product_management.governed.product.archive",
+        "product_management.governed.product.update",
+        "product_management.governed.variant.archive",
+        "product_management.governed.variant.update"
       ]
     },
     {
