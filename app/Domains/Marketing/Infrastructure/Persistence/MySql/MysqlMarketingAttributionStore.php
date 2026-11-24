@@ -7,6 +7,26 @@ use PDO;
 final readonly class MysqlMarketingAttributionStore implements MarketingAttributionStore
 {
     public function __construct(private PDO $connection){}
+    public function batch(string $org,string $key,string $hash,callable $capture):array
+    {
+        if(!preg_match('/^[A-Za-z0-9_.:-]{8,191}$/D',$key)||!preg_match('/^[a-f0-9]{64}$/D',$hash)||$this->connection->inTransaction())
+            throw new DomainException('Invalid attribution capture transaction.');
+        $this->connection->beginTransaction();
+        try{
+            $q=$this->connection->prepare('INSERT INTO marketing_attribution_capture_intents (organization_id,idempotency_key,request_hash)
+                VALUES (?,?,?) ON DUPLICATE KEY UPDATE idempotency_key=idempotency_key');
+            $q->execute([$org,$key,$hash]);
+            $q=$this->connection->prepare('SELECT request_hash,receipt_json FROM marketing_attribution_capture_intents WHERE organization_id=? AND idempotency_key=? FOR UPDATE');
+            $q->execute([$org,$key]);$r=$q->fetch(PDO::FETCH_ASSOC);
+            if(!is_array($r)||!hash_equals($r['request_hash'],$hash))throw new DomainException('Attribution capture idempotency conflict.');
+            if($r['receipt_json']!==null){$result=json_decode($r['receipt_json'],true,32,JSON_THROW_ON_ERROR);$this->connection->commit();return $result;}
+            $result=$capture();
+            $q=$this->connection->prepare('UPDATE marketing_attribution_capture_intents SET receipt_json=? WHERE organization_id=? AND idempotency_key=? AND receipt_json IS NULL');
+            $q->execute([json_encode($result,JSON_THROW_ON_ERROR),$org,$key]);
+            if($q->rowCount()!==1)throw new DomainException('Attribution capture receipt lost.');
+            $this->connection->commit();return $result;
+        }catch(\Throwable $e){if($this->connection->inTransaction())$this->connection->rollBack();throw $e;}
+    }
     public function record(string $org,string $campaign,array $evidence):array
     {
         $id='mkat-'.bin2hex(random_bytes(12));

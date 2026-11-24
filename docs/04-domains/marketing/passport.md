@@ -79,7 +79,7 @@ domain_id: marketing
     },
     {
       "id": "attribution_analytics",
-      "capability_ids": ["marketing.attribution.capture","marketing.attribution.tracking.get","marketing.analytics.report.get"]
+      "capability_ids": ["marketing.attribution.capture", "marketing.attribution.discover","marketing.attribution.tracking.get","marketing.analytics.report.get"]
     },
     {
       "id": "product_evidence",

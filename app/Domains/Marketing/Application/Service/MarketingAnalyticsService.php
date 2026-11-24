@@ -34,14 +34,18 @@ final readonly class MarketingAnalyticsService
         return ['campaign_id'=>$campaign,'plan_id'=>$plan,'tags'=>$tags,'query_string'=>http_build_query($tags,'','&',PHP_QUERY_RFC3986),'model'=>Policy::VERSION];
     }
     /** Bounded human capture; no caller-supplied outcome or attribution identity. */
-    public function capture(TenantContext $actor,string $campaign,?string $plan,array $leadIds):array
+    public function capture(TenantContext $actor,string $campaign,?string $plan,array $leadIds,string $key):array
     {
         $this->scope($actor,$campaign,$plan);
-        if(!array_is_list($leadIds)||count($leadIds)<1||count($leadIds)>50||count(array_unique($leadIds))!==count($leadIds))throw new DomainException('Choose 1-50 distinct native lead IDs.');
+        if(!array_is_list($leadIds)||count($leadIds)<1||count($leadIds)>50)throw new DomainException('Choose 1-50 distinct native lead IDs.');
         $out=[];
         foreach($leadIds as $id){
             if(!is_string($id)||!preg_match('/^[1-9][0-9]{0,17}$/D',$id))throw new DomainException('Invalid lead reference.');
         }
+        if(count(array_unique($leadIds))!==count($leadIds))throw new DomainException('Duplicate lead reference.');
+        sort($leadIds,SORT_STRING);
+        $hash=hash('sha256',json_encode([$actor->userId()->value(),$campaign,$plan,$leadIds],JSON_THROW_ON_ERROR));
+        return $this->store->batch($actor->organizationId()->value(),$key,$hash,function()use($actor,$campaign,$plan,$leadIds,$out):array{
         foreach($leadIds as $id){
             try{
                 $l=$this->sales->lead($actor,$id)??throw new DomainException('Native lead missing.');
@@ -50,6 +54,23 @@ final readonly class MarketingAnalyticsService
             }catch(DomainException){$out[]=['lead_id'=>$id,'state'=>'REJECTED','evidence_id'=>null];}
         }
         return ['model'=>Policy::VERSION,'results'=>$out,'financial_mutation'=>false];
+        });
+    }
+    /** Bounded non-mutating discovery; changing Sales lists cannot prove complete coverage. */
+    public function discover(TenantContext $actor,string $campaign,?string $plan,string $from,string $to,int $offset):array
+    {
+        Policy::window($from,$to);$this->scope($actor,$campaign,$plan);
+        if($offset<0||$offset>99900)throw new DomainException('Invalid discovery offset.');
+        $rows=$this->sales->page($actor,$offset,50);$matches=[];
+        foreach($rows as $r){
+            $date=substr($r['created_at'],0,10);
+            if($date<$from||$date>$to)continue;
+            $l=$this->sales->lead($actor,$r['lead_id']);if($l===null)continue;
+            try{$e=Policy::evidence($l,$campaign,$plan);}catch(DomainException){continue;}
+            if($l['status']!=='spam')$matches[]=$e;
+        }
+        return ['model'=>Policy::VERSION,'matches'=>$matches,'scanned'=>count($rows),
+            'next_offset'=>count($rows)===50&&$offset<99900?$offset+50:null,'complete_coverage'=>false];
     }
     public function report(TenantContext $actor,string $campaign,?string $plan,string $from,string $to,?string $snapshot,?string $reservation):array
     {
@@ -87,6 +108,8 @@ final readonly class MarketingAnalyticsService
                 if($row['id']===$snapshot&&$row['revision']===$proof['source_revision']){$media=Policy::media($row);break;}
             }
             if($media===null)throw new DomainException('Source revision changed or missing.');
+            $media['source_hash']=$this->paid->spendEvidence($actor,$p['account_id'],$snapshot)['source_hash'];
+            $media['timezone']='UTC';
         }
         if($reservation!==null){
             if($p['period_start']!==$from||$p['period_end']!==$to)throw new DomainException('Exact Finance plan window required.');
@@ -99,6 +122,8 @@ final readonly class MarketingAnalyticsService
             'leads'=>$leads,'qualified_leads'=>$qualified,'linked_deals'=>$linked,'won_deals'=>$won,
             'lead_to_won_percent'=>Policy::ratio($won,$leads,100),'won_deal_value'=>$values,'unknown_value_count'=>$unknownValue,
             'missing_source_count'=>$missing,'source_drift_count'=>$drift,'channels'=>array_values($channels),'media'=>$media,'settlement'=>$settlement,
+            'cost_per_captured_lead'=>$media===null?null:Policy::ratio((float)$media['reported_spend_decimal'],$leads),
+            'cost_per_captured_won_deal'=>$media===null?null:Policy::ratio((float)$media['reported_spend_decimal'],$won),
             'recognized_revenue_confirmed'=>false,'roas'=>null,'profit'=>null,'causal_attribution'=>false];
     }
 }

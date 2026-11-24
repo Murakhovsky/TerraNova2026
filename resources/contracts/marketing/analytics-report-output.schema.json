@@ -95,6 +95,20 @@
     "causal_attribution": {
       "type": "boolean",
       "const": false
+    },
+    "cost_per_captured_lead": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "cost_per_captured_won_deal": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0
     }
   }
 }

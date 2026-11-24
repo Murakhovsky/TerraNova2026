@@ -34,6 +34,21 @@ foreach($manifest['contributions']['capability_contracts'] as $raw) {
     $assert(is_file($root.'/'.$contract->outputSchema),'Output schema missing: '.$contract->id);
 }
 $validator->validate(CapabilityContract::fromArray($manifest['contributions']['capability_contracts'][2]),['name'=>'Test launch','business_objective'=>'Leads']);
-$assert(count($found)===33,'Expected seven M0/M1, six M2a and two Product Query capabilities');
+$assert(count($found)===37,'Expected 37 typed Marketing contracts including four M4 capabilities');
 echo "Marketing M0 foundation PASS\n";
 
+
+$attr=\Domains\Marketing\Domain\MarketingAttributionPolicy::class;
+$campaign='mkt-'.str_repeat('a',24);$plan='mkpl-'.str_repeat('b',24);
+$lead=['lead_id'=>'42','created_at'=>'2026-01-01 10:00:00','utm_campaign'=>$plan,'utm_source'=>'meta','utm_medium'=>'paid_social'];
+$e=$attr::evidence($lead,$campaign,$plan);
+$assert($e['model']==='utm-exact-v1'&&$e['evidence_hash']===$attr::evidence($lead,$campaign,$plan)['evidence_hash'],'Deterministic attribution evidence required.');
+foreach([[...$lead,'utm_campaign'=>$campaign],[...$lead,'utm_source'=>'google'],[...$lead,'utm_medium'=>'organic'],[...$lead,'lead_id'=>'../../x']] as $bad){
+    $blocked=false;try{$attr::evidence($bad,$campaign,$plan);}catch(DomainException){$blocked=true;}
+    $assert($blocked,'Wrong native attribution tag accepted.');
+}
+$assert($attr::minor('12.340000')===1234&&$attr::minor('12.345')===null&&$attr::ratio(5,0)===null,'Currency precision or zero denominator unsafe.');
+$metrics=$attr::media(['id'=>'mis-'.str_repeat('c',24),'revision'=>2,'source_status'=>'REVISED','fetched_at'=>'2026-01-01','currency'=>'USD',
+    'spend_decimal'=>'12.50','metrics'=>['impressions'=>'1000','clicks'=>'25']]);
+$assert($metrics['ctr_percent']===2.5&&$metrics['cpc']===0.5&&$metrics['cpm']===12.5,'M4 media metric formulas incorrect.');
+echo "Marketing M4 exact attribution and guarded KPI policy PASS\n";

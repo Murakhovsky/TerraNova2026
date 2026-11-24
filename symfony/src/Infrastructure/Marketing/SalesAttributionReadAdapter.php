@@ -9,6 +9,13 @@ use Kernel\Tenant\Model\TenantContext;
 final readonly class SalesAttributionReadAdapter implements MarketingSalesAttributionReadPort
 {
     public function __construct(private SalesWorkspaceReadModelInterface $sales,private ActiveModuleResolver $modules){}
+    public function page(TenantContext $actor,int $offset,int $limit):array
+    {
+        $org=$actor->organizationId()->value();
+        if(!$this->modules->isEnabled($org,'sales')||$offset<0||$offset>99900||$limit<1||$limit>50)throw new DomainException('Sales discovery unavailable.');
+        $rows=$this->sales->leads($org,['sort'=>'created_at','direction'=>'desc','offset'=>$offset,'limit'=>$limit]);
+        return array_map(static fn(array $r):array=>['lead_id'=>(string)$r['id'],'created_at'=>(string)$r['created_at']],$rows);
+    }
     public function lead(TenantContext $actor,string $leadId):?array
     {
         $org=$actor->organizationId()->value();
