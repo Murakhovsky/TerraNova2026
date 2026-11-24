@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "from": {
+      "type": "string"
+    },
+    "to_exclusive": {
+      "type": "string"
+    },
+    "owner_id": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "pipeline_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "basis": {
+      "type": "string",
+      "enum": [
+        "created_lead_cohort_current_link"
+      ]
+    },
+    "lead_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "linked_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "event_confirmed_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "link_without_event_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "dangling_link_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "conversion_percent": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9]+\\.[0-9]{2}$"
+    }
+  },
+  "required": [
+    "from",
+    "to_exclusive",
+    "owner_id",
+    "pipeline_id",
+    "basis",
+    "lead_count",
+    "linked_count",
+    "event_confirmed_count",
+    "link_without_event_count",
+    "dangling_link_count",
+    "conversion_percent"
+  ],
+  "additionalProperties": false
+}
