@@ -3166,6 +3166,12 @@ services:
     arguments:
       $connection: '@cos.database.pdo'
 
+  Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesActivityEvidenceReadModel:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Sales\Application\Contract\SalesActivityEvidenceReadPort:
+    alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesActivityEvidenceReadModel
+
   Domains\Sales\Application\Contract\SalesMutationReceiptRepositoryInterface:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesMutationReceiptRepository
 
