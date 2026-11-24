@@ -458,6 +458,16 @@ try {
         }else{$check($invoke('sales.pipeline.stage.manage',$payload,'stage-'.$index)['state']['stage_id']===$next,'Nonterminal stage transition failed.');}
     }
     $q->execute([$org,(string)$wonCase,'sales.deal.won']);$check((int)$q->fetchColumn()===1,'WON event/outbox missing or duplicated.');
+    // Historical analytics must use the immutable event snapshot, not current deal status.
+    $history=new \Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesCommercialAnalyticsReadModel($db);
+    $dateQuery=$db->prepare("SELECT DATE(MIN(occurred_at)) first_day,DATE_ADD(DATE(MAX(occurred_at)),INTERVAL 1 DAY) end_day FROM cos_events WHERE organization_id=? AND aggregate_type='deal' AND aggregate_id IN (?,?) AND type IN ('sales.deal.won','sales.deal.lost')");
+    $dateQuery->execute([$org,(string)$caseId,(string)$wonCase]);$period=$dateQuery->fetch(PDO::FETCH_ASSOC);
+    $wonFacts=$history->outcomes($org,$userId,$pdef->id,$period['first_day'],$period['end_day']);
+    $lostFacts=$history->outcomes($org,$targetOwner,$pdef->id,$period['first_day'],$period['end_day']);
+    $check($wonFacts['won_count']===1&&$wonFacts['lost_count']===0&&$wonFacts['win_rate_percent']==='100.00'&&$wonFacts['booked_by_currency']===[['currency'=>'USD','deal_count'=>1,'booked_value'=>'999.99']],'WON historical evidence/amount incorrect.');
+    $check($lostFacts['won_count']===0&&$lostFacts['lost_count']===1&&$lostFacts['win_rate_percent']==='0.00'&&$lostFacts['booked_by_currency']===[],'LOST historical owner scope incorrect.');
+    $empty=$history->outcomes('foreign-'.$token,$userId,$pdef->id,$period['first_day'],$period['end_day']);
+    $check($empty['won_count']===0&&$empty['lost_count']===0&&$empty['win_rate_percent']===null,'Cross-tenant outcome isolation or empty-rate semantics failed.');
     $teamInput=['operation'=>'create','name'=>'CI Sales team','code'=>'CI_'.strtoupper($token)];
     $reject(fn()=>$invoke('sales.team.manage',$teamInput,'no-permission'));
     $db->prepare("INSERT INTO sales_user_capabilities(organization_id,user_id,capability,status,granted_by,created_at,updated_at) VALUES (?,?,'sales.admin.teams.manage','ACTIVE',?,NOW(6),NOW(6))")->execute([$org,$userId,(string)$userId]);
