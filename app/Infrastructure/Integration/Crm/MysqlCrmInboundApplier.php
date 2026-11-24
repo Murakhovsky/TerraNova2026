@@ -27,6 +27,7 @@ final readonly class MysqlCrmInboundApplier implements CrmInboundApplierInterfac
 
     public function apply(CrmInboxItem $item): array
     {
+        if (!$this->connection->inTransaction()) throw new RuntimeException('CRM apply requires a business transaction.');
         $mappedEventType = self::EVENT_MAP[strtolower($item->eventType)] ?? null;
         if ($mappedEventType === null) {
             throw new RuntimeException('Unsupported CRM event type: ' . $item->eventType);
@@ -53,15 +54,27 @@ final readonly class MysqlCrmInboundApplier implements CrmInboundApplierInterfac
         if (array_diff(array_keys($changes), in_array($entityType,['deal','client_case'],true)?['priority','next_contact_at','stage','stage_id']:[]) !== []) {
             throw new RuntimeException('CRM changes contain unsupported fields.');
         }
-        if (isset($changes['priority']) && !in_array($changes['priority'],\Domains\Sales\Model\SalesPriority::values(),true)) {
+        if (array_key_exists('priority',$changes) && !in_array($changes['priority'],\Domains\Sales\Model\SalesPriority::values(),true)) {
             throw new RuntimeException('Invalid CRM priority.');
         }
 
+        if (array_key_exists('next_contact_at',$changes) && $changes['next_contact_at']!==null) {
+            $value=$changes['next_contact_at'];
+            $date=is_string($value)?\DateTimeImmutable::createFromFormat('!Y-m-d H:i:s',$value):false;
+            if ($date===false || $date->format('Y-m-d H:i:s')!==$value) throw new RuntimeException('Invalid CRM next contact date.');
+        }
+        $stage = $changes['stage_id'] ?? $changes['stage'] ?? null;
+        if ((isset($changes['stage_id'],$changes['stage']) && $changes['stage_id']!==$changes['stage'])
+            || (strtolower($item->eventType)==='deal.stage_changed' && (!is_string($stage) || trim($stage)===''))
+            || ($stage!==null && (!is_string($stage) || trim($stage)===''))) {
+            throw new RuntimeException('CRM stage directive is missing or ambiguous.');
+        }
+        $changed = false;
         if (in_array($entityType, ['deal', 'client_case'], true)) {
             $pipelineStatement = $this->connection->prepare('SELECT pipeline_id FROM tn_client_cases WHERE id=:id AND organization_id=:organization_id LIMIT 1');
             $pipelineStatement->execute(['id'=>$localId,'organization_id'=>$item->organizationId]);
             $pipelineId = (string)($pipelineStatement->fetchColumn() ?: '');
-            $this->updateAllowed(
+            $changed = $this->updateAllowed(
                 'tn_client_cases',
                 ['priority', 'next_contact_at'],
                 $item->organizationId,
@@ -101,6 +114,7 @@ final readonly class MysqlCrmInboundApplier implements CrmInboundApplierInterfac
         ]);
         return [
             'event_type' => $mappedEventType,
+            'no_change' => !$changed && $stage===null && $entityType!=='message',
             'aggregate_type' => $aggregateType,
             'aggregate_id' => $localId,
             'payload' => [...$item->payload, 'changes' => array_diff_key($changes, ['stage'=>true,'stage_id'=>true,'pipeline_id'=>true]), 'requested_stage' => $changes['stage_id'] ?? $changes['stage'] ?? null, 'requested_message' => $entityType==='message', 'pipeline_id' => $pipelineId ?? null, 'provider' => $item->provider, 'external_id' => $externalId],
@@ -127,10 +141,10 @@ final readonly class MysqlCrmInboundApplier implements CrmInboundApplierInterfac
         return $id;
     }
 
-    private function updateAllowed(string $table, array $allowed, string $organizationId, string $id, array $changes): void
+    private function updateAllowed(string $table, array $allowed, string $organizationId, string $id, array $changes): bool
     {
         $exists = $this->connection->prepare(
-            'SELECT 1 FROM ' . $table . ' WHERE id = :id AND organization_id = :organization_id LIMIT 1'
+            'SELECT 1 FROM ' . $table . ' WHERE id = :id AND organization_id = :organization_id LIMIT 1 FOR UPDATE'
         );
         $exists->execute(['id' => $id, 'organization_id' => $organizationId]);
         if ($exists->fetchColumn() === false) {
@@ -143,11 +157,12 @@ final readonly class MysqlCrmInboundApplier implements CrmInboundApplierInterfac
             $sets[] = $field . ' = :' . $field;
             $parameters[$field] = $value;
         }
-        if ($sets === []) return;
+        if ($sets === []) return false;
         $statement = $this->connection->prepare(
             'UPDATE ' . $table . ' SET ' . implode(', ', $sets) . ' WHERE id = :id AND organization_id = :organization_id'
         );
         $statement->execute($parameters);
         if ($statement->rowCount() > 1) throw new RuntimeException('CRM synchronization affected multiple records.');
+        return $statement->rowCount()===1;
     }
 }

@@ -5,6 +5,10 @@ use Domains\Sales\Application\Contract\CrmInboundApplierInterface;
 use Domains\Sales\Application\DTO\CrmInboxItem;
 use Domains\Sales\Application\UseCase\ProcessCrmInbox;
 use Domains\Sales\Automation\Event\LeadChanged;
+use Domains\Sales\Automation\Event\ClientCaseChanged;
+use Domains\Property\Infrastructure\ReadModel\MySql\MysqlPropertyReferencePort;
+use Domains\Sales\Infrastructure\Property\SalesPropertyReference;
+use Domains\Sales\Infrastructure\Persistence\MySql\MysqlClientCaseCommandRepository;
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlInboundLeadRepository;
 use Infrastructure\Integration\Crm\MysqlCrmInboxRepository;
 use Infrastructure\Integration\Crm\MysqlCrmInboundApplier;
@@ -31,12 +35,12 @@ $check($org!=='','Missing migrated organization.');
 $token=bin2hex(random_bytes(8));$correlation='crm-ci-'.$token;
 $repo=new MysqlCrmInboxRepository($a);$other=new MysqlCrmInboxRepository($b);
 $tx=new TransactionManager($a);
-$ids=[];$lead=null;
+$ids=[];$lead=null;$case=null;$person=null;
 $read=static function(string $id)use($b,$org):array{
     $q=$b->prepare('SELECT * FROM cos_crm_inbox WHERE organization_id=? AND id=?');$q->execute([$org,$id]);return $q->fetch()?:[];
 };
-$admit=static function(string $suffix,array $payload)use($tx,$repo,$org,$token,$correlation,&$ids):string{
-    $id=$tx->transactional(fn()=>$repo->receive($org,'aida',$token.'-'.$suffix,'lead.updated',$payload,$correlation));
+$admit=static function(string $suffix,array $payload,string $eventType='lead.updated')use($tx,$repo,$org,$token,$correlation,&$ids):string{
+    $id=$tx->transactional(fn()=>$repo->receive($org,'aida',$token.'-'.$suffix,$eventType,$payload,$correlation));
     $ids[$id]=$id;return $id;
 };
 $expire=static function(string $id)use($b,$org):void{
@@ -69,12 +73,13 @@ try{
     $b->beginTransaction();
     $check($other->lockClaim($second),'Current worker cannot lock claim.');
     $a->exec('SET SESSION innodb_lock_wait_timeout=1');
+    $a->beginTransaction();
     try{
         $a->prepare('SELECT id FROM cos_crm_inbox WHERE id=? FOR UPDATE NOWAIT')->execute([$id]);
         throw new RuntimeException('Processing did not hold the inbox row lock.');
     }catch(PDOException $e){
         $check(in_array((int)($e->errorInfo[1]??0),[1205,3572],true),'Unexpected lock error: '.$e->getMessage());
-    }finally{$b->rollBack();}
+    }finally{$a->rollBack();$b->rollBack();}
     $other->fail($second,new RuntimeException('private CRM payload'));
     $row=$read($id);
     $check($row['status']==='FAILED' && !str_contains($row['last_error'],'private'),'Failure or PII redaction invalid.');
@@ -87,7 +92,7 @@ try{
     $module=new class($ruleContext) implements DomainModuleInterface,EventOwningModuleInterface {
         public function __construct(private RuleContextProviderInterface $rules){}
         public function name():string{return 'sales';}
-        public function eventTypes():array{return [LeadChanged::TYPE];}
+        public function eventTypes():array{return [LeadChanged::TYPE,ClientCaseChanged::TYPE];}
         public function ruleContextProvider():RuleContextProviderInterface{return $this->rules;}
     };
     $domains=new DomainModuleRegistry([$module]);
@@ -98,7 +103,19 @@ try{
     $check(!$processor->execute($org,$id,'repeat'),'Completed event was applied again.');
     $q=$b->prepare('SELECT COUNT(*) FROM cos_events e INNER JOIN cos_event_outbox o ON o.event_id=e.id WHERE e.organization_id=? AND e.aggregate_id=? AND e.type=?');
     $q->execute([$org,(string)$lead,LeadChanged::TYPE]);
-    $check((int)$q->fetchColumn()===1,'Expected exactly one native event/outbox.');
+    $check((int)$q->fetchColumn()===0,'Unchanged lead emitted a false business event.');
+    $commands=new MysqlClientCaseCommandRepository($a,new SalesPropertyReference(new MysqlPropertyReferencePort($a),$org));
+    $tx->transactional(function()use($commands,$org,$token,&$person,&$case):void{
+        $person=$commands->createPerson($org,['full_name'=>'CRM CI '.$token,'phone'=>null,'email'=>$token.'@crm-person.test','telegram'=>null,'notes'=>null]);
+        $case=$commands->createCase($org,$person,['type'=>'buy','title'=>'CRM CI '.$token,'status'=>'active','stage'=>'new','priority'=>'normal','assigned_user_id'=>null,'source'=>'integration','property_type_id'=>null,'location_id'=>null,'budget_min'=>null,'budget_max'=>null,'currency'=>'USD','area_min'=>null,'area_max'=>null,'description'=>null,'parameters_json'=>null,'next_contact_at'=>null,'closed_at'=>null]);
+    });
+    $deal=$admit('deal',['entity_type'=>'deal','external_id'=>(string)$case,'changes'=>['priority'=>'high']],'deal.updated');
+    $check($processor->execute($org,$deal,'processor'),'Native deal update failed.');
+    $check(!$processor->execute($org,$deal,'repeat'),'Completed deal was reprocessed.');
+    $q=$b->prepare('SELECT priority FROM tn_client_cases WHERE organization_id=? AND id=?');$q->execute([$org,$case]);
+    $check($q->fetchColumn()==='high','Native deal priority was not applied.');
+    $q=$b->prepare('SELECT COUNT(*) FROM cos_events e INNER JOIN cos_event_outbox o ON o.event_id=e.id WHERE e.organization_id=? AND e.aggregate_id=? AND e.type=?');$q->execute([$org,(string)$case,ClientCaseChanged::TYPE]);
+    $check((int)$q->fetchColumn()===1,'Expected exactly one native changed event/outbox.');
     $invalid=$admit('invalid',[...$payload,'changes'=>['status'=>'won']]);
     $failed=false;
     try{$processor->execute($org,$invalid,'processor');}catch(RuntimeException $e){$failed=str_contains($e->getMessage(),'governed Sales');}
@@ -113,6 +130,13 @@ try{
 }finally{
     if($a->inTransaction())$a->rollBack();if($b->inTransaction())$b->rollBack();
     foreach($ids as $id)$a->prepare('DELETE FROM cos_crm_inbox WHERE organization_id=? AND id=?')->execute([$org,$id]);
+    if($case!==null){
+        $a->prepare('DELETE o FROM cos_event_outbox o INNER JOIN cos_events e ON e.id=o.event_id WHERE e.organization_id=? AND e.aggregate_type=? AND e.aggregate_id=?')->execute([$org,'deal',(string)$case]);
+        $a->prepare('DELETE FROM cos_events WHERE organization_id=? AND aggregate_type=? AND aggregate_id=?')->execute([$org,'deal',(string)$case]);
+        $a->prepare('DELETE FROM cos_sync_state WHERE organization_id=? AND provider=? AND entity_type=? AND external_id=?')->execute([$org,'aida','deal',(string)$case]);
+        $a->prepare('DELETE FROM tn_client_cases WHERE organization_id=? AND id=?')->execute([$org,$case]);
+    }
+    if($person!==null)$a->prepare('DELETE FROM tn_people WHERE organization_id=? AND id=?')->execute([$org,$person]);
     if($lead!==null){
         $a->prepare('DELETE o FROM cos_event_outbox o INNER JOIN cos_events e ON e.id=o.event_id WHERE e.organization_id=? AND e.aggregate_type=? AND e.aggregate_id=?')->execute([$org,'lead',(string)$lead]);
         $a->prepare('DELETE FROM cos_events WHERE organization_id=? AND aggregate_type=? AND aggregate_id=?')->execute([$org,'lead',(string)$lead]);

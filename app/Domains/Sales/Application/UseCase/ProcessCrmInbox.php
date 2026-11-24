@@ -113,7 +113,7 @@ final readonly class ProcessCrmInbox
                     $stageHandled = $eventType === 'sales.deal.stage_changed';
                 }
 
-                if (!$stageHandled && !$messageHandled) {
+                if (!$stageHandled && !$messageHandled && ($applied['no_change'] ?? false) !== true) {
                     $this->events->publish(new DomainEvent(
                         bin2hex(random_bytes(16)),
                         $item->organizationId,
