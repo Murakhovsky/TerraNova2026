@@ -17,6 +17,10 @@ process_id: product_management.catalog-to-variants
 - Typed category characteristics are readable
 - Previewed unique combinations are created without changing existing SKU
 
+## Учасники
+
+- Product manager
+
 ## Тригер
 
 New local assortment requires structured SKU identities.
@@ -36,3 +40,7 @@ New local assortment requires structured SKU identities.
 ## Контроль і recovery
 
 Модель описує один допустимий бізнес-сценарій, не новий виконавчий рушій. Tenant і capability contract перевіряються до кожної операції. Для action-bound кроків незалежні Plan та Action approvals і Platform Workflow обов'язкові. При невідомому результаті — native readback та контрольоване врегулювання, не сліпий повтор. Послідовність не є однією глобальною транзакцією. Source verification не підтверджує production acceptance. Shopify не потрібний.
+
+## Карта коду
+
+- `app/Domains/ProductManagement/Application/Service/ProductManagementService.php`
