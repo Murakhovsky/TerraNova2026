@@ -30,7 +30,7 @@ generated: true
 | `hr` | HR | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/HR/module.php` |
 | `marketing` | Marketing | `0.1.2` | `0.1.2` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Marketing/module.php` |
 | `procurement` | Procurement | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Procurement/module.php` |
-| `product_management` | Product Management | `0.1.0` | `0.8.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/ProductManagement/module.php` |
+| `product_management` | Product Management | `0.1.0` | `0.8.1` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/ProductManagement/module.php` |
 | `property` | Property | `1.0.0` | `1.0.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Property/module.php` |
 | `real_estate` | Real Estate | `1.0.0` | `0.2.0` | `>=0.11.0 <0.12.0` | так | property, sales | `app/Domains/RealEstate/module.php` |
 | `sales` | Sales | `1.0.0` | `0.8.6` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Sales/module.php` |
