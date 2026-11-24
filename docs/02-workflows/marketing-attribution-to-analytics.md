@@ -15,6 +15,15 @@ process_id: marketing.attribution-to-analytics
 
 Marketing генерує UTM-теги для внутрішньої кампанії або конкретного paid plan. Пошук читає нативні ліди через Sales read port, фіксує тільки точний збіг і не зберігає контактні дані. Повторний пакет повертає незмінну квитанцію. При зміні вихідного UTM доказ залишається в історії, але не зараховується до звіту. Виграна угода не є бухгалтерською виручкою. Finance квитанція та Meta spend є окремими фактами. Збір обмежений захопленими лідами; відсутність доказу не означає нуль конверсій.
 
+## Учасники
+
+Marketing manager, Marketing runtime, Sales and Finance read boundaries.
+
+## Карта коду
+
+- `app/Domains/Marketing/Application/Service/MarketingAnalyticsService.php`
+- `resources/processes/marketing-attribution-to-analytics.json`
+
 ## Процес
 
 <ProcessDiagram process-id="marketing.attribution-to-analytics" />

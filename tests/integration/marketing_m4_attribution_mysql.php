@@ -111,3 +111,42 @@ $assert($empty['rows']===[]&&$mediaStore->latest($org,$account['id'],'campaign',
 $ad=$mediaStore->commit($org,'42','m4-media-ad-key',hash('sha256','media-ad'),$account,'ad','2026-01-01','2026-01-03',[[...$base,'ad_id'=>'90002']]);
 $assert($ad['grain']==='ad'&&$ad['rows'][0]['external_id']==='90002','Native ad-grain receipt failed.');
 echo "Marketing M4 immutable complete provider batch, revised/empty scope, ad grain and tenant MySQL PASS\n";
+
+$commerceSource=new class implements \Domains\Marketing\Application\Contract\MarketingCommerceOrderReadPort {
+    public array $facts=[];public bool $available=true;
+    public function assertAvailable(\Kernel\Tenant\Model\TenantContext $actor):void{
+        if(!$this->available)throw new DomainException('Source unavailable.');
+    }
+    public function get(\Kernel\Tenant\Model\TenantContext $actor,string $orderId):?array{
+        $this->assertAvailable($actor);return $this->facts[$actor->organizationId()->value()][$orderId]??null;
+    }
+};
+$commerceStore=new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingCommerceAttributionStore($db);
+$commerce=new \Domains\Marketing\Application\Service\MarketingCommerceAttributionService($campaignService,$plans,$commerceSource,$commerceStore,$store,$modules);
+$orderId=str_repeat('a',32);$shopId=str_repeat('b',32);$badId=str_repeat('c',32);
+$fact=static fn(string $id,string $event,string $channel,string $currency,string $value,array $tags):array=>[
+    'placement'=>['schema_version'=>'1.0.0','event_id'=>$event,'event_type'=>'sales.commerce.order.placed','organization_id'=>$org,
+        'order_id'=>$id,'revision'=>1,'occurred_at'=>'2026-01-02T10:00:00.000000Z','channel'=>$channel,'currency'=>$currency,'order_total'=>$value,
+        'financial_evidence_reference'=>null,'realized_revenue'=>null,'attribution_status'=>'unresolved',
+        'provenance'=>$channel==='native'?'native_operator':'shopify_admin_read','attribution_observations'=>(object)$tags],'journey'=>null];
+$tag=['utm_source'=>'google','utm_medium'=>'organic','utm_campaign'=>$c2];
+$commerceSource->facts[$org][$orderId]=$fact($orderId,str_repeat('1',32),'native','EUR','125.50',$tag);
+$commerceSource->facts[$org][$shopId]=$fact($shopId,str_repeat('2',32),'shopify','USD','20.00',[]);
+$commerceSource->facts[$org][$badId]=$fact($badId,str_repeat('3',32),'native','EUR','25.00',[...$tag,'utm_campaign'=>$campaign]);
+$assert($commerce->inspect($actor,$c2,null,$shopId)['state']==='UNRESOLVED','Absent Shopify journey became conversion.');
+$commerceSource->facts[$org][$shopId]['journey']=['state'=>'observed','evidence_hash'=>str_repeat('f',64),'model'=>'shopify-last-visit-utm-v1',
+    'visit_at'=>'2026-01-01T10:00:00.000000Z',...$tag];
+$receipt=$commerce->capture($actor,$c2,null,[$orderId,$shopId,$badId],'m4-commerce-capture');
+$assert(array_column($receipt['results'],'state','order_id')===[$orderId=>'RECORDED',$shopId=>'RECORDED',$badId=>'REJECTED'],'Exact commerce attribution failed.');
+$assert($commerce->capture($actor,$c2,null,[$shopId,$badId,$orderId],'m4-commerce-capture')===$receipt,'Commerce capture replay changed.');
+$r=$commerce->report($actor,$c2,null,'2026-01-01','2026-01-02');
+$assert($r['placed_orders']===2&&$r['placed_order_value']===[['currency'=>'EUR','minor'=>12550],['currency'=>'USD','minor'=>2000]]
+    &&$r['recognized_revenue']===null&&$r['roas']===null&&!$r['deduplicated_against_deals'],'Commerce value or money semantics invalid.');
+$commerceSource->facts[$org][$shopId]['journey']=['state'=>'conflict'];
+$r=$commerce->report($actor,$c2,null,'2026-01-01','2026-01-02');
+$assert($r['placed_orders']===1&&$r['unresolved_captured_orders']===1,'Conflicting source not quarantined.');
+$assert($commerceStore->list($other,$c2,null,'2026-01-01','2026-01-02')===[],'Cross tenant commerce evidence exposed.');
+$commerceSource->available=false;$blocked=false;
+try{$commerce->report($actor,$c2,null,'2026-01-01','2026-01-02');}catch(DomainException){$blocked=true;}
+$assert($blocked,'Missing commerce source misrepresented as zero.');
+echo "Marketing M4.10 commerce exact placement, delayed source fixture, atomic receipts, currency and conflict PASS\n";

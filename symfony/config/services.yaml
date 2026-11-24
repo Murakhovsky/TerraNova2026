@@ -2750,6 +2750,18 @@ services:
   Domains\Marketing\Application\Contract\MarketingFinanceAnalyticsReadPort:
     alias: App\Infrastructure\Marketing\FinanceAnalyticsReadAdapter
   Domains\Marketing\Application\Service\MarketingAnalyticsService: ~
+  App\Infrastructure\Marketing\CommerceOrderReadAdapter:
+    arguments:
+      $placements: '@?Domains\Sales\Application\Contract\SalesCommerceOrderEvidencePort'
+      $journeys: '@?Domains\Sales\Application\Contract\SalesCommerceOrderJourneyReadPort'
+  Domains\Marketing\Application\Contract\MarketingCommerceOrderReadPort:
+    alias: App\Infrastructure\Marketing\CommerceOrderReadAdapter
+  Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingCommerceAttributionStore:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Marketing\Application\Contract\MarketingCommerceAttributionStore:
+    alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingCommerceAttributionStore
+  Domains\Marketing\Application\Service\MarketingCommerceAttributionService: ~
   Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingMediaAnalyticsStore:
     arguments:
       $connection: '@cos.database.pdo'

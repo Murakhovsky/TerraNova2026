@@ -28,6 +28,11 @@ $manifest = [
         ],
         'cross_domain_contracts' => [
             [
+                'contract' => 'Domains\\Marketing\\Application\\Contract\\MarketingCommerceOrderReadPort',
+                'role' => 'requires', 'counterpart' => 'sales', 'kind' => 'synchronous_port',
+                'purpose' => 'Read native Order placement and independently observed UTM journey; no Sales write, payment or revenue assertion.',
+            ],
+            [
                 'contract' => 'Domains\\Marketing\\Application\\Contract\\MarketingSalesAttributionReadPort',
                 'role' => 'requires', 'counterpart' => 'sales', 'kind' => 'synchronous_port',
                 'purpose' => 'Read minimal native lead UTM and linked won deal facts; no Sales mutation or contact data exposure.',
@@ -100,6 +105,9 @@ $manifest = [
             'marketing.analytics.report.get',
             'marketing.analytics.media.report',
             'marketing.analytics.media.sync',
+            'marketing.attribution.commerce.inspect',
+            'marketing.attribution.commerce.capture',
+            'marketing.analytics.commerce.report',
         ],
         'capability_contracts' => [],
     ],
@@ -119,6 +127,9 @@ foreach ([
     'marketing.attribution.tracking.get' => ['query', 'none', 'marketing/attribution-tracking', 'cos.tenant.manage'],
     'marketing.analytics.media.report' => ['query', 'none', 'marketing/media-analytics-report', 'cos.tenant.manage'],
     'marketing.analytics.media.sync' => ['command', 'internal', 'marketing/media-analytics-sync', 'cos.tenant.manage'],
+    'marketing.attribution.commerce.inspect' => ['query', 'none', 'marketing/commerce-inspect', 'cos.tenant.manage'],
+    'marketing.attribution.commerce.capture' => ['command', 'internal', 'marketing/commerce-capture', 'cos.tenant.manage'],
+    'marketing.analytics.commerce.report' => ['query', 'none', 'marketing/commerce-report', 'cos.tenant.manage'],
     'marketing.analytics.report.get' => ['query', 'none', 'marketing/analytics-report', 'cos.tenant.manage'],
 ] as $id => [$kind, $sideEffect, $schema, $permission]) {
     $contracts[] = [

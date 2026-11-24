@@ -15,6 +15,15 @@ process_id: marketing.media-import-to-report
 
 Для одного Meta акаунта оператор обирає точне вікно та один рівень account/campaign/adset/ad. Повний результат перевіряється за provider account, датами, унікальними ID та точними decimal amounts. MySQL транзакція фіксує нативні спостереження і незмінний run receipt. Звіт не змішує зерна та валюти; reach і provider action categories не сумуються як унікальні конверсії. Порівняння вимагає однакового облікового запису, його ревізії, зерна та неперетинних вікон однакової тривалості. Відсутній звіт не замінюється нулем.
 
+## Учасники
+
+Marketing manager, Marketing runtime, Meta read adapter.
+
+## Карта коду
+
+- `app/Domains/Marketing/Application/Service/MarketingMediaAnalyticsService.php`
+- `resources/processes/marketing-media-import-to-report.json`
+
 ## Процес
 
 <ProcessDiagram process-id="marketing.media-import-to-report" />
