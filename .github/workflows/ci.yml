@@ -15,7 +15,7 @@ on:
       - 'composer.lock'
       - '.github/workflows/ci.yml'
   pull_request:
-    branches: [main]
+    branches: [main, feat/sales-domain-completion]
   workflow_dispatch:
 
 permissions:
