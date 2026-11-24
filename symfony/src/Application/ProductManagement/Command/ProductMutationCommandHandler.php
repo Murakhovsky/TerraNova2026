@@ -95,6 +95,8 @@ final readonly class ProductMutationCommandHandler implements CommandHandlerInte
             ),
             'price.list.update' => $this->prices->updateList($org,(string)$in['list_id'],(string)$in['name'],(int)$in['expected_revision'],$key,$actor,$trace),
             'price.list.archive' => $this->prices->archiveList($org,(string)$in['list_id'],(int)$in['expected_revision'],$key,$actor,$trace),
+            'price.list.entry.remove' => $this->prices->removeListPrice($org,(string)$in['list_id'],(string)$in['variant_id'],(int)$in['expected_revision'],$key,$actor,$trace),
+            'price.list.tier.set' => $this->prices->setTier($org,(string)$in['list_id'],(string)$in['variant_id'],(string)$in['min_quantity'],$in['amount']===null?null:(string)$in['amount'],(int)$in['expected_revision'],$key,$actor,$trace),
             'price.list.create' => $this->prices->createList($org,(string)$in['code'],(string)$in['name'],(string)$in['kind'],(string)$in['currency'],$key,$actor,$trace),
             'price.list.entry.set' => $this->prices->setListPrice($org,(string)$in['list_id'],(string)$in['variant_id'],(string)$in['amount'],(int)$in['expected_revision'],$key,$actor,$trace),
             'price.base.set' => $this->prices->set(
