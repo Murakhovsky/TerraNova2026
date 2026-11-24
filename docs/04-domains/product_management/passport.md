@@ -125,7 +125,14 @@ domain_id: product_management
       ]
     }
   ],
-  "process_ids": [],
+  "process_ids": [
+    "product_management.catalog-to-variants",
+    "product_management.csv-to-native-catalog",
+    "product_management.governed-business-cycle",
+    "product_management.physical-count-to-correction",
+    "product_management.pricing-to-quote",
+    "product_management.stock-to-reconciliation"
+  ],
   "readiness": {
     "level": "UNKNOWN",
     "evidence": []
@@ -151,7 +158,8 @@ Owns Product, Variant/SKU, Categories, Media references, Locations, Stock Ledger
 | Inventory | Locations та balances | MySQL |
 | Movements | Ledger та stock transfer | MySQL |
 | Pricing | BasePrice та history | MySQL |
-| Analytics | Native read-only assortment, stock and quality metrics | MySQL pending |
+| Analytics | Native read-only assortment, stock and quality metrics | MySQL PASS on b61482c; current HEAD pending |
+| Governed operations | Signed intent, canonical Plan and native readback | New E2E pending |
 | Integration | CSV, Shopify read-only, approved import, conflicts | Mock/MySQL; live canary pending |
 
 Це функціональна декомпозиція, не незалежні modules або executors.
@@ -174,7 +182,7 @@ Sales/Procurement/Finance/Property користуються опублікова
 
 ## 8. Процеси та результати
 
-Статус у Process Registry: `exempt`, із відкладеним formal business process для керованого sync та advanced stock workflows. `process_ids=[]` є актуальним registry mapping, а не оцінкою обсягу функціоналу.
+Статус у Process Registry: `covered`. Шість канонічних процесів охоплюють каталог, ціноутворення, склад, фізичний перерахунок, CSV та керований AI-цикл. Моделі не є доказом runtime/production acceptance.
 
 ## 9. Tenant, Policy та Security
 
