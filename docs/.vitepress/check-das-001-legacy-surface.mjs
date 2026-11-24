@@ -10,6 +10,18 @@ function compare(label, actual, expected) {
   for (const key of Object.keys(expected)) if (!Object.hasOwn(actual,key)) errors.push(label+': stale exception '+key);
   return errors;
 }
+// A PR may retire exceptions, but may not introduce or substitute them.
+function additions(current, previous, label) {
+  const errors=[];
+  for (const [key,value] of Object.entries(current)) if (!Object.hasOwn(previous,key)||previous[key]!==value) errors.push(label+': new exception relative to base '+key);
+  return errors;
+}
+function flatten(registry) {
+  return Object.fromEntries(Object.entries(registry.domains??{}).flatMap(([domain,ids])=>ids.map(id=>[id,domain])));
+}
+function gapMap(debt) {
+  return Object.fromEntries((debt.items??[]).map(item=>[item.id,JSON.stringify([item.owner_domain,item.target_capability,item.gap_type])]));
+}
 function inspect(modules, processes, registry, baseline, debt) {
   const issues=[], legacy={}, owners={}, expected={}, refs={};
   const typed=new Set();
@@ -54,13 +66,35 @@ if (process.argv.includes('--self-test')) {
   const normalized={...m,contributions:{...m.contributions,capability_contracts:[{id:'demo.old'}]}};
   if(!check([normalized],[p]).some(e=>e.includes('stale exception'))) throw Error('Stale exception escaped');
   if(check([normalized],[p],{...reg,domains:{},process_references:{}},{domains:{demo:{max_descriptive_only:0}}}).length) throw Error('Valid retirement rejected');
-  console.log('DAS-001 exact legacy identity gate: positive and four regression fixtures PASS');
+  if(additions({'demo.new':'demo'},{'demo.old':'demo'},'legacy').length!==1) throw Error('Base comparison substitution escaped');
+  if(additions({}, {'demo.old':'demo'},'legacy').length) throw Error('Base comparison retirement rejected');
+  if(additions({'flow:step':'demo.new'},{'flow:step':'demo.old'},'process').length!==1) throw Error('Base process substitution escaped');
+  console.log('DAS-001 exact legacy identity gate: positive and seven regression fixtures PASS');
 } else {
   const modules=fs.readdirSync(path.join(root,'app/Domains'),{withFileTypes:true})
     .filter(d=>d.isDirectory()&&fs.existsSync(path.join(root,'app/Domains',d.name,'module.php')))
     .map(d=>JSON.parse(execFileSync('php',['-r','echo json_encode(require $argv[1], JSON_THROW_ON_ERROR);',path.join(root,'app/Domains',d.name,'module.php')],{encoding:'utf8',timeout:10000})));
   const processes=fs.readdirSync(path.join(root,'resources/processes')).filter(f=>f.endsWith('.json')).map(f=>load('resources/processes/'+f));
-  const result=inspect(modules,processes,load('docs/.vitepress/das-001-legacy-surface.json'),load('docs/.vitepress/das-001-compliance-baseline.json'),load('docs/.vitepress/capability-debt.json'));
+  const inventoryPath='docs/.vitepress/das-001-legacy-surface.json';
+  const debtPath='docs/.vitepress/capability-debt.json';
+  const inventory=load(inventoryPath), debt=load(debtPath);
+  const result=inspect(modules,processes,inventory,load('docs/.vitepress/das-001-compliance-baseline.json'),debt);
+  const base=process.env.DAS001_BASE_SHA;
+  if (base) {
+    if (!/^[a-f0-9]{40}$/.test(base)) throw Error('Expected exact DAS001_BASE_SHA');
+    const git=(args)=>execFileSync('git',args,{cwd:root,encoding:'utf8',timeout:10000,stdio:['ignore','pipe','pipe']});
+    git(['cat-file','-e',base+'^{commit}']);
+    const hasInventory=git(['ls-tree','--name-only',base,'--',inventoryPath]).trim()!=='';
+    if (hasInventory) {
+      const previous=JSON.parse(git(['show',base+':'+inventoryPath]));
+      result.issues.push(...additions(flatten(inventory),flatten(previous),'Legacy surface'));
+      result.issues.push(...additions(inventory.process_references??{},previous.process_references??{},'Descriptive process reference'));
+    } else {
+      console.log('Initial inventory adoption: base commit has no inventory; exact source audit still applies.');
+    }
+    const previousDebt=JSON.parse(git(['show',base+':'+debtPath]));
+    result.issues.push(...additions(gapMap(debt),gapMap(previousDebt),'Explicit process gap'));
+  }
   const clean=result.issues.length===0&&result.legacy===0&&result.descriptiveProcessSteps===0&&result.explicitProcessGaps===0;
   console.log(JSON.stringify({...result,zeroDebt:clean},null,2));
   if(result.issues.length||(process.argv.includes('--zero-debt')&&!clean)) process.exitCode=1;

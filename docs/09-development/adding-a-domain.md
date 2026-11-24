@@ -144,3 +144,5 @@ Domain готовий, коли:
 7. Виконати `npm run docs:generate`, `npm run docs:generate:check`, `npm run docs:check`, `bash bin/verify fast` та відповідні runtime/integration suites. PR відкривається від актуального main; readiness не підвищується без acceptance evidence.
 
 `docs/.vitepress/das-001-legacy-surface.json` фіксує точні старі descriptive IDs і process references, а не дозвіл їх викликати. Нормалізований ID або посилання вилучається з цього реєстру в тому самому PR; descriptive ceiling зменшується. Не видаляти чинні access/UI identifiers без аудиту споживачів. Для суворого контролю завершення боргу виконується `npm run docs:domain-zero-debt`; команда навмисно повертає ненульовий код, поки є legacy surface або process gaps.
+
+У pull request CI порівнює реєстри з точним SHA базової гілки: додавання або підміна legacy ID, descriptive process reference чи process gap блокуються навіть при одночасному редагуванні manifest і реєстру. Допускається погашення боргу, а не його перенесення на інший ID.
