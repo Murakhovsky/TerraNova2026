@@ -173,6 +173,15 @@ $assert(
     && (string)$set['price']==='129.9900',
     'base price replay must preserve price revision and amount'
 );
+$eur=$prices->set($org,$variant,'EUR','19.9900','pm-eur-'.$token,'ci-user','ci-pm',0);
+$assert($eur['revision']===1 && $eur['price']==='19.9900','New currency price uses independent revision');
+$eurUpdated=$prices->set($org,$variant,'EUR','21.1250','pm-eur-update-'.$token,'ci-user','ci-pm',1);
+$assert($eurUpdated['revision']===2 && $eurUpdated['price']==='21.1250','Fenced price update');
+$assert($prices->set($org,$variant,'EUR','21.1250','pm-eur-update-'.$token,'ci-user','ci-pm',1)===$eurUpdated,'Fenced price replay preserves receipt');
+$reject(static fn()=> $prices->set($org,$variant,'EUR','1','pm-eur-stale-'.$token,'ci-user','ci-pm',1),'Stale price revision');
+$reject(static fn()=> $prices->set($org,$variant,'EUR','21.1250','pm-eur-update-'.$token,'ci-user','ci-pm',2),'Same key different revision');
+$reject(static fn()=> $prices->set($other,$variant,'EUR','1','pm-eur-cross-'.$token,'ci-other','ci-pm',0),'Cross tenant price');
+$assert($prices->get($org,$variant,'UAH')['price']==='129.9900' && $prices->get($org,$variant,'EUR')['price']==='21.1250','Independent currency readback');
 $csvPayload="sku,name,type,uom,track_inventory\nCSV".$token.",Sample,stock,pcs,1\n";
 $batch=$csv->preview($org,$csvPayload,'ci-user','pm-csv-stage-'.$token);
 $againBatch=$csv->preview($org,$csvPayload,'ci-user','pm-csv-stage-'.$token);
@@ -259,13 +268,15 @@ $reject(static fn()=> $products->recordMovement($org,$variant,$loc,'1','receipt'
     'pm-after-archive-stock-'.$token,'ci-user','ci-pm'),'Archived Product/Variant cannot receive stock');
 $assert((string)$products->balance($org,$variant,$loc)['on_hand']==='0.000000',
     'Archived Variant ledger remains unchanged after denied receipt');
+$reject(static fn()=> $prices->set($org,$variant,'EUR','1','pm-eur-archived-'.$token,'ci-user','ci-pm',2),'Archived Variant/Product price mutation');
+$assert($prices->get($org,$variant,'EUR')['price']==='21.1250','Archived price history remains readable');
 $stmt=$pdo->prepare('SELECT COUNT(*) FROM cos_events WHERE organization_id=? AND type LIKE ?');
 $stmt->execute([$org,'product_management.%']);
-$assert((int)$stmt->fetchColumn()===20,'twenty confirmed native Domain events');
+$assert((int)$stmt->fetchColumn()===22,'twenty-two confirmed native Domain events');
 $stmt=$pdo->prepare('SELECT actor_type FROM cos_events WHERE organization_id=? AND type=? LIMIT 1');
 $stmt->execute([$org,'product_management.product.created']);
 $assert($stmt->fetchColumn()==='USER','event actor uses canonical Kernel enum');
 $stmt=$pdo->prepare('SELECT COUNT(*) FROM cos_event_outbox o JOIN cos_events e ON e.id=o.event_id WHERE e.organization_id=? AND e.type LIKE ?');
 $stmt->execute([$org,'product_management.%']);
-$assert((int)$stmt->fetchColumn()===20,'same-transaction event/outbox evidence');
+$assert((int)$stmt->fetchColumn()===22,'same-transaction event/outbox evidence');
 echo "Product Management MySQL E1–E4 acceptance passed: product, ledger, price, CSV, integration inbox.\n";
