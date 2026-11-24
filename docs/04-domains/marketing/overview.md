@@ -163,6 +163,10 @@ Campaign Workspace дозволяє створити funding candidate, вибр
 
 Finance повторно перевіряє активний exposure під власними locks безпосередньо перед parent activation. Provider readback порівнює країни, optimization, billing, bid і destination. Freeze після останньої локальної перевірки не гарантує скасування вже відправленого HTTP-запиту. Аварійне призупинення й незалежне staging acceptance обов'язкові.
 
+## M3.7: Наскрізне приймання з ізольованим провайдером
+
+`tests/integration/marketing_paid_approved_goal_e2e_mysql.php` перевіряє три окремі canonical Goal/Plan/Action/Outcome cycles (create paused, activate, pause), реальний MySQL journal, native Finance claim та блокування release. Plan Approval evidence й початковий Finance reserve є test-local fixtures; Action approval та worker gates реальні; Meta transport/identity/Vault isolated. Перевіряються відмова до погодження, точна кількість writes, parent/child activation order, повторне виконання, відсутність Hermes call та утримання резерву після pause. CI результат очікується; жоден Meta API request не здійснюється.
+
 ## Надійність імпорту та операційна черга
 
 Meta read-only sync об'єднує імпорт Campaign/AdSet/Ad, Insights, `last_synced_at` і запис `SUCCEEDED` в **одну MySQL-транзакцію**. Невалідний рядок Insights або помилка посеред import викликає rollback без часткових campaign/metrics; окремий `tests/integration/marketing_meta_atomic_mysql.php` перевіряє це на справжній MySQL.
