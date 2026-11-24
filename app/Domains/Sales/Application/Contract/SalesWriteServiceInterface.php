@@ -22,6 +22,8 @@ interface SalesWriteServiceInterface
     public function attachInboundRequest(int $opportunityId, int $leadId, int $actorId): ClientCaseCommandResult;
 
     /** @param array<string,mixed> $input */
+    public function addOpportunityPropertyMatch(int $caseId,int $propertyId,array $input,int $actorId):ClientCaseCommandResult;
+
     public function updateOpportunityPropertyMatch(int $matchId, array $input, int $actorId): ClientCaseCommandResult;
 
     /** @param array<string,mixed> $input */

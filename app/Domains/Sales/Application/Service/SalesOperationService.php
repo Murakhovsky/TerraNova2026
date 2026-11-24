@@ -86,8 +86,9 @@ final readonly class SalesOperationService
         int $activityId,
         ?int $userId,
         string $actorType = 'USER',
+        ?string $correlationId = null,
     ): OperationResult {
-        return $this->transactions->transactional(function () use ($organizationId, $dealId, $activityId, $userId, $actorType): OperationResult {
+        return $this->transactions->transactional(function () use ($organizationId, $dealId, $activityId, $userId, $actorType,$correlationId): OperationResult {
             $activity = $this->operations->completeActivity($organizationId, $dealId, $activityId, $userId);
             if ($activity === null) return OperationResult::failure('Activity was not found, already completed, or belongs to another deal.');
 
@@ -95,10 +96,10 @@ final readonly class SalesOperationService
                 'followup' => SalesEventType::FOLLOWUP_COMPLETED,
                 'task' => SalesEventType::TASK_COMPLETED,
                 'meeting' => SalesEventType::MEETING_COMPLETED,
-                default => null,
+                default => 'sales.activity.completed',
             };
             if ($eventType !== null) {
-                $correlationId = bin2hex(random_bytes(16));
+                $correlationId = $correlationId ?: bin2hex(random_bytes(16));
                 $this->events->publish(new DomainEvent(
                     bin2hex(random_bytes(16)),
                     $organizationId,

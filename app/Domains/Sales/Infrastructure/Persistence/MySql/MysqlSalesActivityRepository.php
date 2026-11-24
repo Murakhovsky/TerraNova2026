@@ -20,13 +20,14 @@ final readonly class MysqlSalesActivityRepository implements SalesActivityReposi
             "INSERT INTO tn_client_case_activities "
             . '(organization_id, client_case_id, person_id, user_id, activity_type, title, body, completed_at) '
             . "SELECT :organization_id, id, :person_id, :user_id, 'call', :title, :body, NOW() "
-            . 'FROM tn_client_cases WHERE id = :case_id AND organization_id = :organization_scope'
+            . 'FROM tn_client_cases WHERE id = :case_id AND organization_id = :organization_scope AND person_id <=> :person_scope'
         );
         $statement->execute([
             'organization_id' => $command->organizationId,
             'organization_scope' => $command->organizationId,
             'case_id' => $command->dealReference,
             'person_id' => $command->personReference,
+            'person_scope' => $command->personReference,
             'user_id' => $command->userReference,
             'title' => $command->title,
             'body' => $command->body,
@@ -36,7 +37,7 @@ final readonly class MysqlSalesActivityRepository implements SalesActivityReposi
         }
         $activityId = (string) $this->connection->lastInsertId();
         $this->connection->prepare(
-            'UPDATE tn_client_cases SET next_contact_at = NULL, last_activity_at = NOW() '
+            'UPDATE tn_client_cases SET last_activity_at = NOW() '
             . 'WHERE id = :case_id AND organization_id = :organization_id'
         )->execute(['case_id' => $command->dealReference, 'organization_id' => $command->organizationId]);
         $this->connection->prepare(

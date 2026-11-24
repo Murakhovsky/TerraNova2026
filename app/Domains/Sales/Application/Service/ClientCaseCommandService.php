@@ -245,14 +245,14 @@ final readonly class ClientCaseCommandService
                 'body' => $this->nullable((string) ($input['body'] ?? '')), 'due_at' => $this->dateTime((string) ($input['due_at'] ?? '')),
                 'completed_at' => $completedAt,
             ]);
-            if ($completedAt) $this->commands->clearNextContact($this->organizationId, $caseId);
+            // Recording an unrelated completed activity must not erase pending followups.
             $eventType = match (true) {
                 $type === 'meeting' && $completedAt !== null => SalesEventType::MEETING_COMPLETED,
                 $type === 'task' && $completedAt !== null => SalesEventType::TASK_COMPLETED,
                 $type === 'task' => SalesEventType::TASK_CREATED,
                 $type === 'followup' && $completedAt !== null => SalesEventType::FOLLOWUP_COMPLETED,
                 $type === 'followup' => SalesEventType::FOLLOWUP_CREATED,
-                default => null,
+                default => 'sales.activity.recorded',
             };
             if ($eventType !== null) {
                 $eventId = bin2hex(random_bytes(16));
@@ -293,6 +293,8 @@ final readonly class ClientCaseCommandService
                 'body' => trim($property['public_id'] . ' / ' . $property['title'] . ($match['note'] ? ' / ' . $match['note'] : '')),
                 'due_at' => null, 'completed_at' => null,
             ]);
+            $this->events->publish(ClientCaseChanged::create(ClientCaseEvents::id(),$this->organizationId,(string)$caseId,
+                ['property_match'=>['property_id'=>$propertyId,'status'=>$match['match_status']]],ClientCaseEvents::metadata($user)));
             return ClientCaseCommandResult::success('added', ['case_id' => $caseId]);
         });
     }
@@ -304,9 +306,9 @@ final readonly class ClientCaseCommandService
         $case = $this->readModel->case((int) $existing['client_case_id']);
         if (!$case) return ClientCaseCommandResult::failure('not_found');
         $match = [
-            'match_status' => ClientCaseInput::allowed((string) ($input['match_status'] ?? 'suggested'), PropertyMatchStatus::values(), 'suggested'),
-            'score' => ClientCaseInput::score($input['score'] ?? null),
-            'note' => ClientCaseInput::nullable((string) ($input['note'] ?? ''), 500),
+            'match_status' => ClientCaseInput::allowed((string) ($input['match_status'] ?? $existing['match_status']), PropertyMatchStatus::values(), (string)$existing['match_status']),
+            'score' => array_key_exists('score',$input)?ClientCaseInput::score($input['score']):$existing['score'],
+            'note' => array_key_exists('note',$input)?ClientCaseInput::nullable((string)$input['note'],500):$existing['note'],
         ];
         $caseId = (int) $existing['client_case_id'];
         return $this->transactions->transactional(function () use ($matchId, $match, $existing, $case, $caseId, $user): ClientCaseCommandResult {
@@ -318,6 +320,8 @@ final readonly class ClientCaseCommandService
                 'body' => trim(($existing['public_id'] ?? '') . ' / ' . ($existing['title'] ?? '') . ' / ' . $match['match_status']),
                 'due_at' => null, 'completed_at' => null,
             ]);
+            $this->events->publish(ClientCaseChanged::create(ClientCaseEvents::id(),$this->organizationId,(string)$caseId,
+                ['property_match'=>['property_id'=>(int)$existing['property_id'],'status'=>$match['match_status']]],ClientCaseEvents::metadata($user)));
             return ClientCaseCommandResult::success('updated', ['case_id' => $caseId]);
         });
     }

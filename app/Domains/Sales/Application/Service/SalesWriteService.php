@@ -53,6 +53,7 @@ final readonly class SalesWriteService implements SalesWriteServiceInterface
     public function createOpportunity(array $input,int $actorId): ClientCaseCommandResult { return $this->cases->create($input,['id'=>$actorId]); }
     public function updateOpportunity(int $opportunityId,array $input,int $actorId): ClientCaseCommandResult { return $this->cases->update($opportunityId,$input,['id'=>$actorId]); }
     public function attachInboundRequest(int $opportunityId,int $leadId,int $actorId): ClientCaseCommandResult { return $this->inbound->attachRequest($opportunityId,$leadId,['id'=>$actorId]); }
+    public function addOpportunityPropertyMatch(int $caseId,int $propertyId,array $input,int $actorId):ClientCaseCommandResult { return $this->cases->addPropertyMatch($caseId,$propertyId,$input,['id'=>$actorId]); }
     public function updateOpportunityPropertyMatch(int $matchId,array $input,int $actorId): ClientCaseCommandResult { return $this->cases->updatePropertyMatch($matchId,$input,['id'=>$actorId]); }
 
     public function createLead(array $input, int $actorId, string $correlationId, string $idempotencyKey): ClientCaseCommandResult
