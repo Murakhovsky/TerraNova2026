@@ -207,7 +207,7 @@ final readonly class MysqlSalesWorkspaceOperationalReadModel implements SalesWor
             unset($item);
         }
         unset($items);
-        $today['needs_approval'] = $ownerId > 0 ? [] : $this->approvals($organizationId, null, null, 20);
+        $today['needs_approval'] = $this->approvals($organizationId, null, $ownerId > 0 ? $ownerId : null, 20);
         return $today;
     }
 
@@ -223,14 +223,15 @@ final readonly class MysqlSalesWorkspaceOperationalReadModel implements SalesWor
 
     public function approvals(string $organizationId, ?int $dealId = null, ?int $ownerId = null, int $limit = 50): array
     {
-        $where = ['ap.organization_id=:organization_id', 'ap.status="PENDING"', 'a.organization_id=ap.organization_id'];
+        $where = ['ap.organization_id=:organization_id', 'ap.status="PENDING"', 'a.organization_id=ap.organization_id', 'a.type LIKE "sales.%"', 'a.target_type="deal"', 'a.status="PENDING_APPROVAL"', 'c.id IS NOT NULL'];
         $params = ['organization_id' => $organizationId];
         if ($dealId !== null) {
             $where[] = 'a.target_type IN ("deal","client_case") AND a.target_id=:deal_id';
             $params['deal_id'] = (string) $dealId;
         }
         if ($ownerId !== null && $ownerId > 0) {
-            $where[] = '(ap.approver_type<>"USER" OR ap.approver_id=:owner_id)';
+            $where[] = 'ap.approver_type="USER" AND ap.approver_id=:owner_id AND c.assigned_user_id=:deal_owner_id';
+            $params['deal_owner_id'] = $ownerId;
             $params['owner_id'] = (string) $ownerId;
         }
         return $this->safeAll(
