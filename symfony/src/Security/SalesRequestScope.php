@@ -9,7 +9,7 @@ use Kernel\Tenant\Contract\TenantContextProviderInterface;
 use Kernel\Tenant\Model\TenantPermissions;
 
 /** Request-bound authority for shared Workspace projections outside Sales controllers. */
-final readonly class SalesRequestScope
+final readonly class SalesRequestScope implements SalesRequestEntityAuthorizationInterface
 {
     public function __construct(private TenantContextProviderInterface $tenants,private ActiveModuleResolver $modules,
         private SalesEntityScopeService $scope) {}
