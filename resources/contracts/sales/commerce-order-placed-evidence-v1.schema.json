@@ -122,7 +122,8 @@
     "provenance": {
       "type": "string",
       "enum": [
-        "native_operator"
+        "native_operator",
+        "shopify_admin_read"
       ]
     },
     "correlation_id": {
