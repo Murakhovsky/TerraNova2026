@@ -52,6 +52,7 @@ final readonly class ProductManagementQueryHandler implements QueryHandlerInterf
                 'items'=>$this->products->reservations($org,(string)$in['variant_id'],(string)$in['location_id'],isset($in['reservation_id'])?(string)$in['reservation_id']:null,(int)($in['limit']??30),(int)($in['offset']??0)),
                 'limit'=>(int)($in['limit']??30),'offset'=>(int)($in['offset']??0),
             ],
+            'stock.count.get' => ['count'=>$this->products->stockCount($org,(string)$in['count_id'])],
             'stock.balance.get' => $this->products->balance($org,(string)$in['variant_id'],(string)$in['location_id']),
             'import.batch.get' => $this->imports->report($org,(string)$in['batch_id']),
             'price.list.history.search' => [
