@@ -30,4 +30,5 @@ generated: true
 | `ExecutionFailureException` | `app/Kernel/Execution/ExecutionFailureException.php` |
 | `LlmBudgetExceededException` | `app/Kernel/Llm/LlmBudgetExceededException.php` |
 | `LlmProviderException` | `app/Kernel/Llm/LlmProviderException.php` |
+| `ShopifyTransientReadFailure` | `app/Domains/ProductManagement/Infrastructure/Shopify/ShopifyTransientReadFailure.php` |
 | `StaleActionExecutionClaimException` | `app/Kernel/Action/StaleActionExecutionClaimException.php` |
