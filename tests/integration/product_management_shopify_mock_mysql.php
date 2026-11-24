@@ -158,6 +158,16 @@ $pull=new ShopifyCatalogPullService(
 $assert=static function(bool $value,string $message):void {
     if (!$value)throw new RuntimeException('Shopify mock MySQL: '.$message);
 };
+$sameConnection=$observations->provision($org,$shop,'shopify_env_primary');
+$assert($sameConnection===$id,'Retry provisioning must return the same tenant-owned connection.');
+$crossProvisionDenied=false;
+try { $observations->provision($org.'-other',$shop,'shopify_env_primary'); }
+catch (DomainException) { $crossProvisionDenied=true; }
+$assert($crossProvisionDenied,'Same Shopify shop must not be claimed by another tenant.');
+$otherSecretDenied=false;
+try { $observations->provision($org,$shop,'env://COS_SHOPIFY_DIFFERENT'); }
+catch (DomainException) { $otherSecretDenied=true; }
+$assert($otherSecretDenied,'Existing shop credential reference may not change on silent retry.');
 $denied=false;
 try { $pull->pull($org,$id,1); }
 catch (DomainException) { $denied=true; }
