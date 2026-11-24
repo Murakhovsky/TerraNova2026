@@ -69,6 +69,7 @@ final readonly class SalesDomainModule implements
         private SalesOperationService $operations,
         private AssignDealOwner $assignDealOwner,
         private ScheduleLeadFollowup $scheduleLeadFollowup,
+        private \Domains\Sales\Automation\Action\QueueSalesOfferDeliveryHandler $offerDelivery,
     ) {
     }
 
@@ -89,12 +90,14 @@ final readonly class SalesDomainModule implements
             ...CreateFollowupTaskHandler::TYPES, CreateLeadFollowupTaskHandler::TYPE, ...UpdateDealHandler::TYPES, ChangeDealStageHandler::TYPE,
             AssignOwnerHandler::TYPE, RequestDocumentHandler::TYPE, ScheduleMeetingHandler::TYPE,
             ...SendMessageHandler::TYPES, ...ScheduleFollowupHandler::TYPES,
+            \Domains\Sales\Automation\Action\QueueSalesOfferDeliveryHandler::TYPE,
         ];
     }
 
     public function actionHandlers(): array
     {
         return [
+            $this->offerDelivery,
             new CreateFollowupTaskHandler($this->crm),
             new CreateLeadFollowupTaskHandler($this->scheduleLeadFollowup),
             new UpdateDealHandler($this->deals),

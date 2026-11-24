@@ -12,6 +12,7 @@ final class SalesPolicyCatalog
     public function policies(string $organizationId): array
     {
         return [
+            new ActionPolicy($this->id($organizationId, 'sales-offer-delivery-approval-v1'), $organizationId, 'sales.offer.delivery.queue', [], PolicyDecision::ApprovalRequired, 10),
             new ActionPolicy($this->id($organizationId, 'sales-auto-qualification-task-v1'), $organizationId, 'sales.create_qualification_task', [], PolicyDecision::Auto, 10),
             new ActionPolicy($this->id($organizationId, 'sales-auto-lead-followup-task-v1'), $organizationId, 'sales.create_lead_followup_task', [], PolicyDecision::Auto, 10),
             new ActionPolicy($this->id($organizationId, 'sales-auto-followup-task-v1'), $organizationId, 'sales.create_followup_task', [], PolicyDecision::Auto, 10),

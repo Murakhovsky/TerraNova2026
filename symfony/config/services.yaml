@@ -2026,6 +2026,7 @@ services:
       $operations: '@Domains\Sales\Application\Service\SalesOperationService'
       $assignDealOwner: '@Domains\Sales\Application\UseCase\AssignDealOwner'
       $scheduleLeadFollowup: '@Domains\Sales\Application\UseCase\ScheduleLeadFollowup'
+      $offerDelivery: '@Domains\Sales\Automation\Action\QueueSalesOfferDeliveryHandler'
 
   # Capital Markets CM-FOUNDATION runtime
   Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlInstrumentRepository:
@@ -3178,6 +3179,19 @@ services:
       $connection: '@cos.database.pdo'
   Domains\Sales\Application\Contract\SalesActivityEvidenceReadPort:
     alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesActivityEvidenceReadModel
+
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOfferDeliveryRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Sales\Application\Contract\SalesOfferDeliveryRepositoryInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOfferDeliveryRepository
+  Infrastructure\Platform\Notification\MysqlNotificationHandoffReadModel:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Platform\Notification\Contract\NotificationHandoffReadPort:
+    alias: Infrastructure\Platform\Notification\MysqlNotificationHandoffReadModel
+  Domains\Sales\Application\Service\SalesOfferDeliveryService: ~
+  Domains\Sales\Automation\Action\QueueSalesOfferDeliveryHandler: ~
 
   Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOfferRepository:
     arguments:
