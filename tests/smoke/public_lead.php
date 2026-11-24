@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 use Domains\Sales\Application\Contract\InboundCaseResolverInterface;
 use Domains\Sales\Application\Contract\InboundLeadRepositoryInterface;
+use Domains\Sales\Application\Contract\SalesMutationReceiptRepositoryInterface;
 use Domains\Sales\Application\UseCase\ReceivePublicLead;
 use Kernel\Event\Contract\EventStoreInterface;
 use Kernel\Event\DomainEvent;
@@ -28,7 +29,8 @@ $store = new class($stored) implements EventStoreInterface {
 $created = [];
 $leads = new class($created) implements InboundLeadRepositoryInterface {
     public function __construct(private array &$created) {}
-    public function create(string $organizationId, array $lead): int { $this->created[] = [$organizationId, $lead]; return 42; }
+    public function create(string $organizationId, array $lead): int { $this->created[] = [$organizationId, $lead]; return 41+count($this->created); }
+    public function existsForUpdate(string $organizationId,int $leadId):bool{return isset($this->created[$leadId-42]) && $this->created[$leadId-42][0]===$organizationId;}
 };
 $attachments = [];
 $cases = new class($attachments) implements InboundCaseResolverInterface {
@@ -38,13 +40,27 @@ $cases = new class($attachments) implements InboundCaseResolverInterface {
     public function attachRequest(int $caseId, int $requestId): void { $this->attachments[] = [$caseId, $requestId]; }
 };
 
-$useCase = new ReceivePublicLead($leads, $cases, new EventBus($store, $transaction), $transaction, 'org-1');
+$receipts=new class implements SalesMutationReceiptRepositoryInterface {
+    private array $items=[];
+    public function find(string $organizationId,string $operationType,string $idempotencyKey):?string{return $this->items[$organizationId][$operationType][$idempotencyKey]??null;}
+    public function claim(string $organizationId,string $operationType,string $idempotencyKey,string $pendingMutationId):bool{
+        if($this->find($organizationId,$operationType,$idempotencyKey)!==null)return false;
+        $this->items[$organizationId][$operationType][$idempotencyKey]=$pendingMutationId;return true;
+    }
+    public function complete(string $organizationId,string $operationType,string $idempotencyKey,string $pendingMutationId,string $mutationId):bool{
+        if($this->find($organizationId,$operationType,$idempotencyKey)!==$pendingMutationId)return false;
+        $this->items[$organizationId][$operationType][$idempotencyKey]=$mutationId;return true;
+    }
+};
+$useCase = new ReceivePublicLead($leads,$cases,new EventBus($store,$transaction),$transaction,'org-1',$receipts);
 $invalid = $useCase->execute(['name' => ''], '/');
 if ($invalid->ok || $invalid->code !== 'contact_required' || $created !== []) throw new RuntimeException('Invalid input was persisted.');
 
-$result = $useCase->execute([
+$input = [
+    'submission_id'=>str_repeat('a',32), 'request_intent'=>'viewing',
     'name' => 'Test Client', 'phone' => '+380000000000', 'property_id' => 12, 'role' => 'покупець', 'deal_type' => 'купівля',
-], '/property/demo');
+ ];
+$result=$useCase->execute($input,'/property/demo');
 if (!$result->ok || $result->leadId !== 42) throw new RuntimeException('Valid lead was not accepted.');
 if (($created[0][0] ?? null) !== 'org-1' || ($created[0][1]['role'] ?? null) !== 'buyer') throw new RuntimeException('Lead normalization or tenant scope failed.');
 if ($attachments !== [[9, 42]]) throw new RuntimeException('Lead was not attached to the client case.');
@@ -52,4 +68,11 @@ if (count($stored) !== 1 || $stored[0]->type !== 'sales.lead.created' || $stored
     throw new RuntimeException('LeadCreated event was not stored with tenant scope.');
 }
 
-echo "Public lead application use case passed.\n";
+$repeat=$useCase->execute(array_reverse($input,true),'/property/demo');
+if(!$repeat->ok || $repeat->leadId!==42 || count($created)!==1 || count($stored)!==1 || count($attachments)!==1)throw new RuntimeException('Public lead replay repeated effects.');
+if($useCase->execute([...$input,'name'=>'Different'],'/property/demo')->ok)throw new RuntimeException('Public key reused with changed payload.');
+if($useCase->execute(array_diff_key($input,['submission_id'=>true]),'/property/demo')->ok)throw new RuntimeException('Missing submission identity accepted.');
+if($useCase->execute([...$input,'property_id'=>'12.2'],'/property/demo')->ok)throw new RuntimeException('Malformed property accepted.');
+if($useCase->execute([...$input,'submission_id'=>str_repeat('b',32)],'/property/demo')->leadId!==43)throw new RuntimeException('Independent enquiry suppressed.');
+if(($created[0][1]['request_intent']??null)!=='viewing')throw new RuntimeException('Intent not persisted.');
+echo "Public lead application, submission identity and idempotency PASS.\n";

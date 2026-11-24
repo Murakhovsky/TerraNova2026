@@ -65,7 +65,7 @@ final readonly class PublicBrandController
             $result = $this->commands->dispatch(new ReceivePublicLeadCommand(
                 OrganizationId::fromString($this->organizationId),
                 $request->request->all(),
-                $request->getRequestUri(),
+                $request->getPathInfo(),
             ));
 
             if (!$result instanceof SalesMutationResult) {
@@ -92,13 +92,12 @@ final readonly class PublicBrandController
                     $brand->state(),
                 ),
                 'brand' => $brand,
+                'leadSubmissionId' => bin2hex(random_bytes(16)),
             ]),
             Response::HTTP_OK,
             [
                 'Content-Type' => 'text/html; charset=UTF-8',
-                'Cache-Control' => $request->isMethod('GET')
-                    ? 'public, max-age=60'
-                    : 'no-store, private',
+                'Cache-Control' => 'no-store, private',
             ],
         );
     }

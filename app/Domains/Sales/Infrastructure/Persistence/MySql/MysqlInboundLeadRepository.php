@@ -12,6 +12,14 @@ final readonly class MysqlInboundLeadRepository implements InboundLeadRepository
     {
     }
 
+    public function existsForUpdate(string $organizationId,int $leadId): bool
+    {
+        if (!$this->connection->inTransaction()) throw new \LogicException('Lead readback requires a transaction.');
+        $q=$this->connection->prepare('SELECT 1 FROM tn_leads WHERE organization_id=? AND id=? LIMIT 1 FOR UPDATE');
+        $q->execute([$organizationId,$leadId]);
+        return $q->fetchColumn()!==false;
+    }
+
     public function create(string $organizationId, array $lead): int
     {
         $lead += [
