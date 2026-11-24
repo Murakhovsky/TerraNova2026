@@ -51,7 +51,14 @@ case "$ACTION" in
   *) usage ;;
 esac
 cd /opt/cos
-# Docker Compose -e NAME forwards values from root's exported environment,
-# not from command-line arguments or the persistent PHP service env.
-exec docker compose exec -T -e SHOPIFY_SHOP_DOMAIN -e SHOPIFY_CLIENT_ID -e SHOPIFY_CLIENT_SECRET -e COS_SHOPIFY_OPERATOR_ENABLED=1 \
-    php php bin/console cos:product:shopify "$ACTION" "${PARAMS[@]}"
+# Deliver credentials over STDIN to one short-lived PHP CLI process.
+# Do not put secrets in process argv or persistent PHP/worker environment.
+printf '%s\n' "$SHOPIFY_SHOP_DOMAIN" "$SHOPIFY_CLIENT_ID" "$SHOPIFY_CLIENT_SECRET" | \
+    docker compose exec -T php sh -c '
+        IFS= read -r SHOPIFY_SHOP_DOMAIN || exit 2
+        IFS= read -r SHOPIFY_CLIENT_ID || exit 2
+        IFS= read -r SHOPIFY_CLIENT_SECRET || exit 2
+        export SHOPIFY_SHOP_DOMAIN SHOPIFY_CLIENT_ID SHOPIFY_CLIENT_SECRET
+        export COS_SHOPIFY_OPERATOR_ENABLED=1
+        exec php bin/console cos:product:shopify "$@"
+    ' sh "$ACTION" "${PARAMS[@]}"

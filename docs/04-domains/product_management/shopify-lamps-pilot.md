@@ -25,7 +25,7 @@ For the supervised single-store pilot, leave the three credentials in the
 root-owned host file `/etc/cos/shopify-lamps.env` (0600), **not** in Docker
 Compose, GitHub or a permanent web/worker process environment.
 The guarded `bin/shopify-lamps-operator.sh` wrapper forwards credentials
-to exactly one transient PHP CLI process using `docker compose exec -e NAME`.
+to exactly one transient PHP CLI process over standard input (STDIN).
 Future multi-store use should resolve a tenant-scoped COS Credential Vault.
 
 The isolated no-output GitHub Actions smoke workflow
