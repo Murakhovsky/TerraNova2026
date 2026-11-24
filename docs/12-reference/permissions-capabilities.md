@@ -20,7 +20,7 @@ generated: true
 | --- | ---: | --- |
 | `both` | 48 | Capability присутня і в runtime catalogue, і в manifest. |
 | `runtime-only` | 3 | Runtime може перевіряти capability, але manifest її не декларує. |
-| `manifest-only` | 230 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
+| `manifest-only` | 235 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
 
 ## Каталог
 
@@ -193,6 +193,11 @@ generated: true
 | `marketing` | `marketing.paid.spend.evidence.get` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
 | `marketing` | `marketing.paid.sync.history` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
 | `marketing` | `marketing.paid.sync.request` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
+| `product_management` | `product_management.analytics.movement.search` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
+| `product_management` | `product_management.analytics.quality.search` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
+| `product_management` | `product_management.analytics.reconciliation.get` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
+| `product_management` | `product_management.analytics.stock.search` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
+| `product_management` | `product_management.analytics.summary.get` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.attribute.category.bind` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.attribute.category.get` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.attribute.define` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
