@@ -23,7 +23,7 @@ final readonly class MysqlSalesAccessControl implements SalesAccessControlInterf
                 ON c.organization_id=u.organization_id AND c.user_id=u.id
                AND c.capability=:capability AND c.status="ACTIVE"
              WHERE u.organization_id=:organization_id AND u.id=:user_id AND u.status="active"
-               AND (u.role="admin" OR c.capability IS NOT NULL)
+               AND (m.role="admin" OR c.capability IS NOT NULL)
              LIMIT 1'
         );
         $statement->execute([
