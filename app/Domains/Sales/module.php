@@ -111,7 +111,7 @@ return [
                 'retry_policy' => ['max_attempts' => 1],
                 'failure_contract' => 'One case per tenant and lead; recover ambiguous completion by native lead and case readback. Replaying the same lead never changes owner or creates another case.',
                 'lifecycle' => 'experimental',
-                'tests' => ['tests/unit/sales_client_case_create_capability.php', 'tests/unit/sales_lead_conversion_transaction.php', 'tests/integration/client_case_commands_mysql.php'],
+                'tests' => ['tests/unit/sales_client_case_create_capability.php', 'tests/unit/sales_lead_conversion_transaction.php', 'tests/integration/client_case_commands_mysql.php', 'tests/integration/sales_client_case_create_mysql.php'],
                 'documentation' => 'docs/04-domains/sales/completion-roadmap.md',
             ],
             [

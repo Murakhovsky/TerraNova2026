@@ -73,6 +73,8 @@ Sales володіє власним словником і станом. Конк
 
 ## Пов’язаний процес і довідник
 
+- [План повної реалізації Sales (#459)](./completion-roadmap.md)
+
 - [Звернення Sales → керована справа](../../02-workflows/sales-lead-to-managed-case.md)
 - [Варіанти використання застосунку](../../12-reference/application-use-cases.md)
 - [Команди](../../12-reference/commands.md)
