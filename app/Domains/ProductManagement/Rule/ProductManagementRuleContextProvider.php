@@ -25,6 +25,7 @@ final readonly class ProductManagementRuleContextProvider implements RuleContext
             'product_management.attribute.defined',
             'product_management.attribute.category_bound',
             'product_management.attribute.product_set',
+            'product_management.attribute.bulk_set',
             'product_management.variant.matrix_created',
             'product_management.variant.archived',
             'product_management.category.created',
