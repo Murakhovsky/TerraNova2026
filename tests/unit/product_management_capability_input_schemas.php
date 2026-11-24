@@ -13,6 +13,7 @@ foreach($raw['contributions']['capability_contracts'] as $definition) {
 if(count($contracts)!==29)throw new RuntimeException('Missing typed PM contracts.');
 $validator=new CapabilityJsonInputValidator();
 $good=[
+ 'product_management.price.base.set'=>['variant_id'=>str_repeat('a',32),'currency'=>'EUR','amount'=>'12.3400','expected_revision'=>0],
  'product_management.media.attach'=>['product_id'=>str_repeat('a',32),'file_id'=>'FILE-123',
     'variant_id'=>str_repeat('b',32),'role'=>'cover','sort_order'=>10],
  'product_management.media.detach'=>['media_id'=>str_repeat('a',32)],
@@ -37,6 +38,7 @@ $good=[
 ];
 foreach($good as $id=>$input) $validator->validate($contracts[$id],$input);
 $bad=[
+ 'product_management.price.base.set'=>[['variant_id'=>str_repeat('a',32),'currency'=>'EUR','amount'=>'1','expected_revision'=>-1],['variant_id'=>str_repeat('a',32),'currency'=>'EUR','amount'=>'1','expected_revision'=>'0']],
  'product_management.media.attach'=>[['product_id'=>str_repeat('a',32),'file_id'=>'../outside','role'=>'cover']],
  'product_management.media.detach'=>[['media_id'=>'invalid']],
  'product_management.media.search'=>[['product_id'=>str_repeat('a',32),'limit'=>101]],
