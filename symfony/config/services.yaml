@@ -1396,6 +1396,9 @@ services:
   Domains\Sales\Application\Contract\SalesProposalLeadReadModelInterface:
     alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceReadModel
 
+  App\Security\SalesRequestEntityAuthorizationInterface:
+    alias: App\Security\SalesRequestScope
+
   App\Application\Experience\Search\Contract\SalesEntitySearchInterface:
     alias: App\Infrastructure\Experience\Search\SalesEntitySearchAdapter
 
