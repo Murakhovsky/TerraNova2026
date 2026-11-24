@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ProductManagement price-list-update input V1",
+  "type": "object",
+  "required": [
+    "list_id",
+    "name",
+    "expected_revision"
+  ],
+  "properties": {
+    "list_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "expected_revision": {
+      "type": "integer",
+      "minimum": 1
+    }
+  },
+  "additionalProperties": false
+}
