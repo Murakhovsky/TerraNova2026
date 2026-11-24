@@ -44,6 +44,9 @@ try{
     $scoped=new \Domains\Sales\Application\Service\SalesWorkspaceScopedReadService($scope,$read);
     $analytics=new \Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesCommercialAnalyticsReadModel($db);
     $analyticsService=new \Domains\Sales\Application\Service\SalesCommercialAnalyticsService($scope,$analytics);
+    $entityScope=new \Domains\Sales\Application\Service\SalesEntityScopeService($scope,$read);
+    $policy=new \App\Application\Sales\SalesDirectInvocationPolicy($entityScope,new MysqlSalesAccessControl($db),new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOfferRepository($db));
+    $reports=new \Domains\Sales\Application\Service\SalesReportService($analyticsService);
     $gateway=new CanonicalCapabilityGateway($catalog,$active,new FederationCapabilityBindingResolver($catalog,new DomainModuleRegistry([]),$active),[
         new SalesWorkspaceSummaryAdapter($scope,$read),
         new \App\Infrastructure\Capability\SalesWorkspaceLeadsListAdapter($scoped),
@@ -52,8 +55,11 @@ try{
         new \App\Infrastructure\Capability\SalesAnalyticsOutcomesAdapter($analyticsService),
         new \App\Infrastructure\Capability\SalesAnalyticsForecastAdapter($analyticsService),
         new \App\Infrastructure\Capability\SalesAnalyticsConversionAdapter($analyticsService),
-        new \App\Infrastructure\Capability\SalesAnalyticsStagesAdapter($analyticsService)
-    ]);
+        new \App\Infrastructure\Capability\SalesAnalyticsStagesAdapter($analyticsService),
+        new \App\Infrastructure\Capability\SalesReportDataAdapter($reports),
+        new \App\Infrastructure\Capability\SalesDealStateReadAdapter(new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlDealRepository($db)),
+        new \App\Infrastructure\Capability\SalesInboundRequestReadAdapter($read)
+    ],[$policy]);
     $actor=static fn(string $tenant,int $user)=>new TenantContext(UserId::fromString((string)$user),OrganizationId::fromString($tenant),OrganizationRole::fromString('manager'),[Permission::fromString(TenantPermissions::ACCESS),Permission::fromString(TenantPermissions::MANAGE)]);
     $manager=$actor($org,$owner);
     $invoke=static fn(array $in)=>$gateway->invoke($manager,'sales.workspace.summary.read',$in,'trusted_read','','summary-test');
@@ -151,5 +157,34 @@ try{
     $history=$analyticsCall('stages',$range+['pipeline_id'=>$pid]);
     $check(count($history['items'])===1&&$history['items'][0]['entry_count']===2&&$history['items'][0]['distinct_deal_count']===1&&$history['items'][0]['complete_count']===1&&$history['items'][0]['partial_count']===1&&$history['items'][0]['duration_count']===1&&$history['items'][0]['average_duration_seconds']==='86400.00','Stage history quality/duration mismatch.');
     $check(!str_contains(json_encode([$cohort,$history],JSON_THROW_ON_ERROR),'Private'),'Analytics leaked PII.');
+    // P4: actual direct Gateway authorization, not only declared scope metadata.
+    $check($page('sales.deal.state.read',['deal_id'=>$ownedId])['found'],'Own deal denied.');
+    $reject(fn()=>$page('sales.deal.state.read',['deal_id'=>$otherId]));
+    $check($page('sales.inbound.request.read',['lead_id'=>$leadId])['found'],'Own lead denied.');
+    $reject(fn()=>$page('sales.inbound.request.read',['lead_id'=>$lead]));
+    $db->prepare('UPDATE tn_leads SET client_case_id=? WHERE organization_id=? AND id=?')->execute([$otherId,$org,$leadId]);
+    $reject(fn()=>$page('sales.inbound.request.read',['lead_id'=>$leadId]));
+    $db->prepare('UPDATE tn_leads SET client_case_id=? WHERE organization_id=? AND id=?')->execute([$ownedId,$org,$leadId]);
+    // Director read capability is live and revocable.
+    $db->prepare('INSERT INTO sales_user_capabilities(organization_id,user_id,capability,status,granted_by,created_at,updated_at) VALUES (?,?, "sales.director.view","ACTIVE",?,NOW(6),NOW(6))')->execute([$org,$owner,(string)$owner]);
+    $check($page('sales.deal.state.read',['deal_id'=>$otherId])['found'],'Director deal read denied.');
+    $db->prepare('DELETE FROM sales_user_capabilities WHERE organization_id=? AND user_id=? AND capability="sales.director.view"')->execute([$org,$owner]);
+    $reject(fn()=>$page('sales.deal.state.read',['deal_id'=>$otherId]));
+    // P5: stable table data contract for Workspace/export, exact values and scope.
+    $reportCall=static fn(string $id,array $extra=[])=>$gateway->invoke($manager,'sales.reports.data.read',['report_id'=>$id,...$range,...$extra],'trusted_read','','reports-test');
+    $report=$reportCall('forecast',['pipeline_id'=>$pid]);
+    $usd=array_values(array_filter($report['rows'],static fn(array $r):bool=>$r['metric']==='weighted_value'&&$r['currency']==='USD'&&$r['bucket']==='in_period'));
+    $check($report['row_count']===count($report['rows'])&&count($usd)===1&&$usd[0]['value']==='1256.26','Forecast report lost exact money or row metadata.');
+    foreach(['outcomes','conversion','stages'] as $reportId){
+        $result=$reportCall($reportId);
+        $check($result['schema_version']==='1.0.0'&&$result['report_id']===$reportId&&$result['owner_id']===$owner
+            &&!str_contains(json_encode($result,JSON_THROW_ON_ERROR),'Private'),'Report scope or PII failure.');
+    }
+    $reject(fn()=>$reportCall('outcomes',['scope'=>'tenant']));
+    $reject(fn()=>$reportCall('forecast',['scope'=>'owner','owner_id'=>$other]));
+    $reject(fn()=>$reportCall('conversion',['pipeline_id'=>$pid]));
+    $reject(fn()=>$reportCall('unknown'));
+    $db->prepare('DELETE FROM cos_organization_memberships WHERE organization_id=? AND user_id=?')->execute([$org,$owner]);
+    $reject(fn()=>$reportCall('outcomes'));
     echo "Sales S5 scoped exact summary, redacted lists and timeline PASS.\n";
 }finally{$db->rollBack();}
