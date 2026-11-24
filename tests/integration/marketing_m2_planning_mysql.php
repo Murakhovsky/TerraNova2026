@@ -149,5 +149,52 @@ $assert($contexts->build($actor,$campaignId,1,$creativeId,3,$set['id'],2)['conte
 $denied(static fn()=> $contexts->build($contextActor($orgB),$campaignId,1,$creativeId,3),'Cross-tenant analyst context accepted.');
 $denied(static fn()=> $contexts->build($actor,$campaignId,1,$creativeId,2),'Stale Creative context accepted.');
 $denied(static fn()=> $contexts->build($actor,$campaignId,1,$creativeId,3,$set['id'],1),'Stale AdSet context accepted.');
+$credential=new \Platform\Integration\Model\Credential('hermes-fixture',\Kernel\Shared\Domain\OrganizationId::fromString($orgA),
+    'hermes-fixture-connection','hermes_analyst','env://TEST_HERMES_TOKEN',['marketing.advice']);
+$vault=new class implements \Platform\Integration\Contract\CredentialVaultInterface {
+    public function resolve(\Platform\Integration\Model\Credential $credential):array{return ['access_token'=>'fixture-token'];}
+};
+$transport=new class implements \Domains\Marketing\Infrastructure\Hermes\HermesAnalystTransport {
+    public bool $tools=false;
+    public bool $incomplete=false;
+    public int $posts=0;
+    public array $payload=[];
+    public string $key='';
+    public function get(string $url,string $token):array {
+        if(!str_ends_with($url,'/p/marketing-fixture/v1/toolsets')||$token!=='fixture-token')throw new RuntimeException('Wrong profile/auth.');
+        return [['enabled'=>$this->tools,'tools'=>['terminal']]];
+    }
+    public function post(string $url,string $token,string $key,array $payload):array {
+        if(!str_ends_with($url,'/p/marketing-fixture/v1/chat/completions')||$token!=='fixture-token')throw new RuntimeException('Wrong endpoint/auth.');
+        $this->posts++;$this->payload=$payload;$this->key=$key;
+        $facts=json_decode($payload['messages'][1]['content'],true,32,JSON_THROW_ON_ERROR);
+        return ['id'=>'chatcmpl-fixture','choices'=>[['finish_reason'=>$this->incomplete?'length':'stop','message'=>[
+            'role'=>'assistant','content'=>json_encode(['context_hash'=>$facts['context_hash'],'recommendation'=>'Improve draft headline',
+                'rationale'=>'Creative wording needs review','evidence_aliases'=>['creative']],JSON_THROW_ON_ERROR)]]]];
+    }
+};
+$connection=new \Domains\Marketing\Infrastructure\Hermes\HermesAnalystConnection('https://hermes.example.com/p/marketing-fixture',$credential,true);
+$runtime=new \Domains\Marketing\Infrastructure\Hermes\HermesMarketingAnalystAdapter($contexts,$connection,$vault,$transport,
+    new \Domains\Marketing\Domain\MarketingAnalystRecommendationPolicy());
+$advice=$runtime->recommend($actor,$envelope,'fixture-correlation-01');
+$assert($advice['runtime']==='HERMES_AGENT'&&$advice['runtime_response_id']==='chatcmpl-fixture'
+    &&!$advice['paid_activation_approved']&&$transport->posts===1,'Hermes adapter output invalid.');
+$sent=$transport->payload['messages'][1]['content'];
+$assert(!str_contains($sent,$campaignId)&&!str_contains($sent,$creativeId)&&!str_contains($sent,'fixture-token')
+    &&!str_contains($sent,'destination_url'),'Hermes received unnecessary identifiers or secrets.');
+$key=$transport->key;
+$runtime->recommend($actor,$envelope,'fixture-correlation-01');
+$assert($key===$transport->key,'Hermes idempotency identity changed.');
+$transport->tools=true;
+$denied(static fn()=> $runtime->recommend($actor,$envelope,'fixture-correlation-02'),'Tool-enabled Hermes was admitted.');
+$assert($transport->posts===2,'Unsafe profile received a turn.');
+$transport->tools=false;$transport->incomplete=true;
+$denied(static fn()=> $runtime->recommend($actor,$envelope,'fixture-correlation-03'),'Incomplete Hermes turn accepted.');
+$denied(static fn()=> $runtime->recommend($contextActor($orgB),$envelope,'fixture-correlation-04'),'Foreign tenant used Hermes profile.');
+$denied(static fn()=> $runtime->recommend($actor,[...$envelope,'context_hash'=>str_repeat('f',64)],'fixture-correlation-05'),'Forged context accepted.');
+$closed=new \Domains\Marketing\Infrastructure\Hermes\HermesMarketingAnalystAdapter($contexts,
+    new \Domains\Marketing\Infrastructure\Hermes\HermesAnalystConnection('https://hermes.example.com/p/marketing-fixture',$credential),
+    $vault,$transport,new \Domains\Marketing\Domain\MarketingAnalystRecommendationPolicy());
+$denied(static fn()=> $closed->recommend($actor,$envelope,'fixture-correlation-06'),'Unaccepted Hermes profile admitted.');
 echo "Marketing M2 real MySQL two-person review, tenant fence, immutable Creative revisions, stale gate PASS\n";
 

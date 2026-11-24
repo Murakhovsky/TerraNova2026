@@ -176,5 +176,16 @@ $validator->validate($contracts['marketing.analyst.context.get'],['campaign_id'=
     'campaign_revision'=>1,'creative_id'=>'mkcr-'.str_repeat('b',24),'creative_revision'=>1]);
 $blocked(static fn()=> $validator->validate($contracts['marketing.analyst.context.get'],['campaign_id'=>'mkt-'.str_repeat('a',24),
     'campaign_revision'=>1,'creative_id'=>'mkcr-'.str_repeat('b',24),'creative_revision'=>1,'organization_id'=>'foreign']),'Client supplied tenant.');
+$hermesCredential=new \Platform\Integration\Model\Credential('test',\Kernel\Shared\Domain\OrganizationId::fromString('test-tenant'),
+    'connection','hermes_analyst','env://TEST_HERMES_TOKEN',['marketing.advice']);
+foreach(['http://hermes.example.com/p/test','https://hermes.example.com','https://hermes.example.com/p/test?x=1',
+    'https://user@hermes.example.com/p/test','https://127.0.0.1/p/test'] as $badEndpoint){
+    $blocked(static fn()=>new \Domains\Marketing\Infrastructure\Hermes\HermesAnalystConnection($badEndpoint,$hermesCredential),
+        'Unsafe or non-profile Hermes URL accepted.');
+}
+$connection=new \Domains\Marketing\Infrastructure\Hermes\HermesAnalystConnection('https://hermes.example.com/p/test',$hermesCredential);
+$expect(!$connection->isolatedProfileAccepted,'Hermes profile admission enabled by default.');
+$services=(string)file_get_contents($root.'/symfony/config/services.yaml');
+$expect(!str_contains($services,'HermesMarketingAnalystAdapter'),'Hermes runtime must remain unbound until durable admission.');
 echo "Marketing M2 typed planning policy, provenance, CSRF and boundary PASS\n";
 
