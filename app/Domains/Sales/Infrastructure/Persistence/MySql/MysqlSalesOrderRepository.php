@@ -12,8 +12,8 @@ final readonly class MysqlSalesOrderRepository implements SalesOrderRepositoryIn
     public function create(string $org,array $order,array $lines,array $evidence):void
     {
         $this->transaction();
-        $this->connection->prepare('INSERT INTO sales_orders(organization_id,order_id,owner_user_id,deal_id,customer_id,channel,store_reference,external_order_id,currency,subtotal,discount,tax,shipping,total,attribution_json,placed_at,created_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
-            ->execute([$org,$order['order_id'],$order['owner_id'],$order['deal_id'],$order['customer_id'],$order['channel'],$order['store_reference'],$order['external_order_id'],$order['currency'],$order['subtotal'],$order['discount'],$order['tax'],$order['shipping'],$order['total'],json_encode((object)$order['attribution'],JSON_THROW_ON_ERROR),$order['placed_at'],$order['created_by']]);
+        $this->connection->prepare('INSERT INTO sales_orders(organization_id,order_id,owner_user_id,deal_id,customer_id,channel,store_reference,external_order_id,currency,subtotal,discount,tax,tax_included,shipping,total,attribution_json,placed_at,created_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+            ->execute([$org,$order['order_id'],$order['owner_id'],$order['deal_id'],$order['customer_id'],$order['channel'],$order['store_reference'],$order['external_order_id'],$order['currency'],$order['subtotal'],$order['discount'],$order['tax'],(int)$order['tax_included'],$order['shipping'],$order['total'],json_encode((object)$order['attribution'],JSON_THROW_ON_ERROR),$order['placed_at'],$order['created_by']]);
         $stmt=$this->connection->prepare('INSERT INTO sales_order_lines(organization_id,order_id,line_no,sku,title,product_id,variant_id,quantity,unit_price,subtotal) VALUES(?,?,?,?,?,?,?,?,?,?)');
         foreach($lines as $line)$stmt->execute([$org,$order['order_id'],$line['line_no'],$line['sku'],$line['title'],$line['product_id'],$line['variant_id'],$line['quantity'],$line['unit_price'],$line['subtotal']]);
         $this->connection->prepare('INSERT INTO sales_order_evidence(organization_id,event_id,order_id,revision,event_type,occurred_at,payload) VALUES(?,?,?,?,?,?,?)')
@@ -31,7 +31,7 @@ final readonly class MysqlSalesOrderRepository implements SalesOrderRepositoryIn
         $result=['order_id'=>$row['order_id'],'owner_id'=>(int)$row['owner_user_id'],'deal_id'=>$row['deal_id']===null?null:(int)$row['deal_id'],
             'customer_id'=>$row['customer_id']===null?null:(int)$row['customer_id'],'channel'=>$row['channel'],'store_reference'=>$row['store_reference'],
             'external_order_id'=>$row['external_order_id'],'status'=>$row['status'],'revision'=>(int)$row['revision'],'currency'=>$row['currency'],
-            'placed_at'=>str_replace(' ','T',$row['placed_at']).'Z','lines'=>$lines];
+            'tax_included'=>(bool)$row['tax_included'],'placed_at'=>str_replace(' ','T',$row['placed_at']).'Z','lines'=>$lines];
         foreach(['subtotal','discount','tax','shipping','total'] as $key)$result[$key]=(string)$row[$key];
         return $result; // Attribution observations are not a user-visible customer profile.
     }
