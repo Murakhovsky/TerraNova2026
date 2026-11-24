@@ -35,8 +35,10 @@ final readonly class MarketingAnalystExecutionService
         if($adsetId!==null){MarketingPlanningPolicy::id($adsetId,'mkas-');MarketingPlanningPolicy::revision($adsetRevision);}
         if($approvedContextHash!==null&&!preg_match('/^[a-f0-9]{64}$/D',$approvedContextHash))throw new DomainException('Invalid approved context hash.');
         $actorId=$actor->userId()->value();
-        $hash=hash('sha256',json_encode([$actorId,$campaignId,$campaignRevision,$creativeId,$creativeRevision,
-            $adsetId,$adsetRevision,$this->admission->profileRef,$approvedContextHash],JSON_THROW_ON_ERROR));
+        $identity=[$actorId,$campaignId,$campaignRevision,$creativeId,$creativeRevision,$adsetId,$adsetRevision,$this->admission->profileRef];
+        // Preserve pre-cutover receipt identity when no approved hash was supplied.
+        if($approvedContextHash!==null)$identity[]=$approvedContextHash;
+        $hash=hash('sha256',json_encode($identity,JSON_THROW_ON_ERROR));
         $existing=$this->runs->byKey($org,$key);
         if($existing!==null){
             if(!hash_equals($existing['request_hash'],$hash))throw new DomainException('Analyst idempotency conflict.');
