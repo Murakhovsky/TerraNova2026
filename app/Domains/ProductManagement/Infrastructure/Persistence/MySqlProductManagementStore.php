@@ -58,7 +58,7 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
                 $this->assertShopifyLocalOwnership($org,'variant',$variantId);
                 if ((int)$variant['revision']!==$expectedRevision) throw new DomainException('Variant revision conflict.');
                 if (isset($changes['sku']) && $changes['sku']!==$variant['sku']) {
-                    $history=$this->one('SELECT movement_id FROM pm_stock_movements WHERE organization_id=? AND variant_id=? LIMIT 1',
+                    $history=$this->one('SELECT movement_id FROM pm_stock_movements WHERE organization_id=? AND variant_id=? LIMIT 1 FOR UPDATE',
                         [$org,$variantId]);
                     if ($history!==null) throw new DomainException('Cannot change SKU after stock movements.');
                 }
@@ -78,9 +78,9 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
     {
         return $this->mutate($org,'variant.archive',$key,[$variantId,$expectedRevision],$actor,$correlation,
             function()use($org,$variantId,$expectedRevision):array {
-                $variant=$this->one('SELECT revision,status FROM pm_variants WHERE organization_id=? AND variant_id=? FOR UPDATE',
+                $variant=$this->one('SELECT v.revision,v.status,p.status AS product_status FROM pm_variants v JOIN pm_products p ON p.organization_id=v.organization_id AND p.product_id=v.product_id WHERE v.organization_id=? AND v.variant_id=? FOR UPDATE',
                     [$org,$variantId]);
-                if ($variant===null||$variant['status']!=='active') throw new DomainException('Variant absent or archived.');
+                if ($variant===null||$variant['status']!=='active'||$variant['product_status']==='archived') throw new DomainException('Variant or parent Product absent or archived.');
                 $this->assertShopifyLocalOwnership($org,'variant',$variantId);
                 if ((int)$variant['revision']!==$expectedRevision) throw new DomainException('Variant revision conflict.');
                 $balance=$this->one('SELECT location_id FROM pm_stock_balances WHERE organization_id=? AND variant_id=? AND (on_hand<>0 OR reserved<>0) LIMIT 1 FOR UPDATE',
@@ -120,8 +120,8 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
                 if ($row===null||$row['status']==='archived') throw new DomainException('Product absent or archived.');
                 $this->assertShopifyLocalOwnership($organizationId,'product',$productId);
                 if ((int)$row['revision']!==$expectedRevision) throw new DomainException('Product revision conflict.');
-                $reserved=$this->one('SELECT COUNT(*) AS total FROM pm_stock_balances b JOIN pm_variants v ON v.organization_id=b.organization_id AND v.variant_id=b.variant_id WHERE v.organization_id=? AND v.product_id=? AND (b.on_hand<>0 OR b.reserved<>0)',[$organizationId,$productId]);
-                if ($reserved!==null && (int)$reserved['total']>0) throw new DomainException('Product has nonzero stock or reservations.');
+                $reserved=$this->one('SELECT b.location_id FROM pm_stock_balances b JOIN pm_variants v ON v.organization_id=b.organization_id AND v.variant_id=b.variant_id WHERE v.organization_id=? AND v.product_id=? AND (b.on_hand<>0 OR b.reserved<>0) LIMIT 1 FOR UPDATE',[$organizationId,$productId]);
+                if ($reserved!==null) throw new DomainException('Product has nonzero stock or reservations.');
                 $this->execute("UPDATE pm_products SET status='archived',revision=revision+1 WHERE organization_id=? AND product_id=?",[$organizationId,$productId]);
                 return ['product_id'=>$productId,'revision'=>$expectedRevision+1,'status'=>'archived'];
             },'product_management.product.archived','Product');
@@ -312,7 +312,7 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
     {
         return $this->mutate($organizationId,'stock.movement',$key,[$variantId,$locationId,$delta,$kind,$source],$actor,$correlation,
             function () use ($organizationId,$variantId,$locationId,$delta,$kind,$source,$key,$actor): array {
-                $variant=$this->one('SELECT v.track_inventory,v.status,p.status AS product_status FROM pm_variants v JOIN pm_products p ON p.organization_id=v.organization_id AND p.product_id=v.product_id WHERE v.organization_id=? AND v.variant_id=?', [$organizationId,$variantId]);
+                $variant=$this->one('SELECT v.track_inventory,v.status,p.status AS product_status FROM pm_variants v JOIN pm_products p ON p.organization_id=v.organization_id AND p.product_id=v.product_id WHERE v.organization_id=? AND v.variant_id=? FOR UPDATE', [$organizationId,$variantId]);
                 $location=$this->one('SELECT status FROM pm_locations WHERE organization_id=? AND location_id=?', [$organizationId,$locationId]);
                 if ($variant === null || (int)$variant['track_inventory'] !== 1 || $variant['status'] !== 'active' || $variant['product_status'] === 'archived'
                     || $location === null || $location['status'] !== 'active') {
