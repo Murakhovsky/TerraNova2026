@@ -78,7 +78,7 @@ $deny=static function(callable $fn)use($assert):void {
     try{$fn();}catch(DomainException){return;}
     $assert(false,'Untrusted Product capability invoked.');
 };
-$assert(count($catalog->executables())===28,'expected 28 Product Management contracts');
+$assert(count($catalog->executables())===30,'expected 30 Product Management contracts');
 $assert($gateway->describe($actor,'product_management.stock.receive')['status']==='direct_human',
     'stock command must be bound only to trusted human');
 $assert($gateway->describe($actor,'product_management.category.search')['status']==='read_only',
