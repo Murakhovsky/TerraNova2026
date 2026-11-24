@@ -80,7 +80,7 @@ final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInte
             LEFT JOIN tn_users u ON u.id = c.assigned_user_id AND u.organization_id = c.organization_id
             LEFT JOIN tn_property_types pt ON pt.id = c.property_type_id
             LEFT JOIN tn_locations l ON l.id = c.location_id
-            LEFT JOIN sales_pipeline_stages ps ON ps.id = c.stage_id AND ps.organization_id = c.organization_id
+            LEFT JOIN sales_pipeline_stages ps ON ps.id = c.stage_id AND ps.organization_id = c.organization_id AND ps.pipeline_id=c.pipeline_id
             WHERE c.organization_id = :organization_id AND ' . implode(' AND ', $where) . '
             ORDER BY ' . $orderBy . ' LIMIT 150', $params);
     }
@@ -224,7 +224,7 @@ final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInte
     {
         $params = ['organization_id' => $this->organizationId];
         $statusRows = $this->all('SELECT status, COUNT(*) AS total FROM tn_leads l WHERE organization_id = :organization_id'.$this->leadScope('l').' GROUP BY status', $params);
-        $intentRows = $this->all('SELECT request_intent, COUNT(*) AS total FROM tn_leads WHERE organization_id = :organization_id GROUP BY request_intent', $params);
+        $intentRows = $this->all('SELECT request_intent, COUNT(*) AS total FROM tn_leads l WHERE organization_id = :organization_id'.$this->leadScope('l').' GROUP BY request_intent', $params);
         $summary = $this->one('SELECT COUNT(*) AS total, SUM(status = "new") AS new_items,
             SUM(assigned_user_id IS NULL) AS unassigned_items, SUM(client_case_id IS NULL) AS no_case_items,
             SUM(next_contact_at IS NOT NULL AND next_contact_at <= NOW() AND status NOT IN ("won", "lost", "spam", "closed")) AS due_items
