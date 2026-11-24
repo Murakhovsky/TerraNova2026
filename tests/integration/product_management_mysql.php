@@ -177,7 +177,9 @@ $eur=$prices->set($org,$variant,'EUR','19.9900','pm-eur-'.$token,'ci-user','ci-p
 $assert($eur['revision']===1 && $eur['price']==='19.9900','New currency price uses independent revision');
 $eurUpdated=$prices->set($org,$variant,'EUR','21.1250','pm-eur-update-'.$token,'ci-user','ci-pm',1);
 $assert($eurUpdated['revision']===2 && $eurUpdated['price']==='21.1250','Fenced price update');
-$assert($prices->set($org,$variant,'EUR','21.1250','pm-eur-update-'.$token,'ci-user','ci-pm',1)===$eurUpdated,'Fenced price replay preserves receipt');
+$eurReplay=$prices->set($org,$variant,'EUR','21.1250','pm-eur-update-'.$token,'ci-user','ci-pm',1);
+ksort($eurReplay);ksort($eurUpdated);
+$assert($eurReplay===$eurUpdated,'Fenced price replay preserves receipt');
 $reject(static fn()=> $prices->set($org,$variant,'EUR','1','pm-eur-stale-'.$token,'ci-user','ci-pm',1),'Stale price revision');
 $reject(static fn()=> $prices->set($org,$variant,'EUR','21.1250','pm-eur-update-'.$token,'ci-user','ci-pm',2),'Same key different revision');
 $reject(static fn()=> $prices->set($other,$variant,'EUR','1','pm-eur-cross-'.$token,'ci-other','ci-pm',0),'Cross tenant price');
@@ -257,8 +259,10 @@ $reject(static fn()=> $products->updateProduct($org,$created['product_id'],['nam
     'pm-edit-archived-'.$token,'ci-user','ci-pm'),'archived Product cannot be edited');
 // Exact replay must return the original receipt even after the lifecycle advanced.
 $replayedVariant=$products->archiveVariant($org,$variant,2,'pm-var-archive-'.$token,'ci-user','ci-pm');
+ksort($replayedVariant);ksort($variantArchived);
 $assert($replayedVariant===$variantArchived,'Variant archive replay must return the same receipt');
 $replayedProduct=$products->archiveProduct($org,$created['product_id'],2,'pm-archive-'.$token,'ci-user','ci-pm');
+ksort($replayedProduct);ksort($archived);
 $assert($replayedProduct===$archived,'Product archive replay must return the same receipt');
 $reject(static fn()=> $products->archiveProduct($other,$created['product_id'],2,
     'pm-archive-cross-'.$token,'ci-other','ci-pm'),'cross-tenant Product archive');
