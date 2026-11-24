@@ -64,16 +64,23 @@ final readonly class ProductManagementPageController
             $product=$this->readProduct($actor,$id);
             if ($product===null) return new Response('Product not found.',404);
             $categories=$this->read($actor,'category.search',['limit'=>100,'offset'=>0]);
+            $currency=strtoupper(trim((string)$request->query->get('currency','UAH')));
+            if (!preg_match('/^[A-Z]{3}$/D',$currency)) return new Response('Invalid currency code.',422);
+            $pricePage=filter_var($request->query->get('price_page','1'),FILTER_VALIDATE_INT);
+            if ($pricePage===false || $pricePage<1 || $pricePage>1000000) return new Response('Invalid price page.',422);
+            $priceVariants=array_slice($product['variants']??[],($pricePage-1)*30,30);
             $prices=[];
-            foreach (array_slice($product['variants']??[],0,30) as $variant) {
+            foreach ($priceVariants as $variant) {
                 $vid=(string)($variant['variant_id']??'');
                 if (preg_match('/^[a-f0-9]{32}$/D',$vid)) {
-                    $price=$this->read($actor,'price.base.get',['variant_id'=>$vid,'currency'=>'UAH']);
-                    $prices[$vid]=$price['price']??null;
+                    $price=$this->read($actor,'price.base.get',['variant_id'=>$vid,'currency'=>$currency]);
+                    $prices[$vid]=$price;
                 }
             }
             return $this->render($request,$actor,'product',[
                 'product'=>$product,'categories'=>$categories['items']??[], 'prices'=>$prices,
+                'priceCurrency'=>$currency,'pricePage'=>$pricePage,
+                'priceHasNext'=>count($product['variants']??[])>$pricePage*30,
             ]);
         } catch (Throwable $e) {
             error_log('product_management.workspace.detail_unavailable '.$e::class);
@@ -264,12 +271,31 @@ final readonly class ProductManagementPageController
             }
         }
         if (!$ownsVariant) return new Response('Variant does not belong to this active Product.',422);
+        $currency=strtoupper(trim((string)$request->request->get('currency','')));
+        $revision=filter_var($request->request->get('expected_revision'),FILTER_VALIDATE_INT);
+        if (!preg_match('/^[A-Z]{3}$/D',$currency)||$revision===false||$revision<0)
+            return new Response('Invalid currency or price revision.',422);
+        if (($product['status']??null)==='archived') return new Response('Archived Product cannot be priced.',422);
         $input=[
-            'variant_id'=>$variantId,
-            'currency'=>'UAH',
+            'variant_id'=>$variantId,'currency'=>$currency,
             'amount'=>trim((string)$request->request->get('amount','')),
+            'expected_revision'=>$revision,
         ];
-        return $this->mutateProduct($actor,$request,$id,'price.base.set',$input);
+        try {
+            $receipt=$this->write($actor,'price.base.set',$input,$request);
+        } catch (DomainException|\InvalidArgumentException) {
+            return new Response('Price action blocked. Reload current price and revision.',422);
+        } catch (Throwable $e) {
+            error_log('product_management.workspace.price_write_uncertain '.$e::class);
+            return new Response('Price outcome uncertain. Reload before retrying.',503);
+        }
+        try {
+            if (!$this->verifyPrice($actor,$input,$receipt)) throw new \RuntimeException('Price readback mismatch.');
+            return $this->go('/product-management/products/'.$id.'?currency='.$currency.'&notice=updated');
+        } catch (Throwable $e) {
+            error_log('product_management.workspace.price_readback_uncertain '.$e::class);
+            return new Response('Price receipt obtained; current state unverified. Reload before retrying.',503);
+        }
     }
 
     public function attachMedia(Request $request,string $id):Response
@@ -399,7 +425,6 @@ final readonly class ProductManagementPageController
             'translation.upsert' => $this->containsPair($after['translations']??[],'locale','name',
                 (string)$input['locale'],(string)$input['name']),
             'category.assign' => $this->containsId($after['categories']??[],'category_id',(string)$input['category_id']),
-            'price.base.set' => $this->verifyPrice($actor,$input),
             default => false,
         };
         if (!$verified) throw new DomainException('Canonical Domain result did not match independently readable state.');
@@ -425,7 +450,7 @@ final readonly class ProductManagementPageController
     }
 
     /** @param array<string,mixed> $input */
-    private function verifyPrice(TenantContext $actor,array $input):bool
+    private function verifyPrice(TenantContext $actor,array $input,array $receipt):bool
     {
         $price=$this->read($actor,'price.base.get',[
             'variant_id'=>(string)$input['variant_id'],'currency'=>(string)$input['currency'],
@@ -441,7 +466,15 @@ final readonly class ProductManagementPageController
             $trimmed=ltrim($whole,'0');
             return ($trimmed===''?'0':$trimmed).'.'.str_pad($fraction,4,'0');
         };
-        return $normalize($actual)===$normalize($expected)&&(int)($price['revision']??0)>=1;
+        $revision=$input['expected_revision']+1;
+        return $normalize($actual)===$normalize($expected)
+            && ($receipt['variant_id']??null)===$input['variant_id']
+            && ($price['variant_id']??null)===$input['variant_id']
+            && ($receipt['currency']??null)===$input['currency']
+            && ($price['currency']??null)===$input['currency']
+            && ($receipt['price']??null)===$actual
+            && (int)($receipt['revision']??0)===$revision
+            && (int)($price['revision']??0)===$revision;
     }
 
     private function checkedProduct(TenantContext $actor,string $id):array|Response
