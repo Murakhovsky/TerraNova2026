@@ -117,14 +117,16 @@ final readonly class PricingService
     {
         if($org===''||strlen($org)>40||$limit<1||$limit>100||$offset<0||$offset>10000000)
             throw new DomainException('Invalid price list scope or pagination.');
-        $sql='SELECT list_id,code,name,kind,currency FROM pm_price_lists WHERE organization_id=:org';
+        $sql='SELECT list_id,code,name,kind,currency,status,revision FROM pm_price_lists WHERE organization_id=:org';
         if($code!==null)$sql.=' AND code=:code';
         $stmt=$this->connection->prepare($sql.' ORDER BY code,list_id LIMIT :lim OFFSET :off');
         $stmt->bindValue(':org',$org);
         if($code!==null)$stmt->bindValue(':code',ProductRules::code($code));
         $stmt->bindValue(':lim',$limit,PDO::PARAM_INT);$stmt->bindValue(':off',$offset,PDO::PARAM_INT);
         $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return array_map(static function(array $row):array{
+            $row['revision']=(int)$row['revision'];return $row;
+        },$stmt->fetchAll(PDO::FETCH_ASSOC));
     }
 
     /** No implicit fallback, FX conversion or inferred customer eligibility. */
@@ -146,8 +148,8 @@ final readonly class PricingService
         return $this->listMutation($org,'price.list.entry.set',[$listId,$variantId,$amount,$expectedRevision],$key,$actor,$correlation,
             'product_management.price_list.entry_updated',function()use($org,$listId,$variantId,$amount,$expectedRevision,$actor):array{
                 $this->lockPriceableVariant($org,$variantId);
-                $list=$this->query('SELECT currency FROM pm_price_lists WHERE organization_id=? AND list_id=? FOR UPDATE',[$org,$listId])->fetch(PDO::FETCH_ASSOC);
-                if($list===false)throw new DomainException('Unknown tenant price list.');
+                $list=$this->query('SELECT currency,status FROM pm_price_lists WHERE organization_id=? AND list_id=? FOR UPDATE',[$org,$listId])->fetch(PDO::FETCH_ASSOC);
+                if($list===false||$list['status']!=='active')throw new DomainException('Active tenant price list required.');
                 $old=$this->query('SELECT amount,revision FROM pm_price_list_entries WHERE organization_id=? AND list_id=? AND variant_id=? FOR UPDATE',[$org,$listId,$variantId])->fetch(PDO::FETCH_ASSOC);
                 if(($old===false?0:(int)$old['revision'])!==$expectedRevision)throw new DomainException('Price list entry revision conflict.');
                 if($old===false){
@@ -160,6 +162,49 @@ final readonly class PricingService
                     [$org,$listId,$variantId,$result['revision'],$old===false?null:$old['amount'],$result['price'],$actor]);
                 return $result;
             });
+    }
+
+    public function updateList(string $org,string $listId,string $name,int $expectedRevision,string $key,string $actor,string $correlation):array
+    {
+        return $this->changeList($org,$listId,ProductRules::name($name),$expectedRevision,$key,$actor,$correlation);
+    }
+
+    public function archiveList(string $org,string $listId,int $expectedRevision,string $key,string $actor,string $correlation):array
+    {
+        return $this->changeList($org,$listId,null,$expectedRevision,$key,$actor,$correlation);
+    }
+
+    private function changeList(string $org,string $listId,?string $name,int $expectedRevision,string $key,string $actor,string $correlation):array
+    {
+        if(!preg_match('/^[a-f0-9]{32}$/D',$listId)||$expectedRevision<1)throw new DomainException('Invalid price list identity or revision.');
+        $archive=$name===null;
+        return $this->listMutation($org,$archive?'price.list.archive':'price.list.update',[$listId,$name,$expectedRevision],$key,$actor,$correlation,
+            $archive?'product_management.price_list.archived':'product_management.price_list.updated',
+            function()use($org,$listId,$name,$expectedRevision,$archive):array{
+                $row=$this->query('SELECT list_id,code,name,kind,currency,status,revision FROM pm_price_lists WHERE organization_id=? AND list_id=? FOR UPDATE',[$org,$listId])->fetch(PDO::FETCH_ASSOC);
+                if($row===false||$row['status']!=='active'||(int)$row['revision']!==$expectedRevision)
+                    throw new DomainException('Active tenant price list and current revision required.');
+                $row['name']=$archive?$row['name']:$name;
+                $row['status']=$archive?'archived':'active';
+                $row['revision']=$expectedRevision+1;
+                $this->query('UPDATE pm_price_lists SET name=?,status=?,revision=? WHERE organization_id=? AND list_id=?',
+                    [$row['name'],$row['status'],$row['revision'],$org,$listId]);
+                return $row;
+            });
+    }
+
+    public function listHistory(string $org,string $listId,string $variantId,int $limit=30,int $offset=0):array
+    {
+        $this->listScope($org,$listId,$variantId);
+        if($limit<1||$limit>100||$offset<0||$offset>10000000)throw new DomainException('Invalid history pagination.');
+        $stmt=$this->connection->prepare('SELECT revision,old_amount,new_amount,actor_ref,created_at FROM pm_price_list_history
+            WHERE organization_id=:org AND list_id=:list AND variant_id=:variant ORDER BY revision DESC LIMIT :lim OFFSET :off');
+        $stmt->bindValue(':org',$org);$stmt->bindValue(':list',$listId);$stmt->bindValue(':variant',$variantId);
+        $stmt->bindValue(':lim',$limit,PDO::PARAM_INT);$stmt->bindValue(':off',$offset,PDO::PARAM_INT);
+        $stmt->execute();
+        return array_map(static function(array $row):array{
+            $row['revision']=(int)$row['revision'];return $row;
+        },$stmt->fetchAll(PDO::FETCH_ASSOC));
     }
 
     private function listScope(string $org,string $listId,string $variantId):void
