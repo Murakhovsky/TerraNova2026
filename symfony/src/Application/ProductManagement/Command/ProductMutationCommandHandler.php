@@ -31,6 +31,7 @@ final readonly class ProductMutationCommandHandler implements CommandHandlerInte
         return match ($command->operation) {
             'attribute.define' => $this->products->defineAttribute($org,$in,$key,$actor,$trace),
             'attribute.category.bind' => $this->products->bindAttribute($org,(string)$in['category_id'],(string)$in['code'],(bool)$in['is_required'],(bool)$in['is_axis'],$key,$actor,$trace),
+            'attribute.product.bulk_set' => $this->products->bulkSetAttributes($org,$in['products'],$in['values'],$key,$actor,$trace),
             'attribute.product.set' => $this->products->setAttributes($org,(string)$in['product_id'],$in['values'],(int)$in['expected_revision'],$key,$actor,$trace),
             'variant.matrix.create' => $this->products->createMatrix($org,(string)$in['product_id'],$in['axes'],(string)$in['sku_prefix'],(int)$in['expected_revision'],(string)($in['uom']??'pcs'),(bool)($in['track_inventory']??true),$key,$actor,$trace),
             'media.attach' => $this->media->attach(
