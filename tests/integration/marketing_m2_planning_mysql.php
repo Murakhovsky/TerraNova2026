@@ -196,5 +196,43 @@ $closed=new \Domains\Marketing\Infrastructure\Hermes\HermesMarketingAnalystAdapt
     new \Domains\Marketing\Infrastructure\Hermes\HermesAnalystConnection('https://hermes.example.com/p/marketing-fixture',$credential),
     $vault,$transport,new \Domains\Marketing\Domain\MarketingAnalystRecommendationPolicy());
 $denied(static fn()=> $closed->recommend($actor,$envelope,'fixture-correlation-06'),'Unaccepted Hermes profile admitted.');
+$catalog=new \Kernel\Module\ModuleCatalog([\Kernel\Module\ModuleDefinition::fromArray(require $root.'/app/Domains/Marketing/module.php')]);
+$state=new class($orgA) implements \Kernel\Module\Contract\ModuleStateRepositoryInterface {
+    public function __construct(private string $org){}
+    public function enabledOverride(string $organizationId,string $moduleId):?bool{return $organizationId===$this->org&&$moduleId==='marketing';}
+    public function setEnabled(string $organizationId,string $moduleId,bool $enabled):void{throw new RuntimeException('Read-only fixture.');}
+};
+$modules=new \Kernel\Module\ActiveModuleResolver($catalog,$state);
+$runStore=new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingAnalystRunStore($db);
+$admission=new \Domains\Marketing\Domain\MarketingAnalystAdmissionPolicy($orgA,'hermes-fixture',2,'fixture-provider-cap',true);
+$execution=new \Domains\Marketing\Application\Service\MarketingAnalystExecutionService($contexts,$runtime,$runStore,$admission,
+    new \Domains\Marketing\Domain\MarketingAnalystRecommendationPolicy(),$modules);
+$transport->incomplete=false;$beforePosts=$transport->posts;
+$run=$execution->request($actor,$campaignId,1,$creativeId,3,$set['id'],2,'hermes-run-01');
+$assert($run['state']==='SUCCEEDED'&&$run['advice']['status']==='UNREVIEWED_ADVICE'&&!$run['finance_cost_confirmed']
+    &&!$run['paid_activation_approved']&&$transport->posts===$beforePosts+1,'Durable Hermes receipt failed.');
+$again=$execution->request($actor,$campaignId,1,$creativeId,3,$set['id'],2,'hermes-run-01');
+$assert($again['id']===$run['id']&&$transport->posts===$beforePosts+1,'Replay issued another remote turn.');
+$denied(static fn()=> $execution->request($actor,$campaignId,1,$creativeId,3,null,null,'hermes-run-01'),'Different pins reused an execution key.');
+$denied(static fn()=> $execution->request($contextActor($orgB),$campaignId,1,$creativeId,3,null,null,'hermes-run-01'),'Foreign run receipt leaked.');
+$transport->incomplete=true;
+$uncertain=$execution->request($actor,$campaignId,1,$creativeId,3,$set['id'],2,'hermes-run-02');
+$assert($uncertain['state']==='UNCERTAIN'&&$uncertain['advice']===null&&$uncertain['failure_code']==='REMOTE_OUTCOME_UNCERTAIN'
+    &&$transport->posts===$beforePosts+2,'Uncertain remote turn did not consume a durable slot.');
+$again=$execution->request($actor,$campaignId,1,$creativeId,3,$set['id'],2,'hermes-run-02');
+$assert($again['state']==='UNCERTAIN'&&$transport->posts===$beforePosts+2,'Uncertain outcome was retried.');
+$denied(static fn()=> $execution->request($actor,$campaignId,1,$creativeId,3,$set['id'],2,'hermes-run-03'),'Daily quota bypassed.');
+$assert($runStore->byKey($orgB,'hermes-run-01')===null,'Cross-tenant run receipt leaked.');
+$pending=$runStore->claim($orgA,'fixture-interrupted-01',[
+    'request_hash'=>str_repeat('a',64),'requested_by'=>'101','profile_ref'=>'hermes-fixture','cost_control_ref'=>'fixture-cap',
+    'campaign_id'=>$campaignId,'context_hash'=>$envelope['context_hash'],'source_pins'=>$envelope['context']['sources']
+],3);
+$assert($pending['claimed']&&$pending['run']['state']==='STARTED','Crash fixture admission failed.');
+$denied(static fn()=> $runStore->claim($orgA,'fixture-interrupted-02',[
+    'request_hash'=>str_repeat('b',64),'requested_by'=>'101','profile_ref'=>'hermes-fixture','cost_control_ref'=>'fixture-cap',
+    'campaign_id'=>$campaignId,'context_hash'=>$envelope['context_hash'],'source_pins'=>$envelope['context']['sources']
+],4),'Unresolved STARTED admission allowed another execution.');
+$runStore->finish($orgA,$pending['run']['id'],null);
+$denied(static fn()=> $runStore->finish($orgA,$pending['run']['id'],null),'Completed receipt was overwritten.');
 echo "Marketing M2 real MySQL two-person review, tenant fence, immutable Creative revisions, stale gate PASS\n";
 

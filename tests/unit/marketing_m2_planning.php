@@ -187,5 +187,15 @@ $connection=new \Domains\Marketing\Infrastructure\Hermes\HermesAnalystConnection
 $expect(!$connection->isolatedProfileAccepted,'Hermes profile admission enabled by default.');
 $services=(string)file_get_contents($root.'/symfony/config/services.yaml');
 $expect(!str_contains($services,'HermesMarketingAnalystAdapter'),'Hermes runtime must remain unbound until durable admission.');
+$admissionClass=\Domains\Marketing\Domain\MarketingAnalystAdmissionPolicy::class;
+$disabled=new $admissionClass('tenant-a','profile-ref',2,'cost-control-ref');
+$blocked(static fn()=> $disabled->assertAllowed('tenant-a'),'Disabled admission accepted.');
+$missingCost=new $admissionClass('tenant-a','profile-ref',2,'',true);
+$blocked(static fn()=> $missingCost->assertAllowed('tenant-a'),'Missing runtime cost-control acceptance.');
+$admitted=new $admissionClass('tenant-a','profile-ref',2,'cost-control-ref',true);
+$admitted->assertAllowed('tenant-a');
+$blocked(static fn()=> $admitted->assertAllowed('tenant-b'),'Foreign tenant admission accepted.');
+$blocked(static fn()=> new $admissionClass('tenant-a','profile-ref',101,'cost-control-ref',true),'Unbounded quota accepted.');
+$expect(!str_contains($services,'MarketingAnalystExecutionService'),'Unaccepted live admission exposed in composition.');
 echo "Marketing M2 typed planning policy, provenance, CSRF and boundary PASS\n";
 

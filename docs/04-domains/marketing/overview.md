@@ -83,7 +83,7 @@ Campaign Workspace має форми create/revise для спільних tenan
 
 `marketing.analyst.context.get` — локальний read-only Query, що збирає лише обрані tenant Campaign/Creative та опційно актуальні AdSet/Audience revisions. При AdSet pin перевіряються stale state і належність Creative. Product observations читаються через існуючий Product port, якщо є валюта AdSet; відсутність джерела явно позначається. Не підставляються performance metrics без перевіреного Campaign binding. Контекст містить обмежені факти, source pins, SHA-256 digest, редагування email/phone за Kernel redactor, видалення URL з текстових полів; довільний текст залишається untrusted. Raw owner IDs, credentials, account IDs, destination URL та media не передаються. Query нічого не відправляє назовні.
 
-Marketing-owned runtime port визначає межу майбутнього advisory adapter. Recommendation policy приймає лише bounded text, точний context hash та evidence aliases із виданого контексту, відхиляє action payload, fabricated evidence, privilege fields. Результат не є proposal receipt або дозволом запуску. Governed admission, durable independent review і live Hermes acceptance ще не підключені; fake provider чи автоматичного fallback немає. Для передачі фактичного контексту назовні потрібні окремі правила допуску й приймання. Додано unit та native MySQL context tests.
+Marketing-owned runtime port визначає межу майбутнього advisory adapter. Recommendation policy приймає лише bounded text, точний context hash та evidence aliases із виданого контексту, відхиляє action payload, fabricated evidence, privilege fields. Результат не є proposal receipt або дозволом запуску. Durable independent review і live Hermes acceptance ще не підключені; fake provider чи автоматичного fallback немає. Для передачі фактичного контексту назовні потрібні окремі правила допуску й приймання. Додано unit та native MySQL context tests.
 
 ## M2c.5b: Адаптер зовнішнього середовища Hermes
 
@@ -91,7 +91,15 @@ Native Hermes Agent API adapter використовує окремий named pr
 
 Adapter повторно збирає authoritative scoped context до і після remote turn, передає лише facts, aliases, constraints та context hash, не надсилає record IDs або credentials у prompt. Використовує стабільний Idempotency-Key, TLS, bounded non-streaming response, без redirect і automatic retry. Приймається лише completed assistant response з JSON, validated evidence aliases і runtime receipt ID. Не є Finance approval або business Action.
 
-Офіційний контракт: https://hermes-agent.nousresearch.com/docs/user-guide/features/api-server. Mock transport і native MySQL fixtures перевіряють profile scope, toolset gate, payload minimization, response validation, stable identity. Adapter навмисно не зареєстрований як live service/Capability: потрібні durable COS admission, cost limit, audit receipt, independent review та реальне перевірене ізольоване середовище Hermes. Немає фактичного зовнішнього запуску.
+Офіційний контракт: https://hermes-agent.nousresearch.com/docs/user-guide/features/api-server. Mock transport і native MySQL fixtures перевіряють profile scope, toolset gate, payload minimization, response validation, stable identity. Adapter навмисно не зареєстрований як live service/Capability: потрібні підтверджені runtime cost controls, independent review та реальне перевірене ізольоване середовище Hermes. Немає фактичного зовнішнього запуску.
+
+## M2c.5c: Допуск і журнал виконання зовнішнього аналітика
+
+`MarketingAnalystExecutionService` перевіряє tenant manager, module activation і operator-provisioned admission policy (disabled by default). Для дозволеного профілю обов'язкове посилання на прийнятий зовнішній cost-control policy; це не підтвердження фінансового бюджету або фактичної витрати. Реальний hard monetary cap і незалежна перевірка конфігурації Hermes залишаються gate до live binding.
+
+Native MySQL admission counter серіалізує запуски на tenant і лімітує 1–100 admitted runs за UTC-добу. До remote call атомарно записуються STARTED, idempotency key, request/context hash, actor, profile, source revision pins і quota slot. Транзакція не утримується під час remote turn. Replay повертає той самий receipt без нового зовнішнього запиту; конфлікт ключа блокується. Незавершений STARTED блокує нові admission до контрольованого reconciliation (operator interface ще відсутній). Timeout, invalid response або stale context зберігаються як UNCERTAIN без raw error та без повернення quota slot. SUCCEEDED містить validated durable advice, runtime response ID і source evidence, відновлене з native context. Стан SUCCEEDED означає тільки завершення advisory turn, не approval. Review та recovery ще не реалізовані; немає автоматичного retry.
+
+Service, runtime та policy не зареєстровані як live endpoint/Capability. Нова таблиця не замінює Platform Workflow, Kernel LLM governance або Finance ledger. Unit та native MySQL fixture tests перевіряють admission, replay, quota, uncertain outcomes, tenant boundaries і durable receipts.
 
 ## Надійність імпорту та операційна черга
 
