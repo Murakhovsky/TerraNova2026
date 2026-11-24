@@ -246,6 +246,19 @@ $archived=$products->archiveProduct($org,$created['product_id'],2,'pm-archive-'.
 $assert($archived['revision']===3 && $archived['status']==='archived','Product archive must preserve state');
 $reject(static fn()=> $products->updateProduct($org,$created['product_id'],['name'=>'After archive'],3,
     'pm-edit-archived-'.$token,'ci-user','ci-pm'),'archived Product cannot be edited');
+// Exact replay must return the original receipt even after the lifecycle advanced.
+$replayedVariant=$products->archiveVariant($org,$variant,2,'pm-var-archive-'.$token,'ci-user','ci-pm');
+$assert($replayedVariant===$variantArchived,'Variant archive replay must return the same receipt');
+$replayedProduct=$products->archiveProduct($org,$created['product_id'],2,'pm-archive-'.$token,'ci-user','ci-pm');
+$assert($replayedProduct===$archived,'Product archive replay must return the same receipt');
+$reject(static fn()=> $products->archiveProduct($other,$created['product_id'],2,
+    'pm-archive-cross-'.$token,'ci-other','ci-pm'),'cross-tenant Product archive');
+$reject(static fn()=> $products->archiveVariant($other,$variant,2,
+    'pm-var-archive-cross-'.$token,'ci-other','ci-pm'),'cross-tenant Variant archive');
+$reject(static fn()=> $products->recordMovement($org,$variant,$loc,'1','receipt','ARCHIVE-FENCE',
+    'pm-after-archive-stock-'.$token,'ci-user','ci-pm'),'Archived Product/Variant cannot receive stock');
+$assert((string)$products->balance($org,$variant,$loc)['on_hand']==='0.000000',
+    'Archived Variant ledger remains unchanged after denied receipt');
 $stmt=$pdo->prepare('SELECT COUNT(*) FROM cos_events WHERE organization_id=? AND type LIKE ?');
 $stmt->execute([$org,'product_management.%']);
 $assert((int)$stmt->fetchColumn()===20,'twenty confirmed native Domain events');
