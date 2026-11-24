@@ -10,6 +10,8 @@ use Domains\ProductManagement\Infrastructure\Shopify\ShopifyObservationStore;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyReadClient;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyImportPreviewService;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyImportRecoveryAudit;
+use Domains\ProductManagement\Infrastructure\Shopify\ShopifyOrderReadbackService;
+use Domains\ProductManagement\Infrastructure\Shopify\ShopifyOrderReadbackNormalizer;
 use Kernel\Module\ActiveModuleResolver;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -33,13 +35,14 @@ final class ProductManagementShopifyOperatorCommand extends Command
         private readonly ActiveModuleResolver $modules,
         private readonly ShopifyImportPreviewService $previews,
         private readonly ShopifyImportRecoveryAudit $recoveryAudit,
+        private readonly ShopifyOrderReadbackService $orderReadback,
     ) {
         parent::__construct();
     }
 
     protected function configure(): void
     {
-        $this->addArgument('action',InputArgument::REQUIRED,'preflight|provision|status|pull|candidates|inspect|stage|audit')
+        $this->addArgument('action',InputArgument::REQUIRED,'preflight|provision|status|pull|candidates|inspect|stage|audit|order')
             ->addOption('organization',null,InputOption::VALUE_REQUIRED,'Explicit tenant organization')
             ->addOption('shop',null,InputOption::VALUE_REQUIRED,'Existing <shop>.myshopify.com name')
             ->addOption('secret-ref',null,InputOption::VALUE_REQUIRED,'Vault ref env://COS_SHOPIFY_* or pilot legacy','shopify_env_primary')
@@ -47,6 +50,7 @@ final class ProductManagementShopifyOperatorCommand extends Command
             ->addOption('pages',null,InputOption::VALUE_REQUIRED,'Maximum 1..20 product pages','1')
             ->addOption('limit',null,InputOption::VALUE_REQUIRED,'Maximum 1..50 snapshot candidates','20')
             ->addOption('product-gid',null,InputOption::VALUE_REQUIRED,'Observed Shopify Product GID')
+            ->addOption('order-gid',null,InputOption::VALUE_REQUIRED,'Verified Shopify Order GID for read-only Order evidence')
             ->addOption('preview-id',null,InputOption::VALUE_REQUIRED,'Existing Shopify import preview ID for read-only recovery audit')
             ->addOption('expected-hash',null,InputOption::VALUE_REQUIRED,'Pinned snapshot SHA-256')
             ->addOption('confirm',null,InputOption::VALUE_REQUIRED,'PROVISION_READ_ONLY or PULL_READ_ONLY');
@@ -65,7 +69,7 @@ final class ProductManagementShopifyOperatorCommand extends Command
             return $this->result($output,['status'=>'INVALID_TENANT'],Command::INVALID);
         }
         try {
-            if (!in_array($action,['preflight','provision','status','pull','candidates','inspect','stage','audit'],true)) {
+            if (!in_array($action,['preflight','provision','status','pull','candidates','inspect','stage','audit','order'],true)) {
                 return $this->result($output,['status'=>'INVALID_ACTION'],Command::INVALID);
             }
             // Supervised, read-only diagnostics are available even before tenant
@@ -121,6 +125,11 @@ final class ProductManagementShopifyOperatorCommand extends Command
                 return $this->result($output,
                     ['status'=>'SNAPSHOT_CANDIDATES','connection_id'=>$connection,
                         'count'=>count($items),'candidates'=>$items],Command::SUCCESS);
+            }
+            if ($action==='order') {
+                $gid=trim((string)$input->getOption('order-gid'));
+                ShopifyOrderReadbackNormalizer::orderGid($gid);
+                return $this->result($output,$this->orderReadback->read($org,$connection,$gid),Command::SUCCESS);
             }
             if ($action==='audit') {
                 $id=trim((string)$input->getOption('preview-id'));
