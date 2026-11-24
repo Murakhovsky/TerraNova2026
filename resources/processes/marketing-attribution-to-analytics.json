@@ -14,7 +14,8 @@
   "actors": [
     "Marketing manager",
     "Marketing analytics runtime",
-    "Sales and Finance read boundaries"
+    "Sales and Finance read boundaries",
+    "Marketing"
   ],
   "steps": [
     {
