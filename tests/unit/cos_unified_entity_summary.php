@@ -37,7 +37,11 @@ final class Ux03SummaryProperty implements PropertyReferencePort {
     }
     public function searchPropertyReferences(string $organizationId,string $query,int $limit=100):array{return [];}
 }
-$reader=new TenantBusinessEntitySummaryRead(new Ux03SummarySales(),new Ux03SummaryProperty());
+$authorization=new class implements \App\Security\SalesRequestEntityAuthorizationInterface {
+    public bool $allow=true;
+    public function entity(string $org,string $kind,int $id):bool{return $this->allow&&$org==='tenant-a'&&$kind==='deal'&&$id===4;}
+};
+$reader=new TenantBusinessEntitySummaryRead(new Ux03SummarySales(),new Ux03SummaryProperty(),$authorization);
 $deal=$reader->facts('tenant-a','sales.deal','4');
 $asset=$reader->facts('tenant-a','property.asset','PROP-AAAAAAAAAAAAAAAAAAAA');
 if(count($deal)!==3||count($asset)!==3||$asset[0]['value']!=='house')throw new RuntimeException('Verified business summary missing');
@@ -47,4 +51,6 @@ foreach([
 ] as [$org,$type,$id]){
     if($reader->facts($org,$type,$id)!==[])throw new RuntimeException('Summary leaked unverified record');
 }
+$authorization->allow=false;
+if($reader->facts('tenant-a','sales.deal','4')!==[])throw new RuntimeException('Same-tenant owner scope bypass.');
 echo "UX03 typed Sales/Property summary tenant boundary PASS.\n";
