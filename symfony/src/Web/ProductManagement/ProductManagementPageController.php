@@ -77,10 +77,22 @@ final readonly class ProductManagementPageController
                     $prices[$vid]=$price;
                 }
             }
+            $historyVariantId=trim((string)$request->query->get('history_variant',''));
+            $historyPage=filter_var($request->query->get('history_page','1'),FILTER_VALIDATE_INT);
+            if ($historyPage===false||$historyPage<1||$historyPage>333334) return new Response('Invalid history page.',422);
+            $history=null;$historyVariant=null;
+            if ($historyVariantId!=='') {
+                $historyVariant=$this->findVariant($product,$historyVariantId);
+                if ($historyVariant===null) return new Response('Variant not found for this Product.',404);
+                $history=$this->read($actor,'price.history.search',[
+                    'variant_id'=>$historyVariantId,'currency'=>$currency,'limit'=>30,'offset'=>($historyPage-1)*30,
+                ]);
+            }
             return $this->render($request,$actor,'product',[
                 'product'=>$product,'categories'=>$categories['items']??[], 'prices'=>$prices,
                 'priceCurrency'=>$currency,'pricePage'=>$pricePage,
                 'priceHasNext'=>count($product['variants']??[])>$pricePage*30,
+                'priceHistory'=>$history,'historyVariant'=>$historyVariant,'historyPage'=>$historyPage,
             ]);
         } catch (Throwable $e) {
             error_log('product_management.workspace.detail_unavailable '.$e::class);
