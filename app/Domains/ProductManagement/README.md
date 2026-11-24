@@ -486,3 +486,7 @@ does not expose a new AI/CRON or public API mutation path and does not
 auto-reconcile any conflict. A full clean audit requires `status=OK` and
 `complete=true`. High-cardinality tenants require an explicit larger
 limit or a future paginated read audit; a truncated response is not evidence.
+
+## E5/E7 integrated reservation Workspace
+
+Tenant managers can browse paginated reservations by SKU and warehouse, create manual reservations and explicitly release active reservations. `stock.reservation.search` independently verifies identity/status and balance readback. No automatic expiry, partial release or Sales order writer is admitted by ADR-0017. All mutations use existing Gateway → CommandBus → Domain and uncertain post-write verification returns 503.
