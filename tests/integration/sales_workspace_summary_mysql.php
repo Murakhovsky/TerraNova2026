@@ -69,7 +69,7 @@ try{
     $shopStore->map($org,$conn,'variant','gid://shopify/ProductVariant/42',str_repeat('b',32));
     $http=new class implements \Domains\ProductManagement\Infrastructure\Shopify\ShopifyHttpTransportInterface {
         public int $reads=0;public string $updated='2026-11-24T10:00:00Z';public string $financial='PAID';
-        public string $current='120.00';public bool $edited=false;public bool $fail=false;public bool $unmapped=false;public bool $truncated=false;
+        public string $current='120.00';public bool $edited=false;public bool $fail=false;public bool $unmapped=false;public bool $truncated=false;public bool $multi=false;public bool $revisionShift=false;public bool $pageMode=false;public bool $temporaryFailure=false;
         public function post(string $url,array $headers,string $body):array
         {
             if(str_ends_with($url,'/oauth/access_token'))return ['status'=>200,'body'=>'{"access_token":"fake-order-token"}'];
@@ -77,19 +77,29 @@ try{
             $request=json_decode($body,true,512,JSON_THROW_ON_ERROR);
             if(!str_starts_with($request['query'],'query ')||str_contains($request['query'],'mutation'))throw new RuntimeException('Unexpected Shopify write.');
             ++$this->reads;
+            if($this->temporaryFailure)return ['status'=>503,'body'=>'{}'];
             if($this->fail)return ['status'=>403,'body'=>'{}'];
             $money=static fn(string $amount)=>['shopMoney'=>['amount'=>$amount,'currencyCode'=>'EUR']];
             $data=['currentAppInstallation'=>['accessScopes'=>[['handle'=>'read_orders']]]];
             if(str_contains($request['query'],'COSCommerceOrderPage')){
-                $data['orders']=['nodes'=>[['id'=>'gid://shopify/Order/12345']],'pageInfo'=>['hasNextPage'=>false,'endCursor'=>null]];
+                $cursor=$request['variables']['after']??null;
+                if($this->pageMode){
+                    if(!str_starts_with($request['variables']['filter']??'','created_at:<='))throw new RuntimeException('Backfill cutoff missing.');
+                    $data['orders']=['nodes'=>[['id'=>'gid://shopify/Order/'.($cursor===null?'12348':'12349')]],'pageInfo'=>['hasNextPage'=>$cursor===null,'endCursor'=>$cursor===null?'page-2':null]];
+                }else $data['orders']=['nodes'=>[['id'=>'gid://shopify/Order/12345']],'pageInfo'=>['hasNextPage'=>false,'endCursor'=>null]];
+            }elseif(str_contains($request['query'],'COSCommerceOrderLines')){
+                if(($request['variables']['after']??null)!=='line-2')throw new RuntimeException('Wrong order line cursor.');
+                $data['order']=['id'=>$request['variables']['id'],'updatedAt'=>$this->revisionShift?'2026-11-24T12:01:00Z':$this->updated,
+                    'lineItems'=>['nodes'=>[['id'=>'gid://shopify/LineItem/78','quantity'=>1,'sku'=>'LAMP-1','product'=>['id'=>'gid://shopify/Product/41'],
+                        'variant'=>['id'=>'gid://shopify/ProductVariant/42'],'originalUnitPriceSet'=>$money('60.00')]],'pageInfo'=>['hasNextPage'=>false,'endCursor'=>null]]];
             }else{
                 $data['order']=['id'=>$request['variables']['id'],'createdAt'=>'2026-11-24T09:00:00Z','updatedAt'=>$this->updated,'cancelledAt'=>null,'test'=>false,
                     'edited'=>$this->edited,'taxesIncluded'=>true,'displayFinancialStatus'=>$this->financial,'displayFulfillmentStatus'=>'UNFULFILLED',
                     'originalTotalPriceSet'=>$money('120.00'),'totalPriceSet'=>$money('120.00'),'currentTotalPriceSet'=>$money($this->current),
                     'totalDiscountsSet'=>$money('0.00'),'totalTaxSet'=>$money('20.00'),'totalShippingPriceSet'=>$money('0.00'),
                     'lineItems'=>['nodes'=>[['id'=>'gid://shopify/LineItem/77','quantity'=>1,'sku'=>'LAMP-1','product'=>['id'=>'gid://shopify/Product/41'],
-                        'variant'=>['id'=>'gid://shopify/ProductVariant/'.($this->unmapped?'99':'42')],'originalUnitPriceSet'=>$money('120.00')]],
-                        'pageInfo'=>['hasNextPage'=>$this->truncated,'endCursor'=>null]]];
+                        'variant'=>['id'=>'gid://shopify/ProductVariant/'.($this->unmapped?'99':'42')],'originalUnitPriceSet'=>$money($this->multi?'60.00':'120.00')]],
+                        'pageInfo'=>['hasNextPage'=>$this->truncated||$this->multi,'endCursor'=>$this->multi?'line-2':null]]];
             }
             return ['status'=>200,'body'=>json_encode(['data'=>$data],JSON_THROW_ON_ERROR)];
         }
@@ -104,6 +114,17 @@ try{
         new \Domains\ProductManagement\Infrastructure\Shopify\ShopifyClientCredentials($http),$active,$productRefs);
     $reconcile=new \Domains\Sales\Application\Service\SalesOrderReconciliationService($source,
         new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderSourceRepository($db),$orderRepo,$receipts,$guard,$orderService,$references);
+    $syncTx=new \Infrastructure\Platform\Persistence\MySql\Transaction\TransactionManager($db);
+    $syncEvents=new \Kernel\Event\EventBus(new class implements \Kernel\Event\Contract\EventStoreInterface {
+        public function append(\Kernel\Event\DomainEvent $event):void{}
+        public function find(string $eventId):?\Kernel\Event\DomainEvent{return null;}
+        public function findByAggregate(string $organizationId,string $aggregateType,string $aggregateId,int $limit=100):array{return [];}
+    },$syncTx);
+    $syncQueue=new \Infrastructure\Platform\Persistence\MySql\Queue\MysqlJobQueue($db,$syncTx,$syncEvents);
+    $syncRepo=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderSyncRepository($db);
+    $sync=new \Domains\Sales\Application\Service\SalesOrderSyncService($syncRepo,$source,$reconcile,$guard,$syncQueue,
+        new \Infrastructure\Platform\ReadModel\MySql\MysqlAsyncOperationReadModel($db),$active);
+    $syncHandler=new \Domains\Sales\Automation\Job\SalesOrderSyncJobHandler($sync);
     $gateway=new CanonicalCapabilityGateway($catalog,$active,new FederationCapabilityBindingResolver($catalog,new DomainModuleRegistry([]),$active),[
         new SalesWorkspaceSummaryAdapter($scope,$read),
         new \App\Infrastructure\Capability\SalesWorkspaceLeadsListAdapter($scoped),
@@ -120,6 +141,8 @@ try{
         new \App\Infrastructure\Capability\SalesOrderSourceReconcileAdapter($reconcile),
         new \App\Infrastructure\Capability\SalesOrderSourcePageAdapter($reconcile),
         new \App\Infrastructure\Capability\SalesOrderSourcePendingAdapter($reconcile),
+        new \App\Infrastructure\Capability\SalesOrderSyncStartAdapter($sync),
+        new \App\Infrastructure\Capability\SalesOrderSyncStatusAdapter($sync),
         new \App\Infrastructure\Capability\SalesDealStateReadAdapter(new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlDealRepository($db)),
         new \App\Infrastructure\Capability\SalesInboundRequestReadAdapter($read)
     ],[$policy]);
@@ -393,6 +416,74 @@ try{
     $reject(fn()=>$runSource([...$sourceInput,'connection_id'=>str_repeat('e',32)],'foreign-shop-'.$token));
     $reject(fn()=>$gateway->invoke($manager,'sales.order.source.reconcile',$sourceInput,'trusted_read','automated-'.$token,'source-test'));
     echo "Sales O2 Shopify HMAC pointer, mock GraphQL, exact placement, replay and revision reconciliation PASS.\n";
+    // Complete line pages and verify consistent provider revision before placement.
+    $http->multi=true;
+    $multiInput=[...$sourceInput,'external_order_id'=>'gid://shopify/Order/12347'];
+    $http->revisionShift=true;$db->exec('SAVEPOINT order_line_revision');
+    try{
+        try{$runSource($multiInput,'multi-'.$token);throw new RuntimeException('Changed provider line revision accepted.');}
+        catch(\Kernel\Execution\ExecutionFailureException $e){$check($e->failureKind()->retryable(),'Pagination change not retryable.');}
+    }finally{$db->exec('ROLLBACK TO SAVEPOINT order_line_revision');$db->exec('RELEASE SAVEPOINT order_line_revision');}
+    $http->revisionShift=false;
+    $multi=$runSource($multiInput,'multi-'.$token);
+    $check($multi['outcome']==='imported'&&count($orderService->read($org,$owner,$multi['order_id'])['order']['lines'])===2,'Complete Shopify line pagination failed.');
+    $http->multi=false;
+
+    // Use real queue persistence, admitted task records and registered handler.
+    // The enclosing rollback fixture cannot use QueueWorker::claim (it opens a physical transaction);
+    // explicitly claim each fixture row, then exercise the real handler and queue receipts.
+    $http->pageMode=true;
+    $startInput=['channel'=>'shopify','connection_id'=>$conn,'mode'=>'backfill'];
+    $startSync=static fn($input,$key)=>$gateway->invoke($manager,'sales.order.source.sync.start',$input,'human_api',$key,'sync-'.$token);
+    $start=$startSync($startInput,'sync-start-'.$token);
+    $runId=$start['run_id'];
+    $check($startSync($startInput,'sync-start-'.$token)['run_id']===$runId,'Sync start replay duplicated run.');
+    $reject(fn()=>$startSync([...$startInput,'mode'=>'webhooks'],'sync-start-'.$token));
+    $syncStatus=static fn($id)=>$gateway->invoke($manager,'sales.order.source.sync.status.read',['run_id'=>$id],'trusted_read','','sync-status');
+    $claimTask=static function(string $runId,string $kind,int $attempt=1)use($db,$org,$check):\Kernel\Queue\Job{
+        $q=$db->prepare("SELECT j.* FROM cos_jobs j JOIN sales_order_sync_tasks t ON t.organization_id=j.organization_id AND t.job_id=j.id WHERE t.organization_id=? AND t.run_id=? AND t.kind=? AND t.state='pending' AND j.status IN ('PENDING','FAILED') ORDER BY j.created_at,j.id LIMIT 1");
+        $q->execute([$org,$runId,$kind]);$j=$q->fetch(PDO::FETCH_ASSOC);$check(is_array($j),'Missing admitted fixture job.');
+        $db->prepare("UPDATE cos_jobs SET status='RUNNING',attempts=?,locked_by='order-fixture-worker',locked_at=NOW(6) WHERE organization_id=? AND id=?")->execute([$attempt,$org,$j['id']]);
+        return new \Kernel\Queue\Job($j['id'],$org,$j['type'],json_decode($j['payload'],true,512,JSON_THROW_ON_ERROR),$attempt,(int)$j['max_attempts'],(int)$j['timeout_seconds'],$j['correlation_id'],$j['idempotency_key'],'order-fixture-worker');
+    };
+    $firstPage=$claimTask($runId,'page');
+    $syncHandler->handle($firstPage);
+    $checkpoint=$syncStatus($runId);
+    $check($checkpoint['pages']===1&&$checkpoint['checkpoint']==='page-2'&&$checkpoint['counts']['orders_pending']===1&&$checkpoint['counts']['discovery_pending']===1,'Backfill page/checkpoint/child transaction mismatch.');
+    $reads=$http->reads;$syncHandler->handle($firstPage);$check($http->reads===$reads,'Commit-before-ack replay queried provider.');
+    $syncQueue->complete($firstPage);
+    $secondPage=$claimTask($runId,'page');$syncHandler->handle($secondPage);$syncQueue->complete($secondPage);
+    $checkpoint=$syncStatus($runId);
+    $check($checkpoint['pages']===2&&$checkpoint['discovery_state']==='complete'&&$checkpoint['historical_access']==='provider_limited'&&$checkpoint['counts']['orders_pending']===2,'Backfill final checkpoint mismatch.');
+    $failed=$claimTask($runId,'order',5);$http->temporaryFailure=true;
+    $db->exec('SAVEPOINT order_job_failure');
+    try{
+        try{$syncHandler->handle($failed);throw new RuntimeException('Provider outage job succeeded.');}
+        catch(\Domains\ProductManagement\Infrastructure\Shopify\ShopifyTransientReadFailure $e){$check($e->failureKind()->retryable(),'Provider 503 must remain retryable.');}
+    }finally{$db->exec('ROLLBACK TO SAVEPOINT order_job_failure');$db->exec('RELEASE SAVEPOINT order_job_failure');}
+    $syncQueue->failWithRetryPolicy($failed,'fixture transient outage',true);
+    $dead=$syncStatus($runId);$deadTasks=array_values(array_filter($dead['tasks'],fn($t)=>$t['job_id']===$failed->id));
+    $check($deadTasks[0]['queue_status']==='dead'&&$deadTasks[0]['state']==='pending','Kernel Dead Letter lost pending business task.');
+    $check($syncQueue->replayDead($org,$failed->id)===1,'Kernel dead replay failed.');
+    $http->temporaryFailure=false;
+    $job=$claimTask($runId,'order');$syncHandler->handle($job);$syncQueue->complete($job);
+    $job=$claimTask($runId,'order');$syncHandler->handle($job);$syncQueue->complete($job);
+    $check($syncStatus($runId)['counts']['orders_done']===2,'Backfill orders not reconciled after replay.');
+    $http->pageMode=false;
+    $rawSync='{"id":12350}';$sigSync=base64_encode(hash_hmac('sha256',$rawSync,'order-fixture-secret',true));
+    $gidSync=\Domains\ProductManagement\Infrastructure\Shopify\ShopifyOrderWebhookEvidence::extractVerified($rawSync,$sigSync,'order-fixture-secret','orders/create');
+    $shopStore->recordVerifiedDelivery($org,$conn,'sync-delivery-'.$token,'orders/create',$rawSync,$gidSync);
+    $webhookRun=$startSync([...$startInput,'mode'=>'webhooks'],'sync-webhook-'.$token)['run_id'];
+    $job=$claimTask($webhookRun,'page');$syncHandler->handle($job);$syncQueue->complete($job);
+    $job=$claimTask($webhookRun,'order');$syncHandler->handle($job);$syncQueue->complete($job);
+    $check($syncStatus($webhookRun)['counts']['orders_done']===1&&$source->pending($org,'shopify',$conn)===[],'Verified webhook batch did not reconcile.');
+    try{
+        $syncHandler->handle(new \Kernel\Queue\Job(str_repeat('f',32),$org,\Domains\Sales\Application\Service\SalesOrderSyncService::JOB,[],1,5,60,'forged'));
+        throw new RuntimeException('Forged job admitted.');
+    }catch(\Kernel\Execution\ExecutionFailureException $e){$check(!$e->failureKind()->retryable(),'Forged job retryable.');}
+    $reject(fn()=>$gateway->invoke($manager,'sales.order.source.sync.start',$startInput,'trusted_read','auto-sync-'.$token,'sync-status'));
+    echo "Sales O2 bounded pagination, atomic backfill checkpoint, Kernel job admission, Dead Letter and replay PASS.\n";
+
 
     $check($writes->quickUpdateOpportunity($ownedId,['priority'=>'high'],$owner,'p4-own')->ok,'Guarded own write failed.');
     $check($read->deal($org,$ownedId)['priority']==='high','Guarded write did not change native state.');
