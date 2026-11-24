@@ -197,6 +197,71 @@ final readonly class ProductManagementPageController
         return $this->mutateProduct($actor,$request,$id,'price.base.set',$input);
     }
 
+    public function attachMedia(Request $request,string $id):Response
+    {
+        $actor=$this->guardWrite($request);
+        if($actor instanceof Response)return $actor;
+        $product=$this->checkedProduct($actor,$id);
+        if($product instanceof Response)return $product;
+        if(($product['status']??null)==='archived')
+            return new Response('Archived product cannot acquire media.',422);
+        $variantId=trim((string)$request->request->get('variant_id',''));
+        $input=[
+            'product_id'=>$id,
+            'file_id'=>trim((string)$request->request->get('file_id','')),
+            'role'=>trim((string)$request->request->get('role','gallery')),
+            'sort_order'=>(int)$request->request->get('sort_order',100),
+        ];
+        if($variantId!==''){
+            $owned=false;
+            foreach($product['variants']??[] as $v){
+                if(($v['variant_id']??null)===$variantId &&($v['status']??null)==='active'){
+                    $owned=true;break;
+                }
+            }
+            if(!$owned)return new Response('Media Variant is not an active part of this Product.',422);
+            $input['variant_id']=$variantId;
+        }
+        try {
+            $receipt=$this->write($actor,'media.attach',$input,$request);
+            $mediaId=(string)($receipt['media_id']??'');
+            $after=$this->read($actor,'media.search',['product_id'=>$id,'limit'=>100,'offset'=>0]);
+            if(!$this->containsId($after['items']??[],'media_id',$mediaId))
+                throw new DomainException('Media attachment not independently visible.');
+            return $this->go('/product-management/products/'.$id.'?notice=updated');
+        }catch(DomainException|\InvalidArgumentException){
+            return new Response('Media attachment blocked. Select a verified tenant Document image.',422);
+        }catch(Throwable $e){
+            error_log('product_management.workspace.media_attach_failed '.$e::class);
+            return new Response('Media attachment result uncertain. Reload before retrying.',503);
+        }
+    }
+
+    public function detachMedia(Request $request,string $id,string $mediaId):Response
+    {
+        $actor=$this->guardWrite($request);
+        if($actor instanceof Response)return $actor;
+        $product=$this->checkedProduct($actor,$id);
+        if($product instanceof Response)return $product;
+        if(($product['status']??null)==='archived')return new Response('Archived Product is immutable.',422);
+        if(!$this->containsId($product['media']??[],'media_id',$mediaId))
+            return new Response('Media reference not found for this tenant Product.',404);
+        try {
+            $receipt=$this->write($actor,'media.detach',['media_id'=>$mediaId],$request);
+            if(($receipt['media_id']??null)!==$mediaId||($receipt['product_id']??null)!==$id)
+                throw new DomainException('Media detached from an unexpected Product.');
+            $after=$this->read($actor,'media.search',['product_id'=>$id,'limit'=>100,'offset'=>0]);
+            if($this->containsId($after['items']??[],'media_id',$mediaId))
+                throw new DomainException('Detached Product Media reference remains active.');
+            return $this->go('/product-management/products/'.$id.'?notice=updated');
+        }catch(DomainException|\InvalidArgumentException){
+            return new Response('Media detach blocked. Verify current Product state.',422);
+        }catch(Throwable $e){
+            error_log('product_management.workspace.media_detach_failed '.$e::class);
+            return new Response('Media detach outcome uncertain. Inspect current Product.',503);
+        }
+    }
+
     public function createCategory(Request $request):Response
     {
         $actor=$this->guardWrite($request);

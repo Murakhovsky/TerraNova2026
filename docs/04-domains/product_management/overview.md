@@ -103,3 +103,18 @@ tenant-manager. Оператор вставляє CSV до 12 000 символі
 не запускає Workflow і не викликає native Product writer. Незалежні
 Plan/Action Approval, запуск і evidence виконуються в canonical
 `/workspace/goals`. Ніякого direct CSV apply у UI немає.
+
+## E7/P0: прив'язка зображень COS Documents
+
+Картка Product відображає активні Media References і дозволяє
+менеджеру прив'язати існуюче перевірене зображення за `file_id`,
+обрати `cover/gallery`, Variant та порядок. `media.attach` перевіряє
+наявність, tenant ownership, MIME і checksum через наявний порт
+COS Documents/Storage; `media.detach` видаляє тільки активне
+посилання, не файл. Обидві команди проходять canonical Gateway,
+CSRF, окремі idempotency keys і native readback.
+
+Це UX для media references, **не** окреме файлове сховище: завантаження
+файлів і генерація thumbnails залишаються в Documents. Візуальний
+file-picker, previews, масштабна галерея та повне E7 UX acceptance
+ще потребують реалізації.

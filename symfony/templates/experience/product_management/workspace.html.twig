@@ -145,6 +145,54 @@
             {% endif %}
         </section>
         <section class="cos-panel">
+            <h2>Зображення товару</h2>
+            <p>Посилання на перевірені файли COS Documents. Файли й байти зберігає Documents/Storage, тут лише контрольований зв'язок із Product.</p>
+            <div class="table-responsive"><table class="table">
+                <thead><tr><th>Роль</th><th>Файл</th><th>Варіант</th><th>Checksum</th><th>Дії</th></tr></thead>
+                <tbody>{% for image in product.media|default([]) %}
+                    <tr>
+                        <td>{{ image.role }}</td><td>{{ image.file_id }}</td>
+                        <td>{{ image.variant_id|default('Товар') }}</td>
+                        <td><code>{{ image.checksum|slice(0,16) }}</code></td>
+                        <td>
+                            {% if product.status != 'archived' %}
+                                <form method="post" action="/product-management/products/{{ product.product_id }}/media/{{ image.media_id }}/detach">
+                                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                    <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}{{ '%08d'|format(loop.index + 4000) }}">
+                                    <button type="submit" class="btn btn-outline-danger">Від'єднати</button>
+                                </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% else %}<tr><td colspan="5">Зображень поки немає.</td></tr>{% endfor %}
+                </tbody>
+            </table></div>
+            {% if product.status != 'archived' %}
+                <form method="post" action="/product-management/products/{{ product.product_id }}/media" class="cos-page__stack">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00003000">
+                    <label>ID зображення з Documents
+                        <input class="form-control" name="file_id" maxlength="80" pattern="[A-Za-z0-9_-]+" required placeholder="Ідентифікатор перевіреного файлу">
+                    </label>
+                    <label>Роль
+                        <select name="role" class="form-select">
+                            <option value="gallery">Галерея</option><option value="cover">Обкладинка</option>
+                        </select>
+                    </label>
+                    <label>Прив'язати до варіанта (необов'язково)
+                        <select name="variant_id" class="form-select">
+                            <option value="">Загальний Product</option>
+                            {% for v in product.variants|default([]) %}
+                                {% if v.status == 'active' %}<option value="{{ v.variant_id }}">{{ v.sku }}</option>{% endif %}
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label>Порядок <input class="form-control" name="sort_order" type="number" min="0" max="100000" value="100" required></label>
+                    <button type="submit" class="btn btn-outline-primary">Додати перевірене зображення</button>
+                </form>
+            {% endif %}
+        </section>
+        <section class="cos-panel">
             <h2>Локалізація товару</h2>
             {% for t in product.translations|default([]) %}
                 <p><strong>{{ t.locale }}</strong>: {{ t.name }}</p>

@@ -64,6 +64,18 @@ cos_product_management_variant_create:
   methods: [POST]
   requirements: { id: '[a-f0-9]{32}' }
 
+cos_product_management_product_media_attach:
+  path: /product-management/products/{id}/media
+  controller: App\Web\ProductManagement\ProductManagementPageController::attachMedia
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_product_management_product_media_detach:
+  path: /product-management/products/{id}/media/{mediaId}/detach
+  controller: App\Web\ProductManagement\ProductManagementPageController::detachMedia
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}', mediaId: '[a-f0-9]{32}' }
+
 cos_product_management_product_translation:
   path: /product-management/products/{id}/translations
   controller: App\Web\ProductManagement\ProductManagementPageController::translate
