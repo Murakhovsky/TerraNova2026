@@ -43,10 +43,15 @@ final readonly class SalesInboundService
 
     public function attachRequest(int $caseId, int $requestId, ?array $user = null): ClientCaseCommandResult
     {
-        $case = $this->readModel->case($caseId);
-        if (!$case) return ClientCaseCommandResult::failure('case_not_found');
-        $ok = $this->transactions->transactional(function () use ($case, $caseId, $requestId, $user): bool {
-            if (!$this->commands->attachInboundRequest($this->organizationId, $caseId, (int) $case['person_id'], $requestId, $user['id'] ?? null)) return false;
+        return $this->transactions->transactional(function () use ($caseId, $requestId, $user): ClientCaseCommandResult {
+            $request = $this->commands->lockInboundRequest($this->organizationId, $requestId);
+            if (!$request) return ClientCaseCommandResult::failure('request_not_found');
+            $case = $this->readModel->case($caseId);
+            if (!$case) return ClientCaseCommandResult::failure('case_not_found');
+            $linked = (int) ($request['client_case_id'] ?? 0);
+            if ($linked === $caseId) return ClientCaseCommandResult::success('already_attached', ['case_id' => $caseId]);
+            if ($linked > 0) return ClientCaseCommandResult::failure('request_already_linked');
+            if (!$this->commands->attachInboundRequest($this->organizationId, $caseId, (int) $case['person_id'], $requestId, $user['id'] ?? null)) return ClientCaseCommandResult::failure('request_not_found');
             $this->commands->addActivity($this->organizationId, $caseId, (int) $case['person_id'], $user['id'] ?? null, [
                 'activity_type' => 'note', 'title' => 'Заявку привʼязано до кейса',
                 'body' => 'Вхідна заявка #' . $requestId . ' додана як контекст кейса.', 'due_at' => null, 'completed_at' => null,
@@ -57,9 +62,8 @@ final readonly class SalesInboundService
                 ['client_case_id' => ['from' => null, 'to' => $caseId]],
                 new EventMetadata($eventId, null, isset($user['id']) ? 'USER' : 'SYSTEM', isset($user['id']) ? (string) $user['id'] : 'system'),
             ));
-            return true;
+            return ClientCaseCommandResult::success('attached', ['case_id' => $caseId]);
         });
-        return $ok ? ClientCaseCommandResult::success('attached') : ClientCaseCommandResult::failure('request_not_found');
     }
 
     public function updateRequest(int $requestId, array $input, ?array $user = null, ?string $correlationId = null): ClientCaseCommandResult
@@ -155,16 +159,24 @@ final readonly class SalesInboundService
 
     public function createCaseFromRequest(int $requestId, array $input = [], ?array $user = null, ?string $correlationId = null): ClientCaseCommandResult
     {
-        $request = $this->commands->inboundRequest($this->organizationId, $requestId);
-        if (!$request) return ClientCaseCommandResult::failure('request_not_found', ['case_id' => null]);
-        if (!empty($request['client_case_id'])) return ClientCaseCommandResult::success('already_attached', ['case_id' => (int) $request['client_case_id']]);
-        $name = ClientCaseInput::limit((string) $request['full_name'], 160);
-        $phone = ClientCaseInput::nullable((string) ($request['phone'] ?? ''), 50);
-        $email = ClientCaseInput::email((string) ($request['email'] ?? ''));
-        $managerId = $this->commands->activeManagerId($this->organizationId, $input['assigned_user_id'] ?? ($user['id'] ?? null));
         $correlationId = trim((string) $correlationId) !== '' ? trim((string) $correlationId) : ClientCaseEvents::id();
 
-        return $this->transactions->transactional(function () use ($requestId, $request, $input, $user, $name, $phone, $email, $managerId, $correlationId): ClientCaseCommandResult {
+        return $this->transactions->transactional(function () use ($requestId, $input, $user, $correlationId): ClientCaseCommandResult {
+            // Serialize conversion on the authoritative lead row before any
+            // person, case, activity or event is created.
+            $request = $this->commands->lockInboundRequest($this->organizationId, $requestId);
+            if (!$request) return ClientCaseCommandResult::failure('request_not_found', ['case_id' => null]);
+            if (!empty($request['client_case_id'])) {
+                $caseId = (int) $request['client_case_id'];
+                if (!$this->readModel->case($caseId)) {
+                    throw new RuntimeException('Linked client case could not be reloaded.');
+                }
+                return ClientCaseCommandResult::success('already_attached', ['case_id' => $caseId]);
+            }
+            $name = ClientCaseInput::limit((string) $request['full_name'], 160);
+            $phone = ClientCaseInput::nullable((string) ($request['phone'] ?? ''), 50);
+            $email = ClientCaseInput::email((string) ($request['email'] ?? ''));
+            $managerId = $this->commands->activeManagerId($this->organizationId, $input['assigned_user_id'] ?? ($user['id'] ?? null));
             $personId = ClientCasePeople::findOrCreate($this->commands, $this->organizationId, ['full_name' => $name, 'phone' => $phone, 'email' => $email, 'telegram' => null, 'notes' => null]);
             $caseInput = [
                 'full_name' => $name, 'type' => ClientCaseInput::caseTypeFromInbound($request), 'title' => ClientCaseInput::caseTitleFromInbound($request, $name),
