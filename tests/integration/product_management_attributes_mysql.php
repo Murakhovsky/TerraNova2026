@@ -25,7 +25,7 @@ $defs=[
 ];
 foreach($defs as $d){
  $receipt=$products->defineAttribute($org,$d,'def-'.$d['code'],$actor,$trace);
- $assert($products->defineAttribute($org,$d,'def-'.$d['code'],$actor,$trace)===$receipt,'definition replay');
+ $assert($products->defineAttribute($org,$d,'def-'.$d['code'],$actor,$trace)==$receipt,'definition replay');
  $products->bindAttribute($org,$category,$d['code'],$d['code']==='width',in_array($d['code'],['material','color'],true),'bind-'.$d['code'],$actor,$trace);
 }
 $assert(count($products->attributes($org))===5&&$products->attributes($foreign)===[],'dictionary tenant isolation');
@@ -38,7 +38,7 @@ $deny(fn()=>$products->setAttributes($org,$id,[['code'=>'width','value'=>'12'],[
 $assert($products->productAttributes($org,$id)===$before,'invalid patch rolls back all values');
 $after=$products->setAttributes($org,$id,$values,$rev,'attr-patch',$actor,$trace);
 $assert($after===$products->productAttributes($org,$id)&&$after['revision']===$rev+1,'attribute native readback');
-$assert($after===$products->setAttributes($org,$id,array_reverse($values),$rev,'attr-patch',$actor,$trace),'canonical patch replay');
+$assert($after==$products->setAttributes($org,$id,array_reverse($values),$rev,'attr-patch',$actor,$trace),'canonical patch replay');
 $assert(count($products->filterAttributes($org,'width','1200.500000'))===1,'decimal normalization and exact filter');
 $assert(count($products->filterAttributes($org,'outdoor',false))===1&&$products->filterAttributes($org,'outdoor',true)===[],'boolean filter');
 $deny(fn()=>$products->setAttributes($org,$id,[['code'=>'width','value'=>null]],$rev+1,'required-remove',$actor,$trace),'required removal');
@@ -54,7 +54,7 @@ $deny(fn()=>$products->variantMatrix($org,$id,[['code'=>'material','choices'=>['
 $deny(fn()=>$products->createMatrix($org,$id,$axes,'MATRIX'.$tag,$rev-1,'pcs',true,'stale-matrix',$actor,$trace),'stale matrix');
 $m=$products->createMatrix($org,$id,$axes,'MATRIX'.$tag,$rev,'pcs',true,'matrix',$actor,$trace);
 $assert(count($m['items'])===4&&$m['revision']===$rev+1,'atomic matrix creation');
-$assert($m===$products->createMatrix($org,$id,array_reverse($axes),'MATRIX'.$tag,$rev,'pcs',true,'matrix',$actor,$trace),'matrix replay');
+$assert($m==$products->createMatrix($org,$id,array_reverse($axes),'MATRIX'.$tag,$rev,'pcs',true,'matrix',$actor,$trace),'matrix replay');
 $fresh=$products->getProduct($org,$id);
 $assert(count($fresh['variants'])===5,'original SKU preserved; four additional variants');
 $assert(count(array_filter($products->variantMatrix($org,$id,$axes,'OTHER'.$tag)['items'],fn($r)=>$r['status']==='exists'))===4,'combination uniqueness independent of SKU prefix');
@@ -74,6 +74,6 @@ $patch=[['code'=>'notes','value'=>'Bulk changed']];
 $deny(fn()=>$products->bulkSetAttributes($org,$stale,$patch,'stale-bulk',$actor,$trace),'stale second target');
 $assert($products->productAttributes($org,$id)===$r1&&$products->productAttributes($org,$second)===$r2,'bulk rollback');
 $bulk=$products->bulkSetAttributes($org,$targets,$patch,'bulk',$actor,$trace);
-$assert(count($bulk['items'])===2&&$bulk===$products->bulkSetAttributes($org,array_reverse($targets),$patch,'bulk',$actor,$trace),'bulk exact replay');
+$assert(count($bulk['items'])===2&&$bulk==$products->bulkSetAttributes($org,array_reverse($targets),$patch,'bulk',$actor,$trace),'bulk exact replay');
 $assert(count($products->filterAttributes($org,'notes','Bulk changed'))===2,'both bulk targets independently readable');
 echo "Product Management typed attributes, category sets, filtering, bulk editing, revision and matrix native MySQL PASS.\n";
