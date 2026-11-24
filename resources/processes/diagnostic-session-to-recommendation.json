@@ -81,40 +81,8 @@
       ]
     },
     {
-      "id": "evaluation",
-      "label": "Evaluate structured evidence",
-      "kind": "operation",
-      "owner": "deterministic evaluation engine",
-      "domain": "diagnostic",
-      "capability": null,
-      "capability_gap": "missing-domain-capability",
-      "critical": true,
-      "runtime": [
-        {
-          "type": "use_case",
-          "ref": "EvaluateDiagnosticSession"
-        }
-      ]
-    },
-    {
-      "id": "result",
-      "label": "Record findings and recommendation",
-      "kind": "state",
-      "owner": "deterministic evaluation engine",
-      "domain": "diagnostic",
-      "capability": null,
-      "capability_gap": "missing-domain-capability",
-      "critical": true,
-      "runtime": [
-        {
-          "type": "use_case",
-          "ref": "RecordDiagnosticResult"
-        }
-      ]
-    },
-    {
       "id": "complete",
-      "label": "Complete coherent session",
+      "label": "Evaluate evidence, persist report and complete session atomically",
       "kind": "operation",
       "owner": "diagnostic operator / interviewer",
       "domain": "diagnostic",
@@ -123,12 +91,42 @@
       "runtime": [
         {
           "type": "use_case",
+          "ref": "EvaluateDiagnosticSession"
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/Diagnostic/Application/Service/DiagnosticRuntimeService.php",
+          "symbol": "function complete("
+        },
+        {
+          "type": "use_case",
           "ref": "CompleteDiagnosticSession"
         },
         {
           "type": "source",
           "path": "symfony/src/Infrastructure/Capability/DiagnosticSessionCompleteAdapter.php",
           "symbol": "DiagnosticSessionCompleteAdapter"
+        }
+      ]
+    },
+    {
+      "id": "result",
+      "label": "Verify persisted Diagnostic report",
+      "kind": "operation",
+      "owner": "diagnostic operator / interviewer",
+      "domain": "diagnostic",
+      "capability": "diagnostic.report.summary.get",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "symfony/src/Infrastructure/Capability/DiagnosticReportSummaryAdapter.php",
+          "symbol": "DiagnosticReportSummaryAdapter"
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/Diagnostic/Infrastructure/Persistence/MySql/MysqlDiagnosticRuntimeRepository.php",
+          "symbol": "function report("
         }
       ]
     },
@@ -160,24 +158,14 @@
     },
     {
       "from": "evidence",
-      "to": "evaluation"
-    },
-    {
-      "from": "evaluation",
-      "to": "evidence",
-      "label": "insufficient evidence"
-    },
-    {
-      "from": "evaluation",
-      "to": "result",
-      "label": "sufficient"
-    },
-    {
-      "from": "result",
       "to": "complete"
     },
     {
       "from": "complete",
+      "to": "result"
+    },
+    {
+      "from": "result",
       "to": "decision"
     }
   ]
