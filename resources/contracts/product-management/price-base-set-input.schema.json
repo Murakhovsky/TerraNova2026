@@ -25,6 +25,11 @@
       "minLength": 1,
       "maxLength": 21,
       "pattern": "^[0-9]+(\\.[0-9]{1,4})?$"
+    },
+    "expected_revision": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Optional optimistic revision; 0 means no existing price for this currency."
     }
   },
   "additionalProperties": false
