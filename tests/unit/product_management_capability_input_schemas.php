@@ -10,9 +10,13 @@ foreach($raw['contributions']['capability_contracts'] as $definition) {
     $cap=CapabilityContract::fromArray($definition);
     $contracts[$cap->id]=$cap;
 }
-if(count($contracts)!==30)throw new RuntimeException('Missing typed PM contracts.');
+if(count($contracts)!==34)throw new RuntimeException('Missing typed PM contracts.');
 $validator=new CapabilityJsonInputValidator();
 $good=[
+ 'product_management.price.list.create'=>['code'=>'B2B','name'=>'Wholesale','kind'=>'wholesale','currency'=>'EUR'],
+ 'product_management.price.list.search'=>['code'=>'B2B','limit'=>10],
+ 'product_management.price.list.entry.get'=>['list_id'=>str_repeat('a',32),'variant_id'=>str_repeat('b',32)],
+ 'product_management.price.list.entry.set'=>['list_id'=>str_repeat('a',32),'variant_id'=>str_repeat('b',32),'amount'=>'12.3456','expected_revision'=>0],
  'product_management.price.history.search'=>['variant_id'=>str_repeat('a',32),'currency'=>'EUR','limit'=>30,'offset'=>0],
  'product_management.price.base.set'=>['variant_id'=>str_repeat('a',32),'currency'=>'EUR','amount'=>'12.3400','expected_revision'=>0],
  'product_management.media.attach'=>['product_id'=>str_repeat('a',32),'file_id'=>'FILE-123',
@@ -39,6 +43,9 @@ $good=[
 ];
 foreach($good as $id=>$input) $validator->validate($contracts[$id],$input);
 $bad=[
+ 'product_management.price.list.create'=>[['code'=>'B2B','name'=>'Wholesale','kind'=>'invalid','currency'=>'EUR']],
+ 'product_management.price.list.search'=>[['limit'=>101],['organization_id'=>'other']],
+ 'product_management.price.list.entry.set'=>[['list_id'=>str_repeat('a',32),'variant_id'=>str_repeat('b',32),'amount'=>'12.34567','expected_revision'=>0],['list_id'=>str_repeat('a',32),'variant_id'=>str_repeat('b',32),'amount'=>'12','expected_revision'=>-1]],
  'product_management.price.history.search'=>[['variant_id'=>str_repeat('a',32),'currency'=>'EUR','limit'=>101],['variant_id'=>str_repeat('a',32),'currency'=>'EUR','organization_id'=>'other'],['variant_id'=>str_repeat('a',32),'currency'=>'EUR','offset'=>-1]],
  'product_management.price.base.set'=>[['variant_id'=>str_repeat('a',32),'currency'=>'EUR','amount'=>'1','expected_revision'=>-1],['variant_id'=>str_repeat('a',32),'currency'=>'EUR','amount'=>'1','expected_revision'=>'0']],
  'product_management.media.attach'=>[['product_id'=>str_repeat('a',32),'file_id'=>'../outside','role'=>'cover']],
