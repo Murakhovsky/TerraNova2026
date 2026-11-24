@@ -102,6 +102,7 @@ $makeInbox = static fn (CrmInboxItem $item, bool $throwOnFail = false): CrmInbox
     {
         return $organizationId === $this->item->organizationId && $id === $this->item->id ? $this->item : null;
     }
+    public function lockClaim(CrmInboxItem $item): bool { return true; }
     public function complete(CrmInboxItem $item): void { $this->completed[] = $item->id; }
     public function fail(CrmInboxItem $item, Throwable $error): void
     {

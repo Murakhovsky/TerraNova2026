@@ -25,6 +25,7 @@ final readonly class MysqlCrmInboxRepository implements CrmInboxRepositoryInterf
         array $payload,
         string $correlationId,
     ): string {
+        if (!$this->connection->inTransaction()) throw new DomainException('CRM admission requires a transaction.');
         $id = bin2hex(random_bytes(16));
         $json = json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
         $payloadHash = hash('sha256', $json);
@@ -52,7 +53,7 @@ final readonly class MysqlCrmInboxRepository implements CrmInboxRepositoryInterf
 
         $existing = $this->connection->prepare(
             'SELECT id,event_type,payload_hash FROM cos_crm_inbox WHERE organization_id = :organization_id '
-            . 'AND provider = :provider AND external_event_id = :external_event_id LIMIT 1'
+            . 'AND provider = :provider AND external_event_id = :external_event_id LIMIT 1 FOR UPDATE'
         );
         $existing->execute([
             'organization_id' => $organizationId,
@@ -76,59 +77,48 @@ final readonly class MysqlCrmInboxRepository implements CrmInboxRepositoryInterf
 
     public function claim(string $organizationId, string $id, string $workerId): ?CrmInboxItem
     {
-        $statement = $this->connection->prepare(
-            "UPDATE cos_crm_inbox SET status = 'PROCESSING', attempts = attempts + 1, locked_at = NOW(6), locked_by = :worker "
-            . "WHERE id = :id AND organization_id = :organization_id AND status IN ('RECEIVED', 'FAILED') "
-            . 'AND available_at <= NOW(6)'
-        );
-        $statement->execute(['worker' => $workerId, 'id' => $id, 'organization_id' => $organizationId]);
-        if ($statement->rowCount() !== 1) {
-            return null;
-        }
+        if ($this->connection->inTransaction()) throw new DomainException('CRM claim must commit before processing.');
+        if (trim($workerId)==='' || strlen($workerId)>100) throw new DomainException('Invalid CRM worker.');
+        $dead = $this->connection->prepare("UPDATE cos_crm_inbox SET status='DEAD',locked_at=NULL,locked_by=NULL,last_error='CRM attempt budget exhausted' WHERE id=:id AND organization_id=:organization_id AND attempts>=10 AND (status IN ('RECEIVED','FAILED') OR (status='PROCESSING' AND (locked_at IS NULL OR locked_at<=DATE_SUB(NOW(6), INTERVAL 300 SECOND))))");
+        $dead->execute(['id'=>$id,'organization_id'=>$organizationId]);
+        $token=substr($workerId,0,60).':'.bin2hex(random_bytes(16));
+        $statement=$this->connection->prepare("UPDATE cos_crm_inbox SET status='PROCESSING',attempts=attempts+1,locked_at=NOW(6),locked_by=:worker WHERE id=:id AND organization_id=:organization_id AND signature_verified=1 AND attempts<10 AND ((status IN ('RECEIVED','FAILED') AND available_at<=NOW(6)) OR (status='PROCESSING' AND (locked_at IS NULL OR locked_at<=DATE_SUB(NOW(6), INTERVAL 300 SECOND))))");
+        $statement->execute(['worker'=>$token,'id'=>$id,'organization_id'=>$organizationId]);
+        if ($statement->rowCount()!==1) return null;
+        $read=$this->connection->prepare("SELECT * FROM cos_crm_inbox WHERE id=:id AND organization_id=:organization_id AND status='PROCESSING' AND locked_by=:worker LIMIT 1");
+        $read->execute(['id'=>$id,'organization_id'=>$organizationId,'worker'=>$token]);
+        $row=$read->fetch(PDO::FETCH_ASSOC);
+        if (!is_array($row)) return null;
+        return new CrmInboxItem((string)$row['id'],(string)$row['organization_id'],(string)$row['provider'],(string)$row['external_event_id'],(string)$row['event_type'],json_decode((string)$row['payload'],true,flags:JSON_THROW_ON_ERROR),(int)$row['attempts'],(string)$row['correlation_id'],$token);
+    }
 
-        $read = $this->connection->prepare(
-            'SELECT * FROM cos_crm_inbox WHERE id = :id AND organization_id = :organization_id LIMIT 1'
-        );
-        $read->execute(['id' => $id, 'organization_id' => $organizationId]);
-        $row = $read->fetch(PDO::FETCH_ASSOC);
-        if ($row === false) {
-            return null;
-        }
-
-        return new CrmInboxItem(
-            (string) $row['id'],
-            (string) $row['organization_id'],
-            (string) $row['provider'],
-            (string) $row['external_event_id'],
-            (string) $row['event_type'],
-            json_decode((string) $row['payload'], true, flags: JSON_THROW_ON_ERROR),
-            (int) $row['attempts'],
-            (string) $row['correlation_id'],
-        );
+    public function lockClaim(CrmInboxItem $item): bool
+    {
+        if (!$this->connection->inTransaction()) throw new DomainException('CRM processing requires a transaction.');
+        if ($item->claimToken==='') return false;
+        // Hold the row lock throughout business writes, outbox and completion.
+        $statement=$this->connection->prepare("SELECT 1 FROM cos_crm_inbox WHERE id=:id AND organization_id=:organization_id AND status='PROCESSING' AND attempts=:attempts AND locked_by=:token AND signature_verified=1 AND locked_at>DATE_SUB(NOW(6), INTERVAL 300 SECOND) LIMIT 1 FOR UPDATE");
+        $statement->execute($this->claimParameters($item));
+        return $statement->fetchColumn()!==false;
     }
 
     public function complete(CrmInboxItem $item): void
     {
-        $statement = $this->connection->prepare(
-            "UPDATE cos_crm_inbox SET status = 'COMPLETED', processed_at = NOW(6), locked_at = NULL, "
-            . 'locked_by = NULL, last_error = NULL WHERE id = :id AND organization_id = :organization_id'
-        );
-        $statement->execute(['id' => $item->id, 'organization_id' => $item->organizationId]);
+        if (!$this->connection->inTransaction()) throw new DomainException('CRM completion requires a transaction.');
+        $statement=$this->connection->prepare("UPDATE cos_crm_inbox SET status='COMPLETED',processed_at=NOW(6),locked_at=NULL,locked_by=NULL,last_error=NULL WHERE id=:id AND organization_id=:organization_id AND status='PROCESSING' AND attempts=:attempts AND locked_by=:token");
+        $statement->execute($this->claimParameters($item));
+        if ($statement->rowCount()!==1) throw new DomainException('CRM processing claim was lost.');
     }
 
     public function fail(CrmInboxItem $item, Throwable $error): void
     {
-        $dead = $item->attempts >= 10;
-        $statement = $this->connection->prepare(
-            'UPDATE cos_crm_inbox SET status = :status, available_at = NOW(6), '
-            . 'locked_at = NULL, locked_by = NULL, last_error = :error WHERE id = :id AND organization_id = :organization_id'
-        );
-        $statement->execute([
-            'status' => $dead ? 'DEAD' : 'FAILED',
-            'error' => mb_substr($error->getMessage(), 0, 65535),
-            'id' => $item->id,
-            'organization_id' => $item->organizationId,
-        ]);
+        $statement=$this->connection->prepare("UPDATE cos_crm_inbox SET status=:status,available_at=DATE_ADD(NOW(6), INTERVAL 30 SECOND),locked_at=NULL,locked_by=NULL,last_error=:error WHERE id=:id AND organization_id=:organization_id AND status='PROCESSING' AND attempts=:attempts AND locked_by=:token");
+        $statement->execute($this->claimParameters($item)+['status'=>$item->attempts>=10?'DEAD':'FAILED','error'=>'CRM processing failed: '.$error::class]);
+    }
+
+    private function claimParameters(CrmInboxItem $item): array
+    {
+        return ['id'=>$item->id,'organization_id'=>$item->organizationId,'attempts'=>$item->attempts,'token'=>$item->claimToken];
     }
 
     /** @return array<int,array{organization_id:string,id:string,correlation_id:string}> */
@@ -136,7 +126,7 @@ final readonly class MysqlCrmInboxRepository implements CrmInboxRepositoryInterf
     {
         $statement = $this->connection->prepare(
             "SELECT organization_id,id,correlation_id FROM cos_crm_inbox "
-            . "WHERE status IN ('RECEIVED','FAILED') AND available_at <= NOW(6) "
+            . "WHERE signature_verified=1 AND ((status IN ('RECEIVED','FAILED') AND available_at<=NOW(6)) OR (status='PROCESSING' AND (locked_at IS NULL OR locked_at<=DATE_SUB(NOW(6), INTERVAL 300 SECOND)))) "
             . 'ORDER BY available_at,id LIMIT :limit'
         );
         $statement->bindValue(':limit', max(1, min(500, $limit)), PDO::PARAM_INT);

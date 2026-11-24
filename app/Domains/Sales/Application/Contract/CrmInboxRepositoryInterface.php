@@ -19,6 +19,8 @@ interface CrmInboxRepositoryInterface
 
     public function claim(string $organizationId, string $id, string $workerId): ?CrmInboxItem;
 
+    public function lockClaim(CrmInboxItem $item): bool;
+
     public function complete(CrmInboxItem $item): void;
 
     public function fail(CrmInboxItem $item, Throwable $error): void;

@@ -16,11 +16,11 @@ final readonly class ProcessCrmInboxCommandHandler implements CommandHandlerInte
     public function __invoke(ProcessCrmInboxCommand $command): array
     {
         $workerId = 'symfony:' . substr(hash('sha256', $command->correlationId . ':' . $command->inboxId), 0, 24);
-        $this->processor->execute($command->organizationId, $command->inboxId, $workerId);
+        $processed = $this->processor->execute($command->organizationId, $command->inboxId, $workerId);
 
         return [
             'inbox_id' => $command->inboxId,
-            'processed' => true,
+            'processed' => $processed,
         ];
     }
 }
