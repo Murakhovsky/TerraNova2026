@@ -2706,6 +2706,10 @@ services:
     arguments:
       $profilesJson: '%env(COS_MARKETING_HERMES_PROFILES_JSON)%'
   Domains\Marketing\Infrastructure\Hermes\CurlHermesAnalystTransport: ~
+  Domains\Marketing\Infrastructure\Hermes\HermesAnalystProfileProbe: ~
+  App\Infrastructure\Marketing\HermesAnalystOperatorPreflight:
+    arguments:
+      $governance: '@Infrastructure\Llm\MysqlLlmGovernanceRepository'
   Domains\Marketing\Infrastructure\Hermes\HermesAnalystTransport:
     alias: Domains\Marketing\Infrastructure\Hermes\CurlHermesAnalystTransport
   Domains\Marketing\Infrastructure\Hermes\HermesAnalystExecutionFactory:

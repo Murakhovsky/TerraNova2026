@@ -197,6 +197,17 @@ try {
         new DoctrineWorkflowExecutionCoordinator($db,$store,$scheduler,$planEvidence,$receipts));
     $readiness=new HermesAnalystReadinessService($profiles,$budget,$modules);
     $planner=new MarketingAnalystPlanProposalService($db,$goals,$bridge,$contexts,$readiness);
+    $preflight=new \App\Infrastructure\Marketing\HermesAnalystOperatorPreflight($profiles,
+        new \Domains\Marketing\Infrastructure\Hermes\HermesAnalystProfileProbe($vault,$transport),$budget,$modules);
+    $local=$preflight->inspect($org);
+    $assert($local['status']==='LOCAL_PREFLIGHT_PASSED'&&$transport->reads===0&&$transport->posts===0,
+        'Local preflight caused remote execution.');
+    $remote=$preflight->inspect($org,true);
+    $assert($remote['status']==='REMOTE_PREFLIGHT_PASSED_NOT_ACCEPTED'&&$remote['remote_probe_passed']
+        &&!$remote['isolation_verified']&&!$remote['provider_cost_cap_verified']&&!$remote['release_authorized']
+        &&$transport->reads===1&&$transport->posts===0&&$budget->monthlySpend($org,'USD')===0.0,
+        'Remote preflight claimed acceptance or consumed generation budget.');
+    $transport->reads=0;
     $campaign=$campaigns->createDraft($org,$owner,(new \Domains\Marketing\Domain\MarketingDraftPolicy())->validate([
         'name'=>'Canonical analyst acceptance','business_objective'=>'Improve product headline',
         'product_refs'=>[],'brief'=>'Planning advice only, no paid advertising.'

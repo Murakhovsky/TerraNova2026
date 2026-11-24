@@ -53,6 +53,9 @@ final class CurlHermesAnalystTransport implements HermesAnalystTransport
             if($ok===false||$status<200||$status>=300){
                 throw new RuntimeException('Hermes request failed or uncertain; reconcile before retrying.');
             }
+            // Associative decoding otherwise conflates the empty JSON object with an empty list.
+            $shape=ltrim($body);
+            if(!str_starts_with($shape,$payload===null?'[':'{'))throw new RuntimeException('Unexpected Hermes response shape.');
             $data=json_decode($body,true,32,JSON_THROW_ON_ERROR);
             if(!is_array($data)||isset($data['error']))throw new RuntimeException('Invalid Hermes response.');
             return $data;

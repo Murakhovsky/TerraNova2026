@@ -234,5 +234,18 @@ $expect(str_contains($handlerSource,'$this->workerAdmission->assertAuthorized($a
     &&str_contains($services,'MarketingDomainModule'),'Canonical analyst Action admission not wired.');
 $expect(str_contains($controller,'$this->analystPlans->propose(')&&!str_contains($controller,'->recommend('),'Workspace bypasses canonical Plan.');
 $expect($mapper::analystPin(['creative_pin'=>'mkcr-'.str_repeat('a',24).':2'],'creative_pin','mkcr-')===['mkcr-'.str_repeat('a',24),2],'Analyst form pin failed.');
+$probeClass=\Domains\Marketing\Infrastructure\Hermes\HermesAnalystProfileProbe::class;
+$probeClass::assertNoTools([]);
+$probeClass::assertNoTools([['enabled'=>false,'tools'=>['terminal']]]);
+foreach([[['enabled'=>true,'tools'=>['terminal']]],[['enabled'=>false,'tools'=>[[]]]],['toolsets'=>[]]] as $unsafe){
+    $blocked(static fn()=> $probeClass::assertNoTools($unsafe),'Unsafe toolset passed preflight.');
+}
+foreach([['profile_url'=>'https://HERMES.example.com/p/mkt-test','credential_ref'=>'env://OTHER_HERMES_SECRET'],
+    ['profile_url'=>'https://hermes.example.com/p/other']] as $overlap){
+    $shared=new $profilesClass(json_encode(['tenant-a'=>$configRaw,'tenant-b'=>[...$configRaw,...$overlap]],JSON_THROW_ON_ERROR));
+    $blocked(static fn()=> $shared->forTenant('tenant-a'),'Cross-tenant Hermes profile or credential alias accepted.');
+}
+$defaultProfile=new $profilesClass(json_encode(['tenant-a'=>[...$configRaw,'profile_url'=>'https://hermes.example.com/p/default']],JSON_THROW_ON_ERROR));
+$blocked(static fn()=> $defaultProfile->forTenant('tenant-a'),'Default profile accepted.');
 echo "Marketing M2 typed planning policy, provenance, CSRF and boundary PASS\n";
 

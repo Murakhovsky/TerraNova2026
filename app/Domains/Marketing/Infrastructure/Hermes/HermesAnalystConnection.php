@@ -15,6 +15,7 @@ final readonly class HermesAnalystConnection
         if(!is_array($parts)||($parts['scheme']??null)!=='https'
             ||!is_string($parts['host']??null)||!preg_match('/^[a-zA-Z0-9.-]+$/D',$parts['host'])
             ||!preg_match('~^/p/[a-zA-Z0-9_-]{1,64}$~D',(string)($parts['path']??''))
+            ||strtolower((string)($parts['path']??''))==='/p/default'
             ||isset($parts['user'])||isset($parts['pass'])||isset($parts['port'])
             ||isset($parts['query'])||isset($parts['fragment'])
             ||!str_contains($parts['host'],'.')||filter_var($parts['host'],FILTER_VALIDATE_IP)!==false

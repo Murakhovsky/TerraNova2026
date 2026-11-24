@@ -29,13 +29,10 @@ final readonly class HermesMarketingAnalystAdapter implements MarketingAnalystRu
         }
         // Rebuild from owner reads. Never trust arbitrary caller-provided business context.
         $fresh=$this->rebuild($actor,$envelope);
-        $secret=$this->vault->resolve($credential);
-        $token=$secret['access_token']??null;
-        if(!is_string($token)||$token===''||strlen($token)>4096||preg_match('/[\\x00-\\x20\\x7f]/',$token)){
-            throw new DomainException('Hermes profile credential unavailable.');
-        }
+        $probe=new HermesAnalystProfileProbe($this->vault,$this->transport);
+        $token=$probe->token($this->connection);
         $base=$this->connection->profileBaseUrl.'/v1';
-        $this->requireNoTools($this->transport->get($base.'/toolsets',$token));
+        $probe->inspect($this->connection,$token);
         $safe=['context_hash'=>$fresh['context_hash'],'facts'=>$fresh['context']['facts'],
             'evidence_aliases'=>array_column($fresh['context']['sources'],'alias'),'constraints'=>$fresh['context']['constraints']];
         $key='cos-mkt-'.hash('sha256',$actor->organizationId()->value().':'.$credential->id.':'.$correlationId.':'.$fresh['context_hash']);
@@ -54,13 +51,7 @@ final readonly class HermesMarketingAnalystAdapter implements MarketingAnalystRu
     /** @param array<mixed> $sets */
     public function requireNoTools(array $sets):void
     {
-        if(!array_is_list($sets))throw new DomainException('Hermes toolset discovery unavailable.');
-        foreach($sets as $set){
-            if(!is_array($set)||!is_bool($set['enabled']??null)||!is_array($set['tools']??null)
-                ||!array_is_list($set['tools'])||($set['enabled']&&$set['tools']!==[])){
-                throw new DomainException('Hermes advisory profile has enabled tools or unverifiable configuration.');
-            }
-        }
+        HermesAnalystProfileProbe::assertNoTools($sets);
     }
 
     /** @return array<string,mixed> */

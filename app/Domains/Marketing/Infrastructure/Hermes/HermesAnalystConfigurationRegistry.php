@@ -19,9 +19,20 @@ final readonly class HermesAnalystConfigurationRegistry
             throw new DomainException('Hermes profile registry must be a bounded tenant map.');
         }
         $profiles=get_object_vars($decoded);
-        $raw=$profiles[$org]??null;
-        if($raw===null)return null;
-        if(!$raw instanceof \stdClass)throw new DomainException('Hermes tenant profile is malformed.');
-        return new HermesAnalystRuntimeConfiguration($org,get_object_vars($raw));
+        $configuration=null;$urls=[];$references=[];
+        foreach($profiles as $tenant=>$raw){
+            if(!$raw instanceof \stdClass)throw new DomainException('Hermes tenant profile is malformed.');
+            $profile=new HermesAnalystRuntimeConfiguration((string)$tenant,get_object_vars($raw));
+            // URL host is case-insensitive; the named profile path is kept exact.
+            $parts=parse_url($profile->connection->profileBaseUrl);
+            $url=strtolower((string)$parts['host']).$parts['path'];
+            $reference=$profile->connection->credential->secretReference;
+            if(isset($urls[$url])||isset($references[$reference])){
+                throw new DomainException('Hermes tenant profiles must not share URL or credential reference.');
+            }
+            $urls[$url]=true;$references[$reference]=true;
+            if((string)$tenant===$org)$configuration=$profile;
+        }
+        return $configuration;
     }
 }
