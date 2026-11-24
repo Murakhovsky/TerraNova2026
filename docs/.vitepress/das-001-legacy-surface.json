@@ -44,7 +44,6 @@
       "capital_markets.view"
     ],
     "diagnostic": [
-      "diagnostic.methodology.compile",
       "diagnostic.semantic.v1",
       "diagnostic.state.rebuild",
       "diagnostic.traceability",

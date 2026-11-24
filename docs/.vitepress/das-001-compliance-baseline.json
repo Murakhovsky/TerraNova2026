@@ -14,8 +14,8 @@
       "max_process_gaps": 0
     },
     "diagnostic": {
-      "min_typed": 4,
-      "max_descriptive_only": 5,
+      "min_typed": 5,
+      "max_descriptive_only": 4,
       "max_process_gaps": 2
     },
     "documents": {

@@ -38,3 +38,7 @@ Gap закривається лише в **одному атомарному PR*
 ### Канонічне завершення Diagnostic
 
 `diagnostic.session.complete` делегує наявному CompleteDiagnosticCommand і транзакційному DiagnosticRuntimeService. Ідемпотентність природна: одна terminal completion на tenant/session, незалежно від request key; інша сесія є іншим бізнесовим наміром. Публічний receipt містить лише session ID, status, report version та replay flag, звірені з native runtime/report readback. Evaluation і result recording всередині completion не оголошуються окремими callable capabilities. Process Registry відображає одну атомарну completion та окреме незалежне читання persisted report metadata через `diagnostic.report.summary.get`. Дві попередні прогалини відокремлених команд погашено через корекцію процесної моделі, а не через додавання фіктивних mutation handlers. D3–D5 не встановлено.
+
+### Компіляція методології
+
+`diagnostic.methodology.compile` є read-only preflight для точного tenant-owned Studio pack/version. Generic manager permission не замінює `diagnostic.methodology.edit`. Результат містить ідентичність, runtime version, статус і content hash; не розкриває документ методології. Операція не викликає mutable `validate`, regression, publish або activate. Хеш є fingerprint компільованого snapshot, а не доказ publication readiness. Окремий methodology publication gap залишається до захисту immutable publication та атомарної activation.
