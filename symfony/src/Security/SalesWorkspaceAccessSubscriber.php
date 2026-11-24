@@ -107,6 +107,10 @@ final readonly class SalesWorkspaceAccessSubscriber implements EventSubscriberIn
                 // Approval scope and governed execution must be proven by S6, not by a generic manager role.
                 throw new DomainException('Legacy action execution requires governed workflow.');
             }
+            // These commands now enter the native transactional write facade.
+            if ($mutation&&($name==='SalesWriteController'
+                ||($name==='ClientCaseMutationController'&&!in_array($method,['create','update'],true))
+                ||($name==='SalesFrontendController'&&in_array($method,['quickUpdate','owner'],true)))) return;
             if ($mutation) {
                 // Existing legacy write handlers do not uniformly lock/recheck owner authorization.
                 // Until migrated, only an explicitly authorized live administrator may use these routes.
