@@ -11,9 +11,14 @@ process_id: sales.order-to-fulfillment
 
 # Sales Order → виконання замовлення
 
-## Мета та межа відповідальності
+## Бізнес-мета
 
 Sales володіє Order, OrderLine, allocation references, revision і бізнесовими фактами виконання. Product Management є власником E5 reservation, stock balance, movement ledger та фізичного повернення. Внутрішні stock operations не є окремими публічними командами для цього процесу; вони викликаються тільки через `OrderInventoryPort` у транзакції Sales. Не створюється другий склад або executor.
+
+## Учасники
+
+- Авторизований менеджер Sales, який підтверджує бізнесові документи.
+- Sales Application і Product Management як транзакційні власники власного стану.
 
 ## Процес
 
@@ -32,3 +37,11 @@ Sales володіє Order, OrderLine, allocation references, revision і біз
 ## Докази
 
 `tests/integration/sales_workspace_summary_mysql.php` перевіряє actual MySQL stock ledger, atomic rollback, two-connection locking та replay. Реальне provider acceptance і release promotion залишаються окремими воротами.
+
+## Карта коду
+
+- `app/Domains/Sales/Application/Service/SalesOrderLifecycleService.php`
+- `app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlSalesOrderRepository.php`
+- `app/Domains/ProductManagement/Application/Contract/OrderInventoryPort.php`
+- `app/Domains/ProductManagement/Infrastructure/Persistence/MySqlProductManagementStore.php`
+- `resources/processes/sales-order-to-fulfillment.json`
