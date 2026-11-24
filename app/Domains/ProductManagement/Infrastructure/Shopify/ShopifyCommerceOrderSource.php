@@ -14,6 +14,7 @@ final readonly class ShopifyCommerceOrderSource implements CommerceOrderSourcePo
 {
     private const ORDER=<<<'GQL'
 query COSCommerceOrder($id: ID!) {
+  currentAppInstallation { accessScopes { handle } }
   order(id: $id) {
     id createdAt updatedAt cancelledAt test edited taxesIncluded
     displayFinancialStatus displayFulfillmentStatus
@@ -32,6 +33,7 @@ query COSCommerceOrder($id: ID!) {
 GQL;
     private const PAGE=<<<'GQL'
 query COSCommerceOrderPage($after: String) {
+  currentAppInstallation { accessScopes { handle } }
   orders(first: 25, after: $after, sortKey: UPDATED_AT) {
     nodes { id }
     pageInfo { hasNextPage endCursor }
@@ -46,7 +48,9 @@ GQL;
         self::gid($externalId,'Order');
         $c=$this->connection($org,$channel,$connection);
         $token=$this->credentials->accessToken($c['shop_domain'],$c['secret_ref'],$org,$connection);
-        $raw=$this->read->query($c['shop_domain'],$token,self::ORDER,['id'=>$externalId])['data']['order']??null;
+        $data=$this->read->query($c['shop_domain'],$token,self::ORDER,['id'=>$externalId])['data'];
+        self::assertOrderScope($data);
+        $raw=$data['order']??null;
         if (!is_array($raw)||($raw['id']??null)!==$externalId) throw new DomainException('Shopify order identity unavailable.');
         $created=self::time($raw['createdAt']??null);$updated=self::time($raw['updatedAt']??null);
         if ($updated<$created||!is_bool($raw['test']??null)||!is_bool($raw['edited']??null)||!is_bool($raw['taxesIncluded']??null)||!array_key_exists('cancelledAt',$raw)) throw new DomainException('Invalid Shopify order observation.');
@@ -93,11 +97,12 @@ GQL;
                 }
             }
         }
-        $this->connection($org,$channel,$connection); // Re-attest connection after provider read.
+        $fresh=$this->connection($org,$channel,$connection); // Re-attest connection after provider read.
+        if($fresh['shop_domain']!==$c['shop_domain']||$fresh['secret_ref']!==$c['secret_ref'])throw new DomainException('Commerce source changed.');
         // Hash the provider response independently of COS mapping revisions. Persist only the digest and redacted observation.
         $providerHash=hash('sha256',json_encode($raw,JSON_THROW_ON_ERROR));
         return ['provider_hash'=>$providerHash,'channel'=>'shopify','store_reference'=>$connection,'external_order_id'=>$externalId,'created_at'=>$created,'updated_at'=>$updated,
-            'financial_status'=>$financial,'fulfillment_status'=>$fulfillment,'cancelled_at'=>$cancelled,'test'=>$raw['test'],
+            'financial_status'=>$financial,'fulfillment_status'=>$fulfillment,'cancelled_at'=>$cancelled,'test'=>$raw['test'],'edited'=>$raw['edited'],'tax_included'=>$raw['taxesIncluded'],
             'currency'=>$currency,'original_total'=>$original,'current_total'=>$current,'terms'=>$terms,'blocked_reason'=>$reason];
     }
 
@@ -106,13 +111,16 @@ GQL;
         if($cursor!==null&&(trim($cursor)===''||strlen($cursor)>512))throw new DomainException('Invalid order cursor.');
         $c=$this->connection($org,$channel,$connection);
         $token=$this->credentials->accessToken($c['shop_domain'],$c['secret_ref'],$org,$connection);
-        $page=$this->read->query($c['shop_domain'],$token,self::PAGE,['after'=>$cursor])['data']['orders']??null;
+        $data=$this->read->query($c['shop_domain'],$token,self::PAGE,['after'=>$cursor])['data'];
+        self::assertOrderScope($data);
+        $page=$data['orders']??null;
         if(!is_array($page)||!is_array($page['nodes']??null)||!array_is_list($page['nodes'])||count($page['nodes'])>25||!is_bool($page['pageInfo']['hasNextPage']??null))throw new DomainException('Invalid Shopify order page.');
         $ids=[];foreach($page['nodes'] as $node)$ids[]=self::gid($node['id']??null,'Order');
         if(count(array_unique($ids))!==count($ids))throw new DomainException('Duplicate Shopify order page identity.');
         $next=$page['pageInfo']['hasNextPage']?($page['pageInfo']['endCursor']??null):null;
         if($page['pageInfo']['hasNextPage']&&(!is_string($next)||$next===''||strlen($next)>512||$next===$cursor||$ids===[]))throw new DomainException('Unsafe Shopify order page cursor.');
-        $this->connection($org,$channel,$connection);
+        $fresh=$this->connection($org,$channel,$connection);
+        if($fresh['shop_domain']!==$c['shop_domain']||$fresh['secret_ref']!==$c['secret_ref'])throw new DomainException('Commerce source changed.');
         return ['order_ids'=>$ids,'next_cursor'=>$next];
     }
     public function pending(string $org,string $channel,string $connection):array
@@ -137,6 +145,13 @@ GQL;
         $unique=$this->store->uniqueConnectionForShop($c['shop_domain']);
         if($unique['organization_id']!==$org||$unique['connection_id']!==$id||$unique['secret_ref']!==$c['secret_ref'])throw new DomainException('Ambiguous commerce source.');
         return $c;
+    }
+    private static function assertOrderScope(array $data):void
+    {
+        $scopes=$data['currentAppInstallation']['accessScopes']??null;
+        if(!is_array($scopes)||!array_is_list($scopes))throw new DomainException('Shopify order scope not verified.');
+        $handles=array_column($scopes,'handle');
+        if(!in_array('read_orders',$handles,true)&&!in_array('write_orders',$handles,true))throw new DomainException('Shopify read_orders scope not granted.');
     }
     private static function gid(mixed $id,string $kind):string
     {
