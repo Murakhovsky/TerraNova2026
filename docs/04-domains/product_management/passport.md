@@ -92,6 +92,19 @@ domain_id: product_management
       ]
     },
     {
+      "id": "governed_operations",
+      "capability_ids": [
+        "product_management.governed.product.create",
+        "product_management.governed.variant.matrix.create",
+        "product_management.governed.attribute.product.bulk_set",
+        "product_management.governed.price.base.set",
+        "product_management.governed.stock.receive",
+        "product_management.governed.stock.issue",
+        "product_management.governed.stock.reserve",
+        "product_management.governed.stock.release"
+      ]
+    },
+    {
       "id": "analytics",
       "capability_ids": [
         "product_management.analytics.summary.get",
