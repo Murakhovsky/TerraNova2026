@@ -21,18 +21,12 @@ repository, CI logs, PR or issue. This repository intentionally contains
 no client credentials. The sample store is non-production, but access
 tokens are still valid credentials while installed.
 
-For the *existing supervised single-store pilot*, the Symfony PHP container
-accepts these host Docker Compose environment variables:
-
-- `SHOPIFY_SHOP_DOMAIN=lamps-6eey3z3e.myshopify.com`
-- `SHOPIFY_CLIENT_ID` from the app's Dev Dashboard
-- `SHOPIFY_CLIENT_SECRET` from the app's Dev Dashboard
-- `COS_SHOPIFY_OPERATOR_ENABLED=1` only while a supervised operator runs
-
-The Docker Compose host `.env` is excluded by `.gitignore`.
-The PHP service alone inherits these settings, not the generic worker fleet.
-Compose environment variables are visible to Docker administrators; a
-production rollout should use the existing COS Credential Vault instead.
+For the supervised single-store pilot, leave the three credentials in the
+root-owned host file `/etc/cos/shopify-lamps.env` (0600), **not** in Docker
+Compose, GitHub or a permanent web/worker process environment.
+The guarded `bin/shopify-lamps-operator.sh` wrapper forwards credentials
+to exactly one transient PHP CLI process using `docker compose exec -e NAME`.
+Future multi-store use should resolve a tenant-scoped COS Credential Vault.
 
 The isolated no-output GitHub Actions smoke workflow
 `.github/workflows/cos-shopify-lamps-smoke.yml` reads a separate
@@ -71,3 +65,41 @@ merge the branch, enable Product Management tenants, or claim a successful
 OAuth connection before its manual read-only smoke finishes. After a
 successful read-only canary, use the existing independent Goal/Plan/Approval
 Workflow for any native materialization. Shopify remains read-only.
+
+## Операторський запуск Product Management
+
+Переконайтесь, що код PR розгорнуто на сервері та модуль
+`product_management` встановлено і увімкнено для конкретного COS TENANT.
+IP allowlist Shopify має пропускати **фактичну вихідну** IPv4/IPv6 адресу.
+Серверні секрети лишаються у `/etc/cos/shopify-lamps.env`; жодних токенів
+не виводити у термінал чи журнали.
+
+```sh
+sudo bash bin/shopify-lamps-operator.sh TENANT_ID provision
+sudo bash bin/shopify-lamps-operator.sh TENANT_ID pull CONNECTION_ID
+sudo bash bin/shopify-lamps-operator.sh TENANT_ID candidates CONNECTION_ID
+sudo bash bin/shopify-lamps-operator.sh TENANT_ID status CONNECTION_ID
+```
+
+`provision` повертає `connection_id`; використовуйте його в наступних
+командах. Повторно provision для вже підключеного магазину не запускайте:
+унікальна пара tenant/shop зупинить дублікат. `pull` читає до п'яти
+Shopify-товарів на сторінку; це тільки зовнішні спостереження COS,
+не створення Product/Price/Stock і не Shopify writeback.
+
+`candidates` повертає до 20 метаданих Product GID, SHA-256 джерела,
+стан повноти, свіжість і перевірку валюти. Поле
+`stage_preconditions_met` не гарантує успішного stage: SKU, мапінг та
+Plan-конфлікти перевіряються окремо. Для вибраного GID/hаsh:
+
+```sh
+sudo bash bin/shopify-lamps-operator.sh TENANT_ID stage CONNECTION_ID 'gid://shopify/Product/123' SOURCE_HASH
+```
+
+Stage створює лише незмінний Preview. Native Product створюється тільки
+після окремого Goal → Plan → незалежного Approval → Platform Workflow.
+
+Обгортка запускається адміністратором із `/opt/cos`, перевіряє
+власника й права 0600 на файлі реквізитів. Ці реквізити не потрібно
+додавати в `/opt/cos/.env` або перезапускати PHP-контейнер, якщо
+застосунок уже розгорнуто з актуальним Product Management кодом.

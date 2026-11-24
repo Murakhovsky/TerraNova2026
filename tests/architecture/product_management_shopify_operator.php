@@ -18,4 +18,13 @@ $check(!str_contains($command,'SHOPIFY_CLIENT_SECRET')
     &&!str_contains($command,'->recordMovement(')
     &&!str_contains($command,'->createProduct('),
     'Operator bypasses read-only scope.');
+$store=(string)file_get_contents($root.'/app/Domains/ProductManagement/Infrastructure/Shopify/ShopifyObservationStore.php');
+$check(str_contains($command,"'candidates'")
+    && str_contains($command,"'limit',null,InputOption::VALUE_REQUIRED")
+    && str_contains($command,"'status'=>'SNAPSHOT_CANDIDATES'")
+    && str_contains($store,'function candidates(')
+    && str_contains($store,'WHERE organization_id=? AND connection_id=?')
+    && str_contains($store,'stage_preconditions_met')
+    && !str_contains($command,'->createProduct('),
+    'Shopify candidate operator must stay bounded and read-only.');
 echo "Product Management supervised Shopify operator contract passed.\n";

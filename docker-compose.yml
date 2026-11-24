@@ -132,13 +132,6 @@ services:
     restart: unless-stopped
     environment:
       <<: *app-environment
-      # Supervised Shopify E4 pilot. Keep app credentials out of the shared
-      # x-app-environment so unrelated workers never inherit them.
-      # The host .env is gitignored; no secret value belongs in the repository.
-      SHOPIFY_SHOP_DOMAIN: ${SHOPIFY_SHOP_DOMAIN:-}
-      SHOPIFY_CLIENT_ID: ${SHOPIFY_CLIENT_ID:-}
-      SHOPIFY_CLIENT_SECRET: ${SHOPIFY_CLIENT_SECRET:-}
-      COS_SHOPIFY_OPERATOR_ENABLED: ${COS_SHOPIFY_OPERATOR_ENABLED:-0}
       MESSENGER_CONSUMER_NAME: http
       # Personal admin-only OpenCode bridge is injected only into the HTTP PHP process.
       # Worker/cron/agent containers do not receive the OpenCode password.
