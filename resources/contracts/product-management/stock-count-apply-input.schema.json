@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Product Management stock-count-apply-input V1",
+  "type": "object",
+  "required": [
+    "target_type",
+    "target_id",
+    "parameters"
+  ],
+  "properties": {
+    "target_type": {
+      "type": "string",
+      "const": "product_stock_count"
+    },
+    "target_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "parameters": {
+      "type": "object",
+      "required": [
+        "variant_id",
+        "location_id",
+        "counted",
+        "expected_revision",
+        "source_ref"
+      ],
+      "properties": {
+        "variant_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        },
+        "location_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        },
+        "counted": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,13})(\\.[0-9]{1,6})?$"
+        },
+        "expected_revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_ref": {
+          "type": "string",
+          "pattern": "^count:[A-Za-z0-9._:/-]{1,150}$"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
