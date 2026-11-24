@@ -95,23 +95,37 @@
         </section>
         <section class="cos-panel">
             <h2>Варіанти та базові ціни</h2>
-            <p>Відображаються перші 30 цін у UAH. Рух залишків і ціни інших валют тут поки не редагуються.</p>
+            <p>Базова ціна зберігається окремо для кожної валюти. Автоматичної конвертації немає.</p>
+            <form method="get" action="/product-management/products/{{ product.product_id }}" class="cos-toolbar">
+                <label>Валюта (три літери) <input class="form-control" name="currency" value="{{ priceCurrency }}" maxlength="3" pattern="[A-Za-z]{3}" required></label>
+                <button class="btn btn-outline-primary" type="submit">Показати ціни</button>
+            </form>
+            <nav class="cos-toolbar" aria-label="Сторінки цін">
+                {% if pricePage > 1 %}<a href="?currency={{ priceCurrency }}&amp;price_page={{ pricePage - 1 }}">Попередні 30 цін</a>{% endif %}
+                <span>Сторінка {{ pricePage }}</span>
+                {% if priceHasNext %}<a href="?currency={{ priceCurrency }}&amp;price_page={{ pricePage + 1 }}">Наступні 30 цін</a>{% endif %}
+            </nav>
             <div class="table-responsive"><table class="table">
-                <thead><tr><th>SKU</th><th>Одиниця</th><th>Статус</th><th>Ревізія</th><th>UAH / базова ціна</th><th>Керування SKU</th></tr></thead>
+                <thead><tr><th>SKU</th><th>Одиниця</th><th>Статус</th><th>Ревізія</th><th>{{ priceCurrency }} / базова ціна</th><th>Керування SKU</th></tr></thead>
                 <tbody>
                 {% for v in product.variants|default([]) %}
                     <tr><td>{{ v.sku }}</td><td>{{ v.uom }}</td><td>{{ v.status }}</td><td>{{ v.revision }}</td>
                         <td>
-                            {{ prices[v.variant_id]|default('Не встановлено') }}
+                            {% if prices[v.variant_id] is defined %}
+                            {% set price = prices[v.variant_id] %}
+                            {{ price.price is null ? 'Не встановлено' : price.price }} · rev {{ price.revision }}
                             {% if product.status != 'archived' and v.status == 'active' %}
                                 <form class="cos-toolbar" method="post" action="/product-management/products/{{ product.product_id }}/price">
                                     <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
-                                    <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}{{ '%08d'|format(loop.index + 100) }}">
+                                    <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,16) }}{{ 'c%015x'|format(loop.index) }}">
                                     <input type="hidden" name="variant_id" value="{{ v.variant_id }}">
-                                    <input class="form-control" name="amount" aria-label="Ціна UAH для {{ v.sku }}" placeholder="0.0000" required pattern="[0-9]+(\.[0-9]{1,4})?">
+                                    <input type="hidden" name="currency" value="{{ priceCurrency }}">
+                                    <input type="hidden" name="expected_revision" value="{{ price.revision }}">
+                                    <input class="form-control" name="amount" aria-label="Ціна {{ priceCurrency }} для {{ v.sku }}" value="{{ price.price|default('') }}" placeholder="0.0000" required pattern="[0-9]+(\.[0-9]{1,4})?">
                                     <button type="submit" class="btn btn-outline-primary">Ціна</button>
                                 </form>
                             {% endif %}
+                            {% else %}<span>На іншій сторінці цін</span>{% endif %}
                         </td>
                         <td>
                             {% if product.status != 'archived' and v.status == 'active' %}
