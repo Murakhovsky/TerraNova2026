@@ -14,6 +14,8 @@ final readonly class ChangeDealStageCommand
         public string $correlationId,
         public ?string $lostReasonId = null,
         public ?string $lostReasonNote = null,
+        public ?string $expectedStageId = null,
+        public ?string $expectedOutcome = null,
     ) {
     }
 }

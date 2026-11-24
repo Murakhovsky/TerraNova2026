@@ -29,6 +29,7 @@ final readonly class ChangeDealStage
 
     public function execute(ChangeDealStageCommand $command): ChangeDealStageResult
     {
+        return $this->transactions->transactional(function () use ($command): ChangeDealStageResult {
         $deal = $this->deals->getForStageChange($command->organizationId, $command->dealId);
         if ($deal === null) {
             return ChangeDealStageResult::failure('Deal was not found in the current organization.');
@@ -44,6 +45,10 @@ final readonly class ChangeDealStage
         if ($current === null || $target === null) {
             return ChangeDealStageResult::failure('Current or target stage was not found in the current organization.');
         }
+
+        if ($command->expectedOutcome!==null && ($command->expectedOutcome==='won'?!$target->isWon:($command->expectedOutcome==='lost'?!$target->isLost:true))) return ChangeDealStageResult::failure('Target stage does not match requested outcome.');
+        if ($command->expectedOutcome===null && $command->expectedStageId!==null && $target->isTerminal) return ChangeDealStageResult::failure('Terminal transition requires the outcome operation.');
+        if ($command->expectedStageId!==null && $current->id!==$target->id && $current->id!==$command->expectedStageId) return ChangeDealStageResult::failure('concurrent_stage_change');
 
         $transition = $current->id === $target->id
             ? null
@@ -62,22 +67,24 @@ final readonly class ChangeDealStage
             return ChangeDealStageResult::success($current->id, $target->id, false);
         }
 
-        if (strtoupper($command->actorType) === 'INTEGRATION' && $validation->requiresApproval) {
+        if (!in_array(strtoupper($command->actorType),['USER'],true) && $validation->requiresApproval) {
             return ChangeDealStageResult::failure('CRM stage transition requires canonical approval.');
         }
 
+        if ($target->isWon && ($deal['deal_value']===null || !is_numeric($deal['deal_value']) || (float)$deal['deal_value']<=0
+            || !in_array((string)($deal['currency']??''),\Domains\Sales\Model\SalesCurrency::values(),true) || (int)($deal['assigned_user_id']??0)<1)) {
+            return ChangeDealStageResult::failure('WON requires positive deal value, currency and owner.');
+        }
         $lostReasonId = null;
         if ($target->isLost) {
             $lostReasonId = trim((string) $command->lostReasonId);
-            if ($lostReasonId === '') {
-                $lostReasonId = $this->pipelines->defaultLostReasonId($command->organizationId, $pipeline->id) ?? '';
-            }
+            if ($lostReasonId === '') return ChangeDealStageResult::failure('Explicit active lost reason is required.');
             if ($lostReasonId === '' || !$this->pipelines->isValidLostReason($command->organizationId, $pipeline->id, $lostReasonId)) {
                 return ChangeDealStageResult::failure('An active lost reason is required when moving a Deal to LOST.');
             }
         }
 
-        return $this->transactions->transactional(function () use ($command, $pipeline, $current, $target, $validation, $lostReasonId, $deal) {
+        // The transaction already holds the current deal row lock.
             $changed = $this->deals->changeStage(
                 $command->organizationId,
                 $command->dealId,
@@ -126,7 +133,7 @@ final readonly class ChangeDealStage
                     'pipeline_id' => $pipeline->id,
                     'stage_id' => $target->id,
                     'stage_code' => $target->code,
-                    'deal_value' => $deal['deal_value'] !== null ? (float) $deal['deal_value'] : null,
+                    'deal_value' => $deal['deal_value'] !== null ? (string) $deal['deal_value'] : null,
                     'currency' => $currency !== '' ? $currency : null,
                     'owner_id' => $ownerId > 0 ? $ownerId : null,
                 ];

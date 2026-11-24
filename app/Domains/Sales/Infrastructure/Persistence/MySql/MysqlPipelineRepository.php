@@ -96,7 +96,7 @@ final readonly class MysqlPipelineRepository implements PipelineRepositoryInterf
             (string) $row['pipeline_id'],
             (string) $row['from_stage_id'],
             (string) $row['to_stage_id'],
-            json_decode((string) ($row['conditions'] ?? '[]'), true) ?: [],
+            json_decode((string) ($row['conditions'] ?? '[]'), true, flags: JSON_THROW_ON_ERROR),
             (bool) $row['requires_approval'],
         );
     }

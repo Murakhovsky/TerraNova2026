@@ -104,6 +104,7 @@ final readonly class ClientCaseCommandService
             $existing,
         );
         $correlationId = ClientCaseEvents::id();
+        if (array_key_exists('currency',$input) && (string)$input['currency']!==(string)$existing['currency']) return ClientCaseCommandResult::failure('use_deal_value_command');
         $targetStageId = isset($input['stage_id']) ? trim((string) $input['stage_id']) : null;
         if ($targetStageId === null && array_key_exists('stage', $input)) {
             if ($this->pipelines === null) return ClientCaseCommandResult::failure('stage_service_unavailable');
@@ -194,16 +195,16 @@ final readonly class ClientCaseCommandService
                 if (!$stageResult->successful) return false;
             }
             if ($managerId !== null && (int) $managerId !== (int) ($case['assigned_user_id'] ?? 0)) {
-                if ($this->assignDealOwner === null) return false;
+                if ($this->assignDealOwner === null) throw new RuntimeException('Owner assignment unavailable.');
                 $assignment = $this->assignDealOwner->execute(
                     $this->organizationId, (string) $caseId, (int) $managerId, $correlationId,
                     isset($user['id']) ? 'USER' : 'SYSTEM', isset($user['id']) ? (string) $user['id'] : 'system',
                 );
-                if (!$assignment->successful) return false;
+                if (!$assignment->successful) throw new RuntimeException($assignment->error??'Owner assignment failed.');
             }
             if (!$this->commands->quickUpdate($this->organizationId, $caseId, [
                 'priority' => $priority, 'next_contact_at' => $nextContact,
-            ])) return false;
+            ])) throw new RuntimeException('Deal quick update failed.');
             if ($simpleChanges !== []) {
                 $this->commands->addActivity($this->organizationId, $caseId, (int) $case['person_id'], $user['id'] ?? null, [
                     'activity_type' => 'status_change', 'title' => 'Кейс швидко оновлено',

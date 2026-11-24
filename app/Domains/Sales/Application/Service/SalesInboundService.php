@@ -13,6 +13,7 @@ use Domains\Sales\Application\Support\ClientCaseInput;
 use Domains\Sales\Application\Support\ClientCasePeople;
 use Domains\Sales\Application\UseCase\ChangeDealStage;
 use Domains\Sales\Domain\Policy\LeadQualificationPolicy;
+use Domains\Sales\Domain\Policy\LeadLifecyclePolicy;
 use Domains\Sales\Automation\Event\ClientCaseChanged;
 use Domains\Sales\Automation\Event\ClientCaseCreated;
 use Domains\Sales\Automation\Event\LeadChanged;
@@ -80,14 +81,12 @@ final readonly class SalesInboundService
             if (array_key_exists('expected_status',$input)) {
                 if (array_diff(array_keys($input),['expected_status','status','activity_type','activity_title','activity_body'])!==[] || trim((string)($input['activity_body']??''))!=='') return ClientCaseCommandResult::failure('invalid_qualification_transition');
                 $expected=$input['expected_status'];
-                if (!is_string($expected) || !LeadQualificationPolicy::allows($expected,$status)) return ClientCaseCommandResult::failure('invalid_qualification_transition');
+                if (!is_string($expected) || !LeadLifecyclePolicy::allows($expected,$status)) return ClientCaseCommandResult::failure('invalid_qualification_transition');
                 if ($previous===$status) return ClientCaseCommandResult::success('already_applied',['case_id'=>(int)($request['client_case_id']??0)]);
                 if ($previous!==$expected) return ClientCaseCommandResult::failure('stale_lead_status');
             }
             $statusChanged=$previous!==$status;
-            if ($statusChanged && (LeadQualificationPolicy::terminal($previous)
-                || ($status==='new' && $previous!=='new')
-                || (in_array($status,['contacted','qualified'],true) && !LeadQualificationPolicy::allows($previous,$status)))) {
+            if ($statusChanged && !LeadLifecyclePolicy::allows($previous,$status)) {
                 return ClientCaseCommandResult::failure('invalid_lead_transition');
             }
             $managerId = array_key_exists('assigned_user_id', $input)
@@ -116,6 +115,10 @@ final readonly class SalesInboundService
                 return ClientCaseCommandResult::success('already_applied',['case_id'=>$caseId]);
             }
             if ($caseId>0 && $case===null) throw new RuntimeException('Linked client case could not be reloaded.');
+            // Deal outcome is independently governed. Lead WON needs a closed deal;
+            // linked LOST must reflect an already lost deal, never close it implicitly.
+            if ($statusChanged && $status==='won' && (!$case || ($case['status']??null)!=='closed')) return ClientCaseCommandResult::failure('deal_outcome_required');
+            if ($statusChanged && $status==='lost' && $case && ($case['status']??null)!=='lost') return ClientCaseCommandResult::failure('deal_outcome_required');
             if (!$this->commands->updateInboundRequest($this->organizationId, $requestId, [
                 'status' => $status, 'assigned_user_id' => $managerId, 'manager_note' => $managerNote,
                 'last_contacted_at' => $lastContacted, 'next_contact_at' => $nextContact,
@@ -141,60 +144,29 @@ final readonly class SalesInboundService
                 $this->events->publish(new DomainEvent(ClientCaseEvents::id(), $this->organizationId, $canonicalType, 'lead', (string) $requestId, ['previous_status' => $request['status'], 'status' => $status], $metadata, new \DateTimeImmutable()));
             }
 
-            // Disqualification classifies the Lead only. A linked Deal has its own lifecycle
-            // and must not be silently moved to LOST just because this inbound request is rejected.
-            if ($case && $status !== LeadStatus::Disqualified->value) {
-                // A lead-only note/owner update must not reset the Deal stage or followup.
-                $syncStage=$statusChanged;
-                if (in_array($status,['contacted','qualified'],true)) {
-                    $stage=strtoupper((string)($case['stage']??''));
-                    $eligible=$status==='contacted'?['NEW','CONTACTED']:['NEW','CONTACTED','QUALIFIED'];
-                    if (!in_array($stage,$eligible,true) || ClientCaseStatus::from((string)$case['status'])->isTerminal()) $syncStage=false;
-                }
-                $state=$syncStage?ClientCaseInput::caseStateForLead($status):['status'=>(string)$case['status'],'stage'=>(string)$case['stage']];
-                $caseManager=array_key_exists('assigned_user_id',$input)?$managerId:(isset($case['assigned_user_id'])?(int)$case['assigned_user_id']:null);
-                $caseNext=array_key_exists('next_contact_at',$input)?$nextContact:($case['next_contact_at']??null);
-                $caseClosed=$syncStage && ClientCaseStatus::from($state['status'])->isTerminal()
-                    ? (($case['closed_at']??null)?:date('Y-m-d H:i:s')) : ($case['closed_at']??null);
-                if ($syncStage && !ClientCaseStatus::from($state['status'])->isTerminal()) $caseClosed=null;
-                if ($syncStage && $this->pipelines !== null && $this->changeDealStage !== null) {
-                    $target = $this->pipelines->findStageByCode($this->organizationId, (string) ($case['pipeline_id'] ?? ''), $state['stage']);
-                    if ($target === null) throw new RuntimeException('Configured stage for lead status was not found.');
-                    if ($target->id !== (string) ($case['stage_id'] ?? '')) {
-                        $changed = $this->changeDealStage->execute(new ChangeDealStageCommand(
-                            $this->organizationId, (string) $caseId, $target->id,
-                            isset($user['id']) ? 'USER' : 'SYSTEM', isset($user['id']) ? (string) $user['id'] : 'system', $correlationId,
-                        ));
-                        if (!$changed->successful) throw new RuntimeException($changed->reason ?? 'Lead stage synchronization failed.');
-                    }
-                }
-
-                if (($syncStage || array_key_exists('assigned_user_id',$input) || array_key_exists('next_contact_at',$input)) && !$this->commands->syncCaseFromLead($this->organizationId,$caseId,[
-                    'status'=>$state['status'],'assigned_user_id'=>$caseManager,'next_contact_at'=>$caseNext,'closed_at'=>$caseClosed,
-                ])) throw new RuntimeException('Linked client case disappeared during lead synchronization.');
-
-                $this->commands->addActivity($this->organizationId, $caseId, (int) $case['person_id'], $user['id'] ?? null, [
-                    'activity_type' => $activityType === SalesActivityType::Viewing->value ? SalesActivityType::Viewing->value : SalesActivityType::Note->value,
-                    'title' => 'Заявку оновлено: ' . ClientCaseInput::leadStatusLabel($status), 'body' => $activityBody,
-                    'due_at' => $nextContact, 'completed_at' => $completedAt,
-                ]);
-                if ($completedAt !== null) $this->commands->clearNextContact($this->organizationId, $caseId);
-
-                $changes = [];
-                if ((string) $case['status'] !== $state['status']) {
-                    $changes['status'] = ['from' => (string) $case['status'], 'to' => $state['status']];
-                }
-                if ((int) ($case['assigned_user_id'] ?? 0) !== (int) ($caseManager ?? 0)) {
-                    $changes['assigned_user_id'] = ['from' => $case['assigned_user_id'] ?? null, 'to' => $caseManager];
-                }
-                if (($case['next_contact_at'] ?? null) !== $caseNext) {
-                    $changes['next_contact_at'] = ['from' => $case['next_contact_at'] ?? null, 'to' => $caseNext];
-                }
-                if ($changes !== []) {
-                    $this->events->publish(ClientCaseChanged::create(
-                        ClientCaseEvents::id(), $this->organizationId, (string) $caseId, $changes, $metadata,
+            // Keep Lead classification independent of Deal ownership, scheduling
+            // and terminal outcomes. Only an early forward qualification stage
+            // may be mirrored through the existing governed stage use case.
+            if ($case && $statusChanged && in_array($status,['contacted','qualified'],true)
+                && !ClientCaseStatus::from((string)$case['status'])->isTerminal()) {
+                $stage=strtoupper((string)($case['stage']??''));
+                $eligible=$status==='contacted'?['NEW']:['NEW','CONTACTED'];
+                if (in_array($stage,$eligible,true) && $this->pipelines!==null && $this->changeDealStage!==null) {
+                    $target=$this->pipelines->findStageByCode($this->organizationId,(string)$case['pipeline_id'],strtoupper($status));
+                    if ($target===null) throw new RuntimeException('Configured qualification stage not found.');
+                    $changed=$this->changeDealStage->execute(new ChangeDealStageCommand(
+                        $this->organizationId,(string)$caseId,$target->id,
+                        isset($user['id'])?'USER':'SYSTEM',isset($user['id'])?(string)$user['id']:'system',$correlationId,
+                        expectedStageId:(string)$case['stage_id'],
                     ));
+                    if (!$changed->successful) throw new RuntimeException($changed->reason??'Qualification stage synchronization failed.');
                 }
+            }
+            if ($case && $statusChanged) {
+                $this->commands->addActivity($this->organizationId,$caseId,(int)$case['person_id'],$user['id']??null,[
+                    'activity_type'=>'note','title'=>'Заявку оновлено: '.ClientCaseInput::leadStatusLabel($status),
+                    'body'=>null,'due_at'=>null,'completed_at'=>null,
+                ]);
             }
             return ClientCaseCommandResult::success('updated', ['case_id' => $caseId]);
         });

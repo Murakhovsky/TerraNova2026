@@ -144,4 +144,8 @@ ensure(!$inbound->updateRequest(40,['expected_status'=>'new','status'=>'qualifie
 ensure($inbound->updateRequest(40,['expected_status'=>'contacted','status'=>'disqualified'],$user,'disqualify')->ok,'Disqualification failed.');
 ensure(!$inbound->updateRequest(40,['status'=>'new'],$user)->ok,'Terminal lead reopened without a dedicated command.');
 ensure(!$inbound->createCaseFromRequest(40,[],$user)->ok,'Disqualified lead was converted.');
+foreach (['new'=>['contacted','qualified','disqualified','spam','closed','lost'],'qualified'=>['viewing_planned','viewing','negotiation','won','lost','closed','spam','disqualified']] as $from=>$targets) {
+    foreach ($targets as $to) ensure(\Domains\Sales\Domain\Policy\LeadLifecyclePolicy::allows($from,$to),'Missing lifecycle edge.');
+}
+foreach (['won','lost','closed','spam','disqualified'] as $terminal) ensure(!\Domains\Sales\Domain\Policy\LeadLifecyclePolicy::allows($terminal,'new'),'Terminal reopened.');
 echo "Sales lead conversion, transactional qualification and replay PASS.\n";

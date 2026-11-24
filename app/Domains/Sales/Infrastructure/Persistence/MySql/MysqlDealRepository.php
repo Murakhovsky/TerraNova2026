@@ -55,6 +55,7 @@ final readonly class MysqlDealRepository implements DealRepositoryInterface, Dea
             'SELECT id, organization_id, pipeline_id, stage_id, stage, status, closed_at, created_at, '
             . 'deal_value, currency, assigned_user_id '
             . 'FROM tn_client_cases WHERE id = :id AND organization_id = :organization_id LIMIT 1'
+            . ($this->connection->inTransaction() ? ' FOR UPDATE' : '')
         );
         $statement->execute(['id' => $dealId, 'organization_id' => $organizationId]);
         $row = $statement->fetch(PDO::FETCH_ASSOC);

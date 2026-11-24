@@ -108,7 +108,7 @@ final class ClientCaseInput
             'location_id' => $locationId,
             'budget_min' => self::decimal($input['budget_min'] ?? ($existing['budget_min'] ?? null)),
             'budget_max' => self::decimal($input['budget_max'] ?? ($existing['budget_max'] ?? null)),
-            'currency' => self::currency((string) ($input['currency'] ?? ($existing['currency'] ?? 'USD'))),
+            'currency' => self::currency((string) ($existing['currency'] ?? $input['currency'] ?? 'USD')),
             'area_min' => self::decimal($input['area_min'] ?? ($existing['area_min'] ?? null)),
             'area_max' => self::decimal($input['area_max'] ?? ($existing['area_max'] ?? null)),
             'description' => self::text((string) ($input['description'] ?? ($existing['description'] ?? ''))),
