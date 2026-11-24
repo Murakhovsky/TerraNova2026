@@ -112,3 +112,7 @@ Generated layer охоплює modules/capabilities, extension points, use cases
 Process Registry schema v5 додає contract-guarded cross-domain steps поверх backward-compatible v4 same-domain definitions. Cross-Domain Process Topology агрегує лише foreign-domain steps із verified `requires` contract та target-Domain capability. Capability Debt Registry вимагає matching debt item для process capability gap і відхиляє stale debt після появи target capability. Domain Process Coverage вимагає process model або explicit exemption для кожного installable Domain і не плутає supporting directory з module manifest.
 
 Зміна executable або structured contract без синхронізації knowledge layer має бути build defect, а не сюрпризом через два місяці.
+
+## Паспортна стандартизація
+
+Канонічний [стандарт архітектури Domains](../03-architecture/cos-domain-architecture-standard.md) і окремі `docs/04-domains/<id>/passport.md` поєднують business ownership, внутрішні компоненти, публічні contracts, процеси та readiness. Машинні факти не дублюються замість цього довідника.

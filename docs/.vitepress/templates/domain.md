@@ -34,3 +34,7 @@ contract: domain-v1
 ```text
 app/Domains/...
 ```
+
+## Паспорт Domain
+
+Для installable Domain створіть `docs/04-domains/<id>/passport.md` за шаблоном `docs/.vitepress/templates/domain-passport.md` і перевірте `node docs/.vitepress/check-domain-passports.mjs`. Весь executable inventory та версії залишаються в manifest і generated reference.

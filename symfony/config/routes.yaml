@@ -1,3 +1,9 @@
+# Product Management: signed Shopify events are staged only, never mutate stock.
+cos_product_management_shopify_webhook:
+  path: /api/v1/integrations/shopify/webhook
+  controller: App\Http\Api\V1\Controller\ShopifyWebhookController::receive
+  methods: [POST]
+
 # HMAC-authenticated machine proposals only, no Action dispatch.
 cos_automation_intents_submit:
   path: /api/v1/capability-intents/property-bulk
@@ -3705,31 +3711,6 @@ cos_marketing_campaign:
   methods: [GET]
   requirements: { id: 'mkt-[a-f0-9]{24}' }
 
-
-cos_marketing_creative_create:
-  path: /marketing/campaigns/{id}/creatives
-  controller: App\Web\Marketing\MarketingPageController::createCreative
-  methods: [POST]
-  requirements: { id: 'mkt-[a-f0-9]{24}' }
-
-cos_marketing_creative_revise:
-  path: /marketing/campaigns/{id}/creatives/{creativeId}/revisions
-  controller: App\Web\Marketing\MarketingPageController::reviseCreative
-  methods: [POST]
-  requirements: { id: 'mkt-[a-f0-9]{24}', creativeId: 'mkcr-[a-f0-9]{24}' }
-
-cos_marketing_analyst_propose:
-  path: /marketing/campaigns/{id}/proposals
-  controller: App\Web\Marketing\MarketingPageController::propose
-  methods: [POST]
-  requirements: { id: 'mkt-[a-f0-9]{24}' }
-
-cos_marketing_analyst_review:
-  path: /marketing/campaigns/{id}/proposals/{proposalId}/review
-  controller: App\Web\Marketing\MarketingPageController::review
-  methods: [POST]
-  requirements: { id: 'mkt-[a-f0-9]{24}', proposalId: 'mkpr-[a-f0-9]{24}' }
-
 cos_marketing_accounts:
   path: /marketing/accounts
   controller: App\Web\Marketing\MarketingPageController::accounts
@@ -3756,3 +3737,29 @@ cos_marketing_actions:
   controller: App\Web\Marketing\MarketingPageController::actions
   methods: [GET]
 
+cos_unified_home:
+  path: /workspace/unified
+  controller: App\Web\Experience\Unified\UnifiedWorkspaceController::index
+  methods: [GET, HEAD]
+
+cos_unified_actions:
+  path: /workspace/unified/actions
+  controller: App\Web\Experience\Unified\UnifiedCapabilityController::index
+  methods: [GET, HEAD]
+
+cos_unified_property_query:
+  path: /workspace/unified/property
+  controller: App\Web\Experience\Unified\UnifiedCapabilityController::property
+  methods: [GET, HEAD]
+
+cos_unified_business_workspace:
+  path: /workspace/unified/business/{workspaceId}
+  controller: App\Web\Experience\Unified\UnifiedBusinessWorkspaceController::show
+  methods: [GET, HEAD]
+  requirements: { workspaceId: '[a-z][a-z0-9_.-]{0,96}' }
+
+cos_unified_saved_view:
+  path: /workspace/unified/business/{workspaceId}/views
+  controller: App\Web\Experience\Unified\UnifiedBusinessWorkspaceController::saveView
+  methods: [POST]
+  requirements: { workspaceId: '[a-z][a-z0-9_.-]{0,96}' }

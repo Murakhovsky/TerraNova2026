@@ -8,7 +8,7 @@
     "docs:generate": "php docs/.vitepress/generate-reference.php && php docs/.vitepress/generate-permissions-reference.php && php docs/.vitepress/generate-events-reference.php && php docs/.vitepress/generate-application-reference.php && php docs/.vitepress/generate-commands-reference.php && php docs/.vitepress/generate-platform-reference.php && php docs/.vitepress/generate-architecture-graph-reference.php && node docs/.vitepress/generate-business-process-reference.mjs && node docs/.vitepress/generate-capability-debt-reference.mjs && node docs/.vitepress/generate-domain-process-coverage-reference.mjs && node docs/.vitepress/generate-cross-domain-process-topology-reference.mjs",
     "docs:generate:check": "php docs/.vitepress/generate-reference.php --check && php docs/.vitepress/generate-permissions-reference.php --check && php docs/.vitepress/generate-events-reference.php --check && php docs/.vitepress/generate-application-reference.php --check && php docs/.vitepress/generate-commands-reference.php --check && php docs/.vitepress/generate-platform-reference.php --check && php docs/.vitepress/generate-architecture-graph-reference.php --check && node docs/.vitepress/generate-business-process-reference.mjs --check && node docs/.vitepress/generate-capability-debt-reference.mjs --check && node docs/.vitepress/generate-domain-process-coverage-reference.mjs --check && node docs/.vitepress/generate-cross-domain-process-topology-reference.mjs --check",
     "docs:language:check": "node docs/.vitepress/check-language.mjs",
-    "docs:check": "npm run docs:language:check && node docs/.vitepress/check-audience-locales.mjs && node docs/.vitepress/check.mjs && node docs/.vitepress/check-contracts.mjs && node docs/.vitepress/check-processes.mjs && node docs/.vitepress/check-capability-debt.mjs && node docs/.vitepress/check-domain-process-coverage.mjs && node docs/.vitepress/check-knowledge-health.mjs && node docs/.vitepress/check-cross-domain-process-topology.mjs",
+    "docs:check": "npm run docs:language:check && node docs/.vitepress/check-audience-locales.mjs && node docs/.vitepress/check.mjs && node docs/.vitepress/check-contracts.mjs && node docs/.vitepress/check-processes.mjs && node docs/.vitepress/check-capability-debt.mjs && node docs/.vitepress/check-domain-process-coverage.mjs && node docs/.vitepress/check-knowledge-health.mjs && node docs/.vitepress/check-cross-domain-process-topology.mjs && node docs/.vitepress/check-domain-passports.mjs && node docs/.vitepress/check-domain-passports.mjs --self-test && npm run docs:domain-compliance",
     "docs:new": "node docs/.vitepress/new-page.mjs",
     "docs:build": "npm run docs:generate && npx --yes vitepress@1.6.4 build docs",
     "docs:preview": "npx --yes vitepress@1.6.4 preview docs",
@@ -18,7 +18,9 @@
     "test:web-accessibility": "node tests/browser/web_accessibility.mjs",
     "test:golden-four-accessibility": "node tests/browser/golden_four_accessibility.mjs",
     "test:golden-eight-quality": "node tests/browser/golden_eight_quality.mjs",
-    "test:external-reference-quality": "node tests/browser/external_reference_quality.mjs"
+    "test:external-reference-quality": "node tests/browser/external_reference_quality.mjs",
+    "docs:domain-compliance": "node docs/.vitepress/check-domain-compliance.mjs && node docs/.vitepress/check-domain-compliance.mjs --self-test && php tests/architecture/das_001_domain_boundaries.php && php tests/architecture/das_001_domain_boundaries.php --self-test && node docs/.vitepress/check-das-001-legacy-surface.mjs && node docs/.vitepress/check-das-001-legacy-surface.mjs --self-test && php tests/architecture/das_001_direct_binding_coverage.php",
+    "docs:domain-zero-debt": "npm run docs:domain-compliance && node docs/.vitepress/check-das-001-legacy-surface.mjs --zero-debt"
   },
   "dependencies": {
     "@popperjs/core": "2.11.8",

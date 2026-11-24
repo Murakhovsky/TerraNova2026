@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DiagnosticEvidenceCaptureOutputV1",
+  "type": "object",
+  "required": [
+    "evidence_id",
+    "replayed",
+    "facts_ingested",
+    "metrics_ingested"
+  ],
+  "properties": {
+    "evidence_id": {
+      "type": "string",
+      "minLength": 64,
+      "maxLength": 64,
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "replayed": {
+      "type": "boolean"
+    },
+    "facts_ingested": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 50
+    },
+    "metrics_ingested": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 50
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    }
+  },
+  "additionalProperties": false
+}

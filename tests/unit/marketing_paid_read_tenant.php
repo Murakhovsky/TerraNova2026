@@ -47,6 +47,15 @@ $repository=new class implements MarketingPaidReadRepository {
         $this->received[]=['history',$organizationId,$accountId,$limit];
         return [];
     }
+    public function spendEvidence(string $organizationId,string $accountId,string $snapshotId):array
+    {
+        if($organizationId!=='org-a'||$accountId!==self::ID
+            ||$snapshotId!=='mis-'.str_repeat('a',24)){
+            throw new DomainException('Unknown tenant Marketing evidence.');
+        }
+        $this->received[]=['evidence',$organizationId,$accountId,$snapshotId];
+        return ['source_snapshot_ref'=>$snapshotId,'reported_spend_decimal'=>'10.250000'];
+    }
     public function importHierarchy(string $organizationId,string $accountId,array $hierarchy):array{throw new RuntimeException('Atomic-only import expected.');}
     public function importInsights(string $organizationId,string $accountId,string $grain,string $from,string $to,array $rows):int{throw new RuntimeException('Atomic-only import expected.');}
     public function importSnapshot(string $organizationId,string $accountId,string $from,string $to,array $hierarchy,array $insights):array
@@ -116,4 +125,18 @@ $before=count($provider->received);
 try {$paid->sync($manager,'mads-1234567890abcdef12345678','2026-02-31','2026-11-07');}
 catch(Blocked){$dateDenied=true;}
 $assert($dateDenied??false&&count($provider->received)===$before,'Invalid read reporting window must not reach Meta.');
+$evidence=$paid->spendEvidence($manager,'mads-1234567890abcdef12345678','mis-'.str_repeat('a',24));
+$assert($evidence['reported_spend_decimal']==='10.250000','Tenant Marketing spend evidence readback failed.');
+$deniedOther=false;
+try{$paid->spendEvidence($alien,'mads-1234567890abcdef12345678','mis-'.str_repeat('a',24));}
+catch(DomainException){$deniedOther=true;}
+$assert($deniedOther,'Other tenant reached Marketing spend evidence.');
+$deniedViewer=false;
+try{$paid->spendEvidence($viewer,'mads-1234567890abcdef12345678','mis-'.str_repeat('a',24));}
+catch(DomainException){$deniedViewer=true;}
+$assert($deniedViewer,'Viewer reached Marketing spend evidence.');
+$deniedId=false;
+try{$paid->spendEvidence($manager,'mads-1234567890abcdef12345678','mis-../../wrong');}
+catch(DomainException){$deniedId=true;}
+$assert($deniedId,'Invalid source snapshot reference was accepted.');
 echo "Marketing Meta tenant and atomic sync service PASS\n";

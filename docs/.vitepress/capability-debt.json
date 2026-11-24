@@ -12,66 +12,6 @@
       "target_capability": "diagnostic.methodology.manage"
     },
     {
-      "id": "diagnostic.session-to-recommendation:session",
-      "process_id": "diagnostic.session-to-recommendation",
-      "step_id": "session",
-      "gap_type": "missing-domain-capability",
-      "owner_domain": "diagnostic",
-      "severity": "high",
-      "resolution": "declare-domain-capability",
-      "target_capability": "diagnostic.session.start"
-    },
-    {
-      "id": "diagnostic.session-to-recommendation:evidence",
-      "process_id": "diagnostic.session-to-recommendation",
-      "step_id": "evidence",
-      "gap_type": "missing-domain-capability",
-      "owner_domain": "diagnostic",
-      "severity": "high",
-      "resolution": "declare-domain-capability",
-      "target_capability": "diagnostic.evidence.capture"
-    },
-    {
-      "id": "diagnostic.session-to-recommendation:evaluation",
-      "process_id": "diagnostic.session-to-recommendation",
-      "step_id": "evaluation",
-      "gap_type": "missing-domain-capability",
-      "owner_domain": "diagnostic",
-      "severity": "high",
-      "resolution": "declare-domain-capability",
-      "target_capability": "diagnostic.evaluation.run"
-    },
-    {
-      "id": "diagnostic.session-to-recommendation:result",
-      "process_id": "diagnostic.session-to-recommendation",
-      "step_id": "result",
-      "gap_type": "missing-domain-capability",
-      "owner_domain": "diagnostic",
-      "severity": "high",
-      "resolution": "declare-domain-capability",
-      "target_capability": "diagnostic.result.record"
-    },
-    {
-      "id": "diagnostic.session-to-recommendation:complete",
-      "process_id": "diagnostic.session-to-recommendation",
-      "step_id": "complete",
-      "gap_type": "missing-domain-capability",
-      "owner_domain": "diagnostic",
-      "severity": "high",
-      "resolution": "declare-domain-capability",
-      "target_capability": "diagnostic.session.complete"
-    },
-    {
-      "id": "diagnostic.session-to-recommendation:decision",
-      "process_id": "diagnostic.session-to-recommendation",
-      "step_id": "decision",
-      "gap_type": "missing-domain-capability",
-      "owner_domain": "diagnostic",
-      "severity": "high",
-      "resolution": "declare-domain-capability",
-      "target_capability": "diagnostic.recommendation.accept"
-    },
-    {
       "id": "sales.lead-to-managed-case:intake",
       "process_id": "sales.lead-to-managed-case",
       "step_id": "intake",
@@ -150,16 +90,6 @@
       "severity": "high",
       "resolution": "declare-domain-capability",
       "target_capability": "sales.deal.outcome.record"
-    },
-    {
-      "id": "sales.request-to-property-match:load-request",
-      "process_id": "sales.request-to-property-match",
-      "step_id": "load-request",
-      "gap_type": "missing-domain-capability",
-      "owner_domain": "sales",
-      "severity": "high",
-      "resolution": "declare-domain-capability",
-      "target_capability": "sales.inbound.request.read"
     },
     {
       "id": "sales.request-to-property-match:create-case",

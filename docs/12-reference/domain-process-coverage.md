@@ -16,26 +16,27 @@ generated: true
 
 ## Підсумок
 
-- **Installable Domains:** 14
+- **Installable Domains:** 15
 - **Покрито канонічним процесом:** 8
-- **Явних exemptions:** 6
+- **Явних exemptions:** 7
 - **Без покриття:** 0
 
 | Domain | Версія | Статус | Процесів | Кроків | Capability mapped | Capability gaps | Debt |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
 | `capital_markets` · Capital Markets | `0.9.0` | `covered` | 3 | 19 | 19/19 | 0 | 0 |
 | `construction` · Construction | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
-| `diagnostic` · Diagnostics | `1.0.0` | `covered` | 1 | 7 | 0/7 | 7 | 7 |
+| `diagnostic` · Diagnostics | `1.0.0` | `covered` | 1 | 6 | 5/6 | 1 | 1 |
 | `documents` · Documents | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `federation` · COS Federation | `1.0.0` | `covered` | 1 | 1 | 1/1 | 0 | 0 |
-| `finance` · Finance | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
+| `finance` · Finance | `0.2.2` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `growth` · Growth | `0.50.0` | `covered` | 1 | 6 | 6/6 | 0 | 0 |
 | `hr` · HR | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
-| `marketing` · Marketing | `0.2.1` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
+| `marketing` · Marketing | `0.1.2` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `procurement` · Procurement | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
+| `product_management` · Product Management | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `property` · Property | `1.0.0` | `covered` | 1 | 6 | 6/6 | 0 | 0 |
 | `real_estate` · Real Estate | `1.0.0` | `covered` | 1 | 7 | 7/7 | 0 | 0 |
-| `sales` · Sales | `1.0.0` | `covered` | 2 | 13 | 1/13 | 12 | 12 |
+| `sales` · Sales | `1.0.0` | `covered` | 2 | 13 | 2/13 | 11 | 11 |
 | `service` · Service | `1.0.0` | `covered` | 1 | 7 | 7/7 | 0 | 0 |
 
 ## Канонічне ownership процесів
@@ -66,7 +67,7 @@ generated: true
 
 ### Finance (`finance`)
 
-- **Exempt:** V1 skeleton only; executable Finance process models are intentionally deferred until Finance runtime implementation.
+- **Exempt:** Finance F1 exposes approved tenant-safe budget mutations but no accepted end-to-end paid spend workflow, provider confirmation or accounting expense settlement. Cross-domain execution remains deferred until Marketing M3 and independent acceptance.
 - **Owner:** COS Architecture
 
 ### Growth (`growth`)
@@ -87,6 +88,11 @@ generated: true
 
 - **Exempt:** V1 skeleton only; executable Procurement process models are intentionally deferred until Procurement runtime implementation.
 - **Owner:** COS Architecture
+
+### Product Management (`product_management`)
+
+- **Exempt:** E0–E4 pilot includes bounded Product Management capabilities and Shopify read-only ingestion; canonical business Process Registry workflow is deferred until governed sync and stock orchestration are independently accepted.
+- **Owner:** COS Product Management
 
 ### Property (`property`)
 
@@ -119,10 +125,11 @@ generated: true
 | --- | --- | --- |
 | `construction` | COS Architecture | V1 skeleton only; executable Construction process models are intentionally deferred until Construction runtime implementation. |
 | `documents` | COS Federation / Documents | Initial Documents V0.1 provides only approved, idempotent signature REQUEST Actions. A complete canonical signature-request-to-provider-verified-signed process is deferred until authenticated human/e-sign provider attestation and durable signer proof have been integrated and positively tested; request is never equivalent to signed outcome. |
-| `finance` | COS Architecture | V1 skeleton only; executable Finance process models are intentionally deferred until Finance runtime implementation. |
+| `finance` | COS Architecture | Finance F1 exposes approved tenant-safe budget mutations but no accepted end-to-end paid spend workflow, provider confirmation or accounting expense settlement. Cross-domain execution remains deferred until Marketing M3 and independent acceptance. |
 | `hr` | COS Architecture | V1 skeleton only; executable HR process models are intentionally deferred until HR runtime implementation. |
 | `marketing` | COS Marketing / Architecture | M0 Domain foundation and Meta read-only have no canonical paid-execution process; FIN-BUDGET-001 and Workflow approval acceptance must precede process activation. |
 | `procurement` | COS Architecture | V1 skeleton only; executable Procurement process models are intentionally deferred until Procurement runtime implementation. |
+| `product_management` | COS Product Management | E0–E4 pilot includes bounded Product Management capabilities and Shopify read-only ingestion; canonical business Process Registry workflow is deferred until governed sync and stock orchestration are independently accepted. |
 
 ## Авторитетність і обмеження
 

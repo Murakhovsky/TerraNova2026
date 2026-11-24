@@ -2,7 +2,7 @@
 title: Додавання Domain
 description: Практична інструкція створення нового bounded context у COS.
 status: active
-updated: 2026-09-16
+updated: 2026-11-24
 kind: how-to
 ---
 
@@ -126,3 +126,23 @@ Domain готовий, коли:
 - capability та access rules визначені;
 - installable Domain має process coverage або формальний exemption;
 - architecture/documentation tests не допускають випадкових залежностей.
+
+## Паспорт Domain (DAS-001)
+
+Для кожного installable Domain обов'язковий `docs/04-domains/<id>/passport.md` із 14 секціями та машинним блоком `COS-DOMAIN-PASSPORT-DATA`. Шаблон: `docs/.vitepress/templates/domain-passport.md`. Документ містить ownership і пояснення, а фактичні IDs/версії/контракти отримує з `module.php`, Process Registry та generated reference. Internal components не є самостійними installable modules.
+
+Перед merge виконайте `node docs/.vitepress/check-domain-passports.mjs` та `npm run docs:check`. Паспорт не може стверджувати D3/D4/D5 без independently linked acceptance evidence. Дивіться `docs/03-architecture/cos-domain-architecture-standard.md`.
+
+## Обов'язковий порядок DAS-001 для нового функціоналу
+
+1. Визначити Domain-owned use case і компонент паспорта; не створювати окремий executor.
+2. Додати реальний handler, типізований контракт у manifest, input/output schemas та permission. Нові descriptive-only IDs не допускаються.
+3. Query і human-only low-risk command підключити до canonical Capability Gateway; external, financial та irreversible mutations — тільки через Platform Workflow/Action з approval та idempotency. Read observations мають окрему canonical runtime authority.
+4. Додати позитивні, negative authorization, cross-tenant та replay/recovery tests відповідно до виду операції; для mutation потрібен native readback.
+5. Оновити компонент паспорта, Process Registry та declared cross-domain contracts у тому самому PR. Новий процесний крок не може посилатися на legacy descriptive ID.
+6. Для нового installable Domain внести запис baseline з нульовим descriptive/process debt і фактичним typed floor, паспорт та процес або обґрунтований exemption.
+7. Виконати `npm run docs:generate`, `npm run docs:generate:check`, `npm run docs:check`, `bash bin/verify fast` та відповідні runtime/integration suites. PR відкривається від актуального main; readiness не підвищується без acceptance evidence.
+
+`docs/.vitepress/das-001-legacy-surface.json` фіксує точні старі descriptive IDs і process references, а не дозвіл їх викликати. Нормалізований ID або посилання вилучається з цього реєстру в тому самому PR; descriptive ceiling зменшується. Не видаляти чинні access/UI identifiers без аудиту споживачів. Для суворого контролю завершення боргу виконується `npm run docs:domain-zero-debt`; команда навмисно повертає ненульовий код, поки є legacy surface або process gaps.
+
+У pull request CI порівнює реєстри з точним SHA базової гілки: додавання або підміна legacy ID, descriptive process reference чи process gap блокуються навіть при одночасному редагуванні manifest і реєстру. Допускається погашення боргу, а не його перенесення на інший ID.

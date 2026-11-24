@@ -1,0 +1,195 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+{% block title %}{{ workspace.definition.label }} | COS{% endblock %}
+{% block workspace_content %}
+<section class="cos-uw cos-page__stack" data-cos-unified-business data-workspace-id="{{ workspace.definition.id }}"
+         data-entity-type="{{ workspace.definition.entityType|default('') }}">
+  <header class="cos-card">
+    <p class="cos-card__eyebrow">COS / Business Workspace / {{ shell.tenantLabel }}</p>
+    <h1 class="cos-card__title">{{ workspace.definition.label|trans }}</h1>
+    <p class="cos-card__copy">{{ 'uw.business.summary'|trans }}</p>
+    <div class="cos-uw__row">
+      <a class="cos-button cos-button--ghost" href="{{ path('cos_unified_home') }}">{{ 'uw.business.contexts'|trans }}</a>
+      <a class="cos-button cos-button--ghost" href="{{ workspace.definition.path }}">{{ 'uw.business.domain'|trans }}</a>
+      <a class="cos-button cos-button--ghost" href="{{ path('cos_unified_actions') }}">{{ 'uw.nav.operations'|trans }}</a>
+    </div>
+  </header>
+  <nav class="cos-uw__tabs" aria-label="{{ 'uw.business.tabs'|trans }}">
+    {% for option in workspaces %}
+      <a class="cos-button cos-button--ghost" href="{{ path('cos_unified_business_workspace',{workspaceId:option.id}) }}"
+         {% if option.id == workspace.definition.id %}aria-current="page"{% endif %}>{{ option.label|trans }}</a>
+    {% endfor %}
+  </nav>
+  <div class="cos-uw__business-grid">
+    <div class="cos-page__stack">
+      <section class="cos-card" aria-labelledby="cos-uw-business-search">
+        <h2 id="cos-uw-business-search" class="cos-card__title">{{ 'uw.business.records'|trans }}</h2>
+        <form method="get" action="{{ path('cos_unified_business_workspace',{workspaceId:workspace.definition.id}) }}"
+              role="search" class="cos-uw__search">
+          <label for="cos-uw-business-q">{{ 'uw.business.filter_label'|trans }}</label>
+          <input id="cos-uw-business-q" name="q" type="search" maxlength="120" value="{{ query }}" class="cos-input">
+          <div class="cos-uw__row">
+            <label for="cos-uw-sort">{{ 'uw.business.sort'|trans }}</label>
+            <select id="cos-uw-sort" class="cos-input" name="sort">
+              <option value="relevance" {% if sort == 'relevance' %}selected{% endif %}>{{ 'uw.business.relevance'|trans }}</option>
+              <option value="label" {% if sort == 'label' %}selected{% endif %}>{{ 'uw.business.name'|trans }}</option>
+            </select>
+            <label for="cos-uw-view">{{ 'uw.business.view'|trans }}</label>
+            <select id="cos-uw-view" class="cos-input" name="view">
+              <option value="list" {% if view == 'list' %}selected{% endif %}>{{ 'uw.business.list'|trans }}</option>
+              <option value="cards" {% if view == 'cards' %}selected{% endif %}>{{ 'uw.business.cards'|trans }}</option>
+            </select>
+            <button class="cos-button cos-button--primary" type="submit">{{ 'uw.common.find'|trans }}</button>
+          </div>
+        </form>
+        {% if savedViews is not empty %}
+          <nav class="cos-uw__saved" aria-label="{{ 'uw.business.saved'|trans }}" data-cos-saved-views>
+            {% for saved in savedViews %}
+              <div class="cos-uw__saved-entry" data-cos-saved-view="{{ saved.id }}">
+                <a class="cos-button cos-button--ghost" href="{{ path('cos_unified_business_workspace',{
+                    workspaceId:workspace.definition.id,q:saved.q,sort:saved.sort,view:saved.view
+                }) }}">{{ saved.name }}</a>
+                <form method="post" action="{{ path('cos_unified_saved_view',{workspaceId:workspace.definition.id}) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                  <input type="hidden" name="operation" value="delete">
+                  <input type="hidden" name="view_id" value="{{ saved.id }}">
+                  <button class="cos-button cos-button--ghost" type="submit" aria-label="{{ 'uw.business.delete_aria'|trans }} {{ saved.name }}">{{ 'uw.business.delete'|trans }}</button>
+                </form>
+              </div>
+            {% endfor %}
+          </nav>
+        {% endif %}
+        {% if query is not empty %}
+          <form method="post" action="{{ path('cos_unified_saved_view',{workspaceId:workspace.definition.id}) }}"
+                class="cos-uw__row" data-cos-save-view-form>
+            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+            <input type="hidden" name="operation" value="save">
+            <input type="hidden" name="q" value="{{ query }}">
+            <input type="hidden" name="sort" value="{{ sort }}">
+            <input type="hidden" name="view" value="{{ view }}">
+            <label for="cos-uw-save-name">{{ 'uw.business.save_label'|trans }}</label>
+            <input id="cos-uw-save-name" name="name" class="cos-input" maxlength="50" required
+                   placeholder="{{ 'uw.business.save_placeholder'|trans }}">
+            <button class="cos-button cos-button--ghost" type="submit">{{ 'uw.business.save'|trans }}</button>
+          </form>
+        {% endif %}
+        {% if query is empty %}
+          <p class="cos-card__copy">{{ 'uw.business.empty_query'|trans }}</p>
+        {% elseif not searchAvailable %}
+          <p class="cos-alert" role="alert">{{ 'uw.business.read_error'|trans }}</p>
+        {% else %}
+          <p class="cos-card__copy" role="status" data-cos-result-count>
+            {{ 'uw.business.result_count'|trans }} {{ results|length }}
+          </p>
+          <div class="cos-uw__entities {{ view == 'cards' ? 'cos-uw__entities--cards' : '' }}" data-cos-business-results>
+          {% for hit in results %}
+            <article class="cos-uw__entity" data-entity-ref="{{ hit.entity.key() }}">
+              <h3>{{ hit.label }}</h3>
+              <p class="cos-card__copy">{{ hit.subtitle ?: hit.entity.key() }}</p>
+              <div class="cos-uw__row">
+                <a class="cos-button cos-button--ghost" href="{{ path('cos_unified_business_workspace',{
+                    workspaceId:workspace.definition.id,q:query,sort:sort,view:view,selected:hit.entity.key()
+                }) }}">{{ 'uw.business.entity_context'|trans }}</a>
+                <a class="cos-button cos-button--ghost" href="{{ hit.path }}">{{ 'uw.business.open_entity'|trans }}</a>
+              </div>
+            </article>
+          {% else %}
+            <div class="cos-card" role="status">{{ 'uw.business.no_results'|trans }}</div>
+          {% endfor %}
+          </div>
+        {% endif %}
+      </section>
+      {% if selectionDenied %}
+        <div class="cos-alert" role="alert">{{ 'uw.business.selection_denied'|trans }}</div>
+      {% elseif selected %}
+        <section class="cos-card" aria-labelledby="cos-uw-selected" data-cos-selected-entity="{{ selected.key() }}">
+          <p class="cos-card__eyebrow">{{ 'uw.business.verified'|trans }}</p>
+          <h2 id="cos-uw-selected" class="cos-card__title">{{ selectedHit.label }}</h2>
+          <p class="cos-card__copy">{{ selectedHit.subtitle }}</p>
+          <div data-cos-business-summary>
+            {% if not summaryAvailable %}
+              <p class="cos-alert" role="alert">{{ 'uw.business.summary_unavailable'|trans }}</p>
+            {% elseif selectedFacts is not empty %}
+              {% set localizedFacts=[] %}
+              {% for fact in selectedFacts %}
+                {% set localizedFacts=localizedFacts|merge([{label:fact.label|trans,value:fact.value}]) %}
+              {% endfor %}
+              <twig:CosEntitySummary :items="localizedFacts" label="{{ 'uw.business.summary_title'|trans }}" />
+            {% else %}
+              <p class="cos-card__copy">{{ 'uw.business.summary_missing'|trans }}</p>
+            {% endif %}
+          </div>
+          <p class="cos-card__copy">{{ 'uw.business.identifier'|trans }} <code>{{ selected.key() }}</code></p>
+          {% if selectedUrl %}<a class="cos-button cos-button--primary" href="{{ selectedUrl }}">{{ 'uw.business.open_canonical'|trans }}</a>{% endif %}
+        </section>
+      {% endif %}
+      {% if selected %}
+      <section class="cos-card" aria-labelledby="cos-uw-business-related" data-cos-related-entities>
+        <h2 id="cos-uw-business-related" class="cos-card__title">{{ 'uw.business.related_title'|trans }}</h2>
+        {% if not relatedAvailable %}
+          <p class="cos-alert" role="alert">{{ 'uw.business.related_unavailable'|trans }}</p>
+        {% else %}
+          <ul class="cos-uw__relations">
+          {% for relation in relatedEntities %}
+            <li class="cos-uw__entity" data-cos-related-ref="{{ relation.type }}:{{ relation.id }}">
+              <small class="cos-card__eyebrow">{{ relation.relation }}</small>
+              <strong>{{ relation.label }}</strong>
+              {% if relation.detail %}<p class="cos-card__copy">{{ relation.detail }}</p>{% endif %}
+              {% if relation.path %}<a class="cos-button cos-button--ghost" href="{{ relation.path }}">{{ 'uw.business.open_related'|trans }}</a>{% endif %}
+            </li>
+          {% else %}
+            <li class="cos-card__copy">{{ 'uw.business.related_empty'|trans }}</li>
+          {% endfor %}
+          </ul>
+        {% endif %}
+      </section>
+      {% endif %}
+      <section class="cos-card" aria-labelledby="cos-uw-business-activity">
+        <h2 id="cos-uw-business-activity" class="cos-card__title">{{ 'uw.business.activity'|trans }}</h2>
+        <p class="cos-card__copy">{{ 'uw.business.activity_scope'|trans }}</p>
+        {% if activityAvailable %}
+          <div class="cos-uw__results">
+          {% for event in activity %}
+            <article class="cos-uw__entity">
+              <strong>{{ event.label }}</strong>
+              <p class="cos-card__copy">{{ event.status }} · {{ event.detail|default('') }}</p>
+              {% if event.path and event.path starts with '/' and not (event.path starts with '//') %}<a href="{{ event.path }}">{{ 'uw.business.view_activity'|trans }}</a>{% endif %}
+            </article>
+          {% else %}
+            <p class="cos-card__copy">{{ 'uw.business.no_activity'|trans }}</p>
+          {% endfor %}
+          </div>
+        {% else %}
+          <p class="cos-card__copy" role="status">{{ 'uw.business.activity_error'|trans }}</p>
+        {% endif %}
+      </section>
+    </div>
+    <aside class="cos-page__stack" aria-label="{{ 'uw.business.context_actions'|trans }}">
+      <section class="cos-card">
+        <h2 class="cos-card__title">{{ 'uw.business.actions'|trans }}</h2>
+        {% for action in workspace.primaryActions %}
+          <div class="cos-uw__action">
+            <strong>{{ action.label|trans }}</strong>
+            <small>{{ action.enabled ? ('uw.business.open_domain_action'|trans) : (action.disabledReason|trans) }}</small>
+          </div>
+        {% else %}
+          <p class="cos-card__copy">{{ 'uw.business.no_actions'|trans }}</p>
+        {% endfor %}
+        <a class="cos-button cos-button--ghost" href="{{ workspace.definition.path }}">Domain Workspace</a>
+      </section>
+      {% if workspace.hasSlot('sidebar') %}
+        <section class="cos-card" aria-label="{{ 'uw.business.side_extensions'|trans }}">
+          {% for ext in workspace.extensions('sidebar') %}
+            {% set extContext=ext.props|merge({'workspace':workspace}) %}
+            {% include ext.template with extContext only %}
+          {% endfor %}
+        </section>
+      {% endif %}
+      <section class="cos-card" role="status">
+        <h2 class="cos-card__title">{{ 'uw.business.process_ai'|trans }}</h2>
+        <p class="cos-card__copy">{{ 'uw.business.ai_unverified'|trans }}</p>
+        <a class="cos-button cos-button--ghost" href="/cos/control-center">{{ 'uw.business.go_operations'|trans }}</a>
+      </section>
+    </aside>
+  </div>
+</section>
+{% endblock %}

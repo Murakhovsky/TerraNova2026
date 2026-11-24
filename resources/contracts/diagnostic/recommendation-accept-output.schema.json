@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "title": "DiagnosticRecommendationAcceptOutputV1",
+  "required": [
+    "session_id",
+    "recommendation_id",
+    "action_id",
+    "action_status",
+    "replayed"
+  ],
+  "properties": {
+    "session_id": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 32,
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "recommendation_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 191,
+      "pattern": "^[a-zA-Z0-9_.:-]+$"
+    },
+    "action_id": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 32,
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "action_status": {
+      "type": "string",
+      "enum": [
+        "PROPOSED",
+        "PENDING_APPROVAL",
+        "QUEUED",
+        "RUNNING",
+        "COMPLETED",
+        "FAILED",
+        "REJECTED"
+      ]
+    },
+    "replayed": {
+      "type": "boolean"
+    }
+  }
+}

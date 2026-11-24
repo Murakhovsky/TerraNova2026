@@ -73,10 +73,45 @@ try {
   await loginPage.goto(absolute('/auth/login'), { waitUntil: 'networkidle' });
   await loginPage.locator('input[name="email"]').fill(email);
   await loginPage.locator('input[name="password"]').fill(password);
-  await Promise.all([
-    loginPage.waitForURL((url) => !url.pathname.startsWith('/auth/login'), { timeout: 25000 }),
-    loginPage.locator('button[type="submit"]').click(),
-  ]);
+  // Preserve the production auth limiter (10 writes / 300 seconds per IP).
+  // Only in *disposable loopback CI*, honor its actual Retry-After ONCE.
+  // Never bypass the limiter, change Symfony security config, or retry
+  // invalid credentials / unauthorized identities.
+  const submitLogin = async () => {
+    const responsePromise = loginPage.waitForResponse(
+      response => new URL(response.url()).pathname === '/auth/login'
+        && response.request().method() === 'POST',
+      { timeout: 30000 },
+    );
+    await loginPage.locator('button[type="submit"]').click();
+    return responsePromise;
+  };
+  let loginResponse = await submitLogin();
+  const ciLoopback = process.env.GITHUB_ACTIONS === 'true'
+    && process.env.EXTERNAL_REFERENCE_CI_RATE_LIMIT_RETRY === '1'
+    && /^http:\/\/(?:127\.0\.0\.1|localhost):8081\/?$/.test(baseUrl);
+  if (loginResponse.status() === 429 && ciLoopback) {
+    const retryAfter = Number(loginResponse.headers()['retry-after']);
+    if (!Number.isInteger(retryAfter) || retryAfter < 1 || retryAfter > 300) {
+      throw new Error('Security limiter returned unbounded/missing Retry-After: '
+        + String(loginResponse.headers()['retry-after'] || 'missing'));
+    }
+    console.log('External-reference CI login correctly rate limited; respecting Retry-After='
+      + retryAfter + ' seconds once.');
+    await new Promise(resolve => setTimeout(resolve, (retryAfter + 1) * 1000));
+    await loginPage.goto(absolute('/auth/login'), { waitUntil: 'networkidle' });
+    await loginPage.locator('input[name="email"]').fill(email);
+    await loginPage.locator('input[name="password"]').fill(password);
+    loginResponse = await submitLogin();
+  }
+  if (loginResponse.status() !== 302 && loginResponse.status() !== 303) {
+    const body = (await loginPage.locator('body').innerText().catch(() => '')).slice(0, 900);
+    throw new Error('External-reference authenticated fixture login rejected: HTTP '
+      + loginResponse.status() + ', URL ' + loginPage.url() + ', page: ' + body);
+  }
+  await loginPage.waitForURL(
+    url => !url.pathname.startsWith('/auth/login'), { timeout: 25000 },
+  );
   const authState = await loginContext.storageState();
   await loginContext.close();
 

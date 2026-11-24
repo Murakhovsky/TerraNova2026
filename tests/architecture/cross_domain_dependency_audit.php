@@ -96,9 +96,51 @@ foreach ($domainDirectories as $domainDirectory) {
     }
 }
 
+/**
+ * A consumer-owned port may be implemented only in the composition layer.
+ * Requiring Domain-to-Domain source imports would force a forbidden dependency.
+ * Such a port must have an actual typed provider-delegating adapter AND an
+ * explicit Symfony DI alias. Manifest metadata alone never counts as evidence.
+ */
+$composedPortEvidence = static function(string $fqcn, string $provider) use ($root, $domainIdsByDirectory): bool {
+    $providerNamespace = array_search($provider, $domainIdsByDirectory, true);
+    $shortName = substr($fqcn, strrpos($fqcn, '\\') + 1);
+    $directory = $root . '/symfony/src/Infrastructure';
+    $servicesFile = $root . '/symfony/config/services.yaml';
+    if (!is_string($providerNamespace) || !is_dir($directory) || !is_file($servicesFile)) {
+        return false;
+    }
+    $services = (string) file_get_contents($servicesFile);
+    if (!str_contains($services, $fqcn . ':')) {
+        return false;
+    }
+    $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($directory, FilesystemIterator::SKIP_DOTS));
+    foreach ($files as $file) {
+        if (!$file->isFile() || $file->getExtension() !== 'php') {
+            continue;
+        }
+        $source = (string) file_get_contents($file->getPathname());
+        if (!preg_match('/^\s*use\s+' . preg_quote($fqcn, '/') . '\s*;/m', $source)
+            || !preg_match('/\bimplements\s+' . preg_quote($shortName, '/') . '\b/', $source)
+            || !str_contains($source, 'use Domains\\' . $providerNamespace . '\\')) {
+            continue;
+        }
+        if (!preg_match('/\bnamespace\s+([^;]+);/', $source, $namespace)
+            || !preg_match('/\bclass\s+(\w+)\s+implements\s+' . preg_quote($shortName, '/') . '\b/', $source, $class)) {
+            continue;
+        }
+        $adapter = trim($namespace[1]) . '\\' . $class[1];
+        if (str_contains($services, 'alias: ' . $adapter)) {
+            return true;
+        }
+    }
+    return false;
+};
+
 foreach ($declared as $fqcn => $relation) {
-    if (($contractEvidence[$fqcn] ?? []) === []) {
-        $violations[] = sprintf('Declared contract %s has no code evidence outside module metadata.', $fqcn);
+    if (($contractEvidence[$fqcn] ?? []) === []
+        && !$composedPortEvidence($fqcn, $relation['provider'])) {
+        $violations[] = sprintf('Declared contract %s has no Domain evidence or verified composition adapter.', $fqcn);
     }
 }
 

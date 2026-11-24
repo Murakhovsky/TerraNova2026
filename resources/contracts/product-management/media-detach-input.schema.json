@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ProductManagement media.detach InputV1",
+  "type": "object",
+  "required": [
+    "media_id"
+  ],
+  "properties": {
+    "media_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    }
+  },
+  "additionalProperties": false
+}

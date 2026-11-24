@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "id",
+    "expected_revision",
+    "reason"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^finb-[a-f0-9]{24}$"
+    },
+    "expected_revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 250
+    }
+  },
+  "additionalProperties": false
+}

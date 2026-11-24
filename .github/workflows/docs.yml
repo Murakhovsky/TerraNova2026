@@ -40,6 +40,12 @@ on:
       - '.github/workflows/ci.yml'
       - '.github/workflows/runtime.yml'
   workflow_dispatch:
+    inputs:
+      deploy_docs:
+        description: 'Explicitly authorize AWS dev documentation deployment'
+        type: boolean
+        required: true
+        default: false
 
 permissions:
   contents: read
@@ -55,6 +61,8 @@ jobs:
     steps:
       - name: Checkout canonical main source
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -98,6 +106,8 @@ jobs:
         run: npm run docs:generate:check
 
       - name: Check documentation integrity
+        env:
+          DAS001_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
         run: npm run docs:check
 
       - name: Build documentation
@@ -114,7 +124,7 @@ jobs:
   deploy:
     name: Deploy docs to AWS dev
     needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.deploy_docs == true
     runs-on: ubuntu-latest
     environment: AWS TN2026
     concurrency:

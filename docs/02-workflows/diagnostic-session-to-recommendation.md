@@ -2,7 +2,7 @@
 title: Diagnostic Session → Recommendation
 description: Канонічний Diagnostic workflow від версії методології через evidence та evaluation до recommendations.
 status: active
-updated: 2026-09-16
+updated: 2026-11-24
 kind: workflow
 contract: workflow-v2
 process_state: as-is
@@ -67,7 +67,7 @@ flowchart LR
     C --> D[Findings / Hypotheses / Recommendations]
 ```
 
-LLM output не є прямою заміною deterministic scoring.
+LLM output не є прямою заміною deterministic scoring. Оцінювання та запис звіту є внутрішніми фазами однієї terminal completion; недостатнє evidence відображається typed conclusions, coverage та confidence. Після успішного завершення повторне внесення evidence заборонене. До завершення оператор може продовжувати збір evidence.
 
 ## AI-assisted шлях
 
@@ -123,7 +123,7 @@ AI не створює канонічну «істину» без evidence та 
 
 <ProcessDiagram process-id="diagnostic.session-to-recommendation" view="capability" direction="LR" />
 
-Проєкція навмисно показує capability gap: Diagnostic має реальний source-verified workflow, але module manifest ще не декларує semantic business capabilities для methodology, session, evidence, evaluation і recommendation. Існування runtime не підміняє capability model.
+Проєкція показує фактичні публічні межі. `diagnostic.session.complete` атомарно оцінює evidence, зберігає report і завершує session; внутрішні evaluation та record не є окремими публічними командами. `diagnostic.report.summary.get` незалежно читає persisted report metadata. `diagnostic.recommendation.accept` фіксує людське рішення і створює лише approval-required Kernel Action; виконання потребує окремого approval. Methodology залишається explicit gap. Існування runtime не підміняє capability model.
 
 ## Точки рішень
 

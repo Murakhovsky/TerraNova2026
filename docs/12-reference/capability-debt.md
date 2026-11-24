@@ -16,27 +16,21 @@ Capability debt означає, що бізнес-крок реальний, а�
 
 ## Підсумок
 
-- **Відкритих debt items:** 19
-- **High severity:** 16
+- **Відкритих debt items:** 12
+- **High severity:** 9
 - **Medium severity:** 3
 - **Зачеплених Domains:** 2
 
 | Domain | Відкрито | High | Medium | Low |
 | --- | ---: | ---: | ---: | ---: |
-| `diagnostic` | 7 | 7 | 0 | 0 |
-| `sales` | 12 | 9 | 3 | 0 |
+| `diagnostic` | 1 | 1 | 0 | 0 |
+| `sales` | 11 | 8 | 3 | 0 |
 
 ## Пріоритетний backlog
 
 | Severity | Domain | Процес / крок | Runtime evidence | Target capability | Resolution |
 | --- | --- | --- | --- | --- | --- |
-| `high` | `diagnostic` | [Diagnostic Session → Recommendation](../02-workflows/diagnostic-session-to-recommendation.md) · `complete` · Complete coherent session | `source` | `diagnostic.session.complete` | `declare-domain-capability` |
-| `high` | `diagnostic` | [Diagnostic Session → Recommendation](../02-workflows/diagnostic-session-to-recommendation.md) · `decision` · Review / accept recommendation | `source` | `diagnostic.recommendation.accept` | `declare-domain-capability` |
-| `high` | `diagnostic` | [Diagnostic Session → Recommendation](../02-workflows/diagnostic-session-to-recommendation.md) · `evaluation` · Evaluate structured evidence | `source` | `diagnostic.evaluation.run` | `declare-domain-capability` |
-| `high` | `diagnostic` | [Diagnostic Session → Recommendation](../02-workflows/diagnostic-session-to-recommendation.md) · `evidence` · Capture evidence | `source` | `diagnostic.evidence.capture` | `declare-domain-capability` |
 | `high` | `diagnostic` | [Diagnostic Session → Recommendation](../02-workflows/diagnostic-session-to-recommendation.md) · `methodology` · Draft and publish methodology version | `source` | `diagnostic.methodology.manage` | `declare-domain-capability` |
-| `high` | `diagnostic` | [Diagnostic Session → Recommendation](../02-workflows/diagnostic-session-to-recommendation.md) · `result` · Record findings and recommendation | `source` | `diagnostic.result.record` | `declare-domain-capability` |
-| `high` | `diagnostic` | [Diagnostic Session → Recommendation](../02-workflows/diagnostic-session-to-recommendation.md) · `session` · Start version-pinned session | `source` | `diagnostic.session.start` | `declare-domain-capability` |
 | `high` | `sales` | [Sales Lead → Managed Case](../02-workflows/sales-lead-to-managed-case.md) · `assign-owner` · Assign owner | `runtime` | `sales.deal.owner.assign` | `declare-domain-capability` |
 | `high` | `sales` | [Sales Lead → Managed Case](../02-workflows/sales-lead-to-managed-case.md) · `canonical-state` · Create or update canonical Sales state | `source` | `sales.lead.state.manage` | `declare-domain-capability` |
 | `high` | `sales` | [Sales Lead → Managed Case](../02-workflows/sales-lead-to-managed-case.md) · `followup` · Schedule next action | `runtime` | `sales.followup.schedule` | `declare-domain-capability` |
@@ -44,7 +38,6 @@ Capability debt означає, що бізнес-крок реальний, а�
 | `high` | `sales` | [Sales Lead → Managed Case](../02-workflows/sales-lead-to-managed-case.md) · `outcome` · Record business outcome | `runtime` | `sales.deal.outcome.record` | `declare-domain-capability` |
 | `high` | `sales` | [Sales Lead → Managed Case](../02-workflows/sales-lead-to-managed-case.md) · `pipeline` · Manage pipeline stage | `source` | `sales.pipeline.stage.manage` | `declare-domain-capability` |
 | `high` | `sales` | [Sales Request → Property Match](../02-workflows/sales-request-to-property-match.md) · `create-case` · Create Client Case and link inbound request | `source` | `sales.client-case.create` | `declare-domain-capability` |
-| `high` | `sales` | [Sales Request → Property Match](../02-workflows/sales-request-to-property-match.md) · `load-request` · Load inbound request and referenced Property context | `source` | `sales.inbound.request.read` | `declare-domain-capability` |
 | `high` | `sales` | [Sales Request → Property Match](../02-workflows/sales-request-to-property-match.md) · `record-match` · Record Property Match in Sales | `source` | `sales.property-match.record` | `declare-domain-capability` |
 | `medium` | `sales` | [Sales Lead → Managed Case](../02-workflows/sales-lead-to-managed-case.md) · `activity` · Record activity / call | `source` | `sales.activity.record` | `declare-domain-capability` |
 | `medium` | `sales` | [Sales Lead → Managed Case](../02-workflows/sales-lead-to-managed-case.md) · `crm-inbox` · Process durable CRM inbox | `source` | `sales.crm.inbox.process` | `declare-domain-capability` |

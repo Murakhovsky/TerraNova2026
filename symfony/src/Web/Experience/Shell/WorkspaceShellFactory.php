@@ -22,6 +22,8 @@ final readonly class WorkspaceShellFactory
         WebExtensionContext $context,
         string $title,
         array $breadcrumbs = [],
+        bool $aiAvailable = true,
+        ShellConnectionState $connectionState = ShellConnectionState::Live,
     ): ShellViewModel {
         $navigation = $this->navigation->compose($context);
         $role = ucfirst($tenant->role()->value());
@@ -37,8 +39,8 @@ final readonly class WorkspaceShellFactory
             utilityNavigation: $navigation['utility'],
             breadcrumbs: $breadcrumbs,
             commands: $navigation['commands'],
-            connectionState: ShellConnectionState::Live,
-            aiAvailable: true,
+            connectionState: $connectionState,
+            aiAvailable: $aiAvailable,
         );
     }
 }
