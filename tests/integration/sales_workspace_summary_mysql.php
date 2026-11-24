@@ -52,10 +52,14 @@ try{
     $teamSummary=new \Domains\Sales\Application\Service\SalesTeamSummaryService(
         new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesTeamScope($db,$scope,new MysqlSalesAccessControl($db)),$read);
     $orderRepo=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository($db);
-    $references=new class implements \Domains\Sales\Application\Contract\SalesOfferReferencePort {
+    $productStore=new \Domains\ProductManagement\Infrastructure\Persistence\MySqlProductManagementStore($db,new \Infrastructure\Platform\Persistence\MySql\Event\MysqlEventStore($db));
+    $productReferences=new \Domains\ProductManagement\Application\Service\ProductCommercialReference($productStore);
+    $references=new class($productReferences) implements \Domains\Sales\Application\Contract\SalesOfferReferencePort {
+        public function __construct(private \Domains\ProductManagement\Application\Contract\ProductCommercialReferencePort $products){}
+
         public function resolve(string $org,array $line):?array{
             return ($line['product_id']??null)===str_repeat('a',32)&&in_array($line['variant_id']??null,[str_repeat('b',32),str_repeat('c',32)],true)&&($line['sku']??null)==='LAMP-1'
-                ?['product_id'=>str_repeat('a',32),'variant_id'=>$line['variant_id'],'sku'=>'LAMP-1','name'=>'Lamp']:null;
+                ?['product_id'=>str_repeat('a',32),'variant_id'=>$line['variant_id'],'sku'=>'LAMP-1','name'=>'Lamp']:$this->products->quoteReference($org,(string)($line['product_id']??''),(string)($line['variant_id']??''));
         }
     };
     $receipts=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesMutationReceiptRepository($db);
@@ -125,6 +129,7 @@ try{
     $sync=new \Domains\Sales\Application\Service\SalesOrderSyncService($syncRepo,$source,$reconcile,$guard,$syncQueue,
         new \Infrastructure\Platform\ReadModel\MySql\MysqlAsyncOperationReadModel($db),$active);
     $syncHandler=new \Domains\Sales\Automation\Job\SalesOrderSyncJobHandler($sync);
+    $lifecycle=new \Domains\Sales\Application\Service\SalesOrderLifecycleService($orderRepo,$orderRepo,$receipts,$guard,$authority,$entityScope,$productStore,$active);
     $gateway=new CanonicalCapabilityGateway($catalog,$active,new FederationCapabilityBindingResolver($catalog,new DomainModuleRegistry([]),$active),[
         new SalesWorkspaceSummaryAdapter($scope,$read),
         new \App\Infrastructure\Capability\SalesWorkspaceLeadsListAdapter($scoped),
@@ -143,6 +148,13 @@ try{
         new \App\Infrastructure\Capability\SalesOrderSourcePendingAdapter($reconcile),
         new \App\Infrastructure\Capability\SalesOrderSyncStartAdapter($sync),
         new \App\Infrastructure\Capability\SalesOrderSyncStatusAdapter($sync),
+        new \App\Infrastructure\Capability\SalesOrderLifecycleConfirmAdapter($lifecycle),
+        new \App\Infrastructure\Capability\SalesOrderLifecycleAllocateAdapter($lifecycle),
+        new \App\Infrastructure\Capability\SalesOrderLifecycleReleaseAdapter($lifecycle),
+        new \App\Infrastructure\Capability\SalesOrderLifecycleFulfillAdapter($lifecycle),
+        new \App\Infrastructure\Capability\SalesOrderLifecycleCancelAdapter($lifecycle),
+        new \App\Infrastructure\Capability\SalesOrderLifecycleReturnAdapter($lifecycle),
+        new \App\Infrastructure\Capability\SalesOrderLifecycleReadAdapter($lifecycle),
         new \App\Infrastructure\Capability\SalesDealStateReadAdapter(new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlDealRepository($db)),
         new \App\Infrastructure\Capability\SalesInboundRequestReadAdapter($read)
     ],[$policy]);
@@ -483,6 +495,77 @@ try{
     }catch(\Kernel\Execution\ExecutionFailureException $e){$check(!$e->failureKind()->retryable(),'Forged job retryable.');}
     $reject(fn()=>$gateway->invoke($manager,'sales.order.source.sync.start',$startInput,'trusted_read','auto-sync-'.$token,'sync-status'));
     echo "Sales O2 bounded pagination, atomic backfill checkpoint, Kernel job admission, Dead Letter and replay PASS.\n";
+    // O3: real canonical Product stock, E5 reservation table, Sales state and durable ledger.
+    $products=new \Domains\ProductManagement\Application\Service\ProductManagementService($productStore);
+    $product=$products->createProduct($org,['name'=>'Lifecycle stock','sku'=>'O3-'.strtoupper($token),'type'=>'stock'],'o3-product-'.$token,(string)$owner,'o3');
+    $serviceProduct=$products->createProduct($org,['name'=>'Lifecycle service','sku'=>'O3-S-'.strtoupper($token),'type'=>'service'],'o3-service-'.$token,(string)$owner,'o3');
+    foreach([$product,$serviceProduct] as $p)$db->prepare("UPDATE pm_products SET status='active' WHERE organization_id=? AND product_id=?")->execute([$org,$p['product_id']]);
+    $locations=[];
+    foreach(['A','B'] as $suffix)$locations[]=$products->createLocation($org,'O3-'.$suffix.'-'.strtoupper($token),'Order test warehouse','o3-location-'.$suffix.'-'.$token,(string)$owner,'o3')['location_id'];
+    sort($locations,SORT_STRING);[$locA,$locB]=$locations;
+    $variant=$product['variant_id'];
+    foreach([[$locA,'10'],[$locB,'3']] as [$loc,$qty])$products->recordMovement($org,$variant,$loc,$qty,'receipt','manual:o3-opening','o3-opening-'.$loc,(string)$owner,'o3');
+    $line=static fn($p,$qty)=>['sku'=>$p['sku'],'title'=>'Order item','product_id'=>$p['product_id'],'variant_id'=>$p['variant_id'],'quantity'=>$qty,'unit_price'=>'10.00'];
+    $one=$createOrder(['currency'=>'EUR','lines'=>[$line($product,8),$line($serviceProduct,1)],'total'=>'90.00'],'o3-order-one-'.$token)['order']['order_id'];
+    $two=$createOrder(['currency'=>'EUR','lines'=>[$line($product,6)],'total'=>'60.00'],'o3-order-two-'.$token)['order']['order_id'];
+    $life=static fn(string $op,string $id,int $rev,string $suffix,array $extra=[])=>$gateway->invoke($manager,'sales.order.lifecycle.'.$op,
+        ['order_id'=>$id,'expected_revision'=>$rev,'reference'=>'document:'.$suffix,...$extra],'human_api','o3-'.$suffix.'-'.$token,'o3');
+    $lifeRead=static fn(string $id)=>$gateway->invoke($manager,'sales.order.lifecycle.read',['order_id'=>$id],'trusted_read','','o3-read');
+    $atomicReject=static function(callable $fn)use($db,$reject):void{
+        $save='o3_'.bin2hex(random_bytes(5));$db->exec('SAVEPOINT '.$save);
+        try{$reject($fn);}finally{$db->exec('ROLLBACK TO SAVEPOINT '.$save);$db->exec('RELEASE SAVEPOINT '.$save);}
+    };
+    $balance=static fn($loc)=>$productStore->stockBalance($org,$variant,$loc);
+    $check($life('confirm',$one,1,'confirm-one')['status']==='confirmed','Order confirmation failed.');
+    $life('confirm',$two,1,'confirm-two');
+    $allocated=$life('allocate',$one,2,'allocate-one',['items'=>[
+        ['line_no'=>1,'location_id'=>$locA,'quantity'=>5],['line_no'=>1,'location_id'=>$locB,'quantity'=>3],['line_no'=>2,'location_id'=>null,'quantity'=>1]]]);
+    $check($allocated['revision']===3&&$allocated['allocated_pending_quantity']===9&&$balance($locA)['reserved']==='5.000000'&&$balance($locB)['reserved']==='3.000000','Allocation did not reserve exact Product stock.');
+    $allocA=array_values(array_filter($allocated['allocations'],fn($a)=>$a['location_id']===$locA))[0];
+    $allocService=array_values(array_filter($allocated['allocations'],fn($a)=>$a['stock_mode']==='nonstock'))[0];
+    $check($allocService['reservation_id']===null,'Service created phantom stock.');
+    $atomicReject(fn()=>$productStore->releaseStock($org,$allocA['reservation_id'],'manual-bypass','o3-manual-bypass-'.$token,(string)$owner,'o3'));
+    $atomicReject(fn()=>$products->recordMovement($org,$variant,$locA,'-6','issue','manual:oversell','o3-oversell-'.$token,(string)$owner,'o3'));
+    $atomicReject(fn()=>$life('allocate',$two,2,'atomic-multi',['items'=>[
+        ['line_no'=>1,'location_id'=>$locA,'quantity'=>4],['line_no'=>1,'location_id'=>$locB,'quantity'=>2]]]));
+    $check($lifeRead($two)['revision']===2&&$lifeRead($two)['allocations']===[]&&$balance($locA)['reserved']==='5.000000','Failed multi-warehouse allocation leaked a reservation.');
+    $fulfillItems=['items'=>[['allocation_id'=>$allocA['allocation_id'],'quantity'=>2],['allocation_id'=>$allocService['allocation_id'],'quantity'=>1]]];
+    $partial=$life('fulfill',$one,3,'dispatch-one',$fulfillItems);
+    $check($partial['fulfillment_state']==='partial'&&$partial['fulfilled_quantity']===3&&$balance($locA)['on_hand']==='8.000000'&&$balance($locA)['reserved']==='3.000000','Partial dispatch did not atomically consume reserve and stock.');
+    $check($life('fulfill',$one,3,'dispatch-one',$fulfillItems)['replayed']&&$balance($locA)['on_hand']==='8.000000','Dispatch replay duplicated movement.');
+    $atomicReject(fn()=>$life('fulfill',$one,3,'stale-dispatch',['items'=>[['allocation_id'=>$allocA['allocation_id'],'quantity'=>1]]]));
+    $released=$life('release',$one,4,'deallocate-one',['items'=>[['allocation_id'=>$allocA['allocation_id'],'quantity'=>1]]]);
+    $check($released['unallocated_quantity']===1&&$balance($locA)['reserved']==='2.000000'&&$balance($locA)['on_hand']==='8.000000','Deallocation changed physical stock or lost remaining order quantity.');
+    $life('allocate',$one,5,'reallocate-one',['items'=>[['line_no'=>1,'location_id'=>$locA,'quantity'=>1]]]);
+    $cancelled=$life('cancel',$one,6,'cancel-one');
+    $check($cancelled['status']==='cancelled'&&$cancelled['cancelled_quantity']===6&&$cancelled['fulfilled_quantity']===3&&$cancelled['allocated_pending_quantity']===0&&$balance($locA)['reserved']==='0.000000'&&$balance($locB)['reserved']==='0.000000','Cancellation failed to release only unfulfilled stock.');
+    $return=$life('return',$one,7,'return-restock',['items'=>[['allocation_id'=>$allocA['allocation_id'],'quantity'=>1,'disposition'=>'restock']]]);
+    $check($return['returned_quantity']===1&&$return['return_state']==='partial'&&$balance($locA)['on_hand']==='9.000000','Return receipt did not restore physical stock.');
+    $life('return',$one,8,'return-no-stock',['items'=>[['allocation_id'=>$allocA['allocation_id'],'quantity'=>1,'disposition'=>'no_restock']]]);
+    $check($balance($locA)['on_hand']==='9.000000','No-restock return incorrectly received stock.');
+    $atomicReject(fn()=>$life('return',$one,9,'excess-return',['items'=>[['allocation_id'=>$allocA['allocation_id'],'quantity'=>1,'disposition'=>'restock']]]));
+    $twoAlloc=$life('allocate',$two,2,'atomic-multi',['items'=>[
+        ['line_no'=>1,'location_id'=>$locA,'quantity'=>4],['line_no'=>1,'location_id'=>$locB,'quantity'=>2]]]);
+    $twoFulfilled=$life('fulfill',$two,3,'dispatch-two',['items'=>array_map(fn($a)=>['allocation_id'=>$a['allocation_id'],'quantity'=>$a['quantity']],$twoAlloc['allocations'])]);
+    $check($twoFulfilled['status']==='completed'&&$twoFulfilled['fulfillment_state']==='fulfilled'&&$balance($locA)['on_hand']==='5.000000'&&$balance($locB)['on_hand']==='1.000000','Complete fulfillment balances mismatch.');
+    $externalLifecycle=$life('confirm',$externalOrderId,1,'external-confirm');
+    $check($externalLifecycle['inventory_authority']==='external_review'&&$externalLifecycle['fulfillment_state']==='external_review','External order ownership not explicit.');
+    $atomicReject(fn()=>$life('allocate',$externalOrderId,2,'external-double-reserve',['items'=>[['line_no'=>1,'location_id'=>$locA,'quantity'=>1]]]));
+    $atomicReject(fn()=>$gateway->invoke($actor($org,$other),'sales.order.lifecycle.cancel',['order_id'=>$one,'expected_revision'=>9,'reference'=>'foreign'],'human_api','foreign-o3-'.$token,'o3'));
+    $atomicReject(fn()=>$gateway->invoke($actor('foreign-'.$token,$owner),'sales.order.lifecycle.read',['order_id'=>$one],'trusted_read','','o3'));
+    $atomicReject(fn()=>$gateway->invoke($manager,'sales.order.lifecycle.cancel',['order_id'=>$two,'expected_revision'=>4,'reference'=>'auto'],'trusted_read','automated-o3-'.$token,'o3'));
+    foreach([$locA,$locB] as $loc){
+        $q=$db->prepare("SELECT CAST(COALESCE(SUM(quantity_delta),0) AS DECIMAL(20,6)) FROM pm_stock_movements WHERE organization_id=? AND variant_id=? AND location_id=?");
+        $q->execute([$org,$variant,$loc]);$check($q->fetchColumn()===$balance($loc)['on_hand'],'Physical movement ledger drift.');
+        $q=$db->prepare("SELECT CAST(COALESCE(SUM(quantity),0) AS DECIMAL(20,6)) FROM pm_stock_reservations WHERE organization_id=? AND variant_id=? AND location_id=? AND status='active'");
+        $q->execute([$org,$variant,$loc]);$check($q->fetchColumn()===$balance($loc)['reserved'],'E5 active reservation audit drift.');
+    }
+    $q=$db->prepare('SELECT payload FROM sales_order_evidence WHERE organization_id=? AND order_id=? ORDER BY revision');
+    $q->execute([$org,$one]);$facts=array_map(fn($raw)=>json_decode($raw,true,512,JSON_THROW_ON_ERROR),$q->fetchAll(PDO::FETCH_COLUMN));
+    $check(count($facts)===9&&array_column($facts,'revision')===range(1,9),'Immutable lifecycle evidence lost or duplicated.');
+    foreach($facts as $fact)$check($fact['financial_evidence_reference']===null&&$fact['realized_revenue']===null,'O3 manufactured a Finance outcome.');
+    echo "Sales O3 Product-owned E5 reserve, multi-warehouse rollback, partial fulfillment, release, cancellation, return, tenant and external ownership fences PASS.\n";
+
 
 
     $check($writes->quickUpdateOpportunity($ownedId,['priority'=>'high'],$owner,'p4-own')->ok,'Guarded own write failed.');
