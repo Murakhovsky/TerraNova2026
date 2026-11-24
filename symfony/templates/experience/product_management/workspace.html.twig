@@ -56,7 +56,7 @@
             <h2>Новий товар</h2>
             <form method="post" action="/product-management/products" class="cos-page__stack">
                 <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
-                <input type="hidden" name="idempotency_key" value="{{ mutationKey }}">
+                <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000001">
                 <label>Назва <input name="name" class="form-control" required maxlength="255"></label>
                 <label>SKU <input name="sku" class="form-control" required maxlength="128"></label>
                 <label>Тип <select name="type" class="form-select">
@@ -77,7 +77,7 @@
             {% if product.status != 'archived' %}
                 <form method="post" action="/product-management/products/{{ product.product_id }}/update" class="cos-page__stack">
                     <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
-                    <input type="hidden" name="idempotency_key" value="{{ mutationKey }}">
+                    <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000002">
                     <input type="hidden" name="expected_revision" value="{{ product.revision }}">
                     <label>Назва <input class="form-control" name="name" value="{{ product.name }}" required maxlength="255"></label>
                     <label>Бренд <input class="form-control" name="brand" value="{{ product.brand|default('') }}" maxlength="190"></label>
@@ -99,7 +99,7 @@
                             {% if product.status != 'archived' and v.status == 'active' %}
                                 <form class="cos-toolbar" method="post" action="/product-management/products/{{ product.product_id }}/price">
                                     <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
-                                    <input type="hidden" name="idempotency_key" value="{{ mutationKey }}">
+                                    <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}{{ '%08d'|format(loop.index + 100) }}">
                                     <input type="hidden" name="variant_id" value="{{ v.variant_id }}">
                                     <input class="form-control" name="amount" aria-label="Ціна UAH для {{ v.sku }}" placeholder="0.0000" required pattern="[0-9]+(\.[0-9]{1,4})?">
                                     <button type="submit" class="btn btn-outline-primary">Ціна</button>
@@ -114,7 +114,7 @@
                 <h3>Додати варіант</h3>
                 <form method="post" class="cos-toolbar" action="/product-management/products/{{ product.product_id }}/variants">
                     <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
-                    <input type="hidden" name="idempotency_key" value="{{ mutationKey }}">
+                    <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000004">
                     <label>SKU <input class="form-control" name="sku" maxlength="128" required></label>
                     <label>Одиниця <input class="form-control" name="uom" value="pcs" maxlength="16" required></label>
                     <button class="btn btn-primary" type="submit">Додати</button>
@@ -131,7 +131,7 @@
             {% if product.status != 'archived' %}
                 <form method="post" class="cos-toolbar" action="/product-management/products/{{ product.product_id }}/categories">
                     <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
-                    <input type="hidden" name="idempotency_key" value="{{ mutationKey }}">
+                    <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000005">
                     <label>Категорія
                         <select class="form-select" name="category_id" required>
                             {% for c in categories %}
@@ -152,7 +152,7 @@
             {% if product.status != 'archived' %}
                 <form method="post" class="cos-page__stack" action="/product-management/products/{{ product.product_id }}/translations">
                     <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
-                    <input type="hidden" name="idempotency_key" value="{{ mutationKey }}">
+                    <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000006">
                     <label>Мова <select class="form-select" name="locale"><option value="uk">Українська</option><option value="en">English</option></select></label>
                     <label>Локалізована назва <input class="form-control" name="name" required maxlength="255"></label>
                     <label>Локалізований опис <textarea class="form-control" name="description" maxlength="20000" rows="2"></textarea></label>
@@ -171,7 +171,7 @@
             <h2>Створити категорію</h2>
             <form method="post" action="/product-management/categories" class="cos-page__stack">
                 <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
-                <input type="hidden" name="idempotency_key" value="{{ mutationKey }}">
+                <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000007">
                 <label>Назва <input class="form-control" name="name" maxlength="255" required></label>
                 <label>Slug <input class="form-control" name="slug" maxlength="190" pattern="[a-z0-9]+(-[a-z0-9]+)*" required></label>
                 <label>Батьківська категорія

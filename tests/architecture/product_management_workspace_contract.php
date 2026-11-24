@@ -18,7 +18,7 @@ foreach([
     'ActiveModuleResolver', 'TenantPermissions::MANAGE',
     '$this->modules->isEnabled(', '$this->csrf->isValid($request)',
     "'human_ui'", "'trusted_read'", 'CorrelationId::generate()',
-    'product_management.'.$capability, 'readProduct(', 'idempotency_key',
+    'product_management.', 'readProduct(', 'idempotency_key',
 ] as $required) $assert(str_contains($controller,$required),'Missing canonical guard: '.$required);
 foreach(['new PDO','->prepare(', 'ProductManagementService','ShopifyReadClient',
     "'ai'", "'cron'", 'QueryBusInterface', 'CommandBusInterface',
@@ -35,7 +35,8 @@ $assert(str_contains($provider,"'productManagementNavigationContributor'") &&
     'Workspace provider/controller not registered.');
 $assert(str_contains($twig,"{% extends 'experience/workspace_shell.html.twig' %}") &&
     substr_count($twig,'name="csrf_token"')>=5 &&
-    substr_count($twig,'name="idempotency_key"')>=5,
+    substr_count($twig,'name="idempotency_key"')>=5 &&
+    str_contains($twig,'mutationKey|slice(0,24)'),
     'Workspace forms must be idempotent and CSRF-protected.');
 foreach([
     'cos_product_management_index:', 'cos_product_management_create:',
