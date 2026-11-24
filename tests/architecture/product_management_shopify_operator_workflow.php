@@ -21,7 +21,7 @@ foreach([
 ] as $expected) {
     $assert(str_contains($command,$expected),'Missing tenant diagnostic: '.$expected);
 }
-$assert(str_contains($wrapper,"  preflight)") && str_contains($wrapper,'COS_SHOPIFY_OPERATOR_ENABLED=1'),
+$assert(str_contains($wrapper,'if [[ "$ACTION" == preflight ]]') && str_contains($wrapper,'COS_SHOPIFY_OPERATOR_ENABLED=1'),
     'Supervisor shell gate or preflight missing.');
 foreach([
     'workflow_dispatch:',

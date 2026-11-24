@@ -117,7 +117,8 @@ Workflow: `.github/workflows/cos-shopify-lamps-operator.yml`, тільки
 Порядок безпечної перевірки:
 
 1. `preflight` — лише перевіряє installed/current/configured/enabled
-   `product_management` для вказаної організації. Не активує модуль.
+   `product_management` для вказаної організації. Не активує модуль,
+   не читає Shopify credentials та не звертається до Shopify.
 2. `provision` — **явний ручний** OAuth preflight та одноразова
    реєстрація готового Shopify connection в COS. Не повторювати, якщо
    `connection_id` уже існує.
