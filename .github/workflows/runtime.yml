@@ -160,6 +160,11 @@ jobs:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
           COS_TEST_PM_COUNT_FULL: "1"
         run: php tests/integration/product_management_stock_count_goal_e2e_mysql.php
+      - name: Product Management canonical atomic stock count session MySQL E2E
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+          COS_TEST_PM_SESSION_FULL: "1"
+        run: php tests/integration/product_management_count_session_goal_e2e_mysql.php
       - name: Product Management approved CSV Action native MySQL acceptance
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
@@ -991,7 +996,31 @@ jobs:
         run: |
           CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
           test -n "$CHROME_BIN"
-          CHROME_PATH="$CHROME_BIN" node tests/browser/sales_workspace.mjs
+          CHROME_PATH="$CHROME_BIN" node tests/browser/sales_workspace.mjs"
+
+      - name: Product Management functional browser acceptance
+        env:
+          PM_E2E_BASE_URL: http://127.0.0.1:8081
+          PM_E2E_EMAIL: sales-functional-acceptance@example.test
+          PM_E2E_PASSWORD: Sales-Functional-Acceptance-CI-Ab9!
+          PM_E2E_MUTATION_SAFE: '1'
+        run: |
+          # Only this disposable CI tenant is enabled; restore module visibility after the browser journey.
+          docker compose exec -T mysql mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "INSERT INTO cos_organization_modules (organization_id,module_id,enabled) VALUES ('default','product_management',1) ON DUPLICATE KEY UPDATE enabled=1"
+          restore_pm() {
+            docker compose exec -T mysql mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "UPDATE cos_organization_modules SET enabled=0 WHERE organization_id='default' AND module_id='product_management'"
+          }
+          trap restore_pm EXIT
+          CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME_BIN"
+          CHROME_PATH="$CHROME_BIN" node tests/browser/product_management_workspace.mjs
+      - name: Upload Product Management browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: product-management-browser-evidence
+          path: tmp/product-management-browser
+          if-no-files-found: ignore
 
       - name: Seed UX-00 independent manager and Federation Plan policy
         env:
