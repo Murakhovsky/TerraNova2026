@@ -68,8 +68,8 @@ return [
             ],
             [
                 'id'=>'product_management.governed.attribute.product.bulk_set','version'=>'1.0.0','owner_domain'=>'product_management',
-                'kind'=>'command','input_schema'=>'resources/contracts/product-management/governed-attribute-product-bulk_set-input.schema.json',
-                'output_schema'=>'resources/contracts/product-management/attribute-product-bulk_set-output.schema.json',
+                'kind'=>'command','input_schema'=>'resources/contracts/product-management/governed-attribute-product-bulk-set-input.schema.json',
+                'output_schema'=>'resources/contracts/product-management/attribute-product-bulk-set-output.schema.json',
                 'execution_binding'=>'action:product_management.governed.attribute.product.bulk_set',
                 'async'=>true,'side_effect_level'=>'external','permission'=>'cos.tenant.manage','approval_policy'=>'required','idempotency'=>'required',
                 'timeout_policy'=>['seconds'=>60],'retry_policy'=>['max_attempts'=>1],
