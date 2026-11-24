@@ -4,7 +4,7 @@ description: Планування маркетингових кампаній і
 status: draft
 updated: 2026-11-24
 kind: domain
-version: 0.2.2
+version: 0.2.3
 ---
 
 # Огляд домену Marketing
@@ -25,7 +25,7 @@ Marketing — окремий bounded context, що володіє рекламн
 
 ## Фактично додані можливості
 
-Тринадцять typed capabilities, включно з шістьма M2a та Finance-facing source Query: `marketing.campaign.search`, `marketing.campaign.get`, `marketing.campaign.create`, `marketing.paid.account.list`, `marketing.paid.insights.query`, `marketing.paid.sync.history`. Для них діють Canonical Capability Gateway і перевірка tenant менеджера. Нових універсальних executor або CommandBus не створено.
+Чотирнадцять typed capabilities, включно з шістьма M2a, Product draft-check і Finance-facing source Query: `marketing.campaign.search`, `marketing.campaign.get`, `marketing.campaign.create`, `marketing.paid.account.list`, `marketing.paid.insights.query`, `marketing.paid.sync.history`. Для них діють Canonical Capability Gateway і перевірка tenant менеджера. Нових універсальних executor або CommandBus не створено.
 
 На UI передбачено Overview, Campaigns, Campaign Workspace, Paid Media Accounts, Performance та Action Queue. Менеджер може створити внутрішню чернетку, під'єднати read-only Meta Ad Account через opaque Vault reference, імпортувати і переглядати provider observations.
 
@@ -43,6 +43,16 @@ Marketing — окремий bounded context, що володіє рекламн
 
 Схема: `app/migrations/20261119_000154_marketing_planning_m2.sql`; інтеграційна перевірка: `tests/integration/marketing_m2_planning_mysql.php`. Модуль вимкнений за замовчуванням.
 
+## M2b: Product Management як джерело істини для Creative Draft
+
+`marketing.product.draft_check.get` є tenant-scoped **read-only Query** через Canonical Capability Gateway. Marketing має власний read port, а Symfony anti-corruption adapter викликає **лише** `ProductManagementService::getProduct()`, `PricingService::get()` та `ActiveModuleResolver::isEnabled()`. Прямого SQL у таблиці Product немає. Якщо Product module вимкнено для tenant, перевірка fail-closed.
+
+У Campaign Workspace доступна форма ручної перевірки `product_id` (32-hex), опційного `variant_id` та валюти. Результат читає актуальні Product/Variant status, revision і базову ціну. Власний Product статус `draft` може бути використаний як посилання **для чернетки**, але не означає готовності до реклами. Чужий tenant, інший Variant, відсутній товар, архівний товар або вимкнений Product module не проходять перевірку. Усі значення з джерела — лише поточний readback; Product змінюється незалежно від Marketing.
+
+Відповідь завжди має `launch_eligible=false`, `inventory_verified=false`, `external_destination_verified=false` та `provider_ad_policy_verified=false`. До платного запуску все ще потрібні перевірка складу для конкретної локації, HTTPS destination, рекламна політика, Finance envelope/Approval та canonical Workflow. Це не створює Finance expense або Meta campaign.
+
+**Докази D2:** `tests/unit/marketing_product_draft_check.php` та `tests/integration/marketing_product_draft_mysql.php` (реальна Product Management persistence/price, tenant/module isolation). D3/D4/D5 не заявлено.
+
 ## Надійність імпорту та операційна черга
 
 Meta read-only sync об'єднує імпорт Campaign/AdSet/Ad, Insights, `last_synced_at` і запис `SUCCEEDED` в **одну MySQL-транзакцію**. Невалідний рядок Insights або помилка посеред import викликає rollback без часткових campaign/metrics; окремий `tests/integration/marketing_meta_atomic_mysql.php` перевіряє це на справжній MySQL.
@@ -55,7 +65,7 @@ Meta read-only sync об'єднує імпорт Campaign/AdSet/Ad, Insights, `l
 
 - **M0**: SQL, сервіси, контракти, початкові тести; приймання D2–D5 ще не доведене.
 - **M1**: Meta read-only адаптер і збереження спостережень, але без підтвердженого реального рекламного акаунта та Ads Manager reconciliation.
-- **M2a**: Creative revisions, людські evidence proposals та незалежний review реалізовані; Product API уже прийнято в `main`, але перевірка товару з боку Marketing, Hermes delegation і provider policy gate не підключені.
+- **M2a/M2b**: Creative revisions і незалежний review реалізовані; Product live draft check підключений до сервісів Product Management. Hermes delegation, stock-by-location, destination/policy validation та production paid launch ще не підключені.
 - **F1/M3**: Finance F1 уже в `main`; Marketing Meta writes залишаються заблокованими до окремого canonical Workflow, live evidence і staging acceptance.
 - **M4/M5**: мультиджерельна атрибуція, оптимізація й додаткові провайдери не реалізовані.
 

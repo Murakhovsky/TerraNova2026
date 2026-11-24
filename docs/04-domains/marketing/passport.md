@@ -48,6 +48,12 @@ domain_id: marketing
         "marketing.analyst.proposal.list",
         "marketing.analyst.proposal.review"
       ]
+    },
+    {
+      "id": "product_evidence",
+      "capability_ids": [
+        "marketing.product.draft_check.get"
+      ]
     }
   ],
   "process_ids": [],
@@ -77,6 +83,7 @@ Marketing володіє Campaign Draft, Meta Ad Account binding, provider Campa
 | `paid_media_read` | Meta read-only snapshots, атомарність імпорту й історія sync | D2, без real Ads Manager acceptance |
 | `creative_planning` | Версії креативів і Product refs | D2, без Product live verification |
 | `analyst_review` | Evidence proposals та незалежні review-рішення | D2, Hermes runtime не підключений |
+| `product_evidence` | Актуальний Product/Variant/Price через Product Management read port | D2, без складу/URL/Meta policy acceptance |
 
 Компоненти не є незалежними installable modules.
 
@@ -86,7 +93,7 @@ Marketing володіє Campaign Draft, Meta Ad Account binding, provider Campa
 
 ## 5. Use Cases та Capabilities
 
-Callable capabilities і точні input/output schemas належать manifest, а не цьому тексту. Початкові Query включають Campaign search/get, Meta account list/Insights query/sync history. Finance-facing read-only source evidence Query присутній, але не підтверджує Expense. M2a має Creative create/revise/list і Proposal submit/list/review, без запуску Meta.
+Callable capabilities і точні input/output schemas належать manifest, а не цьому тексту. Початкові Query включають Campaign search/get, Meta account list/Insights query/sync history. Finance-facing read-only source evidence Query присутній, але не підтверджує Expense. M2a має Creative create/revise/list і Proposal submit/list/review; M2b має tenant-safe Product draft-check, без запуску Meta.
 
 ## 6. Виконання
 
@@ -118,7 +125,7 @@ MySQL atomic import відхиляє часткове оновлення при 
 
 ## 13. План розвитку, борги та рішення
 
-Пріоритети: M1 Meta real Ads Manager reconciliation, M2 Product verification і Hermes analyst, M3 governed paid operations, незалежне D3/D4 приймання. Наявний D2 source import не легалізує жоден Meta write.
+Пріоритети: M1 Meta Ads Manager reconciliation, M2 Hermes analyst та stock/URL/ad-policy signoff, M3 governed paid operations, незалежне D3/D4 приймання. Наявний D2 source import не легалізує жоден Meta write.
 
 ## 14. Карта джерел
 
