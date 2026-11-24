@@ -264,6 +264,19 @@ final readonly class PricingService
         return array_map(static function(array $row):array{$row['revision']=(int)$row['revision'];return $row;},$stmt->fetchAll(PDO::FETCH_ASSOC));
     }
 
+    public function tierHistory(string $org,string $listId,string $variantId,string $minimum,int $limit=30,int $offset=0):array
+    {
+        $this->listScope($org,$listId,$variantId);
+        $minimum=ProductRules::quantity($minimum);
+        if($limit<1||$limit>100||$offset<0||$offset>10000000)throw new DomainException('Invalid tier history pagination.');
+        $stmt=$this->connection->prepare('SELECT min_quantity,revision,old_amount,new_amount,actor_ref,created_at FROM pm_price_list_tier_history
+            WHERE organization_id=:org AND list_id=:list AND variant_id=:variant AND min_quantity=CAST(:min AS DECIMAL(20,6))
+            ORDER BY revision DESC LIMIT :lim OFFSET :off');
+        $stmt->bindValue(':org',$org);$stmt->bindValue(':list',$listId);$stmt->bindValue(':variant',$variantId);$stmt->bindValue(':min',$minimum);
+        $stmt->bindValue(':lim',$limit,PDO::PARAM_INT);$stmt->bindValue(':off',$offset,PDO::PARAM_INT);$stmt->execute();
+        return array_map(static function(array $row):array{$row['revision']=(int)$row['revision'];return $row;},$stmt->fetchAll(PDO::FETCH_ASSOC));
+    }
+
     /** Deterministic quote, not customer eligibility or a commitment to sell. */
     public function resolvePrice(string $org,string $variantId,string $currency,string $quantity,?string $listId):array
     {
