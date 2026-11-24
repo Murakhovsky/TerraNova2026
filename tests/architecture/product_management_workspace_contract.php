@@ -83,4 +83,7 @@ $assert(str_contains($controller,'price.list.tier.history.search')&&str_contains
 foreach(['attribute.define','attribute.category.bind','attribute.product.filter','attribute.product.set','variant.matrix.preview','variant.matrix.create'] as $required)
     $assert(str_contains($controller,$required),'Attribute Workspace missing: '.$required);
 $assert(str_contains($twig,'product_attributes.html.twig')&&str_contains($routes,'cos_product_management_product_attributes:'),'Attribute Workspace routes missing.');
+foreach(['analytics.summary.get','analytics.stock.search','analytics.movement.search','analytics.quality.search','analytics.reconciliation.get'] as $required)
+    $assert(str_contains($controller,$required),'Dashboard query missing: '.$required);
+$assert(str_contains($twig,'dashboard.html.twig')&&str_contains($routes,'cos_product_management_dashboard:'),'Dashboard route missing.');
 echo "Product Management E7/P0 catalog workspace architecture passed.\n";
