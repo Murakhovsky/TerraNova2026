@@ -11,6 +11,7 @@ use DateTimeZone;
 use DomainException;
 use Domains\Marketing\Application\Service\MarketingCampaignService;
 use Domains\Marketing\Application\Service\MarketingPlanningService;
+use Domains\Marketing\Application\Service\MarketingProductDraftCheckService;
 use Domains\Marketing\Application\Service\MarketingPaidReadService;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
@@ -32,6 +33,7 @@ final readonly class MarketingPageController
         private SessionCsrfValidator $csrf,
         private MarketingCampaignService $campaigns,
         private MarketingPlanningService $planning,
+        private MarketingProductDraftCheckService $productChecks,
         private MarketingPaidReadService $paid,
     ){}
 
@@ -192,10 +194,24 @@ final readonly class MarketingPageController
         $actor=$this->manager();
         if($actor instanceof Response)return $actor;
         try {
-            $creatives=[];$proposals=[];
+            $creatives=[];$proposals=[];$productCheck=null;$productCheckError=null;
             if($section==='campaign'&&is_array($selected)&&is_string($selected['id']??null)){
                 $creatives=$this->planning->creatives($actor,$selected['id']);
                 $proposals=$this->planning->proposals($actor,$selected['id']);
+                // Operator-initiated native Product readback; never cached as an
+                // approved Creative or paid activation decision.
+                if($request->query->has('product_id')){
+                    try{
+                        $variant=trim((string)$request->query->get('variant_id',''));
+                        $productCheck=$this->productChecks->check(
+                            $actor,trim((string)$request->query->get('product_id','')),
+                            $variant!==''?$variant:null,
+                            strtoupper(trim((string)$request->query->get('currency','USD')))
+                        );
+                    }catch(DomainException){
+                        $productCheckError='Product check unavailable: verify Product module activation, reference and tenant permissions.';
+                    }
+                }
             }
             $accounts=$this->paid->accounts($actor);
             $accountHealth=[];
@@ -255,6 +271,7 @@ final readonly class MarketingPageController
                 'observations'=>$observations,'selectedCampaign'=>$selected,'accountId'=>$accountId,
                 'from'=>$from,'to'=>$to,'csrfToken'=>$this->csrf->token($request),
                 'creatives'=>$creatives,'proposals'=>$proposals,
+                'productCheck'=>$productCheck,'productCheckError'=>$productCheckError,
                 'currentUserId'=>$actor->userId()->value(),
                 'planningKey'=>'mktplan-'.bin2hex(random_bytes(12)),
                 'planningEvidenceRef'=>'human-note-'.bin2hex(random_bytes(10)),

@@ -39,7 +39,7 @@
     {% elseif section == 'campaigns' %}
         <section class="cos-panel">
             <h2>Create a campaign draft</h2>
-            <p>No Meta ad is created. Product links are unverified until Product has an accepted read API.</p>
+            <p>No Meta ad is created. Product references remain unverified until their live Product Management readback is checked in the Campaign Workspace.</p>
             <form method="post" action="/marketing/campaigns" class="cos-page__stack">
                 <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                 <input type="hidden" name="idempotency_key" value="{{ draftKey }}">
@@ -62,8 +62,23 @@
             <h2>{{ c.name }}</h2>
             <p>{{ c.business_objective }}</p><p>{{ c.brief }}</p>
             <p>State: {{ c.status }} · Revision: {{ c.revision }} · Owner: {{ c.owner_id }}</p>
-            <h3>Product links</h3>
-            {% if c.product_refs is not empty %}<p>{{ c.product_refs|join(', ') }} (read-only, not yet verified)</p>{% else %}<p>No Product links yet.</p>{% endif %}
+            <h3>Product links and live draft check</h3>
+            {% if c.product_refs is not empty %}<p>{{ c.product_refs|join(', ') }} (stored references, not verified advertising eligibility)</p>{% else %}<p>No Product links yet.</p>{% endif %}
+            <p>Product Management is the source of truth for catalog/variant/base price. This check never verifies stock by location, destination URL, Meta policy or Finance permission.</p>
+            <form method="get" action="/marketing/campaigns/{{ c.id|url_encode }}" class="cos-page__stack">
+                <label>Product Management ID (32 hex) <input class="form-control" name="product_id" required pattern="[a-f0-9]{32}" value="{{ query.product_id|default('') }}"></label>
+                <label>Variant ID (optional, 32 hex) <input class="form-control" name="variant_id" pattern="[a-f0-9]{32}" value="{{ query.variant_id|default('') }}"></label>
+                <label>Price currency <input class="form-control" name="currency" value="{{ query.currency|default('USD') }}" maxlength="3" pattern="[A-Z]{3}"></label>
+                <button class="btn btn-outline-secondary" type="submit">Check Product source</button>
+            </form>
+            {% if productCheckError %}<p role="alert">{{ productCheckError }}</p>{% endif %}
+            {% if productCheck %}
+                <section class="cos-panel" aria-label="Current Product source check">
+                    <p>Product: {{ productCheck.product_status }} · Variant: {{ productCheck.variant_status }} · Price: {{ productCheck.base_price_decimal|default('not available') }} {{ productCheck.currency }}</p>
+                    <p>Product revision {{ productCheck.product_revision }}, variant revision {{ productCheck.variant_revision }}. Reference usable in a draft: {{ productCheck.can_reference_in_draft ? 'yes' : 'no' }}.</p>
+                    <p><strong>Paid launch eligible: no.</strong> Still required: {{ productCheck.pending_checks|join(', ') }}. This is a live catalog readback, not a durable advertising approval.</p>
+                </section>
+            {% endif %}
 
             <h3>Creative drafts</h3>
             <p>Planning records only. Product availability, landing URL, regulatory compliance and media ownership have NOT been verified. Nothing here creates or activates an ad.</p>
