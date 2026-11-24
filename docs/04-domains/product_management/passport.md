@@ -41,6 +41,8 @@ domain_id: product_management
       "capability_ids": [
         "product_management.location.create",
         "product_management.location.search",
+        "product_management.stock.reserve",
+        "product_management.stock.release",
         "product_management.stock.balance.get"
       ]
     },
@@ -139,7 +141,7 @@ Tenant isolation у Domain/Kernel. COS Integration Vault керує Shopify cred
 
 ## 11. Operations та Recovery
 
-Невідомий результат partial native import переводить Action preview у `blocked`. Read-only audit збирає Product, Variant, Price, mapping та receipt evidence. Ні автоматичний replay, ні пряме редагування даних не допускаються.
+Read-only E5 Stock audit звіряє on_hand з ledger і reserved з активними резервами; DRIFT або INCOMPLETE не є readiness. Невідомий результат partial native import переводить Action preview у `blocked`. Read-only audit збирає Product, Variant, Price, mapping та receipt evidence. Ні автоматичний replay, ні пряме редагування даних не допускаються.
 
 ## 12. Готовність і докази
 
