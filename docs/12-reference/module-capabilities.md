@@ -345,7 +345,7 @@ Manifest capabilities не задекларовані.
 - обробники jobs: —;
 - внески API routes: —;
 - постачальники конфігурації: —;
-- міграції: `app/migrations/20261118_000152_product_management_catalog.sql`, `app/migrations/20261118_000153_product_management_inventory.sql`, `app/migrations/20261118_000154_product_management_prices_import.sql`, `app/migrations/20261118_000155_product_management_shopify_read.sql`, `app/migrations/20261119_000156_product_management_approved_import.sql`, `app/migrations/20261119_000157_product_management_media_links.sql`, `app/migrations/20261119_000158_product_management_import_plan_binding.sql`, `app/migrations/20261119_000159_product_management_shopify_import_preview.sql`, `app/migrations/20261119_000160_product_management_shopify_approved_apply.sql`, `app/migrations/20261120_000161_product_management_shopify_identity_claim.sql`, `app/migrations/20261124_000162_product_management_shopify_order_pointer.sql`.
+- міграції: `app/migrations/20261118_000152_product_management_catalog.sql`, `app/migrations/20261118_000153_product_management_inventory.sql`, `app/migrations/20261118_000154_product_management_prices_import.sql`, `app/migrations/20261118_000155_product_management_shopify_read.sql`, `app/migrations/20261119_000156_product_management_approved_import.sql`, `app/migrations/20261119_000157_product_management_media_links.sql`, `app/migrations/20261119_000158_product_management_import_plan_binding.sql`, `app/migrations/20261119_000159_product_management_shopify_import_preview.sql`, `app/migrations/20261119_000160_product_management_shopify_approved_apply.sql`, `app/migrations/20261120_000161_product_management_shopify_identity_claim.sql`, `app/migrations/20261124_000162_product_management_reservations.sql`, `app/migrations/20261124_000162_product_management_shopify_order_pointer.sql`, `app/migrations/20261125_009007_product_order_reservation_evidence.sql`.
 
 ### Задекларовані capabilities
 
@@ -443,7 +443,7 @@ Manifest capabilities не задекларовані.
 - обробники jobs: `salesCrmInboxJobHandler`, `salesOrderSyncJobHandler`;
 - внески API routes: —;
 - постачальники конфігурації: `salesModuleConfigurationProvisioner`;
-- міграції: `app/migrations/20260910_000030_sales_v071_configuration_ownership.sql`, `app/migrations/20260913_000044_sales_v081_historical_stage_history.sql`, `app/migrations/20260913_000045_sales_v082_funnel_metrics.sql`, `app/migrations/20260913_000046_sales_v083_operational_performance.sql`, `app/migrations/20260913_000047_sales_v086_hardening.sql`, `app/migrations/20260928_000118_sales_v100_release.sql`, `app/migrations/20261003_000121_sales_lead_qualification_transition.sql`, `app/migrations/20261003_000122_sales_followup_activity_type.sql`, `app/migrations/20261003_000123_sales_lead_qualification_governance_repair.sql`, `app/migrations/20261124_009001_sales_offer_lifecycle.sql`, `app/migrations/20261124_009002_sales_activity_cancellation.sql`, `app/migrations/20261124_009003_sales_offer_delivery.sql`, `app/migrations/20261124_009004_sales_native_orders.sql`, `app/migrations/20261125_009005_sales_order_source_reconciliation.sql`, `app/migrations/20261125_009006_sales_order_sync_runs.sql`.
+- міграції: `app/migrations/20260910_000030_sales_v071_configuration_ownership.sql`, `app/migrations/20260913_000044_sales_v081_historical_stage_history.sql`, `app/migrations/20260913_000045_sales_v082_funnel_metrics.sql`, `app/migrations/20260913_000046_sales_v083_operational_performance.sql`, `app/migrations/20260913_000047_sales_v086_hardening.sql`, `app/migrations/20260928_000118_sales_v100_release.sql`, `app/migrations/20261003_000121_sales_lead_qualification_transition.sql`, `app/migrations/20261003_000122_sales_followup_activity_type.sql`, `app/migrations/20261003_000123_sales_lead_qualification_governance_repair.sql`, `app/migrations/20261124_009001_sales_offer_lifecycle.sql`, `app/migrations/20261124_009002_sales_activity_cancellation.sql`, `app/migrations/20261124_009003_sales_offer_delivery.sql`, `app/migrations/20261124_009004_sales_native_orders.sql`, `app/migrations/20261125_009005_sales_order_source_reconciliation.sql`, `app/migrations/20261125_009006_sales_order_sync_runs.sql`, `app/migrations/20261125_009008_sales_order_lifecycle.sql`.
 
 ### Задекларовані capabilities
 
@@ -497,6 +497,13 @@ Manifest capabilities не задекларовані.
 - `sales.offer.revise`;
 - `sales.offer.transition`;
 - `sales.order.create`;
+- `sales.order.lifecycle.allocate`;
+- `sales.order.lifecycle.cancel`;
+- `sales.order.lifecycle.confirm`;
+- `sales.order.lifecycle.fulfill`;
+- `sales.order.lifecycle.read`;
+- `sales.order.lifecycle.release`;
+- `sales.order.lifecycle.return`;
 - `sales.order.read`;
 - `sales.order.source.page.read`;
 - `sales.order.source.pending.read`;

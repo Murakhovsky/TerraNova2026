@@ -644,3 +644,60 @@ try {
         $db->prepare('DELETE FROM tn_users WHERE organization_id=? AND id=?')->execute([$org,$lockActor]);
     }
 }
+
+
+// O3: independent committed stock fixture and two physical MySQL connections.
+// A second order cannot reserve while the first holds Product locks, or oversell after commit.
+$raceProduct=null;$raceLocation=null;$raceCorrelation='o3-race-'.$token;
+$raceStore=new \Domains\ProductManagement\Infrastructure\Persistence\MySqlProductManagementStore($db,new \Infrastructure\Platform\Persistence\MySql\Event\MysqlEventStore($db));
+$raceStore2=new \Domains\ProductManagement\Infrastructure\Persistence\MySqlProductManagementStore($db2,new \Infrastructure\Platform\Persistence\MySql\Event\MysqlEventStore($db2));
+$raceActor='1';$raceKeyA='o3-race-reserve-a-'.$token;$raceKeyB='o3-race-reserve-b-'.$token;
+try{
+    $db->beginTransaction();
+    $raceProduct=$raceStore->createProduct($org,['name'=>'O3 race fixture','type'=>'stock','sku'=>'O3-RACE-'.strtoupper($token),'uom'=>'pcs','track_inventory'=>true],'o3-race-product-'.$token,$raceActor,$raceCorrelation);
+    $db->prepare("UPDATE pm_products SET status='active' WHERE organization_id=? AND product_id=?")->execute([$org,$raceProduct['product_id']]);
+    $raceLocation=$raceStore->createLocation($org,'O3-RACE-'.strtoupper($token),'Race fixture','o3-race-location-'.$token,$raceActor,$raceCorrelation)['location_id'];
+    $raceStore->postMovement($org,$raceProduct['variant_id'],$raceLocation,'5','receipt','manual:o3-race-opening','o3-race-opening-'.$token,$raceActor,$raceCorrelation);
+    $db->commit();
+    $sourceA='sales-order:'.str_repeat('a',32).':1:'.str_repeat('b',32);
+    $sourceB='sales-order:'.str_repeat('c',32).':1:'.str_repeat('d',32);
+    $db->beginTransaction();
+    $first=$raceStore->reserveForOrder($org,$raceProduct['product_id'],$raceProduct['variant_id'],$raceProduct['sku'],$raceLocation,4,$sourceA,$raceKeyA,$raceActor,$raceCorrelation);
+    $db2->beginTransaction();
+    try{
+        try{
+            $raceStore2->reserveForOrder($org,$raceProduct['product_id'],$raceProduct['variant_id'],$raceProduct['sku'],$raceLocation,4,$sourceB,$raceKeyB,$raceActor,$raceCorrelation);
+            throw new RuntimeException('Competing inventory reservation bypassed row locks.');
+        }catch(PDOException $e){$check((int)($e->errorInfo[1]??0)===1205,'Unexpected competing inventory error.');}
+    }finally{$db2->rollBack();}
+    $db->commit();
+    $db2->beginTransaction();
+    try{
+        $reject(fn()=>$raceStore2->reserveForOrder($org,$raceProduct['product_id'],$raceProduct['variant_id'],$raceProduct['sku'],$raceLocation,4,$sourceB,$raceKeyB,$raceActor,$raceCorrelation));
+    }finally{$db2->rollBack();}
+    $db2->beginTransaction();
+    $second=$raceStore2->reserveForOrder($org,$raceProduct['product_id'],$raceProduct['variant_id'],$raceProduct['sku'],$raceLocation,1,$sourceB,$raceKeyB,$raceActor,$raceCorrelation);
+    $db2->commit();
+    $projection=$raceStore->stockBalance($org,$raceProduct['variant_id'],$raceLocation);
+    $check($first['reservation_id']!==$second['reservation_id']&&$projection['on_hand']==='5.000000'&&$projection['reserved']==='5.000000'&&$projection['available']==='0.000000','Competing orders oversold stock or reused identity.');
+    echo "Sales O3 two physical MySQL connections: reservation lock, oversell rejection and retry PASS.\n";
+}finally{
+    if($db->inTransaction())$db->rollBack();
+    if($db2->inTransaction())$db2->rollBack();
+    $db->beginTransaction();
+    try{
+        if($raceProduct!==null){
+            $v=$raceProduct['variant_id'];
+            $db->prepare('DELETE o FROM pm_order_reservation_operations o JOIN pm_stock_reservations r ON r.organization_id=o.organization_id AND r.reservation_id=o.reservation_id WHERE r.organization_id=? AND r.variant_id=?')->execute([$org,$v]);
+            foreach(['pm_stock_reservations','pm_stock_movements','pm_stock_balances'] as $table)$db->prepare('DELETE FROM '.$table.' WHERE organization_id=? AND variant_id=?')->execute([$org,$v]);
+            $db->prepare('DELETE FROM pm_variants WHERE organization_id=? AND variant_id=?')->execute([$org,$v]);
+            $db->prepare('DELETE FROM pm_products WHERE organization_id=? AND product_id=?')->execute([$org,$raceProduct['product_id']]);
+        }
+        if($raceLocation!==null)$db->prepare('DELETE FROM pm_locations WHERE organization_id=? AND location_id=?')->execute([$org,$raceLocation]);
+        foreach(['o3-race-product-'.$token,'o3-race-location-'.$token,'o3-race-opening-'.$token,$raceKeyA,$raceKeyB,'order-reserve:'.hash('sha256',$raceKeyA),'order-reserve:'.hash('sha256',$raceKeyB)] as $receiptKey)
+            $db->prepare('DELETE FROM pm_operation_receipts WHERE organization_id=? AND idempotency_key=?')->execute([$org,$receiptKey]);
+        $db->prepare('DELETE o FROM cos_event_outbox o JOIN cos_events e ON e.organization_id=o.organization_id AND e.id=o.event_id WHERE e.organization_id=? AND e.correlation_id=?')->execute([$org,$raceCorrelation]);
+        $db->prepare('DELETE FROM cos_events WHERE organization_id=? AND correlation_id=?')->execute([$org,$raceCorrelation]);
+        $db->commit();
+    }catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}
+}
