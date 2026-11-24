@@ -70,4 +70,8 @@ foreach (['price.list.create','price.list.search','price.list.entry.get','price.
     $assert(str_contains($controller,$required),'Missing price list workspace contract: '.$required);
 $assert(str_contains($routes,'cos_product_management_price_list_entry_set:')&&str_contains($twig,'id="list-price"'),
     'Price list workspace requires canonical routes and forms.');
+foreach (['price.list.history.search','list_lifecycle_readback_uncertain','confirm_archive'] as $required)
+    $assert(str_contains($controller,$required),'Missing price list lifecycle workspace contract: '.$required);
+$assert(str_contains($routes,'cos_product_management_price_list_change:')&&str_contains($twig,'listHistory.items'),
+    'Price list lifecycle routes and history form required.');
 echo "Product Management E7/P0 catalog workspace architecture passed.\n";
