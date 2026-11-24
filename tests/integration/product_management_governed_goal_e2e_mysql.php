@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-/** Disposable native multi-step business acceptance. Independent Plan approval evidence is fixture; actual Action approvals and worker admission are exercised. */
+/** Disposable native multi-step business acceptance. Actual Plan and Action approval services and worker admission are exercised; no inserted approval receipt fixtures. */
 if(getenv('COS_TEST_PM_GOVERNED_FULL')!=='1'){
     throw new RuntimeException('Explicit full Product stock count session Goal rollout flag required.');
 }
@@ -16,6 +16,12 @@ spl_autoload_register(static function(string $class)use($root):void{
 use App\Persistence\Federation\FederationCanonicalWorkflowBridge;
 use App\Persistence\Federation\FederationCapabilityBindingResolver;
 use App\Persistence\Federation\FederationGoalStore;
+use App\Persistence\Federation\FederationPlanApproveHandler;
+use App\Persistence\Federation\FederationPlanApprovalCoordinator;
+use App\Infrastructure\Automation\FederationPlanApprovalAuthority;
+use Domains\Federation\Bootstrap\FederationDomainModule;
+use Kernel\Approval\Service\ApprovalService;
+use Platform\Orchestration\Goal\GoalPlanApprovalRequestFactory;
 use App\Persistence\Federation\FederationPlanApprovalEvidenceReader;
 use App\Persistence\Federation\FederationTrustedOutcomeEvidenceResolver;
 use App\Persistence\ProductManagement\ProductGovernedPlanProposalService;
@@ -79,7 +85,6 @@ $pdo=new PDO("mysql:host=$host;port=$port;dbname=$name;charset=utf8mb4",$user,$p
 $db=DriverManager::getConnection(['driver'=>'pdo_mysql','host'=>$host,'port'=>$port,
     'dbname'=>$name,'user'=>$user,'password'=>$password,'charset'=>'utf8mb4']);
 $token=bin2hex(random_bytes(7));$org='pm-goal-'.$token;
-$owner='42';$reviewer='pm-independent-'.$token;
 $runId='run-pm-'.$token;$planApproval=bin2hex(random_bytes(16));
 $assert=static function(bool $ok,string $why):void{
     if(!$ok)throw new RuntimeException('Product approved Goal E2E: '.$why);
@@ -88,15 +93,25 @@ $deny=static function(callable $fn,string $why):void{
     try{$fn();}catch(Throwable){return;}
     throw new RuntimeException('Unsafe Product E2E admitted: '.$why);
 };
-$actor=new TenantContext(UserId::fromString($owner),
-    OrganizationId::fromString($org),OrganizationRole::fromString('manager'),
-    [Permission::fromString(TenantPermissions::ACCESS),Permission::fromString(TenantPermissions::MANAGE)]);
 $oldRollout=getenv('COS_FEDERATION_CANONICAL_ORGANIZATION');
 putenv('COS_FEDERATION_CANONICAL_ORGANIZATION='.$org);
 
 try {
     $pdo->prepare('INSERT INTO cos_organizations (id,name,status) VALUES (:id,:name,"ACTIVE")')
         ->execute(['id'=>$org,'name'=>'Product approved full canonical E2E']);
+    $users=[];
+    foreach(['owner','reviewer'] as $role){
+        $pdo->prepare("INSERT INTO tn_users (organization_id,email,password_hash,full_name,role,status) VALUES (?,?,?,?, 'manager','active')")
+            ->execute([$org,$role.'-'.$token.'@example.test',password_hash(bin2hex(random_bytes(20)),PASSWORD_DEFAULT),'Product QA '.$role]);
+        $id=(string)$pdo->lastInsertId();
+        $pdo->prepare("INSERT INTO cos_organization_memberships (organization_id,user_id,role,status) VALUES (?,?,'manager','ACTIVE') ON DUPLICATE KEY UPDATE role='manager',status='ACTIVE'")->execute([$org,$id]);
+        $users[$role]=$id;
+    }
+    $owner=$users['owner'];$reviewer=$users['reviewer'];
+    $actor=new TenantContext(UserId::fromString($owner),
+    OrganizationId::fromString($org),OrganizationRole::fromString('manager'),
+    [Permission::fromString(TenantPermissions::ACCESS),Permission::fromString(TenantPermissions::MANAGE)]);
+
     $transactions=new class($pdo) implements TransactionManagerInterface {
         public function __construct(private PDO $pdo){}
         public function transactional(callable $op):mixed{
@@ -127,9 +142,10 @@ try {
     $prices=new PricingService($pdo,new MysqlEventStore($pdo));
     $capabilities=new CanonicalCapabilityCatalog($catalog);
     $handler=new ProductGovernedOperationHandler($products,$prices,$modules,$capabilities);
-    $domains=new DomainModuleRegistry([new ProductManagementDomainModule(governedHandler:$handler)]);
-    $bindings=new FederationCapabilityBindingResolver($capabilities,$domains,$modules);
     $planReader=new FederationPlanApprovalEvidenceReader($db);
+    $planHandler=new FederationPlanApproveHandler($db,$planReader);
+    $domains=new DomainModuleRegistry([new ProductManagementDomainModule(governedHandler:$handler),new FederationDomainModule($planHandler)]);
+    $bindings=new FederationCapabilityBindingResolver($capabilities,$domains,$modules);
     $planEvidence=new FederationWorkflowPlanApprovalEvidence($db,$planReader);
     $receipts=new DoctrineWorkflowActionReceiptVerifier($db,$planEvidence);
     $admission=new DoctrineWorkflowActionClaimAdmission($db,$planEvidence,$capabilities,$modules);
@@ -138,7 +154,7 @@ try {
         new WorkflowPredecessorReceiptVerifier($receipts,new FailClosedWorkflowNonActionReceiptEvidence()));
     $gate=new ModuleActionExecutionGate($domains,$modules,null,$worker);
     $actionService=new ActionService(new MysqlActionRepository($pdo),
-        new ActionExecutor([$handler],$gate));
+        new ActionExecutor([$handler,$planHandler],$gate));
     $approvalRepo=new MysqlApprovalRepository($pdo);
     $policies=new MysqlPolicyRepository($pdo);
     $engine=new PolicyEngine(new ConditionEvaluator());
@@ -223,34 +239,20 @@ try {
             ->execute(['id'=>'policy-'.$token.'-'.$i,'org'=>$org,'code'=>'pm-governed-'.$i,'type'=>$type,'conditions'=>'[]']);
     }
 
-    // Independent Plan Approval evidence fixture, as in Property canonical E2E.
-    $db->executeStatement('UPDATE cos_federation_plans SET state=:state
-        WHERE organization_id=:org AND plan_id=:plan',
-        ['state'=>'approved','org'=>$org,'plan'=>$planId]);
-    $storedPlan=(string)$db->fetchOne('SELECT plan_json FROM cos_federation_plans
-        WHERE organization_id=:org AND plan_id=:plan',['org'=>$org,'plan'=>$planId]);
-    $db->insert('cos_actions',[
-        'id'=>$planApproval,'organization_id'=>$org,'type'=>'cos.federation.plan.approval',
-        'target_type'=>'cos_federation_plan','target_id'=>$planId,
-        'parameters'=>json_encode(['goal_id'=>$goalId,'plan_id'=>$planId,
-            'specification_version'=>1,'plan_hash'=>hash('sha256',$storedPlan)],JSON_THROW_ON_ERROR),
-        'source_type'=>'USER','source_id'=>$owner,'status'=>'COMPLETED',
-        'execution_mode'=>'APPROVAL_REQUIRED','risk_level'=>'HIGH',
-        'idempotency_key'=>'plan:'.$token,'correlation_id'=>'pm-plan-'.$token,
-    ]);
-    $db->insert('cos_policy_evaluations',[
-        'id'=>bin2hex(random_bytes(16)),'organization_id'=>$org,'action_id'=>$planApproval,
-        'decision'=>'APPROVAL_REQUIRED','correlation_id'=>'pm-plan-'.$token,
-        'evaluated_at'=>gmdate('Y-m-d H:i:s.u'),
-    ]);
-    $db->insert('cos_approvals',[
-        'id'=>bin2hex(random_bytes(16)),'organization_id'=>$org,'action_id'=>$planApproval,
-        'status'=>'APPROVED','approver_type'=>'USER','approver_id'=>$reviewer,
-        'requested_by_type'=>'USER','requested_by_id'=>$owner,
-        'decided_by_type'=>'USER','decided_by_id'=>$reviewer,
-        'decided_at'=>gmdate('Y-m-d H:i:s.u'),
-        'expires_at'=>(new DateTimeImmutable('+1 day'))->format('Y-m-d H:i:s.u'),
-    ]);
+    $pdo->prepare('INSERT INTO cos_policies (id,organization_id,code,name,action_type,conditions,decision,priority,version,status) VALUES (?,?,?,?,?,?,"APPROVAL_REQUIRED",1,1,"ACTIVE")')
+        ->execute(['policy-plan-'.$token,$org,'pm-plan','Product independent Plan approval',FederationPlanApproveHandler::ACTION_TYPE,'[]']);
+    $coordinator=new FederationPlanApprovalCoordinator($db,$goals,$domains,$modules,new GoalPlanApprovalRequestFactory(),$policyService,$policies,$contexts,$engine);
+    $approvals=new ApprovalService($approvalRepo,$actionService,$transactions,null,null,new FederationPlanApprovalAuthority($pdo));
+    $request=$coordinator->requestApproval($actor,$planId,'pm-plan-'.$token);
+    $planApproval=$request['action_id'];
+    $assert($request['status']==='PENDING_APPROVAL','Real Plan approval request');
+    $planDecision=(string)$db->fetchOne('SELECT id FROM cos_approvals WHERE organization_id=? AND action_id=?',[$org,$planApproval]);
+    $assert($planDecision!=='','Plan approval exists');
+    $deny(fn()=>$approvals->approve($org,$planDecision,$owner,'self approval'),'Plan owner self approval');
+    $deny(fn()=>$bridge->start($actor,$runId,$planId,$planApproval),'Plan pending approval');
+    $approvals->approve($org,$planDecision,$reviewer,'Independent Plan approval');
+    $assert($actionService->execute($org,$planApproval,'pm-plan-worker')?->status===ActionStatus::Completed,'Real Plan approval worker');
+    $assert($db->fetchOne('SELECT state FROM cos_federation_plans WHERE organization_id=? AND plan_id=?',[$org,$planId])==='approved','Approved Plan persisted by handler');
     $assert($bridge->start($actor,$runId,$planId,$planApproval)['execution_authority']==='platform_workflow',
         'Platform Workflow was not sole execution authority');
     $deny(fn()=>$bridge->start($actor,'other-'.$token,$planId,$planApproval),
@@ -267,8 +269,9 @@ try {
         $assert($actionService->execute($org,$actionId,'pm-premature-worker')===null,'Pending Action executed');
         $assert($bridge->advance($actor,$runId,$planApproval)['action_id']===$actionId,'Duplicate dispatch');
         $approvalId=(string)$db->fetchOne('SELECT id FROM cos_approvals WHERE organization_id=? AND action_id=?',[$org,$actionId]);
-        $assert($approvalId!==''&&$approvalRepo->decide($org,$approvalId,ApprovalStatus::Approved,$reviewer,'CI verified'),'Independent Action approval');
-        $actionService->queue($org,$actionId);
+        $assert($approvalId!=='','Action approval exists');
+        $deny(fn()=>$approvals->approve($org,$approvalId,$owner,'self approval'),'Action owner self approval');
+        $approvals->approve($org,$approvalId,$reviewer,'Independent Action approval');
         $assert($actionService->execute($org,$actionId,'pm-governed-worker')?->status===ActionStatus::Completed,'Approved Action failed: '.$step['id']);
         $assert($actionService->execute($org,$actionId,'pm-replay-worker')===null,'Action executed twice');
         $assert($bridge->advance($actor,$runId,$planApproval)['state']==='step_completed','Step checkpoint failed: '.$step['id']);
