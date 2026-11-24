@@ -459,12 +459,18 @@ Manifest capabilities не задекларовані.
 - `sales.crm.inbox.process`;
 - `sales.crm.inbox.recover`;
 - `sales.crm.inbox.status`;
+- `sales.deal.commercial.set`;
+- `sales.deal.outcome.record`;
+- `sales.deal.owner.assign`;
+- `sales.deal.state.read`;
 - `sales.deal.won.observation`;
 - `sales.director.view`;
 - `sales.inbound.request.read`;
 - `sales.lead.create`;
 - `sales.lead.qualify`;
-- `sales.workspace.use`;
+- `sales.lead.state.manage`;
+- `sales.pipeline.stage.manage`;
+- `sales.workspace.use`.
 
 ## Service (`service`)
 

@@ -47,15 +47,14 @@
     },
     {
       "id": "canonical-state",
-      "label": "Create or update canonical Sales state",
+      "label": "Manage canonical Lead lifecycle",
       "kind": "state",
       "owner": "Sales automation",
       "domain": "sales",
-      "capability": null,
-      "capability_gap": "missing-domain-capability",
+      "capability": "sales.lead.state.manage",
       "critical": true,
       "runtime": [
-        { "type": "source", "path": "app/Domains/Sales/Automation/Event/LeadCreated.php", "symbol": "sales.lead.created" }
+        { "type": "source", "path": "app/Domains/Sales/Application/Service/SalesInboundService.php", "symbol": "updateRequest(" }
       ]
     },
     {
@@ -64,8 +63,7 @@
       "kind": "operation",
       "owner": "manager",
       "domain": "sales",
-      "capability": null,
-      "capability_gap": "missing-domain-capability",
+      "capability": "sales.deal.owner.assign",
       "critical": true,
       "runtime": [
         { "type": "use_case", "ref": "AssignDealOwner" },
@@ -78,8 +76,7 @@
       "kind": "operation",
       "owner": "salesperson",
       "domain": "sales",
-      "capability": null,
-      "capability_gap": "missing-domain-capability",
+      "capability": "sales.pipeline.stage.manage",
       "critical": true,
       "runtime": [
         { "type": "use_case", "ref": "ChangeDealStage" },
@@ -120,8 +117,7 @@
       "kind": "outcome",
       "owner": "salesperson",
       "domain": "sales",
-      "capability": null,
-      "capability_gap": "missing-domain-capability",
+      "capability": "sales.deal.outcome.record",
       "critical": true,
       "runtime": [
         { "type": "event", "ref": "sales.deal.won" },

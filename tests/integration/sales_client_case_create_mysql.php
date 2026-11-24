@@ -8,6 +8,26 @@ use App\Application\Sales\Command\ReceivePublicLeadCommand;
 use App\Application\Sales\Command\ReceivePublicLeadCommandHandler;
 use App\Application\Sales\Command\UpdateSalesLeadCommand;
 use App\Application\Sales\Command\UpdateSalesLeadCommandHandler;
+use App\Application\Sales\Command\ManageSalesLeadStateCommand;
+use App\Application\Sales\Command\ManageSalesLeadStateCommandHandler;
+use App\Application\Sales\Command\ManageSalesDealCommand;
+use App\Application\Sales\Command\ManageSalesDealCommandHandler;
+use App\Infrastructure\Capability\SalesLeadStateManageAdapter;
+use App\Infrastructure\Capability\SalesDealStateReadAdapter;
+use App\Infrastructure\Capability\SalesDealOwnerAssignAdapter;
+use App\Infrastructure\Capability\SalesDealCommercialSetAdapter;
+use App\Infrastructure\Capability\SalesPipelineStageManageAdapter;
+use App\Infrastructure\Capability\SalesDealOutcomeRecordAdapter;
+use Domains\Sales\Application\UseCase\AssignDealOwner;
+use Domains\Sales\Application\UseCase\ChangeDealStage;
+use Domains\Sales\Application\UseCase\SetDealCommercialTerms;
+use Domains\Sales\Domain\Policy\StageTransitionPolicy;
+use Domains\Sales\Infrastructure\Persistence\MySql\MysqlDealRepository;
+use Domains\Sales\Infrastructure\Persistence\MySql\MysqlPipelineRepository;
+use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesMutationReceiptRepository;
+use Infrastructure\Platform\Persistence\MySql\Transaction\TransactionManager;
+use Infrastructure\Platform\Persistence\MySql\Event\MysqlEventStore;
+use Kernel\Event\EventBus;
 use App\Infrastructure\Capability\SalesLeadQualificationAdapter;
 use App\Application\Sales\Command\CreateSalesLeadCommandHandler;
 use App\Infrastructure\Capability\SalesLeadCreateAdapter;
@@ -39,7 +59,7 @@ use Symfony\Component\Messenger\Middleware\HandleMessageMiddleware;
 $root = dirname(__DIR__, 2);
 require getenv('COS_TEST_AUTOLOAD') ?: $root . '/symfony/vendor/autoload.php';
 $check = static function(bool $ok, string $why): void { if (!$ok) throw new RuntimeException($why); };
-$reject = static function(callable $fn): void { try { $fn(); } catch (DomainException) { return; } throw new RuntimeException('Unsafe conversion accepted.'); };
+$reject = static function(callable $fn): void { try { $fn(); } catch (Throwable $error) { $root=$error; while($root->getPrevious()!==null)$root=$root->getPrevious(); if($root instanceof DomainException)return; throw $error; } throw new RuntimeException('Unsafe Sales operation accepted.'); };
 $db = new PDO(
     sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4', getenv('DB_HOST') ?: '127.0.0.1', (int)(getenv('DB_PORT') ?: 3306), getenv('DB_DATABASE') ?: 'cos'),
     getenv('DB_USERNAME') ?: 'cos', getenv('DB_PASSWORD') ?: '',
@@ -62,12 +82,20 @@ try {
     ]);
 
     $factory = new MysqlSalesWriteServiceFactory($db,new MysqlPropertyReferencePort($db),new MysqlSalesAssignmentAuthority($db));
+    $tx=new TransactionManager($db);$events=new EventBus(new MysqlEventStore($db),$tx);
+    $deals=new MysqlDealRepository($db);$pipelines=new MysqlPipelineRepository($db);
+    $receipts=new MysqlSalesMutationReceiptRepository($db);$read=new MysqlSalesWorkspaceReadModel($db);
+    $owners=new AssignDealOwner($deals,$events,$tx,new MysqlSalesAssignmentAuthority($db));
+    $stages=new ChangeDealStage($deals,$pipelines,new StageTransitionPolicy(),$events,$tx);
+    $commercial=new SetDealCommercialTerms($deals,$deals,$events,$tx);
     $handler = new ConvertSalesLeadToOpportunityCommandHandler($factory);
     $bus = new SymfonyCommandBus(new MessageBus([new HandleMessageMiddleware(new HandlersLocator([
         ConvertSalesLeadToOpportunityCommand::class => [$handler],
         CreateSalesLeadCommand::class => [new CreateSalesLeadCommandHandler($factory)],
         ReceivePublicLeadCommand::class => [new ReceivePublicLeadCommandHandler($factory)],
         UpdateSalesLeadCommand::class => [new UpdateSalesLeadCommandHandler($factory)],
+        ManageSalesLeadStateCommand::class => [new ManageSalesLeadStateCommandHandler($factory,$read,$receipts,$tx)],
+        ManageSalesDealCommand::class => [new ManageSalesDealCommandHandler($deals,$owners,$stages,$commercial,$receipts,$tx)],
     ]))]));
     $module = new ModuleCatalog([ModuleDefinition::fromArray(require $root.'/app/Domains/Sales/module.php')]);
     $catalog = new CanonicalCapabilityCatalog($module);
@@ -78,7 +106,7 @@ try {
     $active = new ActiveModuleResolver($module,$state);
     $resolver = new FederationCapabilityBindingResolver($catalog,new DomainModuleRegistry([]),$active);
     $read = new MysqlSalesWorkspaceReadModel($db);
-    $gateway = new CanonicalCapabilityGateway($catalog,$active,$resolver,[new SalesClientCaseCreateAdapter($bus,$read),new SalesLeadCreateAdapter($bus,$read),new SalesLeadQualificationAdapter($bus,$read)]);
+    $gateway = new CanonicalCapabilityGateway($catalog,$active,$resolver,[new SalesClientCaseCreateAdapter($bus,$read),new SalesLeadCreateAdapter($bus,$read),new SalesLeadQualificationAdapter($bus,$read),new SalesLeadStateManageAdapter($bus),new SalesDealStateReadAdapter($deals),new SalesDealOwnerAssignAdapter($bus),new SalesDealCommercialSetAdapter($bus),new SalesPipelineStageManageAdapter($bus),new SalesDealOutcomeRecordAdapter($bus)]);
     $actor = static fn(string $tenant,string $role='manager') => new TenantContext(
         UserId::fromString((string)$userId),OrganizationId::fromString($tenant),OrganizationRole::fromString($role),
         [Permission::fromString(TenantPermissions::ACCESS),Permission::fromString(TenantPermissions::MANAGE)],
@@ -162,7 +190,73 @@ try {
     foreach(['sales.lead.contacted','sales.lead.qualified','sales.lead.disqualified'] as $type){
         $q->execute([$org,(string)$newId,$type]);$check((int)$q->fetchColumn()===1,'Missing or duplicate qualification event '.$type);
     }
-    echo "Sales canonical conversion, authenticated/public intake and qualification native state and outbox PASS.\n";
+    $team=(string)$db->query("SELECT id FROM sales_teams WHERE organization_id=".$db->quote($org)." AND status='ACTIVE' ORDER BY id LIMIT 1")->fetchColumn();
+    $check($team!=='','No active Sales team.');
+    $db->prepare("INSERT INTO sales_team_members(organization_id,team_id,user_id,role,status,assignment_enabled,approval_enabled,assignment_weight,created_at,updated_at) VALUES (?,?,?,'LEAD','ACTIVE',1,1,1,NOW(6),NOW(6))")->execute([$org,$team,$userId]);
+    $db->prepare("INSERT INTO sales_user_capabilities(organization_id,user_id,capability,status,granted_by,created_at,updated_at) VALUES (?,?,'sales.deal.assign','ACTIVE',?,NOW(6),NOW(6))")->execute([$org,$userId,(string)$userId]);
+    $db->prepare('INSERT INTO tn_users (organization_id,email,password_hash,full_name,role,status) VALUES (?,?,?,?,?,?)')->execute([$org,'sales-owner-'.$token.'@example.test',password_hash($token,PASSWORD_DEFAULT),'Sales CI owner','manager','active']);
+    $targetOwner=(int)$db->lastInsertId();
+    $db->prepare('INSERT INTO cos_organization_memberships (organization_id,user_id,role,status) VALUES (?,?,?,?)')->execute([$org,$targetOwner,'manager','ACTIVE']);
+    $db->prepare("INSERT INTO sales_team_members(organization_id,team_id,user_id,role,status,assignment_enabled,approval_enabled,assignment_weight,created_at,updated_at) VALUES (?,?,?,'MEMBER','ACTIVE',1,0,1,NOW(6),NOW(6))")->execute([$org,$team,$targetOwner]);
+    $snapshot=static fn(int $id)=>$gateway->invoke($manager,'sales.deal.state.read',['deal_id'=>$id],'trusted_read','','trace-state')['state'];
+    $invoke=static fn(string $cap,array $data,string $key,string $origin='human_api')=>$gateway->invoke($manager,$cap,$data,$origin,$key,'trace-deal');
+    $state=$snapshot($caseId);$base=['deal_id'=>$caseId,'expected_revision'=>$state['revision']];
+    $assign=[...$base,'owner_id'=>$targetOwner];
+    $reject(fn()=>$invoke('sales.deal.owner.assign',[...$base,'owner_id'=>PHP_INT_MAX],'invalid-owner'));
+    $reject(fn()=>$invoke('sales.deal.owner.assign',$assign,'ai','ai'));
+    $assigned=$invoke('sales.deal.owner.assign',$assign,'owner');
+    $check($assigned['changed'] && $assigned['state']['owner_id']===$targetOwner,'Assignment not persisted.');
+    $check($invoke('sales.deal.owner.assign',$assign,'owner')['replayed'],'Assignment replay missing.');
+    $reject(fn()=>$invoke('sales.deal.owner.assign',[...$assign,'owner_id'=>$userId],'owner'));
+    $reject(fn()=>$invoke('sales.deal.commercial.set',[...$base,'deal_value'=>'1000.00','currency'=>'EUR'],'stale'));
+    $state=$snapshot($caseId);$terms=['deal_id'=>$caseId,'expected_revision'=>$state['revision'],'deal_value'=>'123456.78','currency'=>'EUR'];
+    $reject(fn()=>$invoke('sales.deal.commercial.set',[...$terms,'deal_value'=>'-1.00'],'invalid-value'));
+    $termsReceipt=$invoke('sales.deal.commercial.set',$terms,'terms');
+    $check($termsReceipt['state']['deal_value']==='123456.78' && $termsReceipt['state']['currency']==='EUR','Exact terms missing.');
+    $check($invoke('sales.deal.commercial.set',$terms,'terms')['replayed'],'Commercial replay failed.');
+    $pipeline=$pipelines->getPipeline($org,$state['pipeline_id']);$lost=null;$won=null;
+    foreach($pipeline->stages as $stage){if($stage->isLost)$lost=$stage;if($stage->isWon)$won=$stage;}
+    $check($lost!==null && $won!==null,'Terminal stages missing.');
+    $reason=$pipelines->defaultLostReasonId($org,$pipeline->id);
+    $state=$snapshot($caseId);
+    $base=['deal_id'=>$caseId,'expected_revision'=>$state['revision']];
+    $reject(fn()=>$invoke('sales.pipeline.stage.manage',[...$base,'target_stage_id'=>$lost->id],'terminal-stage'));
+    $reject(fn()=>$invoke('sales.deal.outcome.record',[...$base,'target_stage_id'=>$lost->id,'outcome'=>'lost'],'missing-reason'));
+    $reject(fn()=>$invoke('sales.deal.outcome.record',[...$base,'target_stage_id'=>$lost->id,'outcome'=>'lost','lost_reason_id'=>'invalid'],'bad-reason'));
+    $lostInput=[...$base,'target_stage_id'=>$lost->id,'outcome'=>'lost','lost_reason_id'=>$reason];
+    $lostReceipt=$invoke('sales.deal.outcome.record',$lostInput,'lost');
+    $check($lostReceipt['state']['status']==='lost' && $lostReceipt['state']['lost_reason_id']===$reason,'LOST native outcome mismatch.');
+    $check($invoke('sales.deal.outcome.record',$lostInput,'lost')['replayed'],'LOST receipt replay failed.');
+    $terminal=$snapshot($caseId);
+    $reject(fn()=>$invoke('sales.deal.commercial.set',['deal_id'=>$caseId,'expected_revision'=>$terminal['revision'],'deal_value'=>'1.00','currency'=>'USD'],'after-close'));
+    $reject(fn()=>$invoke('sales.deal.owner.assign',['deal_id'=>$caseId,'expected_revision'=>$terminal['revision'],'owner_id'=>$userId],'after-close'));
+    $q=$db->prepare('SELECT COUNT(*) FROM cos_events e INNER JOIN cos_event_outbox o ON o.event_id=e.id WHERE e.organization_id=? AND e.aggregate_id=? AND e.type=?');
+    foreach(['sales.deal.owner_assigned','sales.deal.lost'] as $type){$q->execute([$org,(string)$caseId,$type]);$check((int)$q->fetchColumn()===1,'Missing or duplicate '.$type);}
+    // Full lifecycle classification uses its own durable receipt and cannot implicitly close a Deal.
+    $lifecycle=['lead_id'=>$leadId,'expected_status'=>'qualified','target_status'=>'lost'];
+    $check($invoke('sales.lead.state.manage',$lifecycle,'lead-lost')['status']==='lost','Lead did not reflect independently lost Deal.');
+    $check($invoke('sales.lead.state.manage',$lifecycle,'lead-lost')['replayed'],'Lead lifecycle receipt missing.');
+    // Traverse real configured nonterminal transitions and verify positive WON.
+    $wonCase=(int)$row['client_case_id'];$current=$snapshot($wonCase);
+    $assignWon=['deal_id'=>$wonCase,'expected_revision'=>$current['revision'],'owner_id'=>$userId];
+    $invoke('sales.deal.owner.assign',$assignWon,'owner-won');
+    $current=$snapshot($wonCase);
+    $invoke('sales.deal.commercial.set',['deal_id'=>$wonCase,'expected_revision'=>$current['revision'],'deal_value'=>'999.99','currency'=>'USD'],'terms-won');
+    $current=$snapshot($wonCase);
+    $pdef=$pipelines->getPipeline($org,$current['pipeline_id']);
+    $queue=[[$current['stage_id'],[]]];$visited=[];$route=null;
+    while($queue!==[]){[$from,$path]=array_shift($queue);if(isset($visited[$from]))continue;$visited[$from]=true;if($from===$won->id){$route=$path;break;}foreach($pdef->stages as $stage){if($stage->isLost||isset($visited[$stage->id]))continue;$transition=$pipelines->getTransition($org,$pdef->id,$from,$stage->id);if($transition!==null&&$transition->conditions===[])$queue[]=[$stage->id,[...$path,$stage->id]];}}
+    $check(is_array($route) && $route!==[],'Default pipeline has no configured path to WON.');
+    foreach($route as $index=>$next){
+        $current=$snapshot($wonCase);$payload=['deal_id'=>$wonCase,'expected_revision'=>$current['revision'],'target_stage_id'=>$next];
+        if($next===$won->id){
+            $result=$invoke('sales.deal.outcome.record',[...$payload,'outcome'=>'won'],'won');
+            $check($result['state']['status']==='closed'&&$result['state']['deal_value']==='999.99','WON native state mismatch.');
+            $check($invoke('sales.deal.outcome.record',[...$payload,'outcome'=>'won'],'won')['replayed'],'WON replay failed.');
+        }else{$check($invoke('sales.pipeline.stage.manage',$payload,'stage-'.$index)['state']['stage_id']===$next,'Nonterminal stage transition failed.');}
+    }
+    $q->execute([$org,(string)$wonCase,'sales.deal.won']);$check((int)$q->fetchColumn()===1,'WON event/outbox missing or duplicated.');
+    echo "Sales canonical intake, lifecycle, ownership, commercial terms, pipeline and WON/LOST native state and outbox PASS.\n";
 } finally {
     if ($db->inTransaction()) $db->rollBack();
 }

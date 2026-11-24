@@ -21,7 +21,8 @@ domain_id: sales
       "capability_ids": [
         "sales.inbound.request.read",
         "sales.lead.create",
-        "sales.lead.qualify"
+        "sales.lead.qualify",
+        "sales.lead.state.manage"
       ]
     },
     {
@@ -36,7 +37,12 @@ domain_id: sales
       "id": "deals",
       "capability_ids": [
         "sales.deal.won.observation",
-        "sales.client_case.create"
+        "sales.client_case.create",
+        "sales.deal.state.read",
+        "sales.deal.owner.assign",
+        "sales.deal.commercial.set",
+        "sales.pipeline.stage.manage",
+        "sales.deal.outcome.record"
       ]
     },
     {

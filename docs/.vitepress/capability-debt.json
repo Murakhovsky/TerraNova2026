@@ -22,36 +22,6 @@
       "target_capability": "sales.lead.intake"
     },
     {
-      "id": "sales.lead-to-managed-case:canonical-state",
-      "process_id": "sales.lead-to-managed-case",
-      "step_id": "canonical-state",
-      "gap_type": "missing-domain-capability",
-      "owner_domain": "sales",
-      "severity": "high",
-      "resolution": "declare-domain-capability",
-      "target_capability": "sales.lead.state.manage"
-    },
-    {
-      "id": "sales.lead-to-managed-case:assign-owner",
-      "process_id": "sales.lead-to-managed-case",
-      "step_id": "assign-owner",
-      "gap_type": "missing-domain-capability",
-      "owner_domain": "sales",
-      "severity": "high",
-      "resolution": "declare-domain-capability",
-      "target_capability": "sales.deal.owner.assign"
-    },
-    {
-      "id": "sales.lead-to-managed-case:pipeline",
-      "process_id": "sales.lead-to-managed-case",
-      "step_id": "pipeline",
-      "gap_type": "missing-domain-capability",
-      "owner_domain": "sales",
-      "severity": "high",
-      "resolution": "declare-domain-capability",
-      "target_capability": "sales.pipeline.stage.manage"
-    },
-    {
       "id": "sales.lead-to-managed-case:activity",
       "process_id": "sales.lead-to-managed-case",
       "step_id": "activity",
@@ -70,16 +40,6 @@
       "severity": "high",
       "resolution": "declare-domain-capability",
       "target_capability": "sales.followup.schedule"
-    },
-    {
-      "id": "sales.lead-to-managed-case:outcome",
-      "process_id": "sales.lead-to-managed-case",
-      "step_id": "outcome",
-      "gap_type": "missing-domain-capability",
-      "owner_domain": "sales",
-      "severity": "high",
-      "resolution": "declare-domain-capability",
-      "target_capability": "sales.deal.outcome.record"
     },
     {
       "id": "sales.request-to-property-match:record-match",

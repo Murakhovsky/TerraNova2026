@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "sales.lead.state.manage input v1",
+  "type": "object",
+  "properties": {
+    "lead_id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "expected_status": {
+      "type": "string",
+      "enum": [
+        "new",
+        "contacted",
+        "qualified",
+        "viewing_planned",
+        "viewing",
+        "negotiation"
+      ]
+    },
+    "target_status": {
+      "type": "string",
+      "enum": [
+        "contacted",
+        "qualified",
+        "viewing_planned",
+        "viewing",
+        "negotiation",
+        "won",
+        "lost",
+        "disqualified",
+        "spam",
+        "closed"
+      ]
+    }
+  },
+  "required": [
+    "lead_id",
+    "expected_status",
+    "target_status"
+  ],
+  "additionalProperties": false
+}

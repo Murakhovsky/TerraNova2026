@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "sales.deal.owner.assign input v1",
+  "type": "object",
+  "properties": {
+    "deal_id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "expected_revision": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "owner_id": {
+      "type": "integer",
+      "minimum": 1
+    }
+  },
+  "required": [
+    "deal_id",
+    "expected_revision",
+    "owner_id"
+  ],
+  "additionalProperties": false
+}
