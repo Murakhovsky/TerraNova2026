@@ -361,6 +361,7 @@ Manifest capabilities не задекларовані.
 - `product_management.media.search`;
 - `product_management.price.base.get`;
 - `product_management.price.base.set`;
+- `product_management.price.history.search`;
 - `product_management.product.archive`;
 - `product_management.product.create`;
 - `product_management.product.get`;
