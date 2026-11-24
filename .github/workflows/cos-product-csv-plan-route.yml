@@ -1,0 +1,25 @@
+name: COS Product CSV authenticated Plan route acceptance
+on:
+  push:
+    branches: [feature/series01-canonical-plan-proposal-api-20261125]
+    paths:
+      - '.github/workflows/cos-product-csv-plan-route.yml'
+      - 'symfony/src/Http/Api/V1/Controller/ProductManagementImportPlanController.php'
+      - 'symfony/config/routes.yaml'
+      - 'tests/architecture/product_csv_plan_proposal_http_contract.php'
+  pull_request:
+    paths:
+      - '.github/workflows/cos-product-csv-plan-route.yml'
+      - 'symfony/src/Http/Api/V1/Controller/ProductManagementImportPlanController.php'
+      - 'symfony/config/routes.yaml'
+      - 'tests/architecture/product_csv_plan_proposal_http_contract.php'
+permissions:
+  contents: read
+jobs:
+  route:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - run: php -l symfony/src/Http/Api/V1/Controller/ProductManagementImportPlanController.php
+      - run: php tests/architecture/product_csv_plan_proposal_http_contract.php

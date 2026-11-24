@@ -1,3 +1,10 @@
+# Product Management: authenticated manager proposal only, never approval/Action.
+cos_product_management_import_plan_propose:
+  path: /api/v1/product-management/imports/{batchId}/propose
+  controller: App\Http\Api\V1\Controller\ProductManagementImportPlanController::propose
+  methods: [POST]
+  requirements: { batchId: '[a-f0-9]{32}' }
+
 # Product Management: signed Shopify events are staged only, never mutate stock.
 cos_product_management_shopify_webhook:
   path: /api/v1/integrations/shopify/webhook
