@@ -19,6 +19,15 @@ domain_id: product_management
     {
       "id": "catalog",
       "capability_ids": [
+        "product_management.attribute.define",
+        "product_management.attribute.search",
+        "product_management.attribute.category.bind",
+        "product_management.attribute.category.get",
+        "product_management.attribute.product.set",
+        "product_management.attribute.product.get",
+        "product_management.attribute.product.filter",
+        "product_management.variant.matrix.preview",
+        "product_management.variant.matrix.create",
         "product_management.product.create",
         "product_management.product.get",
         "product_management.product.search",
