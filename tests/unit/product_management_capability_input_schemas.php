@@ -10,9 +10,10 @@ foreach($raw['contributions']['capability_contracts'] as $definition) {
     $cap=CapabilityContract::fromArray($definition);
     $contracts[$cap->id]=$cap;
 }
-if(count($contracts)!==44)throw new RuntimeException('Missing typed PM contracts.');
+if(count($contracts)!==45)throw new RuntimeException('Missing typed PM contracts.');
 $validator=new CapabilityJsonInputValidator();
 $good=[
+ 'product_management.price.list.tier.history.search'=>['list_id'=>str_repeat('a',32),'variant_id'=>str_repeat('b',32),'min_quantity'=>'20','limit'=>30],
  'product_management.price.list.entry.remove'=>['list_id'=>str_repeat('a',32),'variant_id'=>str_repeat('b',32),'expected_revision'=>1],
  'product_management.price.list.tier.set'=>['list_id'=>str_repeat('a',32),'variant_id'=>str_repeat('b',32),'min_quantity'=>'10.5','amount'=>null,'expected_revision'=>1],
  'product_management.price.list.tier.search'=>['list_id'=>str_repeat('a',32),'variant_id'=>str_repeat('b',32),'limit'=>30],
@@ -53,6 +54,7 @@ $good=[
 ];
 foreach($good as $id=>$input) $validator->validate($contracts[$id],$input);
 $bad=[
+ 'product_management.price.list.tier.history.search'=>[['list_id'=>str_repeat('a',32),'variant_id'=>str_repeat('b',32)],['list_id'=>str_repeat('a',32),'variant_id'=>str_repeat('b',32),'min_quantity'=>'20','limit'=>101]],
  'product_management.price.list.entry.remove'=>[['list_id'=>str_repeat('a',32),'variant_id'=>str_repeat('b',32),'expected_revision'=>0]],
  'product_management.price.list.tier.set'=>[['list_id'=>str_repeat('a',32),'variant_id'=>str_repeat('b',32),'min_quantity'=>'-1','amount'=>'3','expected_revision'=>0],['list_id'=>str_repeat('a',32),'variant_id'=>str_repeat('b',32),'min_quantity'=>'1','amount'=>3,'expected_revision'=>0]],
  'product_management.price.resolve'=>[['variant_id'=>str_repeat('b',32),'currency'=>'EUR','quantity'=>'1','organization_id'=>'foreign']],
