@@ -40,13 +40,6 @@ return [
                 'purpose' => 'Resolve active tenant-owned Product variant references without modifying catalog or stock.',
             ],
             [
-                'contract' => 'Domains\\Sales\\Application\\Contract\\SalesCommercialEvidencePort',
-                'role' => 'provides',
-                'counterpart' => 'finance',
-                'kind' => 'synchronous_port',
-                'purpose' => 'Expose accepted commercial terms as source evidence without settlement.',
-            ],
-            [
                 'contract' => 'Domains\\Diagnostic\\Methodology\\Model\\MethodologyPack',
                 'role' => 'requires',
                 'counterpart' => 'diagnostic',

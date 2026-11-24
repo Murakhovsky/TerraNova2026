@@ -17,8 +17,6 @@ final readonly class FinanceSalesCommercialEvidenceReadAdapter implements Capabi
     {
         $id=$input['deal_id']??null;$org=$actor->organizationId()->value();
         if(count($input)!==1||!is_int($id)||$id<1||!$this->modules->isEnabled($org,'sales'))throw new DomainException('Sales source unavailable or invalid deal identity.');
-        $evidence=$this->sales->acceptedOffer($org,$id);
-        if($evidence!==null&&(($evidence['deal_id']??null)!==$id||($evidence['settled']??true)!==false))throw new DomainException('Invalid commercial evidence.');
-        return ['found'=>$evidence!==null,'evidence'=>$evidence];
+        return (new \Domains\Finance\Application\Service\SalesCommercialEvidenceReader($this->sales))->read($org,$id);
     }
 }

@@ -7,23 +7,13 @@ use Domains\ProductManagement\Application\Contract\ProductCommercialReferencePor
 use Domains\Property\Contract\PropertyReferencePort;
 use Kernel\Module\ActiveModuleResolver;
 
+/** Compatibility composition wrapper; business reference policy belongs to Sales. */
 final readonly class SalesOfferReferenceResolver implements SalesOfferReferencePort
 {
-    public function __construct(private ProductCommercialReferencePort $products,private PropertyReferencePort $properties,
-        private ActiveModuleResolver $modules){}
-    public function resolve(string $org,array $line):?array
+    private \Domains\Sales\Application\Service\SalesOfferReferenceResolver $native;
+    public function __construct(ProductCommercialReferencePort $products,PropertyReferencePort $properties,ActiveModuleResolver $modules)
     {
-        if ($line['kind']==='service') return ['kind'=>'service','title'=>$line['title']];
-        if ($line['kind']==='product') {
-            if (!$this->modules->isEnabled($org,'product_management')) return null;
-            return $this->products->quoteReference($org,$line['product_id'],$line['variant_id']);
-        }
-        if (!$this->modules->isEnabled($org,'property')) return null;
-        $row=$this->properties->getInventorySnapshot($org,$line['inventory_id']);
-        if ($row===null||($row['inventory_id']??null)!==$line['inventory_id']||!in_array($row['status']??null,['available','under_offer'],true)) return null;
-        $asset=$this->properties->getPropertyReference($org,(string)$row['asset_id']);
-        if ($asset===null||($asset['asset_id']??null)!==$row['asset_id'])return null;
-        return ['inventory_id'=>$row['inventory_id'],'asset_id'=>$row['asset_id'],'transaction_type'=>$row['transaction_type'],
-            'status'=>$row['status'],'type_code'=>$asset['type_code'],'observed_updated_at'=>$row['updated_at']];
+        $this->native=new \Domains\Sales\Application\Service\SalesOfferReferenceResolver($products,$properties,$modules);
     }
+    public function resolve(string $org,array $line):?array { return $this->native->resolve($org,$line); }
 }
