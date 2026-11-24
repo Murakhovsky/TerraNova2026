@@ -3257,6 +3257,13 @@ services:
   Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOfferRepository:
     arguments:
       $connection: '@cos.database.pdo'
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Sales\Application\Contract\SalesOrderRepositoryInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository
+  Domains\Sales\Application\Service\SalesOrderService: ~
+
   Domains\Sales\Application\Contract\SalesOfferRepositoryInterface:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOfferRepository
   Domains\Sales\Application\Contract\SalesCommercialEvidencePort:
