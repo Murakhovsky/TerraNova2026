@@ -89,6 +89,7 @@ final readonly class ProductMutationCommandHandler implements CommandHandlerInte
             'price.base.set' => $this->prices->set(
                 $org, (string) $in['variant_id'], (string) $in['currency'],
                 (string) $in['amount'], $key, $actor, $trace,
+                array_key_exists('expected_revision',$in)?(int)$in['expected_revision']:null,
             ),
             default => throw new DomainException('Product Management command not supported.'),
         };
