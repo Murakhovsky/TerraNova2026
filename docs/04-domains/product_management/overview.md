@@ -88,3 +88,18 @@ reserved та available із COS ledger, не як Shopify live availability.
 
 Резервування, stock count/adjustments, Sales/Procurement ports, експорт,
 bulk/reconciliation та повний UI acceptance ще не входять у цей блок.
+
+## E7/P0: робочий простір CSV-імпорту
+
+`/product-management/import` доступний лише активному Product Management
+tenant-manager. Оператор вставляє CSV до 12 000 символів
+(`sku,name,type,uom,track_inventory`) у незмінний Preview. Потім
+переглядає `import.batch.get`: `digest`, `rows_digest`, помилки
+і дублікати SKU. Створення native Product під час Preview **заборонене**.
+
+Коли всі рядки `ready`, оператор може запропонувати Goal/Plan через
+наявний `ProductImportPlanProposalService::propose`. Цей сервіс
+створює виключно Plan; **не** схвалює його, не створює Action,
+не запускає Workflow і не викликає native Product writer. Незалежні
+Plan/Action Approval, запуск і evidence виконуються в canonical
+`/workspace/goals`. Ніякого direct CSV apply у UI немає.

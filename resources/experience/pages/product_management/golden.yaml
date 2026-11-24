@@ -1,4 +1,48 @@
 pages:
+  - id: product_management.import
+    route: { name: cos_product_management_import, path: "/product-management/import", methods: [GET] }
+    surface: workspace
+    domain: ProductManagement
+    capability: product_management.import.preview
+    owner: ProductManagement
+    priority: P0
+    status: CONTRACTED
+    personas: [manager]
+    product:
+      primary_goal: "Stage a validated CSV catalog without native Product writes."
+      page_purpose: "Human preview and immutable evidence, not automatic materialization."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, Toolbar]
+      optional: [EmptyState, ErrorState]
+    primary_action: product_management.import.preview
+    states: [normal, empty, error]
+    responsive: { desktop: canonical, tablet: canonical, mobile: stacked_workspace }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: product_management.import.batch
+    route: { name: cos_product_management_import_batch, path: "/product-management/import/{id}", methods: [GET] }
+    surface: workspace
+    domain: ProductManagement
+    capability: product_management.import.batch.get
+    owner: ProductManagement
+    priority: P0
+    status: CONTRACTED
+    personas: [manager]
+    product:
+      primary_goal: "Review staged rows, duplicates and approval readiness of one CSV batch."
+      page_purpose: "Read-only batch evidence plus independently proposed Goal/Plan."
+    archetype: entity_workspace
+    patterns:
+      required: [WorkspaceHeader, EntityHeader]
+      optional: [ContextPanel, ErrorState]
+    primary_action: product_management.import.apply
+    states: [normal, error]
+    responsive: { desktop: canonical, tablet: canonical, mobile: stacked_workspace }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
   - id: product_management.stock
     route: { name: cos_product_management_stock, path: "/product-management/stock", methods: [GET] }
     surface: workspace

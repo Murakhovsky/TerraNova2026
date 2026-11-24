@@ -1,4 +1,26 @@
 # Product Management E7/P0: tenant-gated human workspace, never Shopify or direct DB writer.
+cos_product_management_import:
+  path: /product-management/import
+  controller: App\Web\ProductManagement\ProductImportController::index
+  methods: [GET]
+
+cos_product_management_import_preview:
+  path: /product-management/import/preview
+  controller: App\Web\ProductManagement\ProductImportController::preview
+  methods: [POST]
+
+cos_product_management_import_batch:
+  path: /product-management/import/{id}
+  controller: App\Web\ProductManagement\ProductImportController::batch
+  methods: [GET]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_product_management_import_propose:
+  path: /product-management/import/{id}/propose
+  controller: App\Web\ProductManagement\ProductImportController::propose
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
 cos_product_management_stock:
   path: /product-management/stock
   controller: App\Web\ProductManagement\ProductInventoryController::index
