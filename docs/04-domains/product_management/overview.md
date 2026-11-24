@@ -74,3 +74,17 @@ This is the E5 catalog slice only, **not** a claim that Inventory Operations,
 Product Media UX, CSV approvals, full UI acceptance or production activation
 are complete. Product remains off by default; UI requires the tenant to
 activate the module explicitly.
+
+## E7/P0: складський робочий простір
+
+`/product-management/stock`: tenant-гейт, лише менеджер, чинні
+`location.search`, `product.search`, `stock.balance.get`,
+`stock.movement.search` через Gateway. Оператор створює склади
+(`location.create`) та виконує лише задокументовані приходи,
+витрати і атомарні переміщення (`stock.receive/issue/transfer`).
+Кожна команда потребує CSRF і окремий idempotency key, а результат
+перевіряється повторним native balance read. Показуються on_hand,
+reserved та available із COS ledger, не як Shopify live availability.
+
+Резервування, stock count/adjustments, Sales/Procurement ports, експорт,
+bulk/reconciliation та повний UI acceptance ще не входять у цей блок.

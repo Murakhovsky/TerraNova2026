@@ -28,6 +28,7 @@ final readonly class ProductManagementWebProvider implements
             new NavigationContribution('product-management','Product Management','/product-management','PM',35),
             new NavigationContribution('pm-catalog','Каталог','/product-management',priority:10,parentKey:'product-management'),
             new NavigationContribution('pm-categories','Категорії','/product-management/categories',priority:20,parentKey:'product-management'),
+            new NavigationContribution('pm-stock','Склади','/product-management/stock',priority:30,parentKey:'product-management'),
         ];
     }
 
@@ -36,6 +37,7 @@ final readonly class ProductManagementWebProvider implements
         return $this->matcher->match([
             new SearchResult('pm.catalog','Product catalog','/product-management','workspace','Native COS Product and SKU'),
             new SearchResult('pm.categories','Product categories','/product-management/categories','workspace','Tenant category hierarchy'),
+            new SearchResult('pm.stock','Product stock','/product-management/stock','workspace','Ledger and native balances'),
         ],$query,$limit);
     }
 
@@ -49,6 +51,7 @@ final readonly class ProductManagementWebProvider implements
         return [
             new WorkspaceDefinition('pm.catalog','Product catalog','/product-management',null,10),
             new WorkspaceDefinition('pm.categories','Product categories','/product-management/categories',null,20),
+            new WorkspaceDefinition('pm.stock','Stock workspace','/product-management/stock',null,30),
         ];
     }
 }

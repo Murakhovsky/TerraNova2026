@@ -1,4 +1,26 @@
 pages:
+  - id: product_management.stock
+    route: { name: cos_product_management_stock, path: "/product-management/stock", methods: [GET] }
+    surface: workspace
+    domain: ProductManagement
+    capability: product_management.stock.balance.get
+    owner: ProductManagement
+    priority: P0
+    status: CONTRACTED
+    personas: [manager]
+    product:
+      primary_goal: "Inspect native warehouse stock and ledger, then post documented movements."
+      page_purpose: "Human-only warehouse work; no external Shopify quantities or silent stock adjustment."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, Toolbar]
+      optional: [FilterBar, EmptyState, ErrorState]
+    primary_action: product_management.stock.receive
+    states: [normal, empty, error]
+    responsive: { desktop: canonical, tablet: canonical, mobile: stacked_workspace }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
   - id: product_management.catalog
     route: { name: cos_product_management_index, path: "/product-management", methods: [GET] }
     surface: workspace
