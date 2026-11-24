@@ -1,0 +1,66 @@
+pages:
+  - id: product_management.catalog
+    route: { name: cos_product_management_index, path: "/product-management", methods: [GET] }
+    surface: workspace
+    domain: ProductManagement
+    capability: product_management.product.search
+    owner: ProductManagement
+    priority: P0
+    status: CONTRACTED
+    personas: [manager]
+    product:
+      primary_goal: "Find SKU/Product inventory and create a native COS Product."
+      page_purpose: "Human-only tenant-gated catalog via canonical Domain capability; user acceptance pending."
+    archetype: collection
+    patterns:
+      required: [PageHeader, Toolbar, DataGrid]
+      optional: [EmptyState, ErrorState]
+    primary_action: product_management.product.create
+    states: [normal, empty, error]
+    responsive: { desktop: canonical, tablet: canonical, mobile: stacked_workspace }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: product_management.product
+    route: { name: cos_product_management_product, path: "/product-management/products/{id}", methods: [GET] }
+    surface: workspace
+    domain: ProductManagement
+    capability: product_management.product.get
+    owner: ProductManagement
+    priority: P0
+    status: CONTRACTED
+    personas: [manager]
+    product:
+      primary_goal: "Inspect and manage one scoped Product, its variants, price and categories."
+      page_purpose: "Typed native Product read and safe human writes; browser acceptance pending."
+    archetype: entity_workspace
+    patterns:
+      required: [WorkspaceHeader, EntityHeader]
+      optional: [ContextPanel, Toolbar, ErrorState]
+    primary_action: product_management.product.update
+    states: [normal, error]
+    responsive: { desktop: canonical, tablet: canonical, mobile: stacked_workspace }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: product_management.categories
+    route: { name: cos_product_management_categories, path: "/product-management/categories", methods: [GET] }
+    surface: workspace
+    domain: ProductManagement
+    capability: product_management.category.search
+    owner: ProductManagement
+    priority: P0
+    status: CONTRACTED
+    personas: [manager]
+    product:
+      primary_goal: "Browse and create tenant Product categories."
+      page_purpose: "Category hierarchy create/assign via canonical Domain Gateway; browser acceptance pending."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, Toolbar]
+      optional: [EmptyState, ErrorState]
+    primary_action: product_management.category.create
+    states: [normal, empty, error]
+    responsive: { desktop: canonical, tablet: canonical, mobile: stacked_workspace }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
