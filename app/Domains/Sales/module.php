@@ -105,6 +105,23 @@ return [
         ],
         'capability_contracts' => [
             [
+                'id' => 'sales.workspace.team.summary.read',
+                'version' => '1.0.0',
+                'owner_domain' => 'sales',
+                'kind' => 'query',
+                'input_schema' => 'resources/contracts/sales/workspace-team-summary-input.schema.json',
+                'output_schema' => 'resources/contracts/sales/workspace-team-summary-output.schema.json',
+                'execution_binding' => 'query:sales.workspace.team.summary.read',
+                'async' => false,
+                'side_effect_level' => 'none',
+                'permission' => 'cos.tenant.manage',
+                'approval_policy' => 'none',
+                'idempotency' => 'none',
+                'lifecycle' => 'experimental',
+                'tests' => ['tests/integration/sales_workspace_summary_mysql.php'],
+                'documentation' => 'docs/04-domains/sales/completion-roadmap.md',
+            ],
+            [
                 'id' => 'sales.reports.data.read',
                 'version' => '1.0.0',
                 'owner_domain' => 'sales',
@@ -1027,6 +1044,7 @@ return [
             ],
         ],
         'capabilities' => [
+            'sales.workspace.team.summary.read',
             'sales.reports.data.read',
             'sales.analytics.outcomes.read',
             'sales.analytics.forecast.read',
