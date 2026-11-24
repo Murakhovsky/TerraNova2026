@@ -1369,6 +1369,12 @@ services:
   Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface:
     alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceReadModel
 
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesWorkspaceScope:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Sales\Application\Contract\SalesWorkspaceScopeInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesWorkspaceScope
+
   Domains\Sales\Application\Contract\SalesWorkspaceSummaryReadPort:
     alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceReadModel
 
