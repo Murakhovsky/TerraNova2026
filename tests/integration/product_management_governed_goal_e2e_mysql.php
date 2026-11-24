@@ -126,7 +126,6 @@ try {
     $capabilities=new CanonicalCapabilityCatalog($catalog);
     $handler=new ProductGovernedOperationHandler($products,$prices,$modules,$capabilities);
     $domains=new DomainModuleRegistry([new ProductManagementDomainModule(governedHandler:$handler)]);
-    $capabilities=new CanonicalCapabilityCatalog($catalog);
     $bindings=new FederationCapabilityBindingResolver($capabilities,$domains,$modules);
     $planReader=new FederationPlanApprovalEvidenceReader($db);
     $planEvidence=new FederationWorkflowPlanApprovalEvidence($db,$planReader);
@@ -157,18 +156,33 @@ try {
     $product=$products->createProduct($org,['name'=>'Governed stock','sku'=>'GOV'.strtoupper($token),'type'=>'stock'],'seed-product',$owner,'governed-e2e');
     $loc=$products->createLocation($org,'GOV-WH','Governed warehouse','seed-location',$owner,'governed-e2e')['location_id'];
     $variant=$product['variant_id'];$goalId='goal-'.$token;$planId='plan-'.$token;
+    $category=$products->createCategory($org,'Governed category','governed-category',null,'seed-category',$owner,'governed-e2e')['category_id'];
+    $products->assignCategory($org,$product['product_id'],$category,'seed-category-assign',$owner,'governed-e2e');
+    $products->defineAttribute($org,['code'=>'color','name'=>'Color','value_type'=>'enum','choices'=>['black','white']],'seed-color',$owner,'governed-e2e');
+    $products->bindAttribute($org,$category,'color',false,true,'seed-color-bind',$owner,'governed-e2e');
+    $products->defineAttribute($org,['code'=>'notes','name'=>'Notes','value_type'=>'text'],'seed-notes',$owner,'governed-e2e');
+    $products->bindAttribute($org,$category,'notes',false,false,'seed-notes-bind',$owner,'governed-e2e');
+    $revision=$products->productAttributes($org,$product['product_id'])['revision'];
+    $second=$products->createProduct($org,['name'=>'Release fixture','sku'=>'REL'.strtoupper($token),'type'=>'stock'],'seed-release-product',$owner,'governed-e2e');
+    $products->recordMovement($org,$second['variant_id'],$loc,'2','receipt','QA-BASE','seed-release-stock',$owner,'governed-e2e');
+    $reservation=$products->reserveStock($org,$second['variant_id'],$loc,'1','manual:SEED','seed-reservation',$owner,'governed-e2e')['reservation_id'];
     $steps=[];
     foreach([
         ['receive','stock.receive',['variant_id'=>$variant,'location_id'=>$loc,'quantity'=>'10','source_ref'=>'QA-RECEIPT']],
         ['price','price.base.set',['variant_id'=>$variant,'currency'=>'USD','amount'=>'125.5','expected_revision'=>0]],
         ['reserve','stock.reserve',['variant_id'=>$variant,'location_id'=>$loc,'quantity'=>'3','source_ref'=>'manual:QA-ORDER']],
+        ['issue','stock.issue',['variant_id'=>$variant,'location_id'=>$loc,'quantity'=>'2','source_ref'=>'QA-ISSUE']],
+        ['create','product.create',['name'=>'New assortment','sku'=>'NEW'.strtoupper($token),'type'=>'stock']],
+        ['matrix','variant.matrix.create',['product_id'=>$product['product_id'],'axes'=>[['code'=>'color','choices'=>['black','white']]],'sku_prefix'=>'MATRIX'.$token,'expected_revision'=>$revision]],
+        ['bulk','attribute.product.bulk_set',['products'=>[['product_id'=>$product['product_id'],'expected_revision'=>$revision+1]],'values'=>[['code'=>'notes','value'=>'QA validated']]]],
+        ['release','stock.release',['reservation_id'=>$reservation,'reason'=>'QA cancellation']],
     ] as [$id,$op,$input]){
         $steps[]=['id'=>$id,'capability_id'=>ProductGovernedOperationHandler::PREFIX.$op,'capability_version'=>'1.0.0',
             'input'=>['target_type'=>'product_governed_operation','target_id'=>substr(hash('sha256',$token.':'.$id),0,32),'parameters'=>$input]];
     }
     $allowed=array_column($steps,'capability_id');
-    $spec=new GoalSpecification($goalId,$org,$owner,'Receive and price 10 SKU units, reserve 3',
-        [['id'=>ProductGovernedRunOutcomeProvider::CRITERION,'operator'=>'at_least','expected'=>3]],$allowed,1,null,null,'',[],['independent_plan','independent_action'],'always');
+    $spec=new GoalSpecification($goalId,$org,$owner,'Prepare new assortment, price, receive, reserve, issue and release inventory',
+        [['id'=>ProductGovernedRunOutcomeProvider::CRITERION,'operator'=>'at_least','expected'=>8]],$allowed,1,null,null,'',[],['independent_plan','independent_action'],'always');
     $goals->createGoal($actor,$spec);
     $goals->proposePlan($actor,$planId,$goalId,$steps);
     $assert($products->balance($org,$variant,$loc)['on_hand']==='0.000000'&&$prices->get($org,$variant,'USD')['price']===null,'Proposal must not write business data');
@@ -233,18 +247,23 @@ try {
     }
     $assert($bridge->advance($actor,$runId,$planApproval)['state']==='completed','Workflow completion');
     $balance=$products->balance($org,$variant,$loc);
-    $assert($balance['on_hand']==='10.000000'&&$balance['reserved']==='3.000000'&&$balance['available']==='7.000000','Business stock result');
+    $assert($balance['on_hand']==='8.000000'&&$balance['reserved']==='3.000000'&&$balance['available']==='5.000000','Business stock result');
     $assert($prices->get($org,$variant,'USD')['price']==='125.5000','Business price result');
+    $assert(count($products->getProduct($org,$product['product_id'])['variants'])===3,'Matrix generated two distinct SKU');
+    $assert(count($products->searchProducts($org,'NEW'.strtoupper($token)))===1,'New Product exists');
+    $attributes=array_column($products->productAttributes($org,$product['product_id'])['items'],'value','code');
+    $assert($attributes['notes']==='QA validated','Bulk attribute effect');
+    $assert($products->balance($org,$second['variant_id'],$loc)['reserved']==='0.000000','Reservation released');
     $eval=$goals->recordEvaluation($actor,'eval-'.$token,$runId);
-    $assert($eval['result']==='satisfied'&&($eval['criteria'][0]['observed']??null)===3,'Independent native business Goal outcome');
-    $assert((int)$db->fetchOne('SELECT COUNT(*) FROM cos_actions WHERE organization_id=? AND type LIKE ?',[$org,'product_management.governed.%'])===3,'Exactly three canonical business Actions');
+    $assert($eval['result']==='satisfied'&&($eval['criteria'][0]['observed']??null)===8,'Independent native business Goal outcome');
+    $assert((int)$db->fetchOne('SELECT COUNT(*) FROM cos_actions WHERE organization_id=? AND type LIKE ?',[$org,'product_management.governed.%' ])===8,'Exactly eight canonical business Actions');
     $assert((int)$db->fetchOne('SELECT COUNT(*) FROM cos_federation_runs WHERE organization_id=?',[$org])===0,'No legacy executor');
     $foreign=new TenantContext(UserId::fromString($owner),OrganizationId::fromString('foreign-'.$token),OrganizationRole::fromString('manager'),[Permission::fromString(TenantPermissions::MANAGE)]);
     $deny(fn()=>$outcome->observeRun($foreign,$runId,ProductGovernedRunOutcomeProvider::CRITERION,new DateTimeImmutable('-1 day'),new DateTimeImmutable('+1 day')),'Foreign tenant evidence');
     // Deliberately alter only fixture native ledger, preserving technical Action success.
     $db->executeStatement('UPDATE pm_stock_movements SET source_ref=? WHERE organization_id=? AND variant_id=?',['FORGED',$org,$variant]);
     $deny(fn()=>$goals->recordEvaluation($actor,'tampered-'.$token,$runId),'Technical success without intact native evidence');
-    echo "Product Management governed three-step business Goal/Plan/Action/Outcome native MySQL E2E PASS.\n";
+    echo "Product Management governed eight-step business Goal/Plan/Action/Outcome native MySQL E2E PASS.\n";
 } finally {
     if($oldRollout===false)putenv('COS_FEDERATION_CANONICAL_ORGANIZATION');
     else putenv('COS_FEDERATION_CANONICAL_ORGANIZATION='.$oldRollout);
