@@ -512,6 +512,25 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
             },'product_management.stock.count_session_applied','StockCountSession');
     }
 
+    public function countCandidates(string $org,string $location,int $limit,int $offset):array
+    {
+        $sql="SELECT v.variant_id,v.sku,p.name,CAST(COALESCE(b.on_hand,0) AS DECIMAL(20,6)) AS on_hand,
+            CAST(COALESCE(b.reserved,0) AS DECIMAL(20,6)) AS reserved,COALESCE(b.revision,0) AS revision
+            FROM pm_locations l JOIN pm_variants v ON v.organization_id=l.organization_id
+            JOIN pm_products p ON p.organization_id=v.organization_id AND p.product_id=v.product_id
+            LEFT JOIN pm_stock_balances b ON b.organization_id=v.organization_id AND b.variant_id=v.variant_id AND b.location_id=l.location_id
+            WHERE l.organization_id=:org AND l.location_id=:loc AND l.status='active' AND v.status='active'
+              AND v.track_inventory=1 AND p.status<>'archived'
+              AND NOT EXISTS (SELECT 1 FROM pm_external_mappings m JOIN pm_external_connections c ON c.organization_id=m.organization_id AND c.connection_id=m.connection_id
+                WHERE m.organization_id=v.organization_id AND ((m.entity_type='variant' AND m.canonical_id=v.variant_id) OR (m.entity_type='product' AND m.canonical_id=v.product_id))
+                AND c.provider='shopify' AND c.mode='shopify_authoritative' AND c.status='ready')
+            ORDER BY v.variant_id LIMIT :lim OFFSET :off";
+        $stmt=$this->connection->prepare($sql);
+        $stmt->bindValue(':org',$org);$stmt->bindValue(':loc',$location);
+        $stmt->bindValue(':lim',$limit,PDO::PARAM_INT);$stmt->bindValue(':off',$offset,PDO::PARAM_INT);$stmt->execute();
+        return array_map(static function(array $row):array{$row['revision']=(int)$row['revision'];return $row;},$stmt->fetchAll(PDO::FETCH_ASSOC));
+    }
+
     public function getCountSession(string $org,string $sessionId):?array
     {
         $head=$this->one('SELECT session_id,location_id,source_ref,action_key,actor_ref,row_count,created_at FROM pm_stock_count_sessions WHERE organization_id=? AND session_id=?',[$org,$sessionId]);
