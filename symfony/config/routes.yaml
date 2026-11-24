@@ -1,3 +1,10 @@
+# Product Management: authenticated manager proposal only, never approval/Action.
+cos_product_management_import_plan_propose:
+  path: /api/v1/product-management/imports/{batchId}/propose
+  controller: App\Http\Api\V1\Controller\ProductManagementImportPlanController::propose
+  methods: [POST]
+  requirements: { batchId: '[a-f0-9]{32}' }
+
 # Product Management E7/P0: tenant-gated human workspace, never Shopify or direct DB writer.
 cos_product_management_import:
   path: /product-management/import
