@@ -35,6 +35,30 @@ try {
   await page.locator('input[name=email]').fill(email);
   await page.locator('input[name=password]').fill(password);
   await Promise.all([page.waitForURL(u=>!u.pathname.startsWith('/auth/login')),page.locator('button[type=submit]').click()]);
+  await go('/product-management');
+  const inventoryResponse=await context.request.get(url('/api/v1/capabilities'));
+  check(inventoryResponse.ok(),'Authenticated Capability Library unavailable: '+inventoryResponse.status());
+  const inventory=(await inventoryResponse.json()).capabilities.filter(c=>c.owner_domain==='product_management');
+  check(inventory.length===73,'Product Capability Library must expose 73 typed capabilities');
+  const counts={};
+  for(const c of inventory){
+    counts[c.status]=(counts[c.status]||0)+1;
+    check(c.contract&&c.status!=='unavailable','Unavailable Product binding: '+c.id+' '+c.reason);
+  }
+  check(counts.read_only===31&&counts.direct_human===30&&counts.workflow_approval_required===12,'Unexpected Product execution modes: '+JSON.stringify(counts));
+  const csrf=await page.locator('form[action="/product-management/products"] [name=csrf_token]').getAttribute('value');
+  const headers={'X-CSRF-Token':csrf,'X-Idempotency-Key':'pm-browser-'+tag};
+  const summary=await context.request.post(url('/api/v1/capabilities/product_management.analytics.summary.get/invoke'),{headers,data:{currency:'UAH'}});
+  check(summary.ok()&&(await summary.json()).data.currency==='UAH','Canonical read API unavailable');
+  const denied=await context.request.post(url('/api/v1/capabilities/product_management.governed.product.create/invoke'),{headers,data:{target_type:'product_governed_operation',target_id:'a'.repeat(32),parameters:{name:'Denied',sku:'DENIED'+tag}}});
+  check(denied.status()===422,'Governed Action direct invocation was not denied');
+  const anonymous=await browser.newContext({serviceWorkers:'block'});
+  try{
+    const rejected=await anonymous.request.post(url('/api/v1/capability-intents/product-business'),{data:{kind:'product_management.governed_plan.v1',description:'Unsigned',operations:[]}});
+    check(rejected.status()===403,'Unsigned machine endpoint not denied');
+    const inaccessible=await anonymous.request.get(url('/api/v1/capabilities'));
+    check(inaccessible.status()===403||inaccessible.status()===401,'Anonymous capability inventory not denied');
+  }finally{await anonymous.close();}
   const products=[];
   for (const suffix of ['A','B']) {
     await go('/product-management');
@@ -45,7 +69,7 @@ try {
     await submit(form,'/product-management/products');
     await page.waitForURL(u=>/^\/product-management\/products\/[a-f0-9]{32}$/.test(u.pathname));
     const productId=new URL(page.url()).pathname.split('/').pop();
-    const variant=await page.locator('#list-price select[name=list_variant] option').first().getAttribute('value');
+    const variant=await page.locator('form[action="/product-management/products/'+productId+'/price"] input[name=variant_id]').first().getAttribute('value');
     check(/^[a-f0-9]{32}$/.test(variant||''),'Product variant missing');
     products.push({productId,variant,sku:'PM'+tag+suffix});
   }
@@ -91,7 +115,7 @@ try {
   const matrix=page.locator('form[action="'+attrPath+'"]').filter({has:page.locator('[name=action][value=preview]')});
   await matrix.locator('[name=sku_prefix]').fill('QAM'+tag);
   await matrix.locator('[name=axes]').fill(JSON.stringify([{code:attrCode,choices:['oak','walnut']}]));
-  await matrix.locator('button[type=submit]').click();
+  await Promise.all([page.waitForNavigation({waitUntil:'domcontentloaded'}),matrix.locator('button[type=submit]').click()]);
   const apply=page.locator('form[action="'+attrPath+'"]').filter({has:page.locator('[name=action][value=matrix]')});
   await apply.locator('[name=confirm_matrix]').check();
   await submit(apply,attrPath);
@@ -111,6 +135,9 @@ try {
   for(const p of products){
     await go('/product-management/stock?variant='+p.variant+'&location='+location);
     const form=page.locator('form[action="/product-management/stock/post"]');
+    await form.locator('[name=kind]').selectOption('receipt');
+    await form.locator('[name=variant_id]').selectOption(p.variant);
+    await form.locator('[name=from_location_id]').selectOption(location);
     await form.locator('[name=quantity]').fill('5');
     await form.locator('[name=source_ref]').fill('qa:'+tag+':'+p.sku);
     await submit(form,'/product-management/stock/post');
