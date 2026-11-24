@@ -26,6 +26,7 @@ final readonly class FinancePaidSettlementReviewService implements FinancePaidSe
         $facts=$this->source->marketing($actor,$claim['source_ref'],$snapshotRef);
         $doc=$this->source->document($actor,$documentRef);
         $budget=$this->budgets->envelope($org,$claim['envelope_id'])??throw new DomainException('Native envelope required.');
+        if($budget['reserved_minor']<$claim['amount_minor']&&$budget['committed_minor']===0)throw new DomainException('Finance exposure is not held.');
         return ['claim'=>['organization_id'=>$org,...$claim],'facts'=>$facts,'file'=>$doc,'expected_revision'=>$budget['revision']];
     }
     /** Only an authenticated interactive human entry point may call this method. */

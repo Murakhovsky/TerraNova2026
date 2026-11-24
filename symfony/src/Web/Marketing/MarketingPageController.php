@@ -47,6 +47,9 @@ final readonly class MarketingPageController
         private MarketingPaidLaunchPlanService $paidPlans,
         private MarketingPaidOperationsReadService $paidOperations,
         private MarketingPaidGoalProposalService $paidGoals,
+        private \Domains\Finance\Application\Service\FinancePaidSettlementReviewService $settlementReviews,
+        private \App\Persistence\Finance\FinancePaidSettlementGoalProposalService $settlementGoals,
+        private \Domains\Finance\Application\Contract\FinancePaidSettlementStore $settlements,
     ){}
 
     public function overview(Request $request):Response {return $this->render($request,'overview');}
@@ -113,6 +116,43 @@ final readonly class MarketingPageController
             return new RedirectResponse('/workspace/goals',303);
         }catch(DomainException $e){return new Response('Paid proposal blocked: '.$e->getMessage(),422);}
         catch(Throwable){return new Response('Paid proposal unavailable; inspect Goals.',503);}
+    }
+
+    public function reviewPaidSettlement(Request $request,string $id,string $planId):Response
+    {
+        $actor=$this->manager();if($actor instanceof Response)return $actor;
+        if(!$this->csrf->isValid($request))return new Response('CSRF validation failed',400);
+        try{
+            $f=$request->request->all();$r=MarketingWorkspacePlanningInput::field($f,'reservation_id');
+            $d=MarketingWorkspacePlanningInput::field($f,'document_ref');$s=MarketingWorkspacePlanningInput::field($f,'spend_snapshot');
+            $p=$this->settlementReviews->preview($actor,$r,$d,$s);
+            if($p['facts']['plan']['id']!==$planId||$this->paidPlans->get($actor,$planId)['campaign_id']!==$id)
+                throw new DomainException('Settlement campaign mismatch.');
+            $amount=MarketingWorkspacePlanningInput::field($f,'settlement_minor');
+            if(!preg_match('/^(0|[1-9][0-9]{0,12})$/D',$amount)||(int)$amount>1000000000000||($f['confirm_review']??null)!=='yes')
+                throw new DomainException('Explicit independent document review and exact amount required.');
+            $this->settlementReviews->review($actor,$r,$d,$s,MarketingWorkspacePlanningInput::field($f,'document_hash'),
+                MarketingWorkspacePlanningInput::field($f,'source_hash'),MarketingWorkspacePlanningInput::revision($f,'source_revision'),
+                MarketingWorkspacePlanningInput::field($f,'provider_document_id'),(int)$amount);
+            return new RedirectResponse('/marketing/campaigns/'.$id.'?'.http_build_query(['paid_plan'=>$planId,'settlement_reservation'=>$r,'settlement_document'=>$d,'settlement_snapshot'=>$s]),303);
+        }catch(DomainException $e){return new Response('Settlement review blocked: '.$e->getMessage(),422);}
+        catch(Throwable){return new Response('Settlement review unavailable; inspect native review.',503);}
+    }
+    public function proposePaidSettlement(Request $request,string $id,string $planId):Response
+    {
+        $actor=$this->manager();if($actor instanceof Response)return $actor;
+        if(!$this->csrf->isValid($request))return new Response('CSRF validation failed',400);
+        try{
+            $f=$request->request->all();$r=MarketingWorkspacePlanningInput::field($f,'reservation_id');
+            $d=MarketingWorkspacePlanningInput::field($f,'document_ref');$s=MarketingWorkspacePlanningInput::field($f,'spend_snapshot');
+            $p=$this->settlementReviews->preview($actor,$r,$d,$s);
+            if($p['facts']['plan']['id']!==$planId||$this->paidPlans->get($actor,$planId)['campaign_id']!==$id)
+                throw new DomainException('Settlement campaign mismatch.');
+            $this->settlementGoals->propose($actor,$r,$d,$s,MarketingWorkspacePlanningInput::field($f,'candidate_hash'),
+                MarketingWorkspacePlanningInput::revision($f,'expected_revision'),MarketingWorkspacePlanningInput::field($f,'idempotency_key'));
+            return new RedirectResponse('/workspace/goals',303);
+        }catch(DomainException $e){return new Response('Settlement proposal blocked: '.$e->getMessage(),422);}
+        catch(Throwable){return new Response('Settlement proposal unavailable; inspect Goals.',503);}
     }
 
     public function saveAudience(Request $request,string $id):Response
@@ -328,7 +368,7 @@ final readonly class MarketingPageController
         $actor=$this->manager();
         if($actor instanceof Response)return $actor;
         try {
-            $paidPlans=[];$selectedPaidPlan=null;$paidStatus=null;$paidFunding=null;$paidSpend=null;$paidError=null;
+            $paidPlans=[];$selectedPaidPlan=null;$paidStatus=null;$paidFunding=null;$paidSpend=null;$paidError=null;$settlementPreview=null;$settlementCandidate=null;$settlementReceipt=null;$settlementError=null;
             $creatives=[];$proposals=[];$audiences=[];$adsets=[];$analystRuns=[];$analystOffset=0;$analystRuntime=null;$productCheck=null;$productCheckError=null;$productPage=null;$productSearchError=null;
             if($section==='campaign'&&is_array($selected)&&is_string($selected['id']??null)){
                 $paidPlans=$this->paidPlans->listForCampaign($actor,$selected['id']);
@@ -341,6 +381,20 @@ final readonly class MarketingPageController
                         if($envelope!==''||$reservation!=='')$paidFunding=$this->paidPlans->funding($actor,$selectedPaidPlan['id'],$envelope,$reservation);
                         $snapshot=(string)$request->query->get('spend_snapshot','');
                         if($snapshot!=='')$paidSpend=$this->paidOperations->compareSpend($actor,$selectedPaidPlan['id'],$snapshot);
+                        if($request->query->has('settlement_reservation')){
+                            try{
+                                $r=(string)$request->query->get('settlement_reservation');$d=(string)$request->query->get('settlement_document');
+                                $s=(string)$request->query->get('settlement_snapshot');
+                                $p=$this->settlementReviews->preview($actor,$r,$d,$s);
+                                if($p['facts']['plan']['id']!==$selectedPaidPlan['id'])throw new DomainException('Settlement scope differs.');
+                                $settlementPreview=$p;
+                                $settlementReceipt=$this->settlements->receipt($actor->organizationId()->value(),$r);
+                                if($settlementReceipt===null){
+                                    try{$settlementCandidate=$this->settlementReviews->read($actor,$r,$d,$s);}
+                                    catch(DomainException){/* No current independent review. */}
+                                }
+                            }catch(Throwable){$settlementError='Settlement source or document unavailable for this exact scope.';}
+                        }
                     }catch(DomainException){$paidError='Paid plan, funding or spend evidence unavailable for this exact scope.';}
                 }
                 $creatives=$this->planning->creatives($actor,$selected['id']);
@@ -433,7 +487,7 @@ final readonly class MarketingPageController
                 'providerHierarchy'=>$providerHierarchy,
                 'observations'=>$observations,'selectedCampaign'=>$selected,'accountId'=>$accountId,
                 'from'=>$from,'to'=>$to,'csrfToken'=>$this->csrf->token($request),
-                'paidPlans'=>$paidPlans,'selectedPaidPlan'=>$selectedPaidPlan,'paidStatus'=>$paidStatus,'paidFunding'=>$paidFunding,'paidSpend'=>$paidSpend,'paidError'=>$paidError,
+                'paidPlans'=>$paidPlans,'selectedPaidPlan'=>$selectedPaidPlan,'paidStatus'=>$paidStatus,'paidFunding'=>$paidFunding,'paidSpend'=>$paidSpend,'paidError'=>$paidError,'settlementPreview'=>$settlementPreview,'settlementCandidate'=>$settlementCandidate,'settlementReceipt'=>$settlementReceipt,'settlementError'=>$settlementError,
                 'creatives'=>$creatives,'proposals'=>$proposals,'audiences'=>$audiences,'adsets'=>$adsets,
                 'analystRuns'=>$analystRuns,'analystOffset'=>$analystOffset,'analystRuntime'=>$analystRuntime,
                 'productCheck'=>$productCheck,'productCheckError'=>$productCheckError,

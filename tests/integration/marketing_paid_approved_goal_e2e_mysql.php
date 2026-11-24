@@ -103,7 +103,8 @@ try {
     };
     $manifest=require $root.'/app/Domains/Marketing/module.php';
     $catalog=new ModuleCatalog([ModuleDefinition::fromArray($manifest),ModuleDefinition::fromArray(require $root.'/app/Domains/Finance/module.php'),
-        new ModuleDefinition(new ModuleManifest('federation','Federation','1.0.0'),new ModuleContributions())]);
+        new ModuleDefinition(new ModuleManifest('federation','Federation','1.0.0'),new ModuleContributions()),
+        new ModuleDefinition(new ModuleManifest('documents','Documents','1.0.0'),new ModuleContributions())]);
     $states=new class implements ModuleStateRepositoryInterface {
         public function enabledOverride(string $org,string $moduleId):?bool{return true;}
         public function setEnabled(string $org,string $moduleId,bool $value):void{}
@@ -361,6 +362,94 @@ try {
     $deny(fn()=>$read->settlementSource($actor,$paidPlan['id'],'mis-'.str_repeat('0',24)),'Unrelated insight accepted for settlement.');
     $assert($transport->posts===0,'Hermes unexpectedly invoked by paid lifecycle.');
     $deny(fn()=>$planner->propose($actor,$paidPlan['id'],'activate','reactivation-'.$token,$envelope['id'],$reservation['id']),'Paused plan reactivated.');
+
+    // Close the fixture's clock only for the pure Finance policy, not the
+    // production clock or immutable Marketing dates. Native journal and snapshot are real MySQL.
+    $policy=new \Domains\Finance\Domain\FinancePaidSettlementPolicy(static fn()=>new DateTimeImmutable($end.'T00:00:00Z +2 days'));
+    $settlements=new \Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinancePaidSettlementRepository($pdo,$policy);
+    $reviewStore=new \Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinancePaidSettlementReviewStore($pdo);
+    $documents=new \Infrastructure\Platform\Persistence\MySql\Documents\MysqlDocumentsRepository($pdo);
+    $docId='DOC-'.bin2hex(random_bytes(12));$fileId='FILE-'.bin2hex(random_bytes(12));$versionId='VER-'.bin2hex(random_bytes(12));
+    $storageKey='documents/'.substr(hash('sha256',$org),0,20).'/'.$docId.'/'.$fileId.'/fixture.pdf';
+    $pdf="%PDF-1.4\nSynthetic provider invoice 90001 12.50 USD\n%%EOF";
+    $documents->createDocument(['organization_id'=>$org,'document_id'=>$docId,'title'=>'Synthetic invoice','status'=>'active','created_by'=>(int)$owner,'updated_by'=>(int)$owner],
+        ['organization_id'=>$org,'file_id'=>$fileId,'storage_key'=>$storageKey,'mime_type'=>'application/pdf','size_bytes'=>strlen($pdf),'sha256'=>hash('sha256',$pdf),'created_by'=>(int)$owner],
+        ['organization_id'=>$org,'version_id'=>$versionId,'document_id'=>$docId,'version_number'=>1,'file_id'=>$fileId,'source_type'=>'upload','created_by'=>(int)$owner]);
+    $storage=new class($storageKey,$pdf) implements \Platform\Storage\Contract\FileStorageInterface {
+        public function __construct(private string $key,private string $bytes){}
+        public function put(string $key,string $contents,?string $contentType=null,array $metadata=[]):\Platform\Storage\Model\StoredFile{throw new DomainException('Fixture read only.');}
+        public function read(string $key):string{if($key!==$this->key)throw new DomainException('Missing fixture PDF.');return $this->bytes;}
+        public function exists(string $key):bool{return $key===$this->key;}
+        public function delete(string $key):void{throw new DomainException('Fixture read only.');}
+    };
+    $source=new \App\Infrastructure\Finance\NativePaidSettlementSourceAdapter($read,$documents,$storage,$modules,$pdo);
+    $reviews=new \Domains\Finance\Application\Service\FinancePaidSettlementReviewService($financeRepo,$financeRepo,$source,$reviewStore,$policy,$modules);
+    $reviewActor=new TenantContext(UserId::fromString($reviewer),OrganizationId::fromString($org),OrganizationRole::fromString('manager'),
+        [Permission::fromString(TenantPermissions::ACCESS),Permission::fromString(TenantPermissions::MANAGE)]);
+    $preview=$reviews->preview($actor,$reservation['id'],$docId,$snapshotId);$o=$preview['facts']['observation'];
+    $reviewArgs=[$reservation['id'],$docId,$snapshotId,$preview['file']['sha256'],$o['source_hash'],$o['source_revision'],'META-fixture-invoice',1250];
+    $deny(fn()=>$reviews->review($actor,...$reviewArgs),'Uploader/claimant self review.');
+    $deny(fn()=>$reviews->read($actor,$reservation['id'],$docId,$snapshotId),'Unreviewed provider document.');
+    $realPolicy=new \Domains\Finance\Domain\FinancePaidSettlementPolicy();
+    $early=new \Domains\Finance\Application\Service\FinancePaidSettlementReviewService($financeRepo,$financeRepo,$source,$reviewStore,$realPolicy,$modules);
+    $deny(fn()=>$early->review($reviewActor,...$reviewArgs),'Settlement before real period closure.');
+    $reviews->review($reviewActor,...$reviewArgs);
+    $facts=$reviews->read($actor,$reservation['id'],$docId,$snapshotId);
+    $assert($facts['candidate']['proposed_commit_minor']===1250&&!$facts['candidate']['finance_settled'],'Review must not mutate budget.');
+    $settlementHandler=new \Domains\Finance\Automation\Action\FinancePaidSettlementHandler(
+        new \Domains\Finance\Application\Service\ApprovedFinancePaidSettlementService($settlements,$reviews,$worker,$modules),$identityResolver,$tenantFactory);
+    $domains=new DomainModuleRegistry([new \Domains\Marketing\Bootstrap\MarketingDomainModule($handler,$paidHandler),
+        new \Domains\Finance\Bootstrap\FinanceDomainModule(new \Domains\Finance\Automation\Action\FinanceBudgetActionHandler($financeOps),$settlementHandler)]);
+    $bindings=new FederationCapabilityBindingResolver($capabilities,$domains,$modules);
+    $gate=new ModuleActionExecutionGate($domains,$modules,null,$worker);
+    $actionService=new ActionService(new MysqlActionRepository($pdo),new ActionExecutor([$handler,$paidHandler,$settlementHandler],$gate));
+    $policyContexts=new PolicyContextBuilder($domains);
+    $policyService=new ActionPolicyService($actionService,$policies,new MysqlPolicyEvaluationRepository($pdo),$approvalRepo,$engine,
+        $transactions,null,$domains,$modules,$policyContexts);
+    $settlementOutcome=new \App\Persistence\Finance\FinancePaidSettlementOutcomeProvider($db,$settlements,$receipts);
+    $goals=new FederationGoalStore($db,$bindings,new GoalPlanValidator($capabilities),new GoalOutcomeEvaluator(),
+        new FederationTrustedOutcomeEvidenceResolver($modules,[$outcome,$settlementOutcome]),$planReader);
+    $bridge=new FederationCanonicalWorkflowBridge($db,$store,$scheduler,$goals,$planEvidence,$receipts,
+        new FailClosedWorkflowNonActionReceiptEvidence(),$planReader,$capabilities,$domains,$modules,$policies,$engine,$policyContexts,$policyService,
+        new DoctrineWorkflowExecutionCoordinator($db,$store,$scheduler,$planEvidence,$receipts));
+    $proposer=new \App\Persistence\Finance\FinancePaidSettlementGoalProposalService($db,$goals,$bridge,$reviews);
+    $cap=\Domains\Finance\Application\Service\ApprovedFinancePaidSettlementService::TYPE;
+    $pdo->prepare('INSERT INTO cos_policies (id,organization_id,code,name,action_type,conditions,decision,priority,version,status)
+        VALUES (?,?,?,?,?,?,"APPROVAL_REQUIRED",1,1,"ACTIVE")')->execute([bin2hex(random_bytes(16)),$org,'settlement','Finance approval',$cap,'[]']);
+    $candidate=$facts['candidate'];
+    $proposal=$proposer->propose($actor,$reservation['id'],$docId,$snapshotId,$candidate['candidate_hash'],$facts['expected_revision'],'settlement-'.$token);
+    $goalId=$proposal['goal_id'];$planId=$proposal['plan_id'];$planApproval=bin2hex(random_bytes(16));$runId='run-settle-'.$token;
+    $db->executeStatement('UPDATE cos_federation_plans SET state=:state WHERE organization_id=:org AND plan_id=:plan',['state'=>'approved','org'=>$org,'plan'=>$planId]);
+    $storedPlan=(string)$db->fetchOne('SELECT plan_json FROM cos_federation_plans WHERE organization_id=:org AND plan_id=:plan',['org'=>$org,'plan'=>$planId]);
+    $db->insert('cos_actions',['id'=>$planApproval,'organization_id'=>$org,'type'=>'cos.federation.plan.approval',
+        'target_type'=>'cos_federation_plan','target_id'=>$planId,'parameters'=>json_encode(['goal_id'=>$goalId,'plan_id'=>$planId,
+            'specification_version'=>1,'plan_hash'=>hash('sha256',$storedPlan)],JSON_THROW_ON_ERROR),
+        'source_type'=>'USER','source_id'=>$owner,'status'=>'COMPLETED','execution_mode'=>'APPROVAL_REQUIRED','risk_level'=>'HIGH',
+        'idempotency_key'=>'plan:settlement:'.$token,'correlation_id'=>'settlement-'.$token]);
+    $db->insert('cos_policy_evaluations',['id'=>bin2hex(random_bytes(16)),'organization_id'=>$org,'action_id'=>$planApproval,
+        'decision'=>'APPROVAL_REQUIRED','correlation_id'=>'settlement-'.$token,'evaluated_at'=>gmdate('Y-m-d H:i:s.u')]);
+    $db->insert('cos_approvals',['id'=>bin2hex(random_bytes(16)),'organization_id'=>$org,'action_id'=>$planApproval,'status'=>'APPROVED',
+        'approver_type'=>'USER','approver_id'=>$reviewer,'requested_by_type'=>'USER','requested_by_id'=>$owner,'decided_by_type'=>'USER',
+        'decided_by_id'=>$reviewer,'decided_at'=>gmdate('Y-m-d H:i:s.u'),'expires_at'=>(new DateTimeImmutable('+1 day'))->format('Y-m-d H:i:s.u')]);
+    $bridge->start($actor,$runId,$planId,$planApproval);
+    $bridge->advance($actor,$runId,$planApproval);
+    $pending=$bridge->advance($actor,$runId,$planApproval);
+    $assert($pending['state']==='awaiting_human_approval','Settlement lacks separate Action Approval.');
+    $actionId=$pending['action_id'];
+    $assert($actionService->execute($org,$actionId,'premature-settlement')===null&&$settlements->receipt($org,$reservation['id'])===null,'Unapproved settlement executed.');
+    $approvalId=(string)$db->fetchOne('SELECT id FROM cos_approvals WHERE organization_id=:org AND action_id=:action',['org'=>$org,'action'=>$actionId]);
+    $assert($approvalRepo->decide($org,$approvalId,ApprovalStatus::Approved,$reviewer,'Independent settlement fixture'),'Approval failed.');
+    $actionService->queue($org,$actionId);
+    $assert($actionService->execute($org,$actionId,'settlement-approved-worker')?->status===ActionStatus::Completed,'Financial canonical worker failed.');
+    $assert($bridge->advance($actor,$runId,$planApproval)['state']==='step_completed','Settlement receipt not verified.');
+    $assert($bridge->advance($actor,$runId,$planApproval)['state']==='completed','Settlement Workflow incomplete.');
+    $evaluation=$goals->recordEvaluation($actor,'settlement-eval-'.$token,$runId);
+    $assert(($evaluation['result']??null)==='satisfied','Native Finance outcome not satisfied.');
+    $receipt=$settlements->receipt($org,$reservation['id']);$balance=$financeRepo->envelope($org,$envelope['id']);
+    $assert($receipt['committed_minor']===1250&&$balance['reserved_minor']===0&&$balance['committed_minor']===1250
+        &&$balance['available_minor']===$paidPlan['lifetime_minor']-1250&&!$receipt['payment_confirmed'],'Native settlement balance incorrect.');
+    $assert($actionService->execute($org,$actionId,'settlement-replay')===null,'Completed financial Action replayed.');
+    echo "Marketing M3 native Documents review, canonical financial Goal and independent Finance settlement outcome E2E PASS.\n";
     echo "Marketing M3 approved create-paused/activate/pause native MySQL E2E with isolated Meta fixture PASS.\n";
 } finally {
     if($oldRollout===false)putenv('COS_FEDERATION_CANONICAL_ORGANIZATION');

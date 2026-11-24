@@ -58,5 +58,50 @@
             <button class="btn btn-outline-secondary" type="submit">Compare reported spend</button>
         </form>
         {% if spend %}<p>{{ spend.status }} · {{ spend.reported_spend_decimal }} {{ spend.currency }}. No settlement or funds release.</p>{% endif %}
+        <h4>Final budget settlement</h4>
+        <p>After the full UTC delivery period closes, upload the original Meta PDF in Documents. An independent manager must inspect the exact PDF and campaign allocation. Then propose a separate approved financial Goal. This is not a payment or accounting Expense.</p>
+        <form method="get" class="cos-page__stack">
+            <input type="hidden" name="paid_plan" value="{{ selected.id }}">
+            <label>Finance reservation ID <input class="form-control" name="settlement_reservation" pattern="finr-[a-f0-9]{24}" value="{{ query.settlement_reservation|default('') }}" required></label>
+            <label>Documents PDF ID <input class="form-control" name="settlement_document" value="{{ query.settlement_document|default('') }}" required></label>
+            <label>Campaign spend snapshot ID <input class="form-control" name="settlement_snapshot" pattern="mis-[a-f0-9]{24}" value="{{ query.settlement_snapshot|default('') }}" required></label>
+            <button class="btn btn-outline-secondary">Inspect settlement evidence</button>
+        </form>
+        {% if settlementError %}<p role="alert">{{ settlementError }}</p>{% endif %}
+        {% if settlementReceipt %}
+            <p>SETTLED · {{ settlementReceipt.committed_minor }} committed / {{ settlementReceipt.released_minor }} released minor units {{ settlementReceipt.currency }}. Action {{ settlementReceipt.action_id }}. No payment or accounting Expense.</p>
+        {% elseif settlementPreview %}
+            {% set p = settlementPreview %}{% set o = p.facts.observation %}
+            <p>Document {{ p.file.document_ref }} · version {{ p.file.version_ref }} · SHA-256 <code>{{ p.file.sha256 }}</code>.</p>
+            <p>Campaign {{ o.external_id }} · {{ o.window_start }}–{{ o.window_end }} UTC · {{ o.reported_spend_decimal }} {{ o.currency }} · source revision {{ o.source_revision }}.</p>
+            {% if settlementCandidate %}
+                {% set candidate = settlementCandidate.candidate %}
+                <p>Independently reviewed: {{ candidate.proposed_commit_minor }} to commit / {{ candidate.proposed_release_minor }} to release. Budget revision {{ settlementCandidate.expected_revision }}. Not settled.</p>
+                <form method="post" action="/marketing/campaigns/{{ campaign.id|url_encode }}/paid-plans/{{ selected.id|url_encode }}/settlement-goal" class="cos-page__stack">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <input type="hidden" name="reservation_id" value="{{ p.claim.reservation_id }}">
+                    <input type="hidden" name="document_ref" value="{{ p.file.document_ref }}">
+                    <input type="hidden" name="spend_snapshot" value="{{ o.source_snapshot_ref }}">
+                    <input type="hidden" name="candidate_hash" value="{{ candidate.candidate_hash }}">
+                    <input type="hidden" name="expected_revision" value="{{ settlementCandidate.expected_revision }}">
+                    <input type="hidden" name="idempotency_key" value="{{ planningKey }}-settlement">
+                    <button class="btn btn-outline-primary">Propose settlement in COS Goals</button>
+                </form>
+            {% else %}
+                <form method="post" action="/marketing/campaigns/{{ campaign.id|url_encode }}/paid-plans/{{ selected.id|url_encode }}/settlement-review" class="cos-page__stack">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <input type="hidden" name="reservation_id" value="{{ p.claim.reservation_id }}">
+                    <input type="hidden" name="document_ref" value="{{ p.file.document_ref }}">
+                    <input type="hidden" name="spend_snapshot" value="{{ o.source_snapshot_ref }}">
+                    <input type="hidden" name="document_hash" value="{{ p.file.sha256 }}">
+                    <input type="hidden" name="source_hash" value="{{ o.source_hash }}">
+                    <input type="hidden" name="source_revision" value="{{ o.source_revision }}">
+                    <label>Provider document number <input class="form-control" name="provider_document_id" maxlength="190" required></label>
+                    <label>Exact final campaign net media spend (minor units) <input type="number" min="0" max="1000000000000" step="1" class="form-control" name="settlement_minor" required></label>
+                    <label><input type="checkbox" name="confirm_review" value="yes" required> I independently inspected the original PDF in Documents, verified its Meta origin, final campaign allocation, currency and full period; no unresolved variance.</label>
+                    <button class="btn btn-outline-primary">Record independent review</button>
+                </form>
+            {% endif %}
+        {% endif %}
     {% endif %}
 </section>

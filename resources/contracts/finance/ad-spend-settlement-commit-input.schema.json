@@ -9,7 +9,8 @@
   ],
   "properties": {
     "target_type": {
-      "const": "finance_reservation"
+      "const": "finance_reservation",
+      "type": "string"
     },
     "target_id": {
       "type": "string",

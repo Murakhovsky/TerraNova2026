@@ -46,7 +46,8 @@
         "EUR",
         "UAH",
         "PLN"
-      ]
+      ],
+      "type": "string"
     },
     "reserved_minor": {
       "type": "integer",
@@ -67,16 +68,20 @@
       "type": "string"
     },
     "state": {
-      "const": "SETTLED"
+      "const": "SETTLED",
+      "type": "string"
     },
     "finance_settled": {
-      "const": true
+      "const": true,
+      "type": "boolean"
     },
     "expense_confirmed": {
-      "const": false
+      "const": false,
+      "type": "boolean"
     },
     "payment_confirmed": {
-      "const": false
+      "const": false,
+      "type": "boolean"
     },
     "fresh": {
       "type": "boolean"

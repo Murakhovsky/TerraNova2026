@@ -13,6 +13,7 @@ use DomainException;
  */
 final class FinancePaidSettlementPolicy
 {
+    public function __construct(private readonly ?\Closure $clock=null){}
     public function prepare(string $organizationId,array $claim,array $plan,array $terminal,array $observation,array $document):array
     {
         if($organizationId===''||strlen($organizationId)>190)throw new DomainException('Trusted tenant required.');
@@ -46,7 +47,7 @@ final class FinancePaidSettlementPolicy
         }
         // A terminal journal is not financial proof. The full approved period must
         // have elapsed; no early release while adjustments may still arrive.
-        $now=new DateTimeImmutable('now',new DateTimeZone('UTC'));
+        $now=$this->clock===null?new DateTimeImmutable('now',new DateTimeZone('UTC')):($this->clock)();
         if($now<$end->modify('+1 day'))throw new DomainException('Delivery window is not closed.');
         $scope=['ad_account_ref'=>$plan['account_id'],'external_id'=>$campaign,'grain'=>'campaign',
             'window_start'=>$start->format('Y-m-d'),'window_end'=>$end->format('Y-m-d'),
@@ -79,6 +80,7 @@ final class FinancePaidSettlementPolicy
         }
         if(!is_string($document['reviewer_id']??null)||!preg_match('/^[1-9][0-9]{0,18}$/D',$document['reviewer_id']))
             throw new DomainException('Valid reviewer identity required.');
+        if(!is_string($claim['actor_id']??null)||!preg_match('/^[1-9][0-9]{0,18}$/D',$claim['actor_id']))throw new DomainException('Valid exposure actor required.');
         if(($document['reviewer_id']??null)===($claim['actor_id']??null))
             throw new DomainException('Exposure claimant cannot independently review final document.');
         $amount=$document['settlement_minor']??null;

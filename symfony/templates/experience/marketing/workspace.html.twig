@@ -117,6 +117,7 @@
             {% include 'experience/marketing/paid_funding_workspace.html.twig' with {
                 campaign: c, accounts: accounts, adsets: adsets, plans: paidPlans, selected: selectedPaidPlan,
                 status: paidStatus, funding: paidFunding, spend: paidSpend, error: paidError,
+                settlementPreview: settlementPreview, settlementCandidate: settlementCandidate, settlementReceipt: settlementReceipt, settlementError: settlementError,
                 csrfToken: csrfToken, planningKey: planningKey, query: query
             } only %}
 

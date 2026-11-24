@@ -3747,6 +3747,18 @@ cos_marketing_paid_goal_propose:
   methods: [POST]
   requirements: { id: 'mkt-[a-f0-9]{24}', planId: 'mkpl-[a-f0-9]{24}' }
 
+cos_marketing_paid_settlement_review:
+  path: /marketing/campaigns/{id}/paid-plans/{planId}/settlement-review
+  controller: App\Web\Marketing\MarketingPageController::reviewPaidSettlement
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}', planId: 'mkpl-[a-f0-9]{24}' }
+
+cos_marketing_paid_settlement_goal:
+  path: /marketing/campaigns/{id}/paid-plans/{planId}/settlement-goal
+  controller: App\Web\Marketing\MarketingPageController::proposePaidSettlement
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}', planId: 'mkpl-[a-f0-9]{24}' }
+
 cos_marketing_analyst_plan_propose:
   path: /marketing/campaigns/{id}/analyst-plans
   controller: App\Web\Marketing\MarketingPageController::proposeAnalystPlan

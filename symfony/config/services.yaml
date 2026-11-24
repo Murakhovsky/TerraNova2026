@@ -2866,7 +2866,9 @@ services:
     alias: Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceBudgetRepository
   Domains\Finance\Application\Service\ApprovedFinancePaidExposureService: ~
   Domains\Finance\Automation\Action\FinanceBudgetActionHandler: ~
-  Domains\Finance\Domain\FinancePaidSettlementPolicy: ~
+  Domains\Finance\Domain\FinancePaidSettlementPolicy:
+    arguments:
+      $clock: null
   Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinancePaidSettlementRepository:
     arguments:
       $connection: '@cos.database.pdo'
@@ -2887,6 +2889,8 @@ services:
     alias: Domains\Finance\Application\Service\FinancePaidSettlementReviewService
   Domains\Finance\Application\Service\ApprovedFinancePaidSettlementService: ~
   Domains\Finance\Automation\Action\FinancePaidSettlementHandler: ~
+  App\Persistence\Finance\FinancePaidSettlementGoalProposalService: ~
+  App\Persistence\Finance\FinancePaidSettlementOutcomeProvider: ~
   Domains\Finance\Bootstrap\FinanceDomainModule:
     arguments:
       $settlement: '@Domains\Finance\Automation\Action\FinancePaidSettlementHandler'
@@ -4017,6 +4021,7 @@ services:
         - '@App\Persistence\ProductManagement\ShopifyImportRunOutcomeProvider'
         - '@App\Persistence\Marketing\MarketingAnalystRunOutcomeProvider'
         - '@App\Persistence\Marketing\MarketingPaidGoalOutcomeProvider'
+        - '@App\Persistence\Finance\FinancePaidSettlementOutcomeProvider'
         - '@Domains\Growth\Application\Service\GrowthInboundResponseOutcomeEvidenceProvider'
         - '@App\Persistence\Federation\FederationGrowthRunLinkedOutcomeEvidenceProvider'
         - '@cos.federation.native_origin.research'
