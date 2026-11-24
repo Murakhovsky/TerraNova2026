@@ -86,6 +86,8 @@ final readonly class ProductMutationCommandHandler implements CommandHandlerInte
             'import.preview' => $this->imports->preview(
                 $org,(string)$in['csv'],$actor,$key,
             ),
+            'price.list.update' => $this->prices->updateList($org,(string)$in['list_id'],(string)$in['name'],(int)$in['expected_revision'],$key,$actor,$trace),
+            'price.list.archive' => $this->prices->archiveList($org,(string)$in['list_id'],(int)$in['expected_revision'],$key,$actor,$trace),
             'price.list.create' => $this->prices->createList($org,(string)$in['code'],(string)$in['name'],(string)$in['kind'],(string)$in['currency'],$key,$actor,$trace),
             'price.list.entry.set' => $this->prices->setListPrice($org,(string)$in['list_id'],(string)$in['variant_id'],(string)$in['amount'],(int)$in['expected_revision'],$key,$actor,$trace),
             'price.base.set' => $this->prices->set(
