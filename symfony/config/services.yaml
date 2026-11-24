@@ -1375,6 +1375,8 @@ services:
   Domains\Sales\Application\Contract\SalesWorkspaceScopeInterface:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesWorkspaceScope
 
+  Domains\Sales\Application\Service\SalesWorkspaceScopedReadService: ~
+
   Domains\Sales\Application\Contract\SalesWorkspaceSummaryReadPort:
     alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceReadModel
 

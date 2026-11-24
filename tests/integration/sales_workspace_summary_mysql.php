@@ -41,7 +41,13 @@ try{
         public function enabledOverride(string $organizationId,string $moduleId):?bool{return $this->enabled;}
         public function setEnabled(string $organizationId,string $moduleId,bool $enabled):void{$this->enabled=$enabled;}
     });
-    $gateway=new CanonicalCapabilityGateway($catalog,$active,new FederationCapabilityBindingResolver($catalog,new DomainModuleRegistry([]),$active),[new SalesWorkspaceSummaryAdapter($scope,$read)]);
+    $scoped=new \Domains\Sales\Application\Service\SalesWorkspaceScopedReadService($scope,$read);
+    $gateway=new CanonicalCapabilityGateway($catalog,$active,new FederationCapabilityBindingResolver($catalog,new DomainModuleRegistry([]),$active),[
+        new SalesWorkspaceSummaryAdapter($scope,$read),
+        new \App\Infrastructure\Capability\SalesWorkspaceLeadsListAdapter($scoped),
+        new \App\Infrastructure\Capability\SalesWorkspaceDealsListAdapter($scoped),
+        new \App\Infrastructure\Capability\SalesWorkspaceTimelineAdapter($scoped)
+    ]);
     $actor=static fn(string $tenant,int $user)=>new TenantContext(UserId::fromString((string)$user),OrganizationId::fromString($tenant),OrganizationRole::fromString('manager'),[Permission::fromString(TenantPermissions::ACCESS),Permission::fromString(TenantPermissions::MANAGE)]);
     $manager=$actor($org,$owner);
     $invoke=static fn(array $in)=>$gateway->invoke($manager,'sales.workspace.summary.read',$in,'trusted_read','','summary-test');
@@ -72,5 +78,26 @@ try{
     $operational=new MysqlSalesWorkspaceOperationalReadModel($db,$read);
     $pipelines=$operational->pipelines($org);$p=array_values(array_filter($pipelines,fn($x)=>$x['id']===$pid))[0];
     $s=array_values(array_filter($p['stages'],fn($x)=>$x['id']===$stage))[0];$check($s['deal_count']>=254&&count($s['money_by_currency'])>=3&&$s['pipeline_value']===null,'UI pipeline aggregate incorrect.');
-    echo "Sales S5 scoped currency-separated full-population workspace summary PASS.\n";
+    $page=static fn(string $cap,array $in)=>$gateway->invoke($manager,$cap,$in,'trusted_read','','scope-list');
+    $first=$page('sales.workspace.deals.list',['status'=>'active','limit'=>100,'pipeline_id'=>$pid]);
+    $second=$page('sales.workspace.deals.list',['status'=>'active','limit'=>100,'offset'=>100,'pipeline_id'=>$pid]);
+    $third=$page('sales.workspace.deals.list',['status'=>'active','limit'=>100,'offset'=>200,'pipeline_id'=>$pid]);
+    $check(count($first['items'])===100&&$first['has_more']&&count($second['items'])===100&&$second['has_more']&&count($third['items'])===53&&!$third['has_more'],'Scoped list pagination incorrect.');
+    $check(count(array_unique(array_column([...$first['items'],...$second['items'],...$third['items']],'id')))===253,'Stable ordering lost or duplicated rows.');
+    $check(!str_contains(json_encode($first,JSON_THROW_ON_ERROR),'Private'),'Deal list leaked PII.');
+    $reject(fn()=>$page('sales.workspace.deals.list',['scope'=>'owner','owner_id'=>$other]));
+    $ownedId=$first['items'][0]['id'];
+    $q=$db->prepare('SELECT id FROM tn_client_cases WHERE organization_id=? AND assigned_user_id=? LIMIT 1');$q->execute([$org,$other]);$otherId=(int)$q->fetchColumn();
+    $db->prepare('INSERT INTO tn_client_case_activities(organization_id,client_case_id,activity_type,title,body,completed_at) VALUES (?,?,"note","Private note","Private message",NOW())')->execute([$org,$ownedId]);
+    $timeline=$page('sales.workspace.deal.timeline.read',['deal_id'=>$ownedId]);
+    $check($timeline['found']&&count($timeline['items'])===1&&$timeline['items'][0]['status']==='completed'&&!str_contains(json_encode($timeline,JSON_THROW_ON_ERROR),'Private'),'Timeline redaction/state incorrect.');
+    $check(!$page('sales.workspace.deal.timeline.read',['deal_id'=>$otherId])['found'],'Foreign owner history leaked.');
+    $leadRepo=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlInboundLeadRepository($db);
+    foreach([$owner,$other] as $i=>$u){
+        $lead=$leadRepo->create($org,['person_id'=>null,'client_case_id'=>null,'property_id'=>null,'full_name'=>'Private Lead','phone'=>null,'email'=>'lead-'.$i.'-'.$token.'@example.test','role'=>'buyer','deal_type'=>'consultation','message'=>'Private body','source_page'=>'/ci']);
+        $db->prepare('UPDATE tn_leads SET assigned_user_id=? WHERE organization_id=? AND id=?')->execute([$u,$org,$lead]);
+    }
+    $leads=$page('sales.workspace.leads.list',['status'=>'new']);
+    $check(count($leads['items'])===1&&$leads['items'][0]['owner_id']===$owner&&!str_contains(json_encode($leads,JSON_THROW_ON_ERROR),'Private'),'Scoped lead list mismatch.');
+    echo "Sales S5 scoped exact summary, redacted lists and timeline PASS.\n";
 }finally{$db->rollBack();}

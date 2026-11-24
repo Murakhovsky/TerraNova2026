@@ -159,7 +159,7 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
         return $this->one(
             'SELECT c.*, p.full_name customer, p.phone, p.email, p.telegram, u.full_name owner_name, '
             . 'pl.name pipeline_name, COALESCE(s.code, UPPER(c.stage)) stage_code, COALESCE(s.name, c.stage) stage_name, '
-            . 'COALESCE(c.deal_value, c.budget_max) value, COALESCE(c.probability, s.probability_default) probability '
+            . 'c.deal_value value, COALESCE(c.probability, s.probability_default) probability '
             . 'FROM tn_client_cases c INNER JOIN tn_people p ON p.id = c.person_id AND p.organization_id = c.organization_id '
             . 'LEFT JOIN tn_users u ON u.id = c.assigned_user_id AND u.organization_id = c.organization_id '
             . 'LEFT JOIN sales_pipelines pl ON pl.id = c.pipeline_id AND pl.organization_id = c.organization_id '
@@ -182,11 +182,11 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
                 'detail' => $row['body'],
                 'occurred_at' => $row['created_at'],
                 'correlation_id' => null,
-                'status' => null,
+                'status' => $row['cancelled_at']!==null?'cancelled':($row['completed_at']!==null?'completed':'open'),
             ],
             $this->all(
-                'SELECT id,activity_type,title,body,created_at FROM tn_client_case_activities '
-                . 'WHERE organization_id=:organization_id AND client_case_id=:deal_id ORDER BY created_at DESC LIMIT ' . $limit,
+                'SELECT id,activity_type,title,body,created_at,cancelled_at,completed_at FROM tn_client_case_activities '
+                . 'WHERE organization_id=:organization_id AND client_case_id=:deal_id ORDER BY created_at DESC,id DESC LIMIT ' . $limit,
                 ['organization_id' => $organizationId, 'deal_id' => $dealId],
             ),
         );
@@ -204,7 +204,7 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
             ],
             $this->all(
                 'SELECT id,channel,direction,sender,recipient,body,occurred_at FROM sales_communications '
-                . 'WHERE organization_id=:organization_id AND deal_id=:deal_id ORDER BY occurred_at DESC LIMIT ' . $limit,
+                . 'WHERE organization_id=:organization_id AND deal_id=:deal_id ORDER BY occurred_at DESC,id DESC LIMIT ' . $limit,
                 ['organization_id' => $organizationId, 'deal_id' => $dealId],
             ),
         );
@@ -222,7 +222,7 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
             ],
             $this->all(
                 'SELECT id,type,CAST(payload AS CHAR) payload,occurred_at,correlation_id FROM cos_events '
-                . 'WHERE organization_id=:organization_id AND aggregate_type IN ("deal","client_case") AND aggregate_id=:deal_id ORDER BY occurred_at DESC LIMIT ' . $limit,
+                . 'WHERE organization_id=:organization_id AND aggregate_type IN ("deal","client_case") AND aggregate_id=:deal_id ORDER BY occurred_at DESC,id DESC LIMIT ' . $limit,
                 ['organization_id' => $organizationId, 'deal_id' => (string) $dealId],
             ),
         );
@@ -240,7 +240,7 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
             ],
             $this->all(
                 'SELECT id,type,CAST(parameters AS CHAR) parameters,created_at,correlation_id,status FROM cos_actions '
-                . 'WHERE organization_id=:organization_id AND target_type IN ("deal","client_case") AND target_id=:deal_id ORDER BY created_at DESC LIMIT ' . $limit,
+                . 'WHERE organization_id=:organization_id AND target_type IN ("deal","client_case") AND target_id=:deal_id ORDER BY created_at DESC,id DESC LIMIT ' . $limit,
                 ['organization_id' => $organizationId, 'deal_id' => (string) $dealId],
             ),
         );

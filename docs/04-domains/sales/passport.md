@@ -89,7 +89,10 @@ domain_id: sales
     {
       "id": "workspace",
       "capability_ids": [
-        "sales.workspace.summary.read"
+        "sales.workspace.summary.read",
+        "sales.workspace.leads.list",
+        "sales.workspace.deals.list",
+        "sales.workspace.deal.timeline.read"
       ]
     }
   ],
