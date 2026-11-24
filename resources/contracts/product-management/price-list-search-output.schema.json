@@ -17,7 +17,9 @@
           "code",
           "name",
           "kind",
-          "currency"
+          "currency",
+          "status",
+          "revision"
         ],
         "properties": {
           "list_id": {
@@ -44,6 +46,17 @@
           "currency": {
             "type": "string",
             "pattern": "^[A-Za-z]{3}$"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "archived"
+            ]
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1
           }
         },
         "additionalProperties": false
