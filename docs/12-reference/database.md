@@ -267,6 +267,10 @@ generated: true
 | `product_management` | `app/migrations/20261124_000192_product_management_price_tiers.sql` | `pm_price_list_tiers` |
 | `product_management` | `app/migrations/20261124_000192_product_management_price_tiers.sql` | `pm_price_lists` |
 | `product_management` | `app/migrations/20261124_000192_product_management_price_tiers.sql` | `pm_variants` |
+| `product_management` | `app/migrations/20261124_000193_product_management_stock_counts.sql` | `pm_locations` |
+| `product_management` | `app/migrations/20261124_000193_product_management_stock_counts.sql` | `pm_stock_counts` |
+| `product_management` | `app/migrations/20261124_000193_product_management_stock_counts.sql` | `pm_stock_movements` |
+| `product_management` | `app/migrations/20261124_000193_product_management_stock_counts.sql` | `pm_variants` |
 | `property` | `app/migrations/20260914_000048_web_v041_property_tenancy.sql` | `tn_properties` |
 | `property` | `app/migrations/20260914_000050_property_v022_tenant_boundary.sql` | `tn_properties` |
 | `property` | `app/migrations/20260914_000050_property_v022_tenant_boundary.sql` | `tn_property_activities` |
