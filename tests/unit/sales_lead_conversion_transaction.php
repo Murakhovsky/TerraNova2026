@@ -129,6 +129,9 @@ ensure(!$inbound->attachRequest(10, 42, $user)->ok, 'Reassignment must not silen
 ensure($inbound->attachRequest(201, 42, $user)->code === 'already_attached', 'Same-case attach must be idempotent.');
 ensure(!$inbound->createCaseFromRequest(999, [], $user)->ok, 'Missing lead was accepted.');
 ensure(count($repository->writes) === $writes && count($events) === $eventCount, 'Denied/replayed operation changed state.');
-ensure($repository->lockCalls === 5, 'Every conversion/attachment must lock the lead first.');
+$foreign = new SalesInboundService($readModel, $repository, $eventBus, $transactions, 'org-2');
+ensure(!$foreign->createCaseFromRequest(42, [], $user)->ok, 'Cross-tenant lead conversion was accepted.');
+ensure(count($repository->writes) === $writes && count($events) === $eventCount, 'Foreign conversion changed state.');
+ensure($repository->lockCalls === 6, 'Every conversion/attachment must lock the lead first.');
 foreach ($repository->writes as $write) ensure(($write[1] ?? null) === $organizationId, 'Write lost tenant scope.');
 echo "Sales lead conversion transaction and replay PASS.\n";
