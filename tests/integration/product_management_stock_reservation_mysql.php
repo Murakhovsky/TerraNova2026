@@ -44,6 +44,9 @@ $again=$products->reserveStock($org,$v,$loc,'3.000000',$origin,
 $assert($r['reservation_id']===$again['reservation_id']
     &&$r['status']==='active' &&$r['source_ref']===$origin,
     'same-key replay must return the same reservation receipt');
+$rows=$products->reservations($org,$v,$loc,$r['reservation_id'],1,0);
+$assert(count($rows)===1 && $rows[0]['status']==='active' && $rows[0]['quantity']==='3.000000','Reservation independently readable');
+$assert($products->reservations($other,$v,$loc,$r['reservation_id'])===[],'Reservation tenant scope');
 $balance=$products->balance($org,$v,$loc);
 $assert((string)$balance['on_hand']==='5.000000'
     &&(string)$balance['reserved']==='3.000000'
@@ -68,6 +71,8 @@ $assert((string)$products->balance($org,$v,$loc)['available']==='2.000000',
 
 $rel=$products->releaseStock($org,$r['reservation_id'],'Manual order cancelled',
     'rsv-release-'.$tag,'tester','rsv-e5');
+$releasedRows=$products->reservations($org,$v,$loc,$r['reservation_id'],1,0);
+$assert(count($releasedRows)===1 && $releasedRows[0]['status']==='released' && $releasedRows[0]['release_reason']==='Manual order cancelled','Released reservation audit projection');
 $replay=$products->releaseStock($org,$r['reservation_id'],'Manual order cancelled',
     'rsv-release-'.$tag,'tester','rsv-e5');
 $assert($rel['reservation_id']===$replay['reservation_id']
