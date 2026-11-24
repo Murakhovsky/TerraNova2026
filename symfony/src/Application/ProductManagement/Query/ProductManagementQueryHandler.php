@@ -50,6 +50,10 @@ final readonly class ProductManagementQueryHandler implements QueryHandlerInterf
             ],
             'stock.balance.get' => $this->products->balance($org,(string)$in['variant_id'],(string)$in['location_id']),
             'import.batch.get' => $this->imports->report($org,(string)$in['batch_id']),
+            'price.history.search' => [
+                'items'=>$this->prices->history($org,(string)$in['variant_id'],(string)$in['currency'],(int)($in['limit']??30),(int)($in['offset']??0)),
+                'limit'=>(int)($in['limit']??30),'offset'=>(int)($in['offset']??0),
+            ],
             'price.base.get' => $this->prices->get($org,(string)$in['variant_id'],(string)$in['currency']),
             'sync.status.get' => $this->shopify->status($org,(string)$in['connection_id']),
             default => throw new DomainException('Unknown Product Management query.'),
