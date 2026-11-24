@@ -6,7 +6,7 @@ use App\Application\Sales\Command\UpdateSalesLeadCommand;
 use App\Application\Sales\Command\SalesMutationResult;
 use App\Infrastructure\Capability\SalesLeadQualificationAdapter;
 use App\Persistence\Federation\FederationCapabilityBindingResolver;
-use Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface;
+use Domains\Sales\Application\Contract\SalesProposalLeadReadModelInterface;
 use Kernel\Application\Bus\CommandBusInterface;
 use Kernel\Application\Command\CommandInterface;
 use Kernel\Identity\Model\OrganizationRole;
@@ -38,7 +38,7 @@ $state = new class implements ModuleStateRepositoryInterface {
 };
 $active = new ActiveModuleResolver($modules, $state);
 $resolver = new FederationCapabilityBindingResolver($catalog, new DomainModuleRegistry([]), $active);
-$read = new class implements SalesWorkspaceReadModelInterface {
+$read = new class implements SalesProposalLeadReadModelInterface {
     public array $leadsById = ['tenant-a:7'=>['id'=>'7','organization_id'=>'tenant-a','status'=>'new','client_case_id'=>null,'phone'=>'private']];
     public array $casesById = [];
     public function dashboard(string $organizationId, ?int $ownerId = null): array { return []; }
