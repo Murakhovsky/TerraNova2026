@@ -59,6 +59,30 @@ final readonly class MarketingPaidLaunchPlanService
         return $result;
     }
 
+    /** Internal owner read for approved deployment worker; never a Capability output. */
+    public function deploymentContext(TenantContext $actor,string $id):array
+    {
+        $plan=$this->requirePlan($actor,$id);$this->assertCurrent($actor,$plan);
+        $org=$actor->organizationId()->value();
+        $account=$this->accounts->account($org,$plan['account_id']);
+        $adset=null;$audience=null;$creative=null;
+        foreach($this->planning->adsets($actor,$plan['campaign_id']) as $row){if($row['id']===$plan['adset_id']){$adset=$row;break;}}
+        $c=$adset['content']??[];
+        if(($c['optimization']??null)!=='TRAFFIC'||($c['placements']??null)!==['AUTOMATIC']
+            ||count($c['creatives']??[])!==1||$plan['account_timezone']!=='UTC'
+            ||$plan['period_start']<=gmdate('Y-m-d')){
+            throw new DomainException('P0 provider deployment requires future UTC traffic plan with one creative and automatic placements.');
+        }
+        foreach($this->planning->audiences($actor) as $row){if($row['id']===$c['audience_id']&&$row['revision']===$c['audience_revision']){$audience=$row;break;}}
+        $pin=$c['creatives'][0];
+        foreach($this->planning->creatives($actor,$plan['campaign_id']) as $row){if($row['id']===$pin['creative_id']&&$row['revision']===$pin['revision']){$creative=$row;break;}}
+        if($account===null||$audience===null||$creative===null)throw new DomainException('Deployment source missing.');
+        $this->assertCurrent($actor,$plan);
+        return ['plan'=>self::project($plan),'provider_account_id'=>$account['ad_account_id'],
+            'read_credential_ref'=>$account['credential_ref'],'creative_hash'=>$creative['content_hash'],
+            'countries'=>$audience['content']['target_spec']['market_countries']];
+    }
+
     private function requirePlan(TenantContext $actor,string $id):array
     {
         return $this->plans->get($this->guard($actor),MarketingPlanningPolicy::id($id,'mkpl-'))

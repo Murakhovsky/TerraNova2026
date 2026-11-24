@@ -72,6 +72,20 @@ final readonly class MetaPaidWriteAdapter
         return $row;
     }
 
+    /** Exact bounded child inventory. Pagination means the proof is incomplete. */
+    public function children(string $org,string $account,string $ref,string $parent,string $edge):array
+    {
+        $this->id($parent);
+        if(!in_array($edge,['adsets','ads'],true))throw new DomainException('Invalid child edge.');
+        $row=$this->call($org,$account,$ref,'GET',$parent.'/'.$edge,['fields'=>'id,account_id','limit'=>100]);
+        if(!is_array($row['data']??null)||!array_is_list($row['data'])||isset($row['paging']['next']))throw new DomainException('Incomplete provider child inventory.');
+        $ids=[];foreach($row['data'] as $item){
+            if(!is_array($item)||!is_string($item['id']??null)||(string)($item['account_id']??'')!==substr($account,4))throw new DomainException('Foreign child object.');
+            $ids[]=$this->id($item['id']);
+        }
+        return $ids;
+    }
+
     /** Status-only primitive. No budget increases, deletes or unrelated object updates. */
     public function status(string $org,string $account,string $ref,string $kind,string $id,string $desired):array
     {

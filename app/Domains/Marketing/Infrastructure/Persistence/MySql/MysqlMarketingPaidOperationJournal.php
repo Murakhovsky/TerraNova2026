@@ -8,8 +8,35 @@ use PDO;
 /** Durable per-operation one-shot admission; never authorizes a provider call by itself. */
 final readonly class MysqlMarketingPaidOperationJournal
 {
-    public const OPERATIONS=['CREATE_CAMPAIGN','CREATE_ADSET','CREATE_AD','ACTIVATE_AD','ACTIVATE_ADSET','ACTIVATE_CAMPAIGN','PAUSE_CAMPAIGN'];
+    public const OPERATIONS=['DEPLOY_PAUSED','ACTIVATE','PAUSE','CREATE_CAMPAIGN','CREATE_ADSET','CREATE_AD','ACTIVATE_AD','ACTIVATE_ADSET','ACTIVATE_CAMPAIGN','PAUSE_CAMPAIGN'];
     public function __construct(private PDO $db){}
+    /** Serialize command admission on native plan row, not across a remote call. */
+    public function beginCommand(string $org,string $plan,string $operation,string $action,string $hash):array
+    {
+        if(!in_array($operation,['DEPLOY_PAUSED','ACTIVATE','PAUSE'],true)||$this->db->inTransaction())throw new DomainException('Invalid command admission.');
+        $this->db->beginTransaction();
+        try{
+            $q=$this->db->prepare('SELECT id FROM marketing_paid_launch_plans WHERE organization_id=? AND id=? FOR UPDATE');
+            $q->execute([$org,$plan]);if($q->fetchColumn()!==$plan)throw new DomainException('Native paid plan unavailable.');
+            $existing=$this->get($org,$plan,$operation);
+            if($existing!==null){
+                if($existing['action_id']!==$action||!hash_equals($existing['request_hash'],$hash))throw new DomainException('Command already claimed.');
+                $this->db->commit();return [...$existing,'fresh'=>false];
+            }
+            foreach(['DEPLOY_PAUSED','ACTIVATE','PAUSE'] as $other){
+                $row=$this->get($org,$plan,$other);
+                if($row!==null&&$row['state']!=='CONFIRMED')throw new DomainException('Unresolved provider command; manual reconciliation required.');
+            }
+            if($operation==='ACTIVATE'&&($this->get($org,$plan,'DEPLOY_PAUSED')['state']??null)!=='CONFIRMED')throw new DomainException('Verified paused deployment required.');
+            if($operation==='ACTIVATE'&&$this->get($org,$plan,'PAUSE')!==null)throw new DomainException('Paused plan cannot be reactivated.');
+            if($operation==='PAUSE'&&($this->get($org,$plan,'DEPLOY_PAUSED')['state']??null)!=='CONFIRMED')throw new DomainException('Known campaign binding required.');
+            $q=$this->db->prepare('INSERT INTO marketing_paid_operation_journal (organization_id,plan_id,operation,action_id,request_hash) VALUES (?,?,?,?,?)');
+            $q->execute([$org,$plan,$operation,$action,$hash]);
+            $row=$this->get($org,$plan,$operation)??throw new DomainException('Command receipt missing.');
+            $this->db->commit();return [...$row,'fresh'=>true];
+        }catch(\Throwable $e){if($this->db->inTransaction())$this->db->rollBack();throw $e;}
+    }
+
     public function begin(string $org,string $plan,string $operation,string $action,string $hash):array
     {
         if(!in_array($operation,self::OPERATIONS,true)||!preg_match('/^mkpl-[a-f0-9]{24}$/D',$plan)

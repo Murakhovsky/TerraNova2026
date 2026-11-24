@@ -28,6 +28,11 @@ $manifest = [
         ],
         'cross_domain_contracts' => [
             [
+                'contract' => 'Domains\\Marketing\\Application\\Contract\\MarketingPaidExposureClaimPort',
+                'role' => 'requires', 'counterpart' => 'finance', 'kind' => 'synchronous_port',
+                'purpose' => 'Canonical activation worker requests one-shot Finance-owned exposure claim; no release or spend settlement.',
+            ],
+            [
                 'contract' => 'Domains\\Marketing\\Application\\Contract\\MarketingFinanceFundingReadPort',
                 'role' => 'requires', 'counterpart' => 'finance', 'kind' => 'synchronous_port',
                 'purpose' => 'Observe Finance-owned envelope and reservation against immutable Marketing funding candidate; no financial mutation or execution authority.',
@@ -203,5 +208,17 @@ $contracts[] = [
     'documentation'=>'docs/04-domains/marketing/overview.md',
 ];
 
+foreach(['create_paused','activate','pause'] as $operation){
+    $id='marketing.paid.meta.campaign.'.$operation;
+    $schema='marketing/meta-campaign-'.str_replace('_','-',$operation);
+    $contracts[]=[
+        'id'=>$id,'version'=>'1.0.0','owner_domain'=>'marketing','kind'=>'command',
+        'input_schema'=>'resources/contracts/'.$schema.'-input.schema.json','output_schema'=>'resources/contracts/'.$schema.'-output.schema.json',
+        'execution_binding'=>'action:'.$id,'async'=>true,'side_effect_level'=>'external','permission'=>'cos.tenant.manage',
+        'approval_policy'=>'required','idempotency'=>'required','timeout_policy'=>['seconds'=>600],'retry_policy'=>['max_attempts'=>1],
+        'failure_contract'=>'Provider operation may be uncertain; hold exposure, inspect native journal and reconcile independently; no blind retry.',
+        'lifecycle'=>'experimental','tests'=>['tests/unit/marketing_m2_planning.php'],'documentation'=>'docs/04-domains/marketing/overview.md'
+    ];
+}
 $manifest['contributions']['capability_contracts'] = $contracts;
 return $manifest;

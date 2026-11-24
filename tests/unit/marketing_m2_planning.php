@@ -97,7 +97,7 @@ foreach($manifest['contributions']['capability_contracts'] as $raw){
     $c=CapabilityContract::fromArray($raw);
     $contracts[$c->id]=$c;
 }
-$expect(count($contracts)===28,'Marketing M0/M1 seven, six M2a and two Product Queries expected.');
+$expect(count($contracts)===31,'Marketing M0/M1 seven, six M2a and two Product Queries expected.');
 $validator=new CapabilityJsonInputValidator();
 $validator->validate($contracts['marketing.audience.save'],['name'=>'Broad local market','target_spec'=>$target]);
 $validator->validate($contracts['marketing.adset.save'],['campaign_id'=>'mkt-'.str_repeat('a',24),'campaign_revision'=>1,...$ad]);
@@ -276,5 +276,13 @@ $snapshot=['ad_account_ref'=>$fixturePlan['account_id'],'external_id'=>'100','gr
 $comparison=$lifecycle::spendComparison($fixturePlan,'100',$snapshot);
 $expect($comparison['status']==='SOURCE_EXCEEDS_PLANNED_CAP'&&!$comparison['finance_settled'],'Exact source overage not detected.');
 $blocked(static fn()=> $lifecycle::spendComparison($fixturePlan,'100',[...$snapshot,'timezone'=>'Europe/Kyiv']),'Mixed timezone source accepted.');
+foreach(\Domains\Marketing\Automation\Action\MarketingPaidLifecycleHandler::TYPES as $actionType){
+    $contract=$contracts[$actionType];
+    $expect($contract->approvalPolicy==='required'&&$contract->sideEffectLevel==='external'&&$contract->retryPolicy['max_attempts']===1,
+        'Paid external action lacks mandatory controls.');
+}
+$emptyProfiles=new \Domains\Marketing\Infrastructure\Meta\MetaPaidExecutionProfiles();
+$blocked(static fn()=> $emptyProfiles->accepted('tenant-a',['id'=>'mkpl-'.str_repeat('a',24)],str_repeat('b',64),true),
+    'Default deployment enabled.');
 echo "Marketing M2 typed planning policy, provenance, CSRF and boundary PASS\n";
 

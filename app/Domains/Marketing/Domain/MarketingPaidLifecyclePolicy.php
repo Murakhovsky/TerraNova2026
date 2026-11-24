@@ -23,10 +23,10 @@ final class MarketingPaidLifecyclePolicy
     }
 
     public static function assertPausedHierarchy(array $plan,string $account,string $campaignId,string $adsetId,string $adId,
-        string $creativeId,array $campaign,array $adset,array $ad):void
+        string $creativeId,array $campaign,array $adset,array $ad,bool $childrenActive=false):void
     {
-        foreach([[$campaign,$campaignId],[$adset,$adsetId],[$ad,$adId]] as [$row,$id]){
-            if(($row['id']??null)!==$id||($row['account_id']??null)!==substr($account,4)||($row['configured_status']??null)!=='PAUSED')
+        foreach([[$campaign,$campaignId,'PAUSED'],[$adset,$adsetId,$childrenActive?'ACTIVE':'PAUSED'],[$ad,$adId,$childrenActive?'ACTIVE':'PAUSED']] as [$row,$id,$status]){
+            if(($row['id']??null)!==$id||($row['account_id']??null)!==substr($account,4)||($row['configured_status']??null)!==$status)
                 throw new DomainException('Hierarchy is not verified paused in exact account.');
         }
         $utc=new \DateTimeZone('UTC');

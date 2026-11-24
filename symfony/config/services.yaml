@@ -1,5 +1,7 @@
 parameters:
   env(COS_MARKETING_HERMES_PROFILES_JSON): '{}'
+  env(COS_MARKETING_META_EXECUTION_PROFILES_JSON): '{}'
+  env(COS_MARKETING_META_ACTIVATION_ENABLED): '0'
   env(COS_AI_CAPABILITY_INTENT_SECRET): ''
   env(COS_CRON_CAPABILITY_INTENT_SECRET): ''
   env(COS_AUTOMATION_TENANT_ORGANIZATION): ''
@@ -2742,6 +2744,21 @@ services:
   Domains\Marketing\Application\Contract\MarketingFinanceFundingReadPort:
     alias: App\Infrastructure\Marketing\FinanceFundingReadAdapter
   Domains\Marketing\Application\Service\MarketingPaidLaunchPlanService: ~
+  Domains\Marketing\Application\Contract\MarketingPaidExposureClaimPort:
+    alias: App\Infrastructure\Marketing\FinancePaidExposureClaimAdapter
+  Domains\Marketing\Infrastructure\Meta\MetaPaidExecutionProfiles:
+    arguments:
+      $profilesJson: '%env(COS_MARKETING_META_EXECUTION_PROFILES_JSON)%'
+      $activationEnabled: '%env(bool:COS_MARKETING_META_ACTIVATION_ENABLED)%'
+  Domains\Marketing\Infrastructure\Meta\CurlMetaWriteTransport: ~
+  Domains\Marketing\Infrastructure\Meta\MetaWriteTransport:
+    alias: Domains\Marketing\Infrastructure\Meta\CurlMetaWriteTransport
+  Domains\Marketing\Infrastructure\Meta\MetaPaidWriteAdapter: ~
+  Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidOperationJournal:
+    arguments:
+      $db: '@cos.database.pdo'
+  Domains\Marketing\Infrastructure\Meta\ApprovedMetaPaidLifecycle: ~
+  Domains\Marketing\Automation\Action\MarketingPaidLifecycleHandler: ~
 
   marketingNavigationContributor:
     alias: App\Web\Experience\Extension\Provider\MarketingWebProvider

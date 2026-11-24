@@ -69,7 +69,10 @@ domain_id: marketing
       "capability_ids": [
         "marketing.paid.launch_plan.create",
         "marketing.paid.launch_plan.get",
-        "marketing.paid.funding.check"
+        "marketing.paid.funding.check",
+        "marketing.paid.meta.campaign.create_paused",
+        "marketing.paid.meta.campaign.activate",
+        "marketing.paid.meta.campaign.pause"
       ]
     },
     {
