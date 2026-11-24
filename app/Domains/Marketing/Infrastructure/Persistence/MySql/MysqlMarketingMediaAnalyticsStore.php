@@ -59,6 +59,7 @@ final readonly class MysqlMarketingMediaAnalyticsStore implements MarketingMedia
                 $evidence[]=['external_id'=>$raw[$field],...MarketingAttributionPolicy::media($r),'reach'=>MarketingAttributionPolicy::count($r['metrics']['reach']??null),
                     'source_hash'=>$r['source_hash'],'attribution_hash'=>$r['attribution_hash'],'provider_actions'=>$raw['actions']??[],'provider_action_values'=>$raw['action_values']??[]];
             }
+            MarketingMediaAnalyticsPolicy::summarize($evidence);
             $id='mkar-'.bin2hex(random_bytes(12));$facts=['currency'=>$account['currency'],'timezone'=>$account['timezone'],'attribution_hash'=>$attribution,'rows'=>$evidence];
             $q=$this->connection->prepare('INSERT INTO marketing_media_analytics_runs
                 (organization_id,id,account_id,account_revision,grain,window_start,window_end,idempotency_key,request_hash,actor_id,evidence_json)
