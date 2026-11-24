@@ -35,7 +35,7 @@ try{
     for($i=0;$i<251;$i++)$insert($i,$owner,'10.01','USD');
     $insert(251,$owner,'20.02','EUR');$insert(252,$owner,null,'UAH');$insert(253,$owner,'100.00','USD','closed');$insert(254,$other,'333.00','UAH');
     $read=new MysqlSalesWorkspaceReadModel($db);$scope=new MysqlSalesWorkspaceScope($db,new MysqlSalesAccessControl($db));
-    $modules=new ModuleCatalog([ModuleDefinition::fromArray(require $root.'/app/Domains/Sales/module.php')]);$catalog=new CanonicalCapabilityCatalog($modules);
+    $modules=new ModuleCatalog([ModuleDefinition::fromArray(require $root.'/app/Domains/Sales/module.php'),ModuleDefinition::fromArray(require $root.'/app/Domains/ProductManagement/module.php')]);$catalog=new CanonicalCapabilityCatalog($modules);
     $active=new ActiveModuleResolver($modules,new class implements ModuleStateRepositoryInterface{
         public bool $enabled=true;
         public function enabledOverride(string $organizationId,string $moduleId):?bool{return $this->enabled;}
@@ -52,11 +52,58 @@ try{
     $teamSummary=new \Domains\Sales\Application\Service\SalesTeamSummaryService(
         new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesTeamScope($db,$scope,new MysqlSalesAccessControl($db)),$read);
     $orderRepo=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository($db);
-    $orderService=new \Domains\Sales\Application\Service\SalesOrderService($orderRepo,
-        new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesMutationReceiptRepository($db),$guard,$entityScope,
-        new class implements \Domains\Sales\Application\Contract\SalesOfferReferencePort {
-            public function resolve(string $org,array $line):?array{return null;}
-        });
+    $references=new class implements \Domains\Sales\Application\Contract\SalesOfferReferencePort {
+        public function resolve(string $org,array $line):?array{
+            return ($line['product_id']??null)===str_repeat('a',32)&&($line['variant_id']??null)===str_repeat('b',32)&&($line['sku']??null)==='LAMP-1'
+                ?['product_id'=>str_repeat('a',32),'variant_id'=>str_repeat('b',32),'sku'=>'LAMP-1','name'=>'Lamp']:null;
+        }
+    };
+    $receipts=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesMutationReceiptRepository($db);
+    $orderService=new \Domains\Sales\Application\Service\SalesOrderService($orderRepo,$receipts,$guard,$entityScope,$references);
+    // Actual Shopify source + HMAC inbox + PDO, with a provider-only mock transport.
+    $shop='order-'.$token.'.myshopify.com';
+    putenv('SHOPIFY_SHOP_DOMAIN='.$shop);putenv('SHOPIFY_CLIENT_ID=order-fixture');putenv('SHOPIFY_CLIENT_SECRET=order-fixture-secret');
+    $shopStore=new \Domains\ProductManagement\Infrastructure\Shopify\ShopifyObservationStore($db);
+    $conn=$shopStore->provision($org,$shop,'shopify_env_primary');
+    $shopStore->map($org,$conn,'product','gid://shopify/Product/41',str_repeat('a',32));
+    $shopStore->map($org,$conn,'variant','gid://shopify/ProductVariant/42',str_repeat('b',32));
+    $http=new class implements \Domains\ProductManagement\Infrastructure\Shopify\ShopifyHttpTransportInterface {
+        public int $reads=0;public string $updated='2026-11-24T10:00:00Z';public string $financial='PAID';
+        public string $current='120.00';public bool $edited=false;public bool $fail=false;public bool $unmapped=false;public bool $truncated=false;
+        public function post(string $url,array $headers,string $body):array
+        {
+            if(str_ends_with($url,'/oauth/access_token'))return ['status'=>200,'body'=>'{"access_token":"fake-order-token"}'];
+            if(!str_ends_with($url,'/admin/api/2026-10/graphql.json')||($headers['X-Shopify-Access-Token']??null)!=='fake-order-token')throw new RuntimeException('Wrong provider boundary.');
+            $request=json_decode($body,true,512,JSON_THROW_ON_ERROR);
+            if(!str_starts_with($request['query'],'query ')||str_contains($request['query'],'mutation'))throw new RuntimeException('Unexpected Shopify write.');
+            ++$this->reads;
+            if($this->fail)return ['status'=>403,'body'=>'{}'];
+            $money=static fn(string $amount)=>['shopMoney'=>['amount'=>$amount,'currencyCode'=>'EUR']];
+            $data=['currentAppInstallation'=>['accessScopes'=>[['handle'=>'read_orders']]]];
+            if(str_contains($request['query'],'COSCommerceOrderPage')){
+                $data['orders']=['nodes'=>[['id'=>'gid://shopify/Order/12345']],'pageInfo'=>['hasNextPage'=>false,'endCursor'=>null]];
+            }else{
+                $data['order']=['id'=>$request['variables']['id'],'createdAt'=>'2026-11-24T09:00:00Z','updatedAt'=>$this->updated,'cancelledAt'=>null,'test'=>false,
+                    'edited'=>$this->edited,'taxesIncluded'=>true,'displayFinancialStatus'=>$this->financial,'displayFulfillmentStatus'=>'UNFULFILLED',
+                    'originalTotalPriceSet'=>$money('120.00'),'totalPriceSet'=>$money('120.00'),'currentTotalPriceSet'=>$money($this->current),
+                    'totalDiscountsSet'=>$money('0.00'),'totalTaxSet'=>$money('20.00'),'totalShippingPriceSet'=>$money('0.00'),
+                    'lineItems'=>['nodes'=>[['id'=>'gid://shopify/LineItem/77','quantity'=>1,'sku'=>'LAMP-1','product'=>['id'=>'gid://shopify/Product/41'],
+                        'variant'=>['id'=>'gid://shopify/ProductVariant/'.($this->unmapped?'99':'42')],'originalUnitPriceSet'=>$money('120.00')]],
+                        'pageInfo'=>['hasNextPage'=>$this->truncated,'endCursor'=>null]]];
+            }
+            return ['status'=>200,'body'=>json_encode(['data'=>$data],JSON_THROW_ON_ERROR)];
+        }
+    };
+    $productRefs=new class implements \Domains\ProductManagement\Application\Contract\ProductCommercialReferencePort {
+        public function quoteReference(string $org,string $productId,string $variantId):?array{
+            return $productId===str_repeat('a',32)&&$variantId===str_repeat('b',32)?['product_id'=>$productId,'variant_id'=>$variantId,'sku'=>'LAMP-1','name'=>'Lamp']:null;
+        }
+    };
+    $source=new \Domains\ProductManagement\Infrastructure\Shopify\ShopifyCommerceOrderSource($shopStore,
+        new \Domains\ProductManagement\Infrastructure\Shopify\ShopifyReadClient($http),
+        new \Domains\ProductManagement\Infrastructure\Shopify\ShopifyClientCredentials($http),$active,$productRefs);
+    $reconcile=new \Domains\Sales\Application\Service\SalesOrderReconciliationService($source,
+        new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderSourceRepository($db),$orderRepo,$receipts,$guard,$orderService,$references);
     $gateway=new CanonicalCapabilityGateway($catalog,$active,new FederationCapabilityBindingResolver($catalog,new DomainModuleRegistry([]),$active),[
         new SalesWorkspaceSummaryAdapter($scope,$read),
         new \App\Infrastructure\Capability\SalesWorkspaceLeadsListAdapter($scoped),
@@ -70,6 +117,9 @@ try{
         new \App\Infrastructure\Capability\SalesWorkspaceTeamSummaryAdapter($teamSummary),
         new \App\Infrastructure\Capability\SalesOrderCreateAdapter($orderService),
         new \App\Infrastructure\Capability\SalesOrderReadAdapter($orderService),
+        new \App\Infrastructure\Capability\SalesOrderSourceReconcileAdapter($reconcile),
+        new \App\Infrastructure\Capability\SalesOrderSourcePageAdapter($reconcile),
+        new \App\Infrastructure\Capability\SalesOrderSourcePendingAdapter($reconcile),
         new \App\Infrastructure\Capability\SalesDealStateReadAdapter(new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlDealRepository($db)),
         new \App\Infrastructure\Capability\SalesInboundRequestReadAdapter($read)
     ],[$policy]);
@@ -295,6 +345,52 @@ try{
     $fact=json_decode($events[0],true,512,JSON_THROW_ON_ERROR);
     $check(json_decode(json_encode($orderRepo->placement($org,$orderId),JSON_THROW_ON_ERROR),true)===$fact&&$orderRepo->placement('foreign-'.$token,$orderId)===null,'Cross-domain placement evidence scope failed.');
     $check(count($events)===1&&$fact['event_type']==='sales.commerce.order.placed'&&$fact['realized_revenue']===null&&$fact['financial_evidence_reference']===null&&$fact['attribution_status']==='unresolved'&&$fact['attribution_observations']['utm_campaign']==='test-campaign','Placement fabricated attribution or financial fact.');
+    $sourceInput=['channel'=>'shopify','connection_id'=>$conn,'external_order_id'=>'gid://shopify/Order/12345'];
+    $runSource=static fn(array $input,string $key)=>$gateway->invoke($manager,'sales.order.source.reconcile',$input,'human_api',$key,'source-test');
+    $reject(fn()=>$runSource($sourceInput,'denied-'.$token));
+    $check($http->reads===0,'Unauthorized source operator contacted provider.');
+    $grant->execute([$org,$owner,'sales.admin.integrations.manage',(string)$owner]);
+    $readSource=static fn(string $cap,array $input)=>$gateway->invoke($manager,$cap,$input,'trusted_read','','source-test');
+    $page=$readSource('sales.order.source.page.read',['channel'=>'shopify','connection_id'=>$conn]);
+    $check($page===['order_ids'=>['gid://shopify/Order/12345'],'next_cursor'=>null],'Shopify backfill page mismatch.');
+    $delivery='delivery-'.$token;$raw='{"id":12345,"email":"must-not-store@example.test"}';
+    $signature=base64_encode(hash_hmac('sha256',$raw,'order-fixture-secret',true));
+    $gid=\Domains\ProductManagement\Infrastructure\Shopify\ShopifyOrderWebhookEvidence::extractVerified($raw,$signature,'order-fixture-secret','orders/paid');
+    $check($shopStore->recordVerifiedDelivery($org,$conn,$delivery,'orders/paid',$raw,$gid),'Verified webhook missing.');
+    $pendingInput=['channel'=>'shopify','connection_id'=>$conn];
+    $check(count($readSource('sales.order.source.pending.read',$pendingInput)['deliveries'])===1,'Verified pointer not visible.');
+    $import=$runSource([...$sourceInput,'delivery_id'=>$delivery],'import-'.$token);
+    $externalOrderId=$import['order_id'];$externalOrder=$orderService->read($org,$owner,$externalOrderId)['order'];
+    $check($import['outcome']==='imported'&&$externalOrder['channel']==='shopify'&&$externalOrder['total']==='120.00'&&$externalOrder['tax_included']===true&&$externalOrder['status']==='placed'&&$externalOrder['revision']===1,'Tax inclusive Shopify order failed.');
+    $check($orderRepo->placement($org,$externalOrderId)['realized_revenue']===null&&$orderRepo->placement($org,$externalOrderId)['provenance']==='shopify_admin_read','External paid status treated as Finance evidence.');
+    $check($readSource('sales.order.source.pending.read',$pendingInput)['deliveries']===[],'Successful pointer acknowledgement failed.');
+    $reads=$http->reads;
+    $replay=$runSource([...$sourceInput,'delivery_id'=>$delivery],'import-'.$token);
+    $check($replay['replayed']&&$replay['order_id']===$externalOrderId&&$http->reads===$reads,'Provider request replay was not idempotent.');
+    $reject(fn()=>$runSource([...$sourceInput,'external_order_id'=>'gid://shopify/Order/12346','delivery_id'=>$delivery],'import-'.$token));
+    $same=$runSource($sourceInput,'same-'.$token);
+    $check($same['outcome']==='unchanged'&&$same['order_id']===$externalOrderId,'Source identity duplicated across keys.');
+    $http->financial='REFUNDED';$http->current='0.00';$http->updated='2026-11-24T11:00:00Z';
+    $observed=$runSource($sourceInput,'newer-'.$token);
+    $check($observed['outcome']==='observed'&&$orderService->read($org,$owner,$externalOrderId)['order']===$externalOrder,'Provider update overwrote canonical terms.');
+    $http->updated='2026-11-24T10:00:00Z';$http->financial='PAID';$http->current='120.00';
+    $check($runSource($sourceInput,'older-'.$token)['outcome']==='stale','Out-of-order provider revision not fenced.');
+    $http->updated='2026-11-24T11:00:00Z';
+    $check($runSource($sourceInput,'conflict-'.$token)['outcome']==='conflict','Same revision conflicting provider snapshot accepted.');
+    $http->updated='2026-11-24T12:00:00Z';$http->unmapped=true;
+    $newInput=[...$sourceInput,'external_order_id'=>'gid://shopify/Order/12346'];
+    $blocked=$runSource($newInput,'blocked-'.$token);
+    $check($blocked['outcome']==='blocked'&&$blocked['order_id']===null,'Unmapped order silently imported.');
+    $http->unmapped=false;
+    $check($runSource($newInput,'retry-'.$token)['outcome']==='imported','Mapping repair did not permit new supervised import.');
+    $http->fail=true;
+    $reject(fn()=>$runSource($sourceInput,'outage-'.$token));
+    $http->fail=false;
+    $check($runSource($sourceInput,'outage-'.$token)['outcome']==='observed','Failed provider call consumed retry receipt.');
+    $reject(fn()=>$runSource([...$sourceInput,'connection_id'=>str_repeat('e',32)],'foreign-shop-'.$token));
+    $reject(fn()=>$gateway->invoke($manager,'sales.order.source.reconcile',$sourceInput,'trusted_read','automated-'.$token,'source-test'));
+    echo "Sales O2 Shopify HMAC pointer, mock GraphQL, exact placement, replay and revision reconciliation PASS.\n";
+
     $check($writes->quickUpdateOpportunity($ownedId,['priority'=>'high'],$owner,'p4-own')->ok,'Guarded own write failed.');
     $check($read->deal($org,$ownedId)['priority']==='high','Guarded write did not change native state.');
     $shared=$writes->updateOpportunity($ownedId,['full_name'=>'Forbidden shared contact edit'],$owner);
