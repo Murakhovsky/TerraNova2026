@@ -68,7 +68,8 @@ $bus = new class($read) implements CommandBusInterface {
         if (!$replayed && !$this->skipWrite) {
             $this->mutations++;
             $this->read->leadsById[$key] = ['id'=>'51','organization_id'=>$org,'status'=>'new','assigned_user_id'=>31,
-                'full_name'=>$command->input['full_name'],'email'=>$command->input['email'],'phone'=>null];
+                'full_name'=>$command->input['full_name'],'email'=>$command->input['email'],'phone'=>null,
+                'role'=>'buyer','deal_type'=>'consultation','request_intent'=>'general_contact','source_page'=>'manager-api','property_id'=>null,'client_case_id'=>null];
         }
         return SalesMutationResult::success($replayed?'duplicate':'created',['lead_id'=>$this->wrongReceipt?52:51,'private'=>'hidden']);
     }
@@ -94,6 +95,7 @@ $reject(fn()=>$call(['full_name'=>'Name','email'=>'invalid']));
 $reject(fn()=>$call(['full_name'=>' ','email'=>'example@example.test']));
 $reject(fn()=>$call([...$input,'tenant_id'=>'tenant-b']));
 $reject(fn()=>$call([...$input,'owner_id'=>99]));
+$reject(fn()=>$call([...$input,'source'=>'external-crm']));
 $check(count($bus->calls)===0,'Denied requests reached writer.');
 $bus->failure=true;
 $reject(fn()=>$call($input));

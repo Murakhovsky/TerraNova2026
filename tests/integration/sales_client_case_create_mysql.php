@@ -104,6 +104,9 @@ try {
     $check($new===['lead_id'=>$newId,'replayed'=>false] && $newId>0,'Intake failed.');
     $check($gateway->invoke($manager,'sales.lead.create',array_reverse($intake,true),'human_ui',$intakeKey,'trace-replay')===[...$new,'replayed'=>true],'Equivalent intake did not replay.');
     $reject(fn()=>$gateway->invoke($manager,'sales.lead.create',[...$intake,'full_name'=>'Changed'],'human_api',$intakeKey,'trace-conflict'));
+    $reject(fn()=>$gateway->invoke($manager,'sales.lead.create',[...$intake,'source'=>'fake-crm'],'human_api','other-key','trace'));
+    $reject(fn()=>$gateway->invoke($manager,'sales.lead.create',[...$intake,'property_id'=>PHP_INT_MAX],'human_api','other-key','trace'));
+    $reject(fn()=>$gateway->invoke($actor('foreign-'.$token),'sales.lead.create',$intake,'human_api',$intakeKey,'trace-foreign'));
     $reject(fn()=>$gateway->invoke($manager,'sales.lead.create',$intake,'ai','other-key','trace'));
     $reject(fn()=>$gateway->invoke($actor($org,'viewer'),'sales.lead.create',$intake,'human_api','other-key','trace'));
     $q=$db->prepare('SELECT COUNT(*) FROM tn_leads WHERE organization_id=? AND email=?');

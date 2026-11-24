@@ -34,7 +34,9 @@ final readonly class SalesLeadCreateAdapter implements CapabilityInvocationAdapt
             || (trim((string)($input['phone'] ?? '')) === '' && trim((string)($input['email'] ?? '')) === '')) {
             throw new DomainException('Lead requires a name and at least one contact.');
         }
-        if (isset($input['email']) && filter_var(trim($input['email']),FILTER_VALIDATE_EMAIL) === false) {
+        $phone = trim((string)($input['phone'] ?? ''));
+        $email = trim((string)($input['email'] ?? ''));
+        if (isset($input['email']) && filter_var($email,FILTER_VALIDATE_EMAIL) === false) {
             throw new DomainException('Invalid lead email.');
         }
         $org = $actor->organizationId()->value();
@@ -55,8 +57,16 @@ final readonly class SalesLeadCreateAdapter implements CapabilityInvocationAdapt
             && (($row['status'] ?? null) !== 'new'
                 || ($row['full_name'] ?? null) !== trim($input['full_name'])
                 || !in_array($row['assigned_user_id'] ?? null,[(int)$user,$user],true)
-                || ($row['phone'] ?? null) !== (trim((string)($input['phone'] ?? '')) ?: null)
-                || ($row['email'] ?? null) !== (trim((string)($input['email'] ?? '')) ?: null))) {
+                || ($row['phone'] ?? null) !== ($phone !== '' ? $phone : null)
+                || ($row['email'] ?? null) !== ($email !== '' ? $email : null)
+                || ($row['role'] ?? null) !== ($input['role'] ?? 'buyer')
+                || ($row['deal_type'] ?? null) !== ($input['deal_type'] ?? 'consultation')
+                || ($row['request_intent'] ?? null) !== ($input['request_intent'] ?? 'general_contact')
+                || ($row['source_page'] ?? null) !== 'manager-api'
+                || (isset($input['property_id'])
+                    ? !in_array($row['property_id'] ?? null,[$input['property_id'],(string)$input['property_id']],true)
+                    : ($row['property_id'] ?? null) !== null)
+                || !empty($row['client_case_id']))) {
             throw new DomainException('Created Sales lead differs from requested native state.');
         }
         return ['lead_id'=>$id,'replayed'=>$result->code==='duplicate'];
