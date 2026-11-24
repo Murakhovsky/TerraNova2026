@@ -111,7 +111,7 @@ final readonly class SalesWorkspaceAccessSubscriber implements EventSubscriberIn
             }
             // These commands now enter the native transactional write facade.
             if ($mutation&&($name==='SalesWriteController'
-                ||($name==='ClientCaseMutationController'&&!in_array($method,['create','update'],true))
+                ||$name==='ClientCaseMutationController'
                 ||$name==='SalesCommunicationController'
                 ||($name==='SalesFrontendController'&&in_array($method,['quickUpdate','owner','meeting','completeActivity','rescheduleActivity','leadFollowup'],true)))) return;
             if ($mutation) {
