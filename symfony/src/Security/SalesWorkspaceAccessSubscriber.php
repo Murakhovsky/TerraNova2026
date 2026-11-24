@@ -103,7 +103,8 @@ final readonly class SalesWorkspaceAccessSubscriber implements EventSubscriberIn
                 }
                 return;
             }
-            if ($name==='SalesFrontendController'&&in_array($method,['approve','reject','execute','dismiss'],true)) {
+            if ($name==='SalesFrontendController'&&in_array($method,['approve','reject'],true)) return;
+            if ($name==='SalesFrontendController'&&in_array($method,['execute','dismiss'],true)) {
                 // Approval scope and governed execution must be proven by S6, not by a generic manager role.
                 throw new DomainException('Legacy action execution requires governed workflow.');
             }
