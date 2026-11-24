@@ -61,8 +61,11 @@ expectDomainSkeleton(in_array('app/migrations/20261119_000153_finance_budget_f1.
     $financeDefinition->contributions->migrationFiles,true),'Finance F1 migration must be explicitly declared.');
 expectDomainSkeleton($financeDefinition->manifest->enabledByDefault === false,
     'Finance F1 must remain disabled until independent acceptance.');
-expectDomainSkeleton(count($financeDefinition->contributions->capabilityContracts)===8,
-    'Finance F1 must expose eight canonical typed capabilities, including reconciliation read.');
+$financeIds=array_column((require dirname(__DIR__,2).'/app/Domains/Finance/module.php')['contributions']['capability_contracts'],'id');
+$financeF1=array_filter($financeIds,static fn(string $id):bool=>str_starts_with($id,'finance.budget.')||$id==='finance.ad_spend.reconciliation.status');
+expectDomainSkeleton(count($financeF1)===8,'Finance F1 retains eight canonical typed capabilities, including reconciliation read.');
+expectDomainSkeleton(count($financeIds)===9 && in_array('finance.sales.commercial_evidence.read',$financeIds,true),
+    'Finance additionally exposes accepted Sales evidence read-only.');
 
 $serviceDefinition = ModuleDefinition::fromArray(require dirname(__DIR__, 2) . '/app/Domains/Service/module.php');
 expectDomainSkeleton($serviceDefinition->contributions->runtimeModuleService === 'serviceDomainModule', 'Service V0.2 must expose its runtime module.');
