@@ -98,6 +98,25 @@ final readonly class PricingService
         }
     }
 
+    /** @return list<array<string,mixed>> */
+    public function history(string $org,string $variantId,string $currency,int $limit=30,int $offset=0):array
+    {
+        $currency=$this->currency($currency);
+        if ($org===''||strlen($org)>40||!preg_match('/^[a-f0-9]{32}$/D',$variantId)
+            ||$limit<1||$limit>100||$offset<0||$offset>10000000)
+            throw new DomainException('Invalid price history scope or pagination.');
+        $stmt=$this->connection->prepare('SELECT price_event_id,old_amount,new_amount,actor_ref,created_at FROM pm_base_price_history
+            WHERE organization_id=:org AND variant_id=:variant AND currency=:currency
+            ORDER BY created_at DESC,price_event_id DESC LIMIT :lim OFFSET :off');
+        $stmt->bindValue(':org',$org);
+        $stmt->bindValue(':variant',$variantId);
+        $stmt->bindValue(':currency',$currency);
+        $stmt->bindValue(':lim',$limit,PDO::PARAM_INT);
+        $stmt->bindValue(':off',$offset,PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     private function currency(string $currency): string
     {
         $currency=strtoupper(trim($currency));
