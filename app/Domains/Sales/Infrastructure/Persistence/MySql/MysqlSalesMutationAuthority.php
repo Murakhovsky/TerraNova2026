@@ -49,6 +49,15 @@ final readonly class MysqlSalesMutationAuthority implements SalesMutationAuthori
             throw new DomainException('Sales assignment denied.');
     }
 
+    public function propertyMatchDeal(string $org,int $match):int
+    {
+        $this->transaction();
+        $q=$this->connection->prepare('SELECT client_case_id FROM tn_client_case_property_matches WHERE organization_id=? AND id=? FOR UPDATE');
+        $q->execute([$org,$match]);$deal=(int)$q->fetchColumn();
+        if ($deal<1) throw new \Domains\Sales\Application\Service\SalesMutationDenied('Sales mutation denied.');
+        return $deal;
+    }
+
     public function offerDeal(string $org,string $offer):int
     {
         $this->transaction();
