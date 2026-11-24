@@ -10,9 +10,10 @@ foreach($raw['contributions']['capability_contracts'] as $definition) {
     $cap=CapabilityContract::fromArray($definition);
     $contracts[$cap->id]=$cap;
 }
-if(count($contracts)!==29)throw new RuntimeException('Missing typed PM contracts.');
+if(count($contracts)!==30)throw new RuntimeException('Missing typed PM contracts.');
 $validator=new CapabilityJsonInputValidator();
 $good=[
+ 'product_management.price.history.search'=>['variant_id'=>str_repeat('a',32),'currency'=>'EUR','limit'=>30,'offset'=>0],
  'product_management.price.base.set'=>['variant_id'=>str_repeat('a',32),'currency'=>'EUR','amount'=>'12.3400','expected_revision'=>0],
  'product_management.media.attach'=>['product_id'=>str_repeat('a',32),'file_id'=>'FILE-123',
     'variant_id'=>str_repeat('b',32),'role'=>'cover','sort_order'=>10],
@@ -38,6 +39,7 @@ $good=[
 ];
 foreach($good as $id=>$input) $validator->validate($contracts[$id],$input);
 $bad=[
+ 'product_management.price.history.search'=>[['variant_id'=>str_repeat('a',32),'currency'=>'EUR','limit'=>101],['variant_id'=>str_repeat('a',32),'currency'=>'EUR','organization_id'=>'other'],['variant_id'=>str_repeat('a',32),'currency'=>'EUR','offset'=>-1]],
  'product_management.price.base.set'=>[['variant_id'=>str_repeat('a',32),'currency'=>'EUR','amount'=>'1','expected_revision'=>-1],['variant_id'=>str_repeat('a',32),'currency'=>'EUR','amount'=>'1','expected_revision'=>'0']],
  'product_management.media.attach'=>[['product_id'=>str_repeat('a',32),'file_id'=>'../outside','role'=>'cover']],
  'product_management.media.detach'=>[['media_id'=>'invalid']],
