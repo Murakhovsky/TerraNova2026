@@ -42,13 +42,14 @@ final readonly class MarketingProductDraftCheckService
             ||($found['base_price_decimal']!==null&&!is_string($found['base_price_decimal']))){
             throw new DomainException('Product owner supplied a mismatched or untrusted draft readback.');
         }
-        $productStatus=$found['product_status']==='active'?'ACTIVE':'NOT_ACTIVE';
+        $productStatus=match($found['product_status']){'active'=>'ACTIVE','draft'=>'DRAFT',default=>'NOT_ACTIVE'};
         $variantStatus=$variantId===null?'NOT_SELECTED':($found['variant_status']==='active'?'ACTIVE':'NOT_ACTIVE');
         $basePrice=$found['base_price_decimal'];
         if($basePrice!==null&&!preg_match('/^(0|[1-9][0-9]{0,15})(?:\.[0-9]{1,6})?$/D',$basePrice)){
             throw new DomainException('Product owner returned a noncanonical decimal price.');
         }
-        $canDraft=$productStatus==='ACTIVE'&&($variantId===null||$variantStatus==='ACTIVE');
+        $canDraft=in_array($productStatus,['ACTIVE','DRAFT'],true)
+            &&($variantId===null||$variantStatus==='ACTIVE');
         return $this->result($productId,$variantId,$currency,$productStatus,$variantStatus,
             $found['product_revision'],$found['variant_revision'],$basePrice,$canDraft);
     }

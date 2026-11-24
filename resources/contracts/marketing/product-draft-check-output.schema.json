@@ -42,6 +42,7 @@
       "type": "string",
       "enum": [
         "ACTIVE",
+        "DRAFT",
         "NOT_ACTIVE",
         "NOT_FOUND"
       ]
