@@ -27,10 +27,6 @@ final readonly class SalesUIActionPermissionChecker implements UIActionPermissio
         TenantContext $tenant,
         ?EntityRef $entity = null,
     ): UIActionPermissionDecision {
-        if ($tenant->isAdmin()) {
-            return UIActionPermissionDecision::allow();
-        }
-
         $userId = $tenant->userId()->value();
         if (!ctype_digit($userId) || (int) $userId <= 0) {
             return UIActionPermissionDecision::deny('Authenticated Sales actor is invalid.');
