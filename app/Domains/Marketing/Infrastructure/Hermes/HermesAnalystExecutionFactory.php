@@ -11,7 +11,7 @@ use Kernel\Llm\LlmGovernanceRepositoryInterface;
 use Kernel\Module\ActiveModuleResolver;
 use Platform\Integration\Contract\CredentialVaultInterface;
 
-/** Composition root for the future approval-bound Action handler only. */
+/** Composition root for the approval-bound Action handler only. */
 final readonly class HermesAnalystExecutionFactory
 {
     public function __construct(private HermesAnalystConfigurationRegistry $profiles,private MarketingAnalystContextService $contexts,

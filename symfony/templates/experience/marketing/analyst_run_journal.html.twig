@@ -1,9 +1,25 @@
 <section class="cos-panel" aria-label="Hermes analyst execution journal">
     <h3>Hermes analyst journal</h3>
-    <p>Advice only. Live execution is not yet enabled. No recommendation reserves advertising funds or approves paid activation.</p>
+    <p>Advice only. Live Hermes acceptance is not yet verified. No recommendation reserves advertising funds or approves paid activation.</p>
     {% if runtime %}
-        <p>Runtime configuration: <strong>{{ runtime.status }}</strong>. Live verified: no. Approval-bound launch: unavailable.</p>
+        <p>Runtime configuration: <strong>{{ runtime.status }}</strong>. Live verified: no. Direct execution: unavailable.</p>
         {% if runtime.max_cost_usd is not null %}<p>Conservative AI budget allowance: {{ runtime.max_cost_usd }} USD per turn · daily limit {{ runtime.daily_run_limit }}. Not an actual invoice.</p>{% endif %}
+    {% endif %}
+    {% if runtime.plan_available and campaign.status == 'DRAFT' and creatives|length > 0 %}
+        <form method="post" action="/marketing/campaigns/{{ campaign.id|url_encode }}/analyst-plans" class="cos-page__stack">
+            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+            <input type="hidden" name="idempotency_key" value="mkt-analyst-plan-{{ planningKey }}">
+            <input type="hidden" name="campaign_revision" value="{{ campaign.revision }}">
+            <label>Creative revision <select class="form-control" name="creative_pin" required>
+                {% for creative in creatives %}<option value="{{ creative.id }}:{{ creative.revision }}">{{ creative.content.headline }} · r{{ creative.revision }}</option>{% endfor %}
+            </select></label>
+            <label>Optional current AdSet <select name="adset_pin" class="form-control">
+                <option value="">No AdSet</option>
+                {% for adset in adsets %}{% if not adset.pins_stale %}<option value="{{ adset.id }}:{{ adset.revision }}">{{ adset.content.name }} · r{{ adset.revision }}</option>{% endif %}{% endfor %}
+            </select></label>
+            <button class="btn btn-outline-primary" type="submit">Propose analysis in COS Goals</button>
+            <p>Creates a Plan only. Independent Plan and Action approvals are required before a remote turn.</p>
+        </form>
     {% endif %}
     {% for run in runs %}
         <section class="cos-panel">

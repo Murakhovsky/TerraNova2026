@@ -8,7 +8,8 @@
         "NOT_CONFIGURED",
         "CONFIGURATION_BLOCKED",
         "BUDGET_REQUIRED",
-        "APPROVAL_BINDING_REQUIRED"
+        "CANONICAL_ROLLOUT_REQUIRED",
+        "APPROVAL_REQUIRED"
       ]
     },
     "configuration_hash": {
@@ -43,6 +44,9 @@
     "launch_available": {
       "type": "boolean",
       "const": false
+    },
+    "plan_available": {
+      "type": "boolean"
     }
   },
   "required": [
@@ -52,7 +56,8 @@
     "daily_run_limit",
     "budget_configured",
     "live_verified",
-    "launch_available"
+    "launch_available",
+    "plan_available"
   ],
   "additionalProperties": false
 }

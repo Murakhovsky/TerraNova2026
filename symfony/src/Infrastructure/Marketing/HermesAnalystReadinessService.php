@@ -22,7 +22,7 @@ final readonly class HermesAnalystReadinessService
         if(!$actor->isManager()||!$actor->allows(TenantPermissions::ACCESS)||!$actor->allows(TenantPermissions::MANAGE)
             ||!$this->modules->isEnabled($org,'marketing'))throw new DomainException('Marketing manager and active module required.');
         $result=['status'=>'NOT_CONFIGURED','configuration_hash'=>null,'max_cost_usd'=>null,'daily_run_limit'=>null,
-            'budget_configured'=>false,'live_verified'=>false,'launch_available'=>false];
+            'budget_configured'=>false,'live_verified'=>false,'launch_available'=>false,'plan_available'=>false];
         try{
             $profile=$this->profiles->forTenant($org);
             if($profile===null)return $result;
@@ -34,7 +34,10 @@ final readonly class HermesAnalystReadinessService
             $result['status']='CONFIGURATION_BLOCKED';return $result;
         }
         $result['budget_configured']=$this->governance->monthlyBudget($org,'USD')!==null;
-        $result['status']=$result['budget_configured']?'APPROVAL_BINDING_REQUIRED':'BUDGET_REQUIRED';
+        if(!$result['budget_configured']){$result['status']='BUDGET_REQUIRED';return $result;}
+        $rollout=getenv('COS_FEDERATION_CANONICAL_ORGANIZATION');
+        $result['plan_available']=is_string($rollout)&&$rollout!==''&&hash_equals($org,$rollout);
+        $result['status']=$result['plan_available']?'APPROVAL_REQUIRED':'CANONICAL_ROLLOUT_REQUIRED';
         return $result;
     }
 }

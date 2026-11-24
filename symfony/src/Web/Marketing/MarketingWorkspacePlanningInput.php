@@ -70,6 +70,12 @@ final class MarketingWorkspacePlanningInput
             'planned_daily_budget'=>self::field($form,'planned_daily_budget'),'currency'=>strtoupper(self::field($form,'currency'))];
     }
 
+    /** @param array<string,mixed> $form @return array{string,int} */
+    public static function analystPin(array $form,string $key,string $prefix):array
+    {
+        return self::pin(self::field($form,$key),$prefix);
+    }
+
     /** @return array{string,int} */
     private static function pin(string $value,string $prefix):array
     {

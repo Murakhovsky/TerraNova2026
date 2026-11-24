@@ -291,5 +291,8 @@ $assert(is_array($usage)&&$usage['cost_source']==='AUTHORIZED_CEILING','Cost cei
 try{$budgeted->recommend($actor,$envelope,'mkar-'.str_repeat('e',24));throw new LogicException('Budget exhausted but call admitted.');}
 catch(\Kernel\Llm\LlmBudgetExceededException){}
 $assert($mockBudgetRuntime->calls===1,'Over-budget turn reached runtime.');
+$denied(static fn()=> $extended->request($actor,$campaignId,1,$creativeId,4,null,null,'hermes-fenced-01',str_repeat('f',64)),
+    'Approved stale context hash admitted.');
+$assert($runStore->byKey($orgA,'hermes-fenced-01')===null,'Stale approval created run receipt.');
 echo "Marketing M2 real MySQL two-person review, tenant fence, immutable Creative revisions, stale gate PASS\n";
 

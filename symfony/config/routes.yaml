@@ -3735,6 +3735,12 @@ cos_marketing_creative_revise:
   methods: [POST]
   requirements: { id: 'mkt-[a-f0-9]{24}', creativeId: 'mkcr-[a-f0-9]{24}' }
 
+cos_marketing_analyst_plan_propose:
+  path: /marketing/campaigns/{id}/analyst-plans
+  controller: App\Web\Marketing\MarketingPageController::proposeAnalystPlan
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}' }
+
 cos_marketing_analyst_run_review:
   path: /marketing/campaigns/{id}/analyst-runs/{runId}/review
   controller: App\Web\Marketing\MarketingPageController::reviewAnalystRun

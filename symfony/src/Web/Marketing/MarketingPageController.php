@@ -13,6 +13,7 @@ use Domains\Marketing\Application\Service\MarketingCampaignService;
 use Domains\Marketing\Application\Service\MarketingPlanningService;
 use Domains\Marketing\Application\Service\MarketingAnalystReviewService;
 use App\Infrastructure\Marketing\HermesAnalystReadinessService;
+use App\Persistence\Marketing\MarketingAnalystPlanProposalService;
 use Domains\Marketing\Application\Service\MarketingProductDraftCheckService;
 use Domains\Marketing\Application\Service\MarketingPaidReadService;
 use Kernel\Module\ActiveModuleResolver;
@@ -39,6 +40,7 @@ final readonly class MarketingPageController
         private MarketingPaidReadService $paid,
         private MarketingAnalystReviewService $analystReviews,
         private HermesAnalystReadinessService $analystReadiness,
+        private MarketingAnalystPlanProposalService $analystPlans,
     ){}
 
     public function overview(Request $request):Response {return $this->render($request,'overview');}
@@ -160,6 +162,23 @@ final readonly class MarketingPageController
             return new RedirectResponse('/marketing/campaigns/'.$id,303);
         }catch(DomainException $e){return new Response('Proposal denied: '.$e->getMessage(),422);}
         catch(Throwable $e){error_log('marketing.workspace.proposal_failed '.$e::class);return new Response('Proposal creation uncertain; check receipt.',503);}
+    }
+
+    public function proposeAnalystPlan(Request $request,string $id):Response
+    {
+        $actor=$this->manager();
+        if($actor instanceof Response)return $actor;
+        if(!$this->csrf->isValid($request))return new Response('CSRF validation failed',400);
+        try{
+            $form=$request->request->all();
+            $creative=MarketingWorkspacePlanningInput::analystPin($form,'creative_pin','mkcr-');
+            $adset=MarketingWorkspacePlanningInput::field($form,'adset_pin');
+            $pin=$adset===''?[null,null]:MarketingWorkspacePlanningInput::analystPin($form,'adset_pin','mkas-');
+            $this->analystPlans->propose($actor,$id,MarketingWorkspacePlanningInput::revision($form,'campaign_revision'),
+                $creative[0],$creative[1],$pin[0],$pin[1],MarketingWorkspacePlanningInput::field($form,'idempotency_key'));
+            return new RedirectResponse('/workspace/goals',303);
+        }catch(DomainException $e){return new Response('Analyst plan denied: '.$e->getMessage(),422);}
+        catch(Throwable $e){error_log('marketing.workspace.analyst_plan_failed '.$e::class);return new Response('Plan uncertain; inspect Goals.',503);}
     }
 
     public function reviewAnalystRun(Request $request,string $id,string $runId):Response

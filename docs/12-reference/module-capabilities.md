@@ -299,7 +299,7 @@ Manifest capabilities не задекларовані.
 
 **Опис із manifest:** Marketing M2 creative drafts/analyst review and Meta read-only evidence; Finance owns budgets and paid mutations remain blocked.
 
-- runtime service модуля: —;
+- runtime service модуля: `marketingDomainModule`;
 - обробники jobs: —;
 - внески API routes: —;
 - постачальники конфігурації: —;

@@ -22,7 +22,7 @@ final readonly class MarketingAnalystExecutionService
 
     /** @return array<string,mixed> */
     public function request(TenantContext $actor,string $campaignId,int $campaignRevision,string $creativeId,int $creativeRevision,
-        ?string $adsetId,?int $adsetRevision,string $key):array
+        ?string $adsetId,?int $adsetRevision,string $key,?string $approvedContextHash=null):array
     {
         $org=$actor->organizationId()->value();
         if(!$actor->isManager()||!$actor->allows(TenantPermissions::ACCESS)||!$actor->allows(TenantPermissions::MANAGE)
@@ -33,15 +33,17 @@ final readonly class MarketingAnalystExecutionService
         MarketingPlanningPolicy::id($creativeId,'mkcr-');MarketingPlanningPolicy::revision($creativeRevision);
         if(($adsetId===null)!==($adsetRevision===null))throw new DomainException('Incomplete AdSet pin.');
         if($adsetId!==null){MarketingPlanningPolicy::id($adsetId,'mkas-');MarketingPlanningPolicy::revision($adsetRevision);}
+        if($approvedContextHash!==null&&!preg_match('/^[a-f0-9]{64}$/D',$approvedContextHash))throw new DomainException('Invalid approved context hash.');
         $actorId=$actor->userId()->value();
         $hash=hash('sha256',json_encode([$actorId,$campaignId,$campaignRevision,$creativeId,$creativeRevision,
-            $adsetId,$adsetRevision,$this->admission->profileRef],JSON_THROW_ON_ERROR));
+            $adsetId,$adsetRevision,$this->admission->profileRef,$approvedContextHash],JSON_THROW_ON_ERROR));
         $existing=$this->runs->byKey($org,$key);
         if($existing!==null){
             if(!hash_equals($existing['request_hash'],$hash))throw new DomainException('Analyst idempotency conflict.');
             return $this->publicReceipt($existing);
         }
         $envelope=$this->contexts->build($actor,$campaignId,$campaignRevision,$creativeId,$creativeRevision,$adsetId,$adsetRevision);
+        if($approvedContextHash!==null&&!hash_equals($approvedContextHash,$envelope['context_hash']))throw new DomainException('Approved analyst context changed.');
         $claim=$this->runs->claim($org,$key,[
             'request_hash'=>$hash,'requested_by'=>$actorId,'profile_ref'=>$this->admission->profileRef,
             'cost_control_ref'=>$this->admission->costControlRef,'campaign_id'=>$campaignId,

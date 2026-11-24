@@ -2698,6 +2698,10 @@ services:
   Domains\Marketing\Application\Contract\MarketingAnalystRunStore:
     alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingAnalystRunStore
   Domains\Marketing\Application\Service\MarketingAnalystReviewService: ~
+  Domains\Marketing\Automation\Action\MarketingAnalystRunHandler: ~
+  Domains\Marketing\Bootstrap\MarketingDomainModule: ~
+  marketingDomainModule:
+    alias: Domains\Marketing\Bootstrap\MarketingDomainModule
   Domains\Marketing\Infrastructure\Hermes\HermesAnalystConfigurationRegistry:
     arguments:
       $profilesJson: '%env(COS_MARKETING_HERMES_PROFILES_JSON)%'
@@ -2907,6 +2911,7 @@ services:
         - '@Domains\Service\Bootstrap\ServiceDomainModule'
         - '@Domains\Growth\Bootstrap\GrowthDomainModule'
         - '@Domains\ProductManagement\Bootstrap\ProductManagementDomainModule'
+        - '@Domains\Marketing\Bootstrap\MarketingDomainModule'
 
   Kernel\Rule\Service\ConditionEvaluator: ~
 
@@ -3952,6 +3957,7 @@ services:
         - '@App\Persistence\Property\PropertyBulkRunOutcomeProvider'
         - '@App\Persistence\ProductManagement\ProductImportRunOutcomeProvider'
         - '@App\Persistence\ProductManagement\ShopifyImportRunOutcomeProvider'
+        - '@App\Persistence\Marketing\MarketingAnalystRunOutcomeProvider'
         - '@Domains\Growth\Application\Service\GrowthInboundResponseOutcomeEvidenceProvider'
         - '@App\Persistence\Federation\FederationGrowthRunLinkedOutcomeEvidenceProvider'
         - '@cos.federation.native_origin.research'

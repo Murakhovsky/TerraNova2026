@@ -16,7 +16,7 @@ $manifest = [
     'dependencies' => [],
     'enabled_by_default' => false,
     'contributions' => [
-        'runtime_module_service' => null,
+        'runtime_module_service' => 'marketingDomainModule',
         'job_handler_services' => [],
         'api_route_contributor_services' => [],
         'configuration_provisioner_services' => [],
@@ -179,7 +179,7 @@ foreach ([
     ];
 }
 
-// Deliberately unavailable until an approved Workflow Action handler is registered.
+// External advice is executable only through an approved canonical Workflow Action.
 $contracts[] = [
     'id'=>'marketing.analyst.run.request','version'=>'1.0.0','owner_domain'=>'marketing','kind'=>'command',
     'input_schema'=>'resources/contracts/marketing/analyst-run-request-input.schema.json',

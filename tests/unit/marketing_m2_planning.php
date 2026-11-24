@@ -196,7 +196,7 @@ $admitted=new $admissionClass('tenant-a','profile-ref',2,'cost-control-ref',true
 $admitted->assertAllowed('tenant-a');
 $blocked(static fn()=> $admitted->assertAllowed('tenant-b'),'Foreign tenant admission accepted.');
 $blocked(static fn()=> new $admissionClass('tenant-a','profile-ref',101,'cost-control-ref',true),'Unbounded quota accepted.');
-$expect(!str_contains($services,'MarketingAnalystExecutionService'),'Unaccepted live admission exposed in composition.');
+$expect(!str_contains($services,'MarketingAnalystExecutionService'),'Raw execution service must not be directly registered.');
 $validator->validate($contracts['marketing.analyst.run.list'],['campaign_id'=>'mkt-'.str_repeat('a',24),'limit'=>50]);
 $recoverInput=['campaign_id'=>'mkt-'.str_repeat('a',24),'run_id'=>'mkar-'.str_repeat('b',24),
     'reason'=>'Verified external termination','evidence_ref'=>'operator-check-01','local_and_remote_stopped'=>true];
@@ -227,5 +227,12 @@ $expect($launch->approvalPolicy==='required'&&$launch->executionBinding==='actio
 $validator->validate($launch,['target_type'=>'marketing_campaign','target_id'=>'mkt-'.str_repeat('a',24),'parameters'=>[
     'campaign_revision'=>1,'creative_id'=>'mkcr-'.str_repeat('b',24),'creative_revision'=>1,
     'configuration_hash'=>str_repeat('c',64),'context_hash'=>str_repeat('d',64)]]);
+$handlerSource=(string)file_get_contents($root.'/app/Domains/Marketing/Automation/Action/MarketingAnalystRunHandler.php');
+$moduleSource=(string)file_get_contents($root.'/app/Domains/Marketing/Bootstrap/MarketingDomainModule.php');
+$expect(str_contains($handlerSource,'$this->workerAdmission->assertAuthorized($action)')
+    &&str_contains($handlerSource,'$this->identities->resolve(')&&str_contains($moduleSource,'PolicyDecision::ApprovalRequired')
+    &&str_contains($services,'MarketingDomainModule'),'Canonical analyst Action admission not wired.');
+$expect(str_contains($controller,'$this->analystPlans->propose(')&&!str_contains($controller,'->recommend('),'Workspace bypasses canonical Plan.');
+$expect($mapper::analystPin(['creative_pin'=>'mkcr-'.str_repeat('a',24).':2'],'creative_pin','mkcr-')===['mkcr-'.str_repeat('a',24),2],'Analyst form pin failed.');
 echo "Marketing M2 typed planning policy, provenance, CSRF and boundary PASS\n";
 
