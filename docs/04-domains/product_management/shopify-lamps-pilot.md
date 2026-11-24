@@ -104,6 +104,17 @@ Stage створює лише незмінний Preview. Native Product ств�
 додавати в `/opt/cos/.env` або перезапускати PHP-контейнер, якщо
 застосунок уже розгорнуто з актуальним Product Management кодом.
 
+## Автоматична read-only перевірка OAuth після merge
+
+Зміна `.github/workflows/cos-shopify-lamps-smoke.yml` запускає
+на `main` одноразовий live smoke без введення реквізитів у чат:
+через існуючі SSH secrets GitHub Environment команда на COS VPS
+зчитує root-owned `/etc/cos/shopify-lamps.env`, виконує OAuth та
+`shop { name } products(first: 1)` через Shopify Admin GraphQL.
+Це лише перевірка авторизації та читання Shopify, **не** підтвердження
+tenant connection у COS, не `provision` і не `pull` у доменну базу.
+Підсумок фіксується в GitHub Actions без токенів і каталогу.
+
 ## Керований запуск через GitHub Actions
 
 Workflow: `.github/workflows/cos-shopify-lamps-operator.yml`, тільки
