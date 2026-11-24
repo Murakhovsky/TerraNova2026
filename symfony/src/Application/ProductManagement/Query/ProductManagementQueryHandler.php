@@ -27,6 +27,11 @@ final readonly class ProductManagementQueryHandler implements QueryHandlerInterf
         $org=$query->organization->value();
         $in=$query->input;
         return match($query->operation) {
+            'attribute.search' => ['items'=>$this->products->attributes($org,(int)($in['limit']??30),(int)($in['offset']??0)),'limit'=>(int)($in['limit']??30),'offset'=>(int)($in['offset']??0)],
+            'attribute.category.get' => ['items'=>$this->products->categoryAttributes($org,(string)$in['category_id'])],
+            'attribute.product.get' => $this->products->productAttributes($org,(string)$in['product_id']),
+            'attribute.product.filter' => ['items'=>$this->products->filterAttributes($org,(string)$in['code'],$in['value'],(int)($in['limit']??30),(int)($in['offset']??0)),'limit'=>(int)($in['limit']??30),'offset'=>(int)($in['offset']??0)],
+            'variant.matrix.preview' => $this->products->variantMatrix($org,(string)$in['product_id'],$in['axes'],(string)$in['sku_prefix']),
             'media.search' => [
                 'items'=>$this->media->search($org,(string)$in['product_id'],(int)($in['limit']??30),(int)($in['offset']??0)),
                 'limit'=>(int)($in['limit']??30),'offset'=>(int)($in['offset']??0),
