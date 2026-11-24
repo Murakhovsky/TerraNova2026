@@ -18,7 +18,7 @@ final readonly class SalesCommercialAnalyticsService
     public function read(string $org,int $actor,string $view,array $input):array
     {
         if (array_diff(array_keys($input),['scope','owner_id','pipeline_id','from','to'])!==[]
-            || !in_array($view,['outcomes','forecast'],true)
+            || !in_array($view,['outcomes','forecast','conversion','stages'],true)
             || !is_string($input['from']??null)||!is_string($input['to']??null)) {
             throw new DomainException('Invalid Sales analytics input.');
         }
@@ -31,6 +31,8 @@ final readonly class SalesCommercialAnalyticsService
         $authorized=$this->scope->resolve($org,$actor,$mode,$owner);
         $result=match($view) {
             'outcomes'=>$this->read->outcomes($org,$authorized,$pipeline,$input['from'],$input['to']),
+            'conversion'=>$this->read->conversion($org,$authorized,$pipeline,$input['from'],$input['to']),
+            'stages'=>$this->read->stages($org,$authorized,$pipeline,$input['from'],$input['to']),
             'forecast'=>$this->read->forecast($org,$authorized,$pipeline,$input['from'],$input['to']),
         };
         if ($this->scope->resolve($org,$actor,$mode,$owner)!==$authorized) {
