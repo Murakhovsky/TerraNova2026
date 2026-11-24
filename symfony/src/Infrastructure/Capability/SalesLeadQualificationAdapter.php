@@ -27,6 +27,10 @@ final readonly class SalesLeadQualificationAdapter implements CapabilityInvocati
             || !LeadQualificationPolicy::allows($from,$to) || !ctype_digit($user) || (int)$user<1
             || (string)(int)$user!==$user || trim($key)==='' || strlen($key)>191) throw new DomainException('Invalid qualification request.');
         $org=$actor->organizationId()->value();
+        $before=$this->leads->lead($org,$id);
+        if ($before===null || ($before['organization_id']??null)!==$org || !in_array($before['id']??null,[$id,(string)$id],true)) {
+            throw new DomainException('Tenant-owned lead not found.');
+        }
         $result=$this->commands->dispatch(new UpdateSalesLeadCommand($actor->organizationId(),(int)$user,$id,$correlationId,
             ['expected_status'=>$from,'status'=>$to]));
         if (!$result instanceof SalesMutationResult || !$result->ok || !in_array($result->code,['updated','already_applied'],true)) {
