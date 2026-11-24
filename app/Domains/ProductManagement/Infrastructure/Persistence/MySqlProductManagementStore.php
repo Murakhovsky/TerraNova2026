@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Domains\ProductManagement\Infrastructure\Persistence;
 
 use Domains\ProductManagement\Application\Contract\ProductManagementStoreInterface;
+use Domains\ProductManagement\Domain\AttributeRules;
 use DomainException;
 use Kernel\Event\Contract\EventStoreInterface;
 use Kernel\Event\DomainEvent;
@@ -50,7 +51,7 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
     {
         return $this->mutate($org,'variant.update',$key,[$variantId,$changes,$expectedRevision],$actor,$correlation,
             function()use($org,$variantId,$changes,$expectedRevision):array {
-                $variant=$this->one('SELECT v.sku,v.revision,v.status,p.status AS product_status FROM pm_variants v JOIN pm_products p ON p.organization_id=v.organization_id AND p.product_id=v.product_id WHERE v.organization_id=? AND v.variant_id=? FOR UPDATE',
+                $variant=$this->one('SELECT v.sku,v.product_id,v.revision,v.status,p.status AS product_status FROM pm_variants v JOIN pm_products p ON p.organization_id=v.organization_id AND p.product_id=v.product_id WHERE v.organization_id=? AND v.variant_id=? FOR UPDATE',
                     [$org,$variantId]);
                 if ($variant===null||$variant['status']!=='active'||$variant['product_status']==='archived') {
                     throw new DomainException('Variant or parent Product is inactive.');
@@ -62,6 +63,8 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
                         [$org,$variantId]);
                     if ($history!==null) throw new DomainException('Cannot change SKU after stock movements.');
                 }
+                if(array_key_exists('options_json',$changes)&&$this->one('SELECT variant_id FROM pm_variant_matrix_identities WHERE organization_id=? AND product_id=? LIMIT 1',[$org,$variant['product_id']])!==null)
+                    throw new DomainException('Managed matrix options are immutable; create a new combination.');
                 $allowed=['sku','uom','barcode','options_json'];
                 $set=[];$values=[];
                 foreach($changes as $field=>$value) {
@@ -549,6 +552,134 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
             $row['expected_revision']=(int)$row['expected_revision'];$row['result_revision']=(int)$row['result_revision'];
         }
         return $row;
+    }
+
+    private function decodeAttribute(array $row):array
+    {
+        $row['choices']=json_decode($row['choices_json'],true,flags:JSON_THROW_ON_ERROR);unset($row['choices_json']);
+        foreach(['is_required','is_axis'] as $flag)if(isset($row[$flag]))$row[$flag]=(bool)$row[$flag];
+        return $row;
+    }
+    private function attributeDefinition(string $org,string $code):array
+    {
+        $row=$this->one('SELECT code,name,value_type,unit,choices_json FROM pm_attribute_definitions WHERE organization_id=? AND code=?',[$org,$code]);
+        if($row===null)throw new DomainException('Unknown tenant attribute.');
+        return $this->decodeAttribute($row);
+    }
+    public function defineAttribute(string $org,array $definition,string $key,string $actor,string $trace):array
+    {
+        return $this->mutate($org,'attribute.define',$key,[$definition],$actor,$trace,function()use($org,$definition):array{
+            $this->execute('INSERT INTO pm_attribute_definitions (organization_id,code,name,value_type,unit,choices_json) VALUES (?,?,?,?,?,?)',
+                [$org,$definition['code'],$definition['name'],$definition['value_type'],$definition['unit'],json_encode($definition['choices'],JSON_THROW_ON_ERROR)]);
+            return $this->attributeDefinition($org,$definition['code']);
+        },'product_management.attribute.defined','Attribute');
+    }
+    public function attributes(string $org,int $limit,int $offset):array
+    {
+        $stmt=$this->connection->prepare('SELECT code,name,value_type,unit,choices_json FROM pm_attribute_definitions WHERE organization_id=:org ORDER BY code LIMIT :lim OFFSET :off');
+        $stmt->bindValue(':org',$org);$stmt->bindValue(':lim',$limit,PDO::PARAM_INT);$stmt->bindValue(':off',$offset,PDO::PARAM_INT);$stmt->execute();
+        return array_map($this->decodeAttribute(...),$stmt->fetchAll(PDO::FETCH_ASSOC));
+    }
+    public function bindAttribute(string $org,string $category,string $code,bool $required,bool $axis,string $key,string $actor,string $trace):array
+    {
+        return $this->mutate($org,'attribute.category.bind',$key,[$category,$code,$required,$axis],$actor,$trace,function()use($org,$category,$code,$required,$axis):array{
+            $def=$this->attributeDefinition($org,$code);
+            if($axis&&$def['value_type']!=='enum')throw new DomainException('Matrix axis must be enum.');
+            if($this->one('SELECT category_id FROM pm_categories WHERE organization_id=? AND category_id=? FOR UPDATE',[$org,$category])===null)
+                throw new DomainException('Unknown tenant category.');
+            $this->execute('INSERT INTO pm_category_attributes (organization_id,category_id,code,is_required,is_axis) VALUES (?,?,?,?,?)',[$org,$category,$code,(int)$required,(int)$axis]);
+            return ['category_id'=>$category,'code'=>$code,'is_required'=>$required,'is_axis'=>$axis];
+        },'product_management.attribute.category_bound','Category');
+    }
+    public function categoryAttributes(string $org,string $category):array
+    {
+        return array_map($this->decodeAttribute(...),$this->rows('SELECT d.code,d.name,d.value_type,d.unit,d.choices_json,a.is_required,a.is_axis FROM pm_category_attributes a JOIN pm_attribute_definitions d ON d.organization_id=a.organization_id AND d.code=a.code WHERE a.organization_id=? AND a.category_id=? ORDER BY d.code',[$org,$category]));
+    }
+    private function applicableAttributes(string $org,string $product):array
+    {
+        $rows=$this->rows('SELECT d.code,d.name,d.value_type,d.unit,d.choices_json,MAX(a.is_required) AS is_required,MAX(a.is_axis) AS is_axis FROM pm_product_categories pc JOIN pm_category_attributes a ON a.organization_id=pc.organization_id AND a.category_id=pc.category_id JOIN pm_attribute_definitions d ON d.organization_id=a.organization_id AND d.code=a.code WHERE pc.organization_id=? AND pc.product_id=? GROUP BY d.code,d.name,d.value_type,d.unit,d.choices_json ORDER BY d.code',[$org,$product]);
+        $map=[];foreach($rows as $row)$map[$row['code']]=$this->decodeAttribute($row);
+        return $map;
+    }
+    private function lockAttributeProduct(string $org,string $product,int $revision):array
+    {
+        $row=$this->one('SELECT product_type,status,revision FROM pm_products WHERE organization_id=? AND product_id=? FOR UPDATE',[$org,$product]);
+        if($row===null||$row['status']==='archived'||(int)$row['revision']!==$revision)throw new DomainException('Active Product and current revision required.');
+        $this->assertShopifyLocalOwnership($org,'product',$product);return $row;
+    }
+    public function setAttributes(string $org,string $product,array $changes,int $revision,string $key,string $actor,string $trace):array
+    {
+        return $this->mutate($org,'attribute.product.set',$key,[$product,$changes,$revision],$actor,$trace,function()use($org,$product,$changes,$revision):array{
+            $this->lockAttributeProduct($org,$product,$revision);
+            $defs=$this->applicableAttributes($org,$product);
+            foreach($changes as $code=>$value){
+                if(!isset($defs[$code]))throw new DomainException('Attribute not in assigned category set.');
+                if($value===null){
+                    if($defs[$code]['is_required'])throw new DomainException('Required value cannot be removed.');
+                    $this->execute('DELETE FROM pm_product_attribute_values WHERE organization_id=? AND product_id=? AND code=?',[$org,$product,$code]);
+                }else{
+                    $value=AttributeRules::value($defs[$code],$value);
+                    $this->execute('INSERT INTO pm_product_attribute_values (organization_id,product_id,code,value_json) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE value_json=VALUES(value_json)',[$org,$product,$code,json_encode($value,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE)]);
+                }
+            }
+            $this->execute('UPDATE pm_products SET revision=revision+1 WHERE organization_id=? AND product_id=?',[$org,$product]);
+            return $this->productAttributes($org,$product);
+        },'product_management.attribute.product_set','Product');
+    }
+    public function productAttributes(string $org,string $product):array
+    {
+        $p=$this->one('SELECT revision FROM pm_products WHERE organization_id=? AND product_id=?',[$org,$product]);
+        if($p===null)return ['found'=>false,'product_id'=>$product,'revision'=>0,'items'=>[]];
+        $values=[];foreach($this->rows('SELECT code,value_json FROM pm_product_attribute_values WHERE organization_id=? AND product_id=?',[$org,$product]) as $row)$values[$row['code']]=json_decode($row['value_json'],true,flags:JSON_THROW_ON_ERROR);
+        $items=[];foreach($this->applicableAttributes($org,$product) as $code=>$def)$items[]=$def+['value'=>$values[$code]??null,'missing_required'=>$def['is_required']&&!array_key_exists($code,$values)];
+        return ['found'=>true,'product_id'=>$product,'revision'=>(int)$p['revision'],'items'=>$items];
+    }
+    public function filterAttributes(string $org,string $code,mixed $value,int $limit,int $offset):array
+    {
+        $value=AttributeRules::value($this->attributeDefinition($org,$code),$value);
+        $stmt=$this->connection->prepare("SELECT p.product_id,p.name,p.status FROM pm_product_attribute_values a JOIN pm_products p ON p.organization_id=a.organization_id AND p.product_id=a.product_id WHERE a.organization_id=:org AND a.code=:code AND JSON_CONTAINS(a.value_json,CAST(:value AS JSON)) AND p.status<>'archived' ORDER BY p.product_id LIMIT :lim OFFSET :off");
+        $stmt->bindValue(':org',$org);$stmt->bindValue(':code',$code);$stmt->bindValue(':value',json_encode($value,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE));$stmt->bindValue(':lim',$limit,PDO::PARAM_INT);$stmt->bindValue(':off',$offset,PDO::PARAM_INT);$stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    public function variantMatrix(string $org,string $product,array $matrix):array
+    {
+        $p=$this->one('SELECT status,revision FROM pm_products WHERE organization_id=? AND product_id=?',[$org,$product]);
+        if($p===null||$p['status']==='archived')throw new DomainException('Active tenant Product required.');
+        $defs=$this->applicableAttributes($org,$product);
+        $existing=[];
+        foreach($this->rows('SELECT variant_id,sku,options_json FROM pm_variants WHERE organization_id=? AND product_id=?',[$org,$product]) as $v){
+            if($v['options_json']===null)continue;
+            $options=json_decode($v['options_json'],true,flags:JSON_THROW_ON_ERROR);
+            if(!is_array($options)||$options===[])continue;
+            ksort($options,SORT_STRING);$existing[hash('sha256',json_encode($options,JSON_THROW_ON_ERROR))]=$v['variant_id'];
+        }
+        $items=[];
+        foreach($matrix as $row){
+            foreach($row['options'] as $code=>$value){
+                if(!isset($defs[$code])||!$defs[$code]['is_axis'])throw new DomainException('Matrix axis not assigned to Product category.');
+                AttributeRules::value($defs[$code],$value);
+            }
+            $sku=$this->one('SELECT variant_id FROM pm_variants WHERE organization_id=? AND sku=?',[$org,$row['sku']]);
+            $items[]=$row+['status'=>isset($existing[$row['combination_hash']])?'exists':($sku!==null?'sku_conflict':'ready')];
+        }
+        return ['product_id'=>$product,'revision'=>(int)$p['revision'],'items'=>$items];
+    }
+    public function createMatrix(string $org,string $product,array $matrix,int $revision,string $uom,bool $track,string $key,string $actor,string $trace):array
+    {
+        return $this->mutate($org,'variant.matrix.create',$key,[$product,$matrix,$revision,$uom,$track],$actor,$trace,function()use($org,$product,$matrix,$revision,$uom,$track):array{
+            $p=$this->lockAttributeProduct($org,$product,$revision);
+            if($track&&in_array($p['product_type'],['service','digital'],true))throw new DomainException('Non-stock matrix cannot track inventory.');
+            $preview=$this->variantMatrix($org,$product,$matrix);$items=[];
+            foreach($preview['items'] as $row){
+                if($row['status']!=='ready')throw new DomainException('Matrix contains an existing combination or SKU conflict.');
+                $id=bin2hex(random_bytes(16));
+                $this->execute('INSERT INTO pm_variants (organization_id,variant_id,product_id,sku,uom,track_inventory,options_json) VALUES (?,?,?,?,?,?,?)',[$org,$id,$product,$row['sku'],$uom,(int)$track,json_encode($row['options'],JSON_THROW_ON_ERROR)]);
+                $this->execute('INSERT INTO pm_variant_matrix_identities (organization_id,product_id,variant_id,combination_hash) VALUES (?,?,?,?)',[$org,$product,$id,$row['combination_hash']]);
+                $items[]=['variant_id'=>$id,'sku'=>$row['sku'],'combination_hash'=>$row['combination_hash']];
+            }
+            $this->execute('UPDATE pm_products SET revision=revision+1 WHERE organization_id=? AND product_id=?',[$org,$product]);
+            return ['product_id'=>$product,'revision'=>$revision+1,'items'=>$items];
+        },'product_management.variant.matrix_created','Product');
     }
 
     public function stockBalance(string $organizationId, string $variantId, string $locationId): array
