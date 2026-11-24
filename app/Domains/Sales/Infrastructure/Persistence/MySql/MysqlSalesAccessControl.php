@@ -24,7 +24,7 @@ final readonly class MysqlSalesAccessControl implements SalesAccessControlInterf
                AND c.capability=:capability AND c.status="ACTIVE"
              WHERE u.organization_id=:organization_id AND u.id=:user_id AND u.status="active"
                AND (m.role="admin" OR c.capability IS NOT NULL)
-             LIMIT 1'
+             LIMIT 1'.($this->connection->inTransaction()?' FOR UPDATE':'')
         );
         $statement->execute([
             'organization_id'=>$organizationId,
