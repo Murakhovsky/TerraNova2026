@@ -93,7 +93,9 @@ domain_id: sales
         "sales.order.read",
         "sales.order.source.reconcile",
         "sales.order.source.page.read",
-        "sales.order.source.pending.read"
+        "sales.order.source.pending.read",
+        "sales.order.source.sync.start",
+        "sales.order.source.sync.status.read"
       ]
     },
     {
