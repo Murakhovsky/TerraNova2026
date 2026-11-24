@@ -125,7 +125,7 @@ return [
                 'permission'=>'cos.tenant.manage','approval_policy'=>'required','idempotency'=>'required',
                 'timeout_policy'=>['seconds'=>60],'retry_policy'=>['max_attempts'=>1],
                 'failure_contract'=>'Reconcile approved physical count document and immutable ledger before any retry.',
-                'lifecycle'=>'experimental','tests'=>['tests/integration/product_management_stock_reservation_mysql.php'],
+                'lifecycle'=>'experimental','tests'=>['tests/integration/product_management_stock_reservation_mysql.php','tests/integration/product_management_stock_count_goal_e2e_mysql.php'],
                 'documentation'=>'app/Domains/ProductManagement/README.md',
             ],
             [
