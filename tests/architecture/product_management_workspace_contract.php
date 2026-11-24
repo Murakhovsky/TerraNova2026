@@ -78,4 +78,6 @@ foreach (['price.resolve','price.list.entry.remove','price.list.tier.search','pr
     $assert(str_contains($controller,$required),'Advanced pricing Workspace missing: '.$required);
 $assert(str_contains($twig,'name="min_quantity"')&&str_contains($twig,'name="quote_qty"'),
     'Quantity tier editing and deterministic quote preview required.');
+$assert(str_contains($controller,'price.list.tier.history.search')&&str_contains($twig,'id="tier-history"')&&str_contains($pricing,'FROM pm_price_list_tier_history'),
+    'Tier history requires canonical query and native immutable history.');
 echo "Product Management E7/P0 catalog workspace architecture passed.\n";
