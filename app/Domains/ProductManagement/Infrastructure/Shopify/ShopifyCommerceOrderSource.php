@@ -137,6 +137,11 @@ GQL;
         if($fresh['shop_domain']!==$c['shop_domain']||$fresh['secret_ref']!==$c['secret_ref'])throw new DomainException('Commerce source changed.');
         return ['order_ids'=>$ids,'next_cursor'=>$next,'historical_access'=>in_array('read_all_orders',array_column($data['currentAppInstallation']['accessScopes'],'handle'),true)?'all_orders_scope':'provider_limited'];
     }
+    public function pendingPage(string $org,string $channel,string $connection,?string $cursor):array
+    {
+        $this->connection($org,$channel,$connection);
+        return $this->store->pendingOrderDeliveryPage($org,$connection,$cursor);
+    }
     public function pending(string $org,string $channel,string $connection):array
     {
         $this->connection($org,$channel,$connection);
