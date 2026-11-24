@@ -244,7 +244,7 @@ final readonly class MysqlSalesWorkspaceOperationalReadModel implements SalesWor
         );
     }
 
-    public function search(string $organizationId, string $query, int $limitPerType = 6): array
+    public function search(string $organizationId, string $query, int $limitPerType = 6,?int $ownerId=null): array
     {
         $query = trim($query);
         if (mb_strlen($query) < 2) {
@@ -252,10 +252,10 @@ final readonly class MysqlSalesWorkspaceOperationalReadModel implements SalesWor
         }
 
         $limit = max(1, min($limitPerType, 12));
-        $deals = $this->deals($organizationId, ['q' => $query, 'limit' => $limit]);
-        $leads = $this->leads($organizationId, ['q' => $query, 'limit' => $limit]);
+        $deals = $this->deals($organizationId, ['q' => $query, 'limit' => $limit,'owner_id'=>$ownerId]);
+        $leads = $this->leads($organizationId, ['q' => $query, 'limit' => $limit,'owner_id'=>$ownerId]);
         $like = '%' . $query . '%';
-        $people = $this->safeAll(
+        $people = $ownerId!==null?[]:$this->safeAll(
             'SELECT p.id,p.full_name name,p.phone,p.email,p.telegram,'
             . '(SELECT c.id FROM tn_client_cases c WHERE c.organization_id=p.organization_id AND c.person_id=p.id ORDER BY c.updated_at DESC LIMIT 1) deal_id,'
             . '(SELECT c.public_id FROM tn_client_cases c WHERE c.organization_id=p.organization_id AND c.person_id=p.id ORDER BY c.updated_at DESC LIMIT 1) deal_public_id '
