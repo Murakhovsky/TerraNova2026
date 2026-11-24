@@ -1360,6 +1360,9 @@ services:
     arguments:
       $connection: '@cos.database.pdo'
 
+  Domains\Sales\Application\Contract\ScopedClientCaseReadModelFactoryInterface:
+    alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModelFactory
+
   Domains\Sales\Application\Contract\ClientCaseReadModelFactoryInterface:
     alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModelFactory
 
