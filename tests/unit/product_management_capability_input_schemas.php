@@ -10,9 +10,10 @@ foreach($raw['contributions']['capability_contracts'] as $definition) {
     $cap=CapabilityContract::fromArray($definition);
     $contracts[$cap->id]=$cap;
 }
-if(count($contracts)!==59)throw new RuntimeException('Missing typed PM contracts.');
+if(count($contracts)!==60)throw new RuntimeException('Missing typed PM contracts.');
 $validator=new CapabilityJsonInputValidator();
 $good=[
+ 'product_management.attribute.product.bulk_set'=>['products'=>[['product_id'=>str_repeat('a',32),'expected_revision'=>1]],'values'=>[['code'=>'outdoor','value'=>false]]],
  'product_management.attribute.define'=>['code'=>'material','name'=>'Material','value_type'=>'enum','choices'=>['oak','walnut']],
  'product_management.attribute.search'=>['limit'=>30],
  'product_management.attribute.category.bind'=>['category_id'=>str_repeat('a',32),'code'=>'material','is_required'=>true,'is_axis'=>true],
@@ -68,6 +69,7 @@ $good=[
 ];
 foreach($good as $id=>$input) $validator->validate($contracts[$id],$input);
 $bad=[
+ 'product_management.attribute.product.bulk_set'=>[['products'=>[],'values'=>[['code'=>'outdoor','value'=>false]]]],
  'product_management.attribute.define'=>[['code'=>'MATERIAL','name'=>'Material','value_type'=>'enum'],['code'=>'material','name'=>'Material','value_type'=>'unknown']],
  'product_management.attribute.product.set'=>[['product_id'=>str_repeat('a',32),'expected_revision'=>0,'values'=>[['code'=>'material','value'=>'oak']]],['product_id'=>str_repeat('a',32),'expected_revision'=>1,'values'=>[['code'=>'material','value'=>['oak']]]]],
  'product_management.variant.matrix.preview'=>[['product_id'=>str_repeat('a',32),'sku_prefix'=>'SKU','axes'=>[]]],
