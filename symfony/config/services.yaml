@@ -2809,6 +2809,9 @@ services:
   documentsDomainModule:
     alias: Domains\Documents\Bootstrap\DocumentsDomainModule
 
+  Domains\ProductManagement\Infrastructure\Persistence\MySqlProductAnalytics:
+    arguments:
+      $connection: '@cos.database.pdo'
   Domains\ProductManagement\Infrastructure\Persistence\MySqlStockReconciliationAudit:
     arguments:
       $connection: '@cos.database.pdo'
