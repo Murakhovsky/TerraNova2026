@@ -25,7 +25,7 @@ interface SalesWorkspaceOperationalReadModelInterface extends SalesWorkspaceRead
      *
      * @return array{query:string,items:list<array<string,mixed>>,groups:array<string,int>}
      */
-    public function search(string $organizationId, string $query, int $limitPerType = 6): array;
+    public function search(string $organizationId, string $query, int $limitPerType = 6,?int $ownerId=null): array;
 
     /** @return array<string, mixed> */
     public function directorAnalytics(string $organizationId, int $days = 30): array;
