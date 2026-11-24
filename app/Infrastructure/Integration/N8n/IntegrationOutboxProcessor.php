@@ -59,7 +59,7 @@ class IntegrationOutboxProcessor
                 SET status = "processing", attempts = attempts + 1, locked_at = NOW(), lock_token = :token
                 WHERE integration = "n8n" AND available_at <= NOW() AND attempts < 5
                   AND (status IN ("pending", "failed") OR (status = "processing" AND locked_at < DATE_SUB(NOW(), INTERVAL 10 MINUTE)))
-                  AND ((dedupe_key NOT LIKE "notification:SQUO-%" AND dedupe_key NOT LIKE "notification:SREM-%") OR (status="pending" AND attempts=0))
+                  AND (dedupe_key IS NULL OR (dedupe_key NOT LIKE "notification:SQUO-%" AND dedupe_key NOT LIKE "notification:SREM-%") OR (status="pending" AND attempts=0))
                 ORDER BY id LIMIT ' . $limit . '
             ');
             $statement->execute(['token' => $token]);

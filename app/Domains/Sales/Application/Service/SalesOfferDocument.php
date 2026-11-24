@@ -16,6 +16,7 @@ final class SalesOfferDocument
         }
         $text.="\nTotal: ".$offer['total'].' '.$offer['currency']."\nTerms reference: ".$offer['terms_hash']."\n";
         $html.='</tbody></table><p><strong>Total: '.self::e($offer['total'].' '.$offer['currency']).'</strong></p><p>Terms reference: '.self::e($offer['terms_hash']).'</p></body></html>';
+        $text=trim($text);
         if(mb_strlen($text)>10000)throw new DomainException('Offer document exceeds supported delivery size.');
         return ['offer_id'=>$offer['offer_id'],'revision'=>$offer['revision'],'terms_version'=>$offer['terms_version'],'terms_hash'=>$offer['terms_hash'],
             'document_hash'=>hash('sha256',$text),'subject'=>$offer['title'],'text'=>$text,'html'=>$html];

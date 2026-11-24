@@ -127,6 +127,22 @@ try {
     $productRef=new \Domains\ProductManagement\Application\Service\ProductCommercialReference(new \Domains\ProductManagement\Infrastructure\Persistence\MySqlProductManagementStore($db,new MysqlEventStore($db)));
     $offerRefs=new \App\Application\Sales\SalesOfferReferenceResolver($productRef,new MysqlPropertyReferencePort($db),$active);
     $offerService=new \Domains\Sales\Application\Service\SalesOfferService($offerRepo,$offerRefs,$deals,$commercial,$receipts,$events,$tx);
+    $scheduledRepo=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesScheduledActivityRepository($db);
+    $leadFollowup=new \Domains\Sales\Application\UseCase\ScheduleLeadFollowup(new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlLeadFollowupRepository($db),$events,$tx);
+    $scheduledService=new \Domains\Sales\Application\Service\SalesScheduledActivityService($scheduledRepo,$leadFollowup,$receipts,$events,$tx);
+    $notificationDb=new \Infrastructure\Platform\Persistence\Pdo\PdoConnection($db);
+    $notifications=new \Platform\Notification\Service\NotificationDispatcher(
+        [new \Infrastructure\Platform\Notification\N8nEmailNotificationChannel($notificationDb)],
+        new \Infrastructure\Platform\Notification\BuiltinNotificationTemplateRepository(),
+        new \Infrastructure\Platform\Notification\SimpleNotificationTemplateRenderer(),
+        new \Infrastructure\Platform\Notification\MysqlNotificationDeliveryRepository($notificationDb));
+    $handoff=new \Infrastructure\Platform\Notification\MysqlNotificationHandoffReadModel($db);
+    $deliveryRepo=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOfferDeliveryRepository($db);
+    $offerDelivery=new \Domains\Sales\Application\Service\SalesOfferDeliveryService($offerService,$deliveryRepo,$deals,$offerRefs,$notifications,$handoff,$tx,$events);
+    $reminders=new \Domains\Sales\Application\Service\SalesActivityReminderService($scheduledRepo,$receipts,$events,$tx,$active,$notifications,$handoff);
+    $referenceStore=new \Infrastructure\Platform\Persistence\MySql\MysqlExternalReferenceStore($db);
+    $crmEvidence=new \Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesCrmReconciliationReadModel($db,$referenceStore);
+    $nativeMessages=new SalesOperationService(new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlMessageGateway($db,$referenceStore),new MysqlSalesOperationRepository($db),$events,$tx);
     $bus = new SymfonyCommandBus(new MessageBus([new HandleMessageMiddleware(new HandlersLocator([
         ConvertSalesLeadToOpportunityCommand::class => [$handler],
         CreateSalesLeadCommand::class => [new CreateSalesLeadCommandHandler($factory)],
@@ -136,11 +152,12 @@ try {
         ManageSalesDealCommand::class => [new ManageSalesDealCommandHandler($deals,$owners,$stages,$commercial,$receipts,$tx)],
         ManageSalesTeamCommand::class => [new ManageSalesTeamCommandHandler($teams,$teamAuth,$receipts,$tx)],
         ManageSalesActivityCommand::class => [$activityHandler],
+        \App\Application\Sales\Command\ManageScheduledSalesActivityCommand::class => [new \App\Application\Sales\Command\ManageScheduledSalesActivityCommandHandler($scheduledService)],
         \App\Application\Sales\Command\ManageSalesOfferCommand::class => [new \App\Application\Sales\Command\ManageSalesOfferCommandHandler($offerService)],
     ]))]));
     $resolver = new FederationCapabilityBindingResolver($catalog,new DomainModuleRegistry([]),$active);
     $read = new MysqlSalesWorkspaceReadModel($db);
-    $gateway = new CanonicalCapabilityGateway($catalog,$active,$resolver,[new SalesClientCaseCreateAdapter($bus,$read),new SalesLeadCreateAdapter($bus,$read),new SalesLeadQualificationAdapter($bus,$read),new SalesLeadStateManageAdapter($bus),new SalesDealStateReadAdapter($deals),new SalesDealOwnerAssignAdapter($bus),new SalesDealCommercialSetAdapter($bus),new SalesPipelineStageManageAdapter($bus),new SalesDealOutcomeRecordAdapter($bus),new SalesTeamManageAdapter($bus),new SalesTeamReadAdapter($teams,$teamAuth),new SalesActivityRecordAdapter($bus),new SalesActivityCompleteAdapter($bus),new SalesActivityRescheduleAdapter($bus),new SalesFollowupScheduleAdapter($bus),new SalesPropertyMatchRecordAdapter($bus),new \App\Infrastructure\Capability\SalesLeadIntakeAdapter($bus,$read),new \App\Infrastructure\Capability\SalesOfferCreateAdapter($bus),new \App\Infrastructure\Capability\SalesOfferReviseAdapter($bus),new \App\Infrastructure\Capability\SalesOfferTransitionAdapter($bus),new \App\Infrastructure\Capability\SalesNegotiationRecordAdapter($bus),new \App\Infrastructure\Capability\SalesOfferReadAdapter($offerRepo),new \App\Infrastructure\Capability\SalesOfferListAdapter($offerRepo),new \App\Infrastructure\Capability\FinanceSalesCommercialEvidenceReadAdapter($offerRepo,$active)]);
+    $gateway = new CanonicalCapabilityGateway($catalog,$active,$resolver,[new SalesClientCaseCreateAdapter($bus,$read),new SalesLeadCreateAdapter($bus,$read),new SalesLeadQualificationAdapter($bus,$read),new SalesLeadStateManageAdapter($bus),new SalesDealStateReadAdapter($deals),new SalesDealOwnerAssignAdapter($bus),new SalesDealCommercialSetAdapter($bus),new SalesPipelineStageManageAdapter($bus),new SalesDealOutcomeRecordAdapter($bus),new SalesTeamManageAdapter($bus),new SalesTeamReadAdapter($teams,$teamAuth),new SalesActivityRecordAdapter($bus),new SalesActivityCompleteAdapter($bus),new SalesActivityRescheduleAdapter($bus),new SalesFollowupScheduleAdapter($bus),new SalesPropertyMatchRecordAdapter($bus),new \App\Infrastructure\Capability\SalesLeadIntakeAdapter($bus,$read),new \App\Infrastructure\Capability\SalesOfferCreateAdapter($bus),new \App\Infrastructure\Capability\SalesOfferReviseAdapter($bus),new \App\Infrastructure\Capability\SalesOfferTransitionAdapter($bus),new \App\Infrastructure\Capability\SalesNegotiationRecordAdapter($bus),new \App\Infrastructure\Capability\SalesOfferReadAdapter($offerRepo),new \App\Infrastructure\Capability\SalesOfferListAdapter($offerRepo),new \App\Infrastructure\Capability\FinanceSalesCommercialEvidenceReadAdapter($offerRepo,$active),new \App\Infrastructure\Capability\SalesLeadFollowupScheduleAdapter($bus),new \App\Infrastructure\Capability\SalesLeadActivityCompleteAdapter($bus),new \App\Infrastructure\Capability\SalesLeadActivityRescheduleAdapter($bus),new \App\Infrastructure\Capability\SalesLeadActivityCancelAdapter($bus),new \App\Infrastructure\Capability\SalesActivityCancelAdapter($bus),new \App\Infrastructure\Capability\SalesActivityOverdueReadAdapter($scheduledRepo),new \App\Infrastructure\Capability\SalesOfferDocumentRenderAdapter($offerDelivery),new \App\Infrastructure\Capability\SalesOfferDeliveryStatusAdapter($offerDelivery),new \App\Infrastructure\Capability\SalesCrmReconciliationReadAdapter($crmEvidence)]);
     $actor = static fn(string $tenant,string $role='manager') => new TenantContext(
         UserId::fromString((string)$userId),OrganizationId::fromString($tenant),OrganizationRole::fromString($role),
         [Permission::fromString(TenantPermissions::ACCESS),Permission::fromString(TenantPermissions::MANAGE)],
@@ -276,6 +293,72 @@ try {
     $reject(fn()=>$invoke('sales.property_match.record',['deal_id'=>$caseId,'property_id'=>PHP_INT_MAX,'match_status'=>'suggested'],'no-property'));
     $q=$db->prepare('SELECT COUNT(*) FROM cos_events e INNER JOIN cos_event_outbox o ON o.event_id=e.id WHERE e.organization_id=? AND e.aggregate_id=? AND e.type=?');
     $q->execute([$org,(string)$caseId,'sales.call.completed']);$check((int)$q->fetchColumn()===1,'Call event missing or duplicated.');
+    // S3: schedule, reschedule, cancel and complete native lead tasks.
+    $db->prepare('UPDATE tn_leads SET assigned_user_id=? WHERE organization_id=? AND id=?')->execute([$userId,$org,$leadId]);
+    $leadSchedule=['lead_id'=>$leadId,'title'=>'Lead callback','due_at'=>$due1];
+    $la=$invoke('sales.lead.followup.schedule',$leadSchedule,'lead-task-one');
+    $check($la['status']==='open'&&$invoke('sales.lead.followup.schedule',$leadSchedule,'lead-task-one')['replayed'],'Lead followup receipt failed.');
+    $lb=$invoke('sales.lead.followup.schedule',[...$leadSchedule,'title'=>'Second callback','due_at'=>$due2],'lead-task-two');
+    $check($read->lead($org,$leadId)['next_contact_at']===$expectedDate($due1),'Lead earliest contact incorrect.');
+    $invoke('sales.lead.activity.reschedule',['lead_id'=>$leadId,'activity_id'=>$la['activity_id'],'due_at'=>$due3],'lead-move');
+    $check($read->lead($org,$leadId)['next_contact_at']===$expectedDate($due2),'Lead next contact not recomputed.');
+    $cancelLead=['lead_id'=>$leadId,'activity_id'=>$lb['activity_id'],'reason'=>'Customer requested later'];
+    $check($invoke('sales.lead.activity.cancel',$cancelLead,'lead-cancel')['status']==='cancelled','Lead cancellation failed.');
+    $check($invoke('sales.lead.activity.cancel',$cancelLead,'lead-cancel')['replayed'],'Lead cancellation replay failed.');
+    $reject(fn()=>$invoke('sales.lead.activity.complete',['lead_id'=>$leadId,'activity_id'=>$lb['activity_id']],'cancelled-complete'));
+    $check($read->lead($org,$leadId)['next_contact_at']===$expectedDate($due3),'Cancelled task polluted lead projection.');
+    // Backdate a fixture only, then exercise actual overdue read and existing scan boundary.
+    $past='2020-01-01 00:00:00';
+    $db->prepare('UPDATE tn_lead_activities SET due_at=? WHERE id=? AND lead_id=?')->execute([$past,$la['activity_id'],$leadId]);
+    $due=$gateway->invoke($manager,'sales.activity.overdue.read',['limit'=>200],'trusted_read','','due-read');
+    $check(count(array_filter($due['items'],fn(array $x)=>$x['target_type']==='lead'&&$x['activity_id']===$la['activity_id']))===1,'Overdue native lead absent.');
+    $reminders->scan($org,new DateTimeImmutable(),200);$reminders->scan($org,new DateTimeImmutable(),200);
+    $q=$db->prepare('SELECT COUNT(*) FROM cos_events e INNER JOIN cos_event_outbox o ON o.event_id=e.id WHERE e.organization_id=? AND e.aggregate_id=? AND e.type=?');
+    $q->execute([$org,(string)$leadId,'sales.activity.reminder.due']);$check((int)$q->fetchColumn()===1,'Reminder event missing or duplicated.');
+    $reminderParams=['activity_id'=>$la['activity_id'],'expected_due_at'=>$past,'expected_owner_id'=>$userId];
+    $reject(fn()=>$gateway->invoke($manager,'sales.activity.reminder.queue',['target_type'=>'lead','target_id'=>(string)$leadId,'parameters'=>$reminderParams],'human_api','denied','trace'));
+    $reminderAction=new \Kernel\Action\Action(bin2hex(random_bytes(16)),$org,'sales.activity.reminder.queue','lead',(string)$leadId,$reminderParams,'USER',(string)$userId,'APPROVAL_REQUIRED','HIGH','reminder-action',new DateTimeImmutable(),\Kernel\Action\ActionStatus::Running,'reminder-trace');
+    $reminderHandler=new \Domains\Sales\Automation\Action\QueueSalesActivityReminderHandler($reminders);
+    $reminder=$reminderHandler->execute($reminderAction);
+    $check($reminder->successful&&$reminder->data['state']==='queued'&&$reminder->data['recipient_delivery_verified']===false,'Reminder queue evidence invalid.');
+    $check($reminderHandler->execute($reminderAction)->data['notification_id']===$reminder->data['notification_id'],'Reminder replay duplicated queue.');
+    $check($invoke('sales.lead.activity.complete',['lead_id'=>$leadId,'activity_id'=>$la['activity_id']],'lead-complete')['status']==='completed','Lead task completion failed.');
+    $check($read->lead($org,$leadId)['next_contact_at']===null,'Completed lead task left next contact.');
+    $check(!$reminderHandler->execute($reminderAction)->successful,'Completed task still eligible for reminder.');
+    $cancelDeal=['deal_id'=>$caseId,'activity_id'=>$f1['record_id'],'reason'=>'No longer needed'];
+    $check($invoke('sales.activity.cancel',$cancelDeal,'deal-cancel')['status']==='cancelled','Deal cancellation failed.');
+    $check($read->deal($org,$caseId)['next_contact_at']===null,'Cancelled deal followup polluted next contact.');
+    $reject(fn()=>$invoke('sales.activity.complete',['deal_id'=>$caseId,'activity_id'=>$f1['record_id']],'complete-cancelled'));
+    // Native local CRM recording and read-only reconciliation, never external delivery.
+    $msg=new SendMessageCommand($org,(string)$caseId,'EMAIL','CI CRM record','crm-'.$token);
+    $m=$nativeMessages->sendMessage($msg,[],'USER',(string)$userId);
+    $check($m->successful&&$m->data['delivery_state']==='local_recorded'&&$m->data['recipient_delivery_verified']===false,'Local CRM log represented as delivery.');
+    $check($nativeMessages->sendMessage($msg)->data['duplicate']===true,'CRM local replay failed.');
+    $reject(fn()=>$nativeMessages->sendMessage(new SendMessageCommand($org,(string)$caseId,'EMAIL','Different','crm-'.$token)));
+    $recon=['deal_id'=>$caseId,'provider'=>'aida','kind'=>'message','operation_key'=>'crm-'.$token];
+    $check($gateway->invoke($manager,'sales.crm.reconciliation.read',$recon,'trusted_read','','crm-read')['state']==='local_verified','CRM native reconciliation failed.');
+    $check($gateway->invoke($manager,'sales.crm.reconciliation.read',[...$recon,'provider'=>'unconfigured'],'trusted_read','','crm-read')['state']==='unsupported_provider','Unsupported CRM provider simulated success.');
+    // Positive real Property reference/legacy projection fixture; Sales must not own or mutate its inventory.
+    $asset='asset-'.$token;$inventory='inv-'.$token;
+    $type=(int)$db->query('SELECT MIN(id) FROM tn_property_types')->fetchColumn();$location=(int)$db->query('SELECT MIN(id) FROM tn_locations')->fetchColumn();
+    $check($type>0&&$location>0,'Property fixture vocabulary missing.');
+    $db->prepare('INSERT INTO tn_properties(organization_id,public_id,slug,title,deal_type,type_id,status,location_id) VALUES (?,?,?,?,"sale",?,"draft",?)')->execute([$org,'CI-'.$token,'ci-'.$token,'CI property',$type,$location]);
+    $propertyId=(int)$db->lastInsertId();
+    $db->prepare('INSERT INTO tn_property_assets(organization_id,asset_id,kind,type_code,lifecycle,legacy_property_id) VALUES (?,?,"unit","apartment","existing",?)')->execute([$org,$asset,$propertyId]);
+    $db->prepare('INSERT INTO tn_property_inventory_items(organization_id,inventory_id,asset_id,transaction_type,status,price_amount,price_currency) VALUES (?,?,?,"sale","available",1000,"USD")')->execute([$org,$inventory,$asset]);
+    $match=['deal_id'=>$caseId,'property_id'=>$propertyId,'match_status'=>'suggested','score'=>90,'note'=>'CI match'];
+    $matchReceipt=$invoke('sales.property_match.record',$match,'match-create');
+    $check($matchReceipt['status']==='suggested'&&$invoke('sales.property_match.record',$match,'match-create')['replayed'],'Property match creation/replay failed.');
+    $matchSent=['deal_id'=>$caseId,'property_id'=>$propertyId,'expected_status'=>'suggested','match_status'=>'sent'];
+    $check($invoke('sales.property_match.record',$matchSent,'match-sent')['status']==='sent','Property match transition failed.');
+    $reject(fn()=>$invoke('sales.property_match.record',[...$matchSent,'match_status'=>'rejected'],'match-stale'));
+    $propertyQuote=['deal_id'=>$caseId,'title'=>'Property quote','currency'=>'USD','valid_until'=>'2035-01-01T00:00:00Z','lines'=>[['kind'=>'property','title'=>'Property','quantity'=>1,'unit_price'=>'1000.00','inventory_id'=>$inventory]]];
+    $pq=$invoke('sales.offer.create',$propertyQuote,'property-quote')['offer'];
+    $pidentity=['deal_id'=>$caseId,'offer_id'=>$pq['offer_id'],'expected_revision'=>1,'target_status'=>'presented','evidence_reference'=>'property-presented'];
+    $check($invoke('sales.offer.transition',$pidentity,'property-presented')['offer']['status']==='presented','Property offer failed.');
+    $db->prepare('UPDATE tn_property_inventory_items SET price_amount=1100 WHERE organization_id=? AND inventory_id=?')->execute([$org,$inventory]);
+    $reject(fn()=>$invoke('sales.offer.transition',[...$pidentity,'expected_revision'=>2,'target_status'=>'accepted'],'property-drift'));
+    $check((new MysqlPropertyReferencePort($db))->getInventorySnapshot($org,$inventory)['status']==='available','Sales wrote Property inventory.');
     $state=$snapshot($caseId);
     $base=['deal_id'=>$caseId,'expected_revision'=>$state['revision']];
     $reject(fn()=>$invoke('sales.pipeline.stage.manage',[...$base,'target_stage_id'=>$lost->id],'terminal-stage'));
@@ -334,6 +417,21 @@ try {
     $reject(fn()=>$invoke('sales.offer.transition',[...$identity,'expected_revision'=>4,'target_status'=>'presented','evidence_reference'=>'email-2'],'customer-draft'));
     $revised=$invoke('sales.offer.revise',[...$identity,'expected_revision'=>4,...$offerTerms,'direction'=>'sales'],'adopt-counter');
     $invoke('sales.offer.transition',[...$identity,'expected_revision'=>5,'target_status'=>'presented','evidence_reference'=>'operator-email-2'],'present-adopted');
+    // Actual native Platform Notification/outbox, without sending real mail.
+    $doc=$gateway->invoke($manager,'sales.offer.document.render',['offer_id'=>$offerId],'trusted_read','','doc-read');
+    $check(str_contains($doc['html'],'999.99 USD')&&hash('sha256',$doc['text'])===$doc['document_hash']&&is_string($doc['recipient_hash']),'Offer document or recipient evidence invalid.');
+    $deliveryParams=['expected_revision'=>6,'terms_hash'=>$doc['terms_hash'],'document_hash'=>$doc['document_hash'],'recipient_hash'=>$doc['recipient_hash']];
+    $reject(fn()=>$gateway->invoke($manager,'sales.offer.delivery.queue',['target_type'=>'offer','target_id'=>$offerId,'parameters'=>$deliveryParams],'human_api','direct-delivery','trace'));
+    $deliveryAction=new \Kernel\Action\Action(bin2hex(random_bytes(16)),$org,'sales.offer.delivery.queue','offer',$offerId,$deliveryParams,'USER',(string)$userId,'APPROVAL_REQUIRED','HIGH','offer-delivery',new DateTimeImmutable(),\Kernel\Action\ActionStatus::Running,'offer-trace');
+    $deliveryHandler=new \Domains\Sales\Automation\Action\QueueSalesOfferDeliveryHandler($offerDelivery);
+    $queued=$deliveryHandler->execute($deliveryAction);
+    $check($queued->successful&&$queued->data['state']==='queued'&&$queued->data['recipient_delivery_verified']===false,'Offer transport queue evidence invalid.');
+    $check($deliveryHandler->execute($deliveryAction)->data['notification_id']===$queued->data['notification_id'],'Offer delivery duplicated.');
+    $status=$gateway->invoke($manager,'sales.offer.delivery.status',['offer_id'=>$offerId,'terms_version'=>3],'trusted_read','','status-read');
+    $check($status['state']==='queued'&&$status['notification_id']===$queued->data['notification_id'],'Native delivery status mismatch.');
+    $db->prepare('UPDATE tn_integration_outbox SET status="sent",sent_at=NOW() WHERE dedupe_key=?')->execute(['notification:'.$queued->data['notification_id']]);
+    $status=$gateway->invoke($manager,'sales.offer.delivery.status',['offer_id'=>$offerId,'terms_version'=>3],'trusted_read','','status-read');
+    $check($status['state']==='handed_off'&&$status['recipient_delivery_verified']===false,'Transport handoff falsely marked recipient delivery.');
     $accept=[...$identity,'expected_revision'=>6,'target_status'=>'accepted','evidence_reference'=>'customer-accept-1'];
     $accepted=$invoke('sales.offer.transition',$accept,'accept-offer');
     $check($accepted['offer']['status']==='accepted'&&$accepted['offer']['revision']===7&&$invoke('sales.offer.transition',$accept,'accept-offer')['replayed'],'Acceptance replay failed.');
@@ -379,7 +477,7 @@ try {
     $reject(fn()=>$invoke('sales.team.manage',[...$member,'configuration_version'=>3],'disabled-member'));
     $teamRead=$gateway->invoke($manager,'sales.team.read',['team_id'=>$newTeamId],'trusted_read','','trace-team');
     $check($teamRead['found'] && $teamRead['team']['configuration_version']===3,'Team readback failed.');
-    echo "Sales canonical intake, lifecycle, teams, ownership, commercial terms, pipeline and WON/LOST native state and outbox PASS.\n";
+    echo "Sales S1–S4 native intake, lifecycle, activities, Property/Product quote, approved-handler notification handoff, CRM evidence and WON/LOST PASS.\n";
 } finally {
     if ($db->inTransaction()) $db->rollBack();
 }

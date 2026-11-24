@@ -24,6 +24,6 @@ final readonly class SalesOfferReferenceResolver implements SalesOfferReferenceP
         $asset=$this->properties->getPropertyReference($org,(string)$row['asset_id']);
         if ($asset===null||($asset['asset_id']??null)!==$row['asset_id'])return null;
         return ['inventory_id'=>$row['inventory_id'],'asset_id'=>$row['asset_id'],'transaction_type'=>$row['transaction_type'],
-            'status'=>$row['status'],'type_code'=>$asset['type_code'],'observed_updated_at'=>$row['updated_at']];
+            'status'=>$row['status'],'type_code'=>$asset['type_code'],'asset_lifecycle'=>$asset['lifecycle'],'price_amount'=>$row['price_amount'],'price_currency'=>$row['price_currency'],'price_period'=>$row['price_period'],'available_from'=>$row['available_from'],'available_until'=>$row['available_until'],'observed_updated_at'=>$row['updated_at']];
     }
 }
