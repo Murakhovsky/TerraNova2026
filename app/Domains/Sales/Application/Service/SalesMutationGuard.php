@@ -15,6 +15,7 @@ final readonly class SalesMutationGuard
         ?int $targetOwner=null,string $permission='sales.workspace.use',?string $offer=null):mixed
     {
         return $this->transactions->transactional(function()use($org,$actor,$operation,$kind,$id,$targetOwner,$permission,$offer):mixed{
+            try {
             $this->authority->actor($org,$actor,$permission);
             if ($offer!==null) {
                 $deal=$this->authority->offerDeal($org,$offer);
@@ -23,6 +24,9 @@ final readonly class SalesMutationGuard
             }
             if ($kind!==null) $this->authority->entity($org,$actor,$kind,$id??0);
             if ($targetOwner!==null) $this->authority->targetOwner($org,$actor,$targetOwner);
+            } catch (DomainException $error) {
+                throw new SalesMutationDenied('Sales mutation denied.',0,$error);
+            }
             return $operation();
         });
     }
