@@ -18,7 +18,7 @@ use App\Persistence\Federation\FederationCapabilityBindingResolver;
 use App\Persistence\Federation\FederationGoalStore;
 use App\Persistence\Federation\FederationPlanApprovalEvidenceReader;
 use App\Persistence\Federation\FederationTrustedOutcomeEvidenceResolver;
-use Platform\Orchestration\Goal\GoalSpecification;
+use App\Persistence\ProductManagement\ProductGovernedPlanProposalService;
 use Domains\ProductManagement\Application\Service\PricingService;
 use App\Persistence\ProductManagement\ProductGovernedRunOutcomeProvider;
 use App\Persistence\Workflow\DoctrineWorkflowActionClaimAdmission;
@@ -88,7 +88,7 @@ $deny=static function(callable $fn,string $why):void{
 };
 $actor=new TenantContext(UserId::fromString($owner),
     OrganizationId::fromString($org),OrganizationRole::fromString('manager'),
-    [Permission::fromString(TenantPermissions::MANAGE)]);
+    [Permission::fromString(TenantPermissions::ACCESS),Permission::fromString(TenantPermissions::MANAGE)]);
 $oldRollout=getenv('COS_FEDERATION_CANONICAL_ORGANIZATION');
 putenv('COS_FEDERATION_CANONICAL_ORGANIZATION='.$org);
 
@@ -181,10 +181,19 @@ try {
             'input'=>['target_type'=>'product_governed_operation','target_id'=>substr(hash('sha256',$token.':'.$id),0,32),'parameters'=>$input]];
     }
     $allowed=array_column($steps,'capability_id');
-    $spec=new GoalSpecification($goalId,$org,$owner,'Prepare new assortment, price, receive, reserve, issue and release inventory',
-        [['id'=>ProductGovernedRunOutcomeProvider::CRITERION,'operator'=>'at_least','expected'=>8]],$allowed,1,null,null,'',[],['independent_plan','independent_action'],'always');
-    $goals->createGoal($actor,$spec);
-    $goals->proposePlan($actor,$planId,$goalId,$steps);
+    $operations=array_map(static fn(array $step):array=>['id'=>$step['id'],'capability_id'=>$step['capability_id'],'parameters'=>$step['input']['parameters']],$steps);
+    $proposalService=new ProductGovernedPlanProposalService($db,$goals,$bindings);
+    $proposalKey=bin2hex(random_bytes(16));$description='Prepare new assortment, price, receive, reserve, issue and release inventory';
+    $proposal=$proposalService->propose($actor,$proposalKey,$description,$operations);
+    $goalId=$proposal['goal_id'];$planId=$proposal['plan_id'];
+    $assert($proposal['operation_count']===8&&$proposal['approval_required']&&!$proposal['execution_started'],'Proposal admission result');
+    $assert($proposal===$proposalService->propose($actor,$proposalKey,$description,$operations),'Same proposal replay');
+    $changed=$operations;$changed[0]['parameters']['quantity']='9';
+    $deny(fn()=>$proposalService->propose($actor,$proposalKey,$description,$changed),'Changed approved proposal');
+    $bad=$operations;$bad[0]['parameters']['organization_id']='foreign';
+    $deny(fn()=>$proposalService->propose($actor,bin2hex(random_bytes(16)),$description,$bad),'Injected tenant');
+    $bad=$operations;$bad[0]['capability_id']='product_management.stock.receive';
+    $deny(fn()=>$proposalService->propose($actor,bin2hex(random_bytes(16)),$description,$bad),'Direct human capability bypass');
     $assert($products->balance($org,$variant,$loc)['on_hand']==='0.000000'&&$prices->get($org,$variant,'USD')['price']===null,'Proposal must not write business data');
     $deny(fn()=>$bridge->start($actor,$runId,$planId,$planApproval),'Unapproved Plan cannot execute');
     foreach($allowed as $i=>$type){
