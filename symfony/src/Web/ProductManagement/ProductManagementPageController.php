@@ -35,6 +35,40 @@ final readonly class ProductManagementPageController
         private WorkspaceShellFactory $shells,
     ) {}
 
+    public function dashboard(Request $request):Response
+    {
+        $actor=$this->manager();if($actor instanceof Response)return $actor;
+        try{
+            $currency=strtoupper(trim((string)$request->query->get('currency','UAH')));
+            $tab=(string)$request->query->get('tab','stock');
+            $location=trim((string)$request->query->get('location',''));
+            $risk=(string)$request->query->get('risk','unavailable');
+            $low=(string)$request->query->get('low','5');$high=(string)$request->query->get('high','100');
+            $kind=(string)$request->query->get('kind','no_price');
+            $now=new \DateTimeImmutable('now',new \DateTimeZone('UTC'));
+            $from=(string)$request->query->get('from',$now->modify('-29 days')->format('Y-m-d'));
+            $to=(string)$request->query->get('to',$now->modify('+1 day')->format('Y-m-d'));
+            $page=filter_var($request->query->get('page','1'),FILTER_VALIDATE_INT);
+            if($page===false||$page<1||$page>333334||!in_array($tab,['stock','movement','quality','audit'],true))
+                return new Response('Invalid dashboard parameters.',422);
+            $summary=$this->read($actor,'analytics.summary.get',['currency'=>$currency]);
+            $scope=['limit'=>30,'offset'=>($page-1)*30];
+            $locations=$this->read($actor,'location.search',['limit'=>100,'offset'=>0])['items'];
+            $report=match($tab){
+                'stock'=>$this->read($actor,'analytics.stock.search',$scope+['risk'=>$risk,'low'=>$low,'high'=>$high]+($location!==''?['location_id'=>$location]:[])),
+                'movement'=>$this->read($actor,'analytics.movement.search',$scope+['from'=>$from,'to'=>$to]),
+                'quality'=>$this->read($actor,'analytics.quality.search',$scope+['currency'=>$currency,'kind'=>$kind]),
+                'audit'=>$this->read($actor,'analytics.reconciliation.get',['limit'=>500]),
+            };
+            $filters=compact('currency','tab','location','risk','low','high','kind','from','to');
+            return $this->render($request,$actor,'dashboard',compact('summary','report','locations','page','filters')+[
+                'prevQuery'=>http_build_query($filters+['page'=>max(1,$page-1)]),
+                'nextQuery'=>http_build_query($filters+['page'=>$page+1]),
+            ]);
+        }catch(DomainException|\InvalidArgumentException){return new Response('Invalid analytics scope or filters.',422);}
+        catch(Throwable $e){error_log('product_management.dashboard.unavailable '.$e::class);return new Response('Native analytics unavailable. No synthetic metrics.',503);}
+    }
+
     public function index(Request $request): Response
     {
         $actor=$this->manager();
@@ -860,7 +894,7 @@ final readonly class ProductManagementPageController
     private function render(Request $request,TenantContext $actor,string $section,array $data):Response
     {
         $label=match($section){
-            'catalog'=>'Каталог товарів','product'=>'Картка товару','categories'=>'Категорії','price-lists'=>'Прайс-листи','attributes'=>'Атрибути','product-attributes'=>'Характеристики та варіації',
+            'dashboard'=>'Product Dashboard','catalog'=>'Каталог товарів','product'=>'Картка товару','categories'=>'Категорії','price-lists'=>'Прайс-листи','attributes'=>'Атрибути','product-attributes'=>'Характеристики та варіації',
             default=>'Product Management',
         };
         $context=new WebExtensionContext(
