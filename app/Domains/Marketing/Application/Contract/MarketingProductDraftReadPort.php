@@ -11,6 +11,9 @@ interface MarketingProductDraftReadPort
     /** @return array{items:list<array<string,mixed>>,has_more:bool} */
     public function search(string $organizationId,string $query,int $limit,int $offset):array;
 
+    /** @return array<string,mixed>|null Null means inventory is not tracked for this variant. */
+    public function stock(string $organizationId,string $productId,string $variantId,string $locationId):?array;
+
     /** @return array<string,mixed>|null */
     public function inspect(string $organizationId,string $productId,?string $variantId,string $currency):?array;
 }

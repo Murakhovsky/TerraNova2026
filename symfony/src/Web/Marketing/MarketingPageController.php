@@ -159,6 +159,10 @@ final readonly class MarketingPageController
             'product_ref'=>$product!==''?$product:null,
             'media_sha256'=>$media!==''?$media:null,
         ];
+        foreach(['variant_ref','location_ref'] as $field){
+            $ref=trim((string)$request->request->get($field,''));
+            if($ref!=='')$content[$field]=$ref;
+        }
         $markets = trim((string)$request->request->get('target_market_countries',''));
         $hypothesis = trim((string)$request->request->get('target_audience_hypothesis',''));
         if ($markets !== '' || $hypothesis !== '') {
@@ -220,10 +224,13 @@ final readonly class MarketingPageController
                 if($request->query->has('product_id')){
                     try{
                         $variant=trim((string)$request->query->get('variant_id',''));
+                        $location=trim((string)$request->query->get('location_id',''));
+                        $destination=trim((string)$request->query->get('destination_url',''));
                         $productCheck=$this->productChecks->check(
                             $actor,trim((string)$request->query->get('product_id','')),
                             $variant!==''?$variant:null,
-                            strtoupper(trim((string)$request->query->get('currency','USD')))
+                            strtoupper(trim((string)$request->query->get('currency','USD'))),
+                            $location!==''?$location:null,$destination!==''?$destination:null
                         );
                     }catch(DomainException){
                         $productCheckError='Product check unavailable: verify Product module activation, reference and tenant permissions.';

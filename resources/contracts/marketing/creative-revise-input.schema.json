@@ -76,6 +76,14 @@
         }
       },
       "additionalProperties": false
+    },
+    "variant_ref": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "location_ref": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
     }
   },
   "additionalProperties": false

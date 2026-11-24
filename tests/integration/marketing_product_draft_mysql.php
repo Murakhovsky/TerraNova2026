@@ -76,6 +76,18 @@ $check($before['product_status']==='DRAFT'&&$before['variant_status']==='ACTIVE'
     &&in_array('BASE_PRICE',$before['pending_checks'],true),
     'Marketing created a false advertising readiness or price from a native Product draft.');
 
+$location=$productOwner->createLocation($org,'MKTLOC','Marketing stock fixture','mkt-loc-'.$token,'ci-product-owner','ci-product-mkt');
+$locationRef=$location['location_id'];
+$empty=$service->check($manager,$productRef,$variantRef,'USD',$locationRef);
+$check($empty['stock_observation']['status']==='NO_AVAILABLE_STOCK','Empty native stock not recognized.');
+$productOwner->recordMovement($org,$variantRef,$locationRef,'5','receipt','mkt-test-source','mkt-stock-'.$token,'ci-product-owner','ci-product-mkt');
+$observed=$service->check($manager,$productRef,$variantRef,'USD',$locationRef,'https://example.com/item');
+$check($observed['stock_observation']['status']==='AVAILABLE_OBSERVED'
+    &&$observed['stock_observation']['available']==='5.000000'
+    &&!$observed['launch_eligible']&&!$observed['external_destination_verified'],'Native stock readback failed or overstated.');
+$denied(static fn()=> $service->check($manager,$productRef,$variantRef,'USD',str_repeat('f',32)),'Unknown location accepted.');
+$alien=$service->check($otherManager,$productRef,$variantRef,'USD',$locationRef);
+$check($alien['stock_observation']['status']==='NOT_OBSERVED'&&$alien['stock_observation']['available']===null,'Foreign stock leaked.');
 $price=$pricingOwner->set($org,$variantRef,'USD','23.75',
     'product-mkt-price-'.$token,'ci-product-owner','ci-product-mkt');
 $checked=$service->check($manager,$productRef,$variantRef,'USD');

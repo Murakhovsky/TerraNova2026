@@ -49,6 +49,30 @@ final readonly class ProductManagementDraftReadAdapter implements MarketingProdu
         return ['items'=>$items,'has_more'=>count($rows)>$limit];
     }
 
+    public function stock(string $organizationId,string $productId,string $variantId,string $locationId):?array
+    {
+        if(!$this->modules->isEnabled($organizationId,'product_management')){
+            throw new DomainException('Product Management is not active for this tenant.');
+        }
+        $product=$this->products->getProduct($organizationId,$productId);
+        if($product===null||($product['product_id']??null)!==$productId
+            ||!in_array($product['status']??null,['active','draft'],true)){
+            throw new DomainException('Product unavailable for inventory planning.');
+        }
+        foreach(($product['variants']??[]) as $variant){
+            if(($variant['variant_id']??null)!==$variantId||($variant['status']??null)!=='active')continue;
+            if(!in_array($variant['track_inventory']??null,[0,1,'0','1',true,false],true)){
+                throw new DomainException('Unknown Product inventory policy.');
+            }
+            if(!(bool)$variant['track_inventory'])return null;
+            $balance=$this->products->balance($organizationId,$variantId,$locationId);
+            return ['variant_id'=>$balance['variant_id']??null,'location_id'=>$balance['location_id']??null,
+                'on_hand'=>$balance['on_hand']??null,'reserved'=>$balance['reserved']??null,
+                'available'=>$balance['available']??null,'revision'=>(int)($balance['revision']??-1)];
+        }
+        throw new DomainException('Variant unavailable for inventory planning.');
+    }
+
     public function inspect(string $organizationId,string $productId,?string $variantId,string $currency):?array
     {
         if(!$this->modules->isEnabled($organizationId,'product_management')){

@@ -98,6 +98,62 @@
     "source_readback": {
       "type": "string",
       "const": "PRODUCT_DOMAIN_CURRENT_READ"
+    },
+    "destination_syntax_status": {
+      "type": "string",
+      "const": "VALID_HTTPS_SYNTAX_ONLY"
+    },
+    "stock_observation": {
+      "type": "object",
+      "required": [
+        "location_ref",
+        "status",
+        "on_hand",
+        "reserved",
+        "available",
+        "revision"
+      ],
+      "properties": {
+        "location_ref": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "NOT_OBSERVED",
+            "NOT_TRACKED",
+            "AVAILABLE_OBSERVED",
+            "NO_AVAILABLE_STOCK"
+          ]
+        },
+        "on_hand": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reserved": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "available": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "revision": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false

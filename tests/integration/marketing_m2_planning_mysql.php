@@ -38,11 +38,14 @@ $creativeData=$policy->creative([
     'call_to_action'=>'Read more',
     'destination_url'=>'https://example.com/catalog/product',
     'language'=>'uk',
-    'product_ref'=>'prod-future-1',
+    'product_ref'=>str_repeat('a',32),
+    'variant_ref'=>str_repeat('b',32),
+    'location_ref'=>str_repeat('c',32),
     'target_spec'=>['market_countries'=>['UA','PL'],'audience_hypothesis'=>'Broad local product demand'],
 ]);
 $creative=$repo->createCreative($orgA,$campaignId,'101',$creativeData,'creative-create-01');
 $creativeId=$creative['id'];
+$assert($creative['content']['variant_ref']===str_repeat('b',32)&&$creative['content']['location_ref']===str_repeat('c',32),'Variant/location revision not persisted.');
 $assert($creative['revision']===1&&$creative['status']==='DRAFT'
     &&$creative['content']['product_verification']==='PENDING_PRODUCT_ACCEPTANCE','Creative must begin unverified DRAFT');
 $assert($creative['content']['target_spec']['market_countries']===['PL','UA']

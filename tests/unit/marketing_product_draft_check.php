@@ -40,6 +40,11 @@ $source=new class($productId,$variantId) implements MarketingProductDraftReadPor
         return ['items'=>[['product_ref'=>$this->forge?'bad':$this->productId,'variant_ref'=>$this->variantId,
             'name'=>'Local Product','sku'=>'LOCAL-SKU','product_status'=>$this->status]],'has_more'=>false];
     }
+    public function stock(string $org,string $productId,string $variantId,string $locationId):?array {
+        if($org!=='product-marketing-tenant')throw new DomainException('Foreign stock denied.');
+        return ['variant_id'=>$this->forge?'bad':$variantId,'location_id'=>$locationId,
+            'on_hand'=>'8.000000','reserved'=>'3.000000','available'=>'5.000000','revision'=>1];
+    }
     public function inspect(string $org,string $productId,?string $variantId,string $currency):?array {
         if($org!=='product-marketing-tenant')throw new DomainException('Foreign tenant must not access Product.');
         if($productId!==$this->productId)return null;
@@ -76,6 +81,15 @@ $assert($ready['product_status']==='DRAFT'
     &&$ready['external_destination_verified']===false
     &&$ready['provider_ad_policy_verified']===false,
     'Native Product draft readback must not claim Meta launch readiness.');
+$loc=str_repeat('f',32);
+$stock=$service->check($manager,$productId,$variantId,'USD',$loc,'https://example.com/item');
+$assert($stock['stock_observation']['status']==='AVAILABLE_OBSERVED'
+    &&$stock['stock_observation']['available']==='5.000000'
+    &&$stock['destination_syntax_status']==='VALID_HTTPS_SYNTAX_ONLY'
+    &&!$stock['launch_eligible']&&!$stock['external_destination_verified']&&!$stock['inventory_verified'],
+    'Stock/URL observation must never claim launch readiness.');
+$deny(static fn()=> $service->check($manager,$productId,null,'USD',$loc),'Location without variant accepted.');
+$deny(static fn()=> $service->check($manager,$productId,$variantId,'USD',$loc,'https://127.0.0.1/'),'IP destination accepted.');
 $none=$service->check($manager,str_repeat('d',32),null,'USD');
 $assert(!$none['can_reference_in_draft']&&$none['product_status']==='NOT_FOUND',
     'Unknown Product was wrongly accepted for a Creative draft.');

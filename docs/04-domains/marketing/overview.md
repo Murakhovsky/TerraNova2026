@@ -61,7 +61,15 @@ Workspace дозволяє створювати, переглядати, змі�
 
 ## M2c.2: Product Selector
 
-`marketing.product.selector.search` — read-only tenant-manager Query через наявний Product read port. Пошук за назвою/SKU через Product owner, сторінки до 20 variant rows, повторне читання поточного статусу Product/Variant; архівні або неактивні варіації відсіюються. Pagination працює за source rows, тому відфільтрована сторінка може бути порожньою. Workspace дозволяє обрати SKU, виконати live price check та підставити Product reference у новий Creative Draft. Variant selection наразі використовується для readback, а не зберігається як прив'язка креативу. Немає stock guarantee, paid eligibility або прямого SQL. Unit та native MySQL tests додають tenant/module/role fences. D3–D5 не заявлено.
+`marketing.product.selector.search` — read-only tenant-manager Query через наявний Product read port. Пошук за назвою/SKU через Product owner, сторінки до 20 variant rows, повторне читання поточного статусу Product/Variant; архівні або неактивні варіації відсіюються. Pagination працює за source rows, тому відфільтрована сторінка може бути порожньою. Workspace дозволяє обрати SKU, виконати live price check та підставити Product reference у новий Creative Draft. Початковий M2c.2 використовував Variant selection для readback; M2c.3 додає версіоноване посилання. Немає stock guarantee, paid eligibility або прямого SQL. Unit та native MySQL tests додають tenant/module/role fences. D3–D5 не заявлено.
+
+## M2c.3: Variant/Location references та stock readback
+
+Creative create/revise приймають опційні canonical `variant_ref` та `location_ref` у версіонованому JSON. Це посилання, а не підтверджені факти: наявна ознака Product verification не змінюється. Старі payload без цих полів не отримують нових ключів. Workspace підставляє вибрані Product/Variant/Location та відображає збережені посилання.
+
+Existing `marketing.product.draft_check.get` підтримує опційний `location_id` та `destination_url`. Через Product owner `balance()` читається on-hand/reserved/available/revision для активної варіації конкретного tenant і location. Non-stock variant позначається NOT_TRACKED; відсутній/неактивний Product не дає stock evidence. Decimal залишається string, без float conversion. Це поточне спостереження, а не резерв або гарантія доступності. Stock location наразі вводиться за ID; довідник локацій потребує Product-owned list contract.
+
+Destination URL проходить синтаксичну HTTPS перевірку без DNS/HTTP, credentials, IP та нестандартних портів. Reachability, redirect safety, ownership і відповідність товару залишаються непідтвердженими. Немає SSRF-prone server fetch. `launch_eligible`, `inventory_verified`, `external_destination_verified` залишаються false; Meta/Finance writes заборонені. Unit та native MySQL tests додано; CI і незалежне приймання потрібні.
 
 ## Надійність імпорту та операційна черга
 

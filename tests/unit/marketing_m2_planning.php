@@ -38,6 +38,14 @@ foreach([
     $blocked(static fn()=> $policy->creative($invalid),'Invalid or privileged Creative accepted.');
 }
 $expect(!array_key_exists('target_spec',$saved),'Legacy Creative payload/hash must remain unchanged.');
+$linked=$policy->creative([...$creative,'product_ref'=>str_repeat('a',32),'variant_ref'=>str_repeat('b',32),'location_ref'=>str_repeat('c',32)]);
+$expect($linked['variant_ref']===str_repeat('b',32)&&$linked['location_ref']===str_repeat('c',32)
+    &&$linked['product_verification']==='PENDING_PRODUCT_ACCEPTANCE','Draft reference must remain unverified.');
+$blocked(static fn()=> $policy->creative([...$creative,'variant_ref'=>str_repeat('b',32)]),'Variant without canonical Product accepted.');
+$blocked(static fn()=> $policy->creative([...$creative,'location_ref'=>str_repeat('c',32)]),'Location without variant accepted.');
+foreach(['https://foo.localhost/','https://a..example.com/','https://example.com:443/','https://2130706433/'] as $invalidUrl){
+    $blocked(static fn()=> $policy->creative([...$creative,'destination_url'=>$invalidUrl]),'Invalid destination accepted.');
+}
 $target=['market_countries'=>['UA','PL'],'audience_hypothesis'=>'Broad demand for local products'];
 $targeted=$policy->creative([...$creative,'target_spec'=>$target]);
 $expect($targeted['target_spec']['market_countries']===['PL','UA']

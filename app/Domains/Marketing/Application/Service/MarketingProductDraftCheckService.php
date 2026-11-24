@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace Domains\Marketing\Application\Service;
 
 use DomainException;
+use Domains\Marketing\Domain\MarketingPlanningPolicy;
 use Domains\Marketing\Application\Contract\MarketingProductDraftReadPort;
 use Kernel\Tenant\Model\TenantContext;
 use Kernel\Tenant\Model\TenantPermissions;
@@ -49,7 +50,7 @@ final readonly class MarketingProductDraftCheckService
     }
 
     /** @return array<string,mixed> */
-    public function check(TenantContext $actor,string $productId,?string $variantId,string $currency):array
+    public function check(TenantContext $actor,string $productId,?string $variantId,string $currency,?string $locationId=null,?string $destinationUrl=null):array
     {
         if(!$actor->isManager()||!$actor->allows(TenantPermissions::ACCESS)
             ||!$actor->allows(TenantPermissions::MANAGE)){
@@ -60,9 +61,13 @@ final readonly class MarketingProductDraftCheckService
             ||!preg_match('/^[A-Z]{3}$/D',$currency)){
             throw new DomainException('Product draft check requires canonical Product/Variant references and currency.');
         }
+        if($locationId!==null&&($variantId===null||!preg_match('/^[a-f0-9]{32}$/D',$locationId))){
+            throw new DomainException('Stock observation requires a canonical variant and location.');
+        }
+        if($destinationUrl!==null)MarketingPlanningPolicy::validateDestination($destinationUrl);
         $found=$this->products->inspect($actor->organizationId()->value(),$productId,$variantId,$currency);
         if($found===null){
-            return $this->result($productId,$variantId,$currency,'NOT_FOUND','NOT_FOUND',0,0,null,false);
+            return $this->withObservations($this->result($productId,$variantId,$currency,'NOT_FOUND','NOT_FOUND',0,0,null,false),$actor,$locationId,$destinationUrl);
         }
         if(($found['product_ref']??null)!==$productId
             ||($found['variant_ref']??null)!==$variantId
@@ -83,8 +88,45 @@ final readonly class MarketingProductDraftCheckService
         }
         $canDraft=in_array($productStatus,['ACTIVE','DRAFT'],true)
             &&($variantId===null||$variantStatus==='ACTIVE');
-        return $this->result($productId,$variantId,$currency,$productStatus,$variantStatus,
-            $found['product_revision'],$found['variant_revision'],$basePrice,$canDraft);
+        return $this->withObservations($this->result($productId,$variantId,$currency,$productStatus,$variantStatus,
+            $found['product_revision'],$found['variant_revision'],$basePrice,$canDraft),$actor,$locationId,$destinationUrl);
+    }
+
+    /** @param array<string,mixed> $result @return array<string,mixed> */
+    private function withObservations(array $result,TenantContext $actor,?string $locationId,?string $destinationUrl):array
+    {
+        if($destinationUrl!==null)$result['destination_syntax_status']='VALID_HTTPS_SYNTAX_ONLY';
+        if($locationId===null)return $result;
+        $observation=['location_ref'=>$locationId,'status'=>'NOT_OBSERVED','on_hand'=>null,'reserved'=>null,
+            'available'=>null,'revision'=>null];
+        if($result['can_reference_in_draft']&&$result['variant_status']==='ACTIVE'){
+            $source=$this->products->stock($actor->organizationId()->value(),$result['product_ref'],$result['variant_ref'],$locationId);
+            if($source===null){
+                $observation['status']='NOT_TRACKED';
+            }else{
+                if(($source['variant_id']??null)!==$result['variant_ref']||($source['location_id']??null)!==$locationId
+                    ||!is_int($source['revision']??null)||$source['revision']<0){
+                    throw new DomainException('Mismatched stock source observation.');
+                }
+                foreach(['on_hand','reserved','available'] as $field){
+                    $decimal=$source[$field]??null;
+                    if(!is_string($decimal)||!preg_match('/^-?(0|[1-9][0-9]{0,15})(?:\\.[0-9]{1,6})?$/D',$decimal)){
+                        throw new DomainException('Invalid Product stock decimal.');
+                    }
+                    if($field!=='available'&&str_starts_with($decimal,'-')){
+                        throw new DomainException('Negative stock or reservation is not eligible for planning.');
+                    }
+                    $observation[$field]=$decimal;
+                }
+                $observation['revision']=$source['revision'];
+                $available=$observation['available'];
+                $observation['status']=!str_starts_with($available,'-')&&preg_match('/[1-9]/',$available)
+                    ?'AVAILABLE_OBSERVED':'NO_AVAILABLE_STOCK';
+            }
+        }
+        $result['stock_observation']=$observation;
+        // A readback is not a reservation, freshness guarantee or paid launch gate.
+        return $result;
     }
 
     /** @return array<string,mixed> */

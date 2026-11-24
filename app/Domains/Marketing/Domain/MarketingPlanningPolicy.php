@@ -38,7 +38,7 @@ final class MarketingPlanningPolicy
     /** @param array<string,mixed> $raw @return array<string,mixed> */
     public function creative(array $raw):array
     {
-        $this->only($raw,['headline','primary_text','call_to_action','destination_url','language','product_ref','media_sha256','target_spec']);
+        $this->only($raw,['headline','primary_text','call_to_action','destination_url','language','product_ref','media_sha256','target_spec','variant_ref','location_ref']);
         foreach(['headline','primary_text','call_to_action','destination_url','language'] as $field){
             if(!is_string($raw[$field]??null)){
                 throw new DomainException('Creative planning fields must be strings.');
@@ -55,20 +55,7 @@ final class MarketingPlanningPolicy
             ||!preg_match('/^[a-z]{2}(?:-[A-Z]{2})?$/D',$lang)){
             throw new DomainException('Invalid bounded creative text or locale.');
         }
-        $parts=parse_url($url);
-        if($parts===false||strtolower((string)($parts['scheme']??''))!=='https'
-            ||!is_string($parts['host']??null)
-            ||!preg_match('/^[a-zA-Z0-9.-]{4,253}$/D',$parts['host'])
-            ||!str_contains($parts['host'],'.')
-            ||str_ends_with(strtolower($parts['host']),'.local')
-            ||str_ends_with(strtolower($parts['host']),'.internal')
-            ||str_ends_with(strtolower($parts['host']),'.test')
-            ||filter_var($parts['host'],FILTER_VALIDATE_IP)!==false
-            ||strtolower($parts['host'])==='localhost'
-            ||isset($parts['user'])||isset($parts['pass'])||isset($parts['port'])
-            ||mb_strlen($url)>1200){
-            throw new DomainException('Creative destination requires a bounded public HTTPS hostname without credentials.');
-        }
+        self::validateDestination($url);
         $productRef=$raw['product_ref']??null;
         if($productRef!==null && (!is_string($productRef)||!preg_match('/^[A-Za-z0-9_.:-]{1,100}$/D',$productRef))){
             throw new DomainException('Invalid unverified Product reference.');
@@ -84,12 +71,44 @@ final class MarketingPlanningPolicy
             'destination_verification'=>'UNVERIFIED',
             'compliance_state'=>'NOT_REVIEWED',
         ];
+        if(array_key_exists('variant_ref',$raw)){
+            $variant=$raw['variant_ref'];
+            if(!is_string($variant)||!preg_match('/^[a-f0-9]{32}$/D',$variant)
+                ||!is_string($productRef)||!preg_match('/^[a-f0-9]{32}$/D',$productRef)){
+                throw new DomainException('Variant reference requires canonical Product and Variant IDs.');
+            }
+            $content['variant_ref']=$variant;
+        }
+        if(array_key_exists('location_ref',$raw)){
+            $location=$raw['location_ref'];
+            if(!isset($content['variant_ref'])||!is_string($location)||!preg_match('/^[a-f0-9]{32}$/D',$location)){
+                throw new DomainException('Location reference requires canonical Variant and Location IDs.');
+            }
+            $content['location_ref']=$location;
+        }
         // Omitted TargetSpec preserves the exact legacy content and idempotency hash.
         if (array_key_exists('target_spec', $raw)) {
             if (!is_array($raw['target_spec'])) throw new DomainException('TargetSpec must be an object.');
             $content['target_spec'] = $this->targetSpec($raw['target_spec']);
         }
         return $content;
+    }
+
+    /** Syntactic validation only. Never resolve DNS, follow redirects or fetch user URLs. */
+    public static function validateDestination(string $url): void
+    {
+        if(strlen($url)>1200||preg_match('/[\\x00-\\x20\\x7f\\\\\\\\]/',$url)||filter_var($url,FILTER_VALIDATE_URL)===false){
+            throw new DomainException('Invalid HTTPS destination syntax.');
+        }
+        $parts=parse_url($url);
+        $host=strtolower((string)($parts['host']??''));
+        if($parts===false||strtolower((string)($parts['scheme']??''))!=='https'
+            ||!preg_match('/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?$/D',$host)
+            ||strlen($host)>253||filter_var($host,FILTER_VALIDATE_IP)!==false
+            ||preg_match('/\\.(?:localhost|local|internal|test|invalid|onion|lan|home|arpa)$/D',$host)
+            ||isset($parts['user'])||isset($parts['pass'])||isset($parts['port'])){
+            throw new DomainException('Creative destination requires a public-style HTTPS hostname without credentials.');
+        }
     }
 
     /** Provider-neutral planning only; no audience IDs, identity lists or activation fields.

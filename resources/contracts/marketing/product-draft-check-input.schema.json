@@ -20,6 +20,15 @@
     "currency": {
       "type": "string",
       "pattern": "^[A-Z]{3}$"
+    },
+    "location_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "destination_url": {
+      "type": "string",
+      "pattern": "^https://",
+      "maxLength": 1200
     }
   },
   "additionalProperties": false

@@ -14,6 +14,8 @@ final readonly class MarketingProductDraftCheckGetAdapter implements CapabilityI
     public function invoke(TenantContext $actor,array $input,string $key,string $correlationId):mixed
     {
         return $this->checks->check($actor,(string)$input['product_id'],
-            isset($input['variant_id'])?(string)$input['variant_id']:null,(string)$input['currency']);
+            isset($input['variant_id'])?(string)$input['variant_id']:null,(string)$input['currency'],
+            isset($input['location_id'])?(string)$input['location_id']:null,
+            isset($input['destination_url'])?(string)$input['destination_url']:null);
     }
 }
