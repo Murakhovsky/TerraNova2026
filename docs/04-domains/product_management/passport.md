@@ -57,7 +57,8 @@ domain_id: product_management
       "id": "pricing",
       "capability_ids": [
         "product_management.price.base.set",
-        "product_management.price.base.get"
+        "product_management.price.base.get",
+        "product_management.price.history.search"
       ]
     },
     {
