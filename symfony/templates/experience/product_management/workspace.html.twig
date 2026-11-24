@@ -12,6 +12,7 @@
     <nav class="cos-toolbar" aria-label="Product Management">
         <a class="btn btn-outline-secondary" href="/product-management">Каталог</a>
         <a class="btn btn-outline-secondary" href="/product-management/categories">Категорії</a>
+        <a class="btn btn-outline-secondary" href="/product-management/price-lists">Прайс-листи</a>
     </nav>
     {% if notice == 'created' or notice == 'updated' %}
         <p role="status" class="alert alert-success">Операцію збережено. Дані повторно прочитані з Domain.</p>
@@ -165,6 +166,33 @@
                 </form>
             {% endif %}
         </section>
+        <section class="cos-panel" id="list-price">
+            <h2>Ціна в прайс-листі</h2>
+            <p>Виберіть явний код прайс-листа та SKU. Базова ціна не підставляється автоматично.</p>
+            <form method="get" action="/product-management/products/{{ product.product_id }}#list-price" class="cos-toolbar">
+                <label>Код прайс-листа <input name="list_code" class="form-control" required maxlength="64" value="{{ selectedList.code|default('') }}"></label>
+                <label>SKU <select name="list_variant" class="form-select" required>
+                    {% for v in product.variants|default([]) %}<option value="{{ v.variant_id }}" {% if listVariant and listVariant.variant_id == v.variant_id %}selected{% endif %}>{{ v.sku }}</option>{% endfor %}
+                </select></label>
+                <button class="btn btn-outline-primary">Показати ціну</button>
+            </form>
+            {% if selectedList and listPrice %}
+                <p>{{ selectedList.name }} · {{ selectedList.kind }} · {{ listPrice.currency }} · {{ listVariant.sku }}: {{ listPrice.price is null ? 'Не встановлено' : listPrice.price }} · rev {{ listPrice.revision }}</p>
+                {% if product.status != 'archived' and listVariant.status == 'active' %}
+                <form method="post" action="/product-management/products/{{ product.product_id }}/list-price" class="cos-toolbar">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000009">
+                    <input type="hidden" name="list_code" value="{{ selectedList.code }}">
+                    <input type="hidden" name="list_id" value="{{ selectedList.list_id }}">
+                    <input type="hidden" name="variant_id" value="{{ listVariant.variant_id }}">
+                    <input type="hidden" name="expected_revision" value="{{ listPrice.revision }}">
+                    <label>Ціна {{ listPrice.currency }} <input class="form-control" name="amount" value="{{ listPrice.price|default('') }}" required maxlength="21"></label>
+                    <button class="btn btn-outline-primary">Зберегти ціну</button>
+                </form>
+                {% endif %}
+            {% endif %}
+            <a href="/product-management/price-lists">Перелік прайс-листів</a>
+        </section>
         {% if priceHistory is not null %}
         <section class="cos-panel" id="price-history">
             <h2>Історія ціни: {{ historyVariant.sku }} · {{ priceCurrency }}</h2>
@@ -269,6 +297,32 @@
                     <button class="btn btn-outline-primary" type="submit">Зберегти переклад</button>
                 </form>
             {% endif %}
+        </section>
+    {% elseif section == 'price-lists' %}
+        <section class="cos-panel">
+            <h2>Прайс-листи організації</h2>
+            <table class="table"><thead><tr><th>Код</th><th>Назва</th><th>Тип</th><th>Валюта</th></tr></thead><tbody>
+                {% for p in lists %}<tr><td>{{ p.code }}</td><td>{{ p.name }}</td><td>{{ p.kind }}</td><td>{{ p.currency }}</td></tr>
+                {% else %}<tr><td colspan="4">Прайс-листів немає.</td></tr>{% endfor %}
+            </tbody></table>
+            <nav class="cos-toolbar">
+                {% if listPage > 1 %}<a href="?page={{ listPage - 1 }}">Попередня</a>{% endif %}
+                <span>Сторінка {{ listPage }}</span>
+                {% if listHasNext %}<a href="?page={{ listPage + 1 }}">Наступна</a>{% endif %}
+            </nav>
+            <p>Для зміни ціни відкрийте потрібний товар у каталозі та введіть код прайс-листа.</p>
+        </section>
+        <section class="cos-panel">
+            <h2>Створити прайс-лист</h2>
+            <form method="post" action="/product-management/price-lists" class="cos-page__stack">
+                <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000010">
+                <label>Код <input name="code" class="form-control" required maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9_-]*"></label>
+                <label>Назва <input name="name" class="form-control" required maxlength="255"></label>
+                <label>Тип <select name="kind" class="form-select"><option value="retail">Роздрібний</option><option value="wholesale">Гуртовий</option><option value="partner">Партнерський</option></select></label>
+                <label>Валюта <input name="currency" class="form-control" required maxlength="3" pattern="[A-Za-z]{3}" value="UAH"></label>
+                <button class="btn btn-primary">Створити</button>
+            </form>
         </section>
     {% elseif section == 'categories' %}
         <section class="cos-panel">
