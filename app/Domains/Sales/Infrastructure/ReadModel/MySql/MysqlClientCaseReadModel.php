@@ -17,6 +17,7 @@ final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInte
         private PDO $connection,
         private string $organizationId,
         private SalesPropertyReference $properties,
+        private ?int $ownerId=null,
     ) {
     }
 
@@ -35,7 +36,7 @@ final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInte
 
     public function cases(array $filters): array
     {
-        $where = ['1 = 1'];
+        $where = ['1 = 1'.$this->dealScope('c')];
         $params = ['organization_id' => $this->organizationId];
         if (($filters['q'] ?? '') !== '') {
             $where[] = '(c.public_id LIKE :q_public_id OR c.title LIKE :q_title OR p.full_name LIKE :q_name OR p.phone LIKE :q_phone OR p.email LIKE :q_email OR p.telegram LIKE :q_telegram)';
@@ -71,7 +72,7 @@ final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInte
         return $this->all('SELECT c.*, COALESCE(ps.code, UPPER(c.stage)) AS stage_code, COALESCE(ps.name, c.stage) AS stage_name,
             p.public_id AS person_public_id, p.full_name, p.phone, p.email, p.telegram,
             u.full_name AS manager_name, pt.name_uk AS property_type_name, l.city AS location_city,
-            (SELECT COUNT(*) FROM tn_leads l WHERE l.client_case_id = c.id AND l.organization_id = c.organization_id) AS inquiry_count,
+            (SELECT COUNT(*) FROM tn_leads l WHERE l.client_case_id = c.id AND l.organization_id = c.organization_id'.$this->leadScope('l').') AS inquiry_count,
             (SELECT COUNT(*) FROM tn_client_case_activities a WHERE a.client_case_id = c.id AND a.organization_id = c.organization_id) AS activity_count,
             (SELECT COUNT(*) FROM tn_client_case_property_matches m WHERE m.client_case_id = c.id AND m.organization_id = c.organization_id) AS match_count
             FROM tn_client_cases c
@@ -94,7 +95,7 @@ final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInte
         foreach ($stageRows as $stageRow) $stats[(string) $stageRow['code']] = 0;
         $rows = $this->all('SELECT COALESCE(s.code, UPPER(c.stage)) stage_code, COUNT(*) total
             FROM tn_client_cases c LEFT JOIN sales_pipeline_stages s ON s.id=c.stage_id AND s.organization_id=c.organization_id
-            WHERE c.organization_id=:organization_id GROUP BY COALESCE(s.code, UPPER(c.stage))',
+            WHERE c.organization_id=:organization_id'.$this->dealScope('c').' GROUP BY COALESCE(s.code, UPPER(c.stage))',
             ['organization_id' => $this->organizationId]);
         foreach ($rows as $row) {
             $stage = (string) ($row['stage_code'] ?? '');
@@ -117,14 +118,14 @@ final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInte
             LEFT JOIN tn_locations l ON l.id = c.location_id
             LEFT JOIN sales_pipelines pl ON pl.id=c.pipeline_id AND pl.organization_id=c.organization_id
             LEFT JOIN sales_pipeline_stages ps ON ps.id=c.stage_id AND ps.organization_id=c.organization_id
-            WHERE c.id = :id AND c.organization_id = :organization_id LIMIT 1',
+            WHERE c.id = :id AND c.organization_id = :organization_id'.$this->dealScope('c').' LIMIT 1',
             ['id' => $id, 'organization_id' => $this->organizationId]);
     }
 
     public function inboundRequests(int $caseId): array
     {
         $rows = $this->all('SELECT l.* FROM tn_leads l
-            WHERE l.client_case_id = :case_id AND l.organization_id = :organization_id
+            WHERE l.client_case_id = :case_id AND l.organization_id = :organization_id'.$this->leadScope('l').'
             ORDER BY l.created_at DESC, l.id DESC', ['case_id' => $caseId, 'organization_id' => $this->organizationId]);
         return $this->enrichLeadProperties($rows);
     }
@@ -133,14 +134,14 @@ final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInte
     {
         return $this->all('SELECT a.*, u.full_name AS user_name FROM tn_client_case_activities a
             LEFT JOIN tn_users u ON u.id = a.user_id AND u.organization_id = a.organization_id
-            WHERE a.client_case_id = :case_id AND a.organization_id = :organization_id
+            WHERE a.client_case_id = :case_id AND a.organization_id = :organization_id'.$this->childScope('a').'
             ORDER BY a.created_at DESC, a.id DESC LIMIT 80', ['case_id' => $caseId, 'organization_id' => $this->organizationId]);
     }
 
     public function propertyMatches(int $caseId): array
     {
         $rows = $this->all('SELECT m.* FROM tn_client_case_property_matches m
-            WHERE m.client_case_id = :case_id AND m.organization_id = :organization_id
+            WHERE m.client_case_id = :case_id AND m.organization_id = :organization_id'.$this->childScope('m').'
             ORDER BY FIELD(m.match_status, "interested", "viewing", "sent", "suggested", "deal", "rejected"), m.updated_at DESC',
             ['case_id' => $caseId, 'organization_id' => $this->organizationId]);
 
@@ -159,14 +160,14 @@ final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInte
         return $this->all('SELECT rm.*, l.full_name, l.phone, l.email, l.deal_type, l.status, l.created_at AS request_created_at
             FROM tn_client_case_request_matches rm
             INNER JOIN tn_leads l ON l.id = rm.inbound_request_id AND l.organization_id = rm.organization_id
-            WHERE rm.client_case_id = :case_id AND rm.organization_id = :organization_id
+            WHERE rm.client_case_id = :case_id AND rm.organization_id = :organization_id'.$this->childScope('rm').$this->leadScope('l').'
             ORDER BY rm.created_at DESC, rm.id DESC', ['case_id' => $caseId, 'organization_id' => $this->organizationId]);
     }
 
     public function unlinkedInboundRequests(): array
     {
         $rows = $this->all('SELECT l.* FROM tn_leads l
-            WHERE l.client_case_id IS NULL AND l.organization_id = :organization_id
+            WHERE l.client_case_id IS NULL AND l.organization_id = :organization_id'.$this->leadScope('l').'
             ORDER BY l.created_at DESC, l.id DESC LIMIT 80', ['organization_id' => $this->organizationId]);
         return $this->enrichLeadProperties($rows);
     }
@@ -185,7 +186,7 @@ final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInte
 
     public function inboundInbox(array $filters): array
     {
-        $where = ['l.organization_id = :organization_id'];
+        $where = ['l.organization_id = :organization_id'.$this->leadScope('l')];
         $params = ['organization_id' => $this->organizationId];
         if (($filters['q'] ?? '') !== '') {
             $search = ['l.full_name LIKE :q', 'l.phone LIKE :q', 'l.email LIKE :q', 'l.message LIKE :q', 'c.public_id LIKE :q'];
@@ -222,12 +223,12 @@ final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInte
     public function inboundInboxStats(): array
     {
         $params = ['organization_id' => $this->organizationId];
-        $statusRows = $this->all('SELECT status, COUNT(*) AS total FROM tn_leads WHERE organization_id = :organization_id GROUP BY status', $params);
+        $statusRows = $this->all('SELECT status, COUNT(*) AS total FROM tn_leads l WHERE organization_id = :organization_id'.$this->leadScope('l').' GROUP BY status', $params);
         $intentRows = $this->all('SELECT request_intent, COUNT(*) AS total FROM tn_leads WHERE organization_id = :organization_id GROUP BY request_intent', $params);
         $summary = $this->one('SELECT COUNT(*) AS total, SUM(status = "new") AS new_items,
             SUM(assigned_user_id IS NULL) AS unassigned_items, SUM(client_case_id IS NULL) AS no_case_items,
             SUM(next_contact_at IS NOT NULL AND next_contact_at <= NOW() AND status NOT IN ("won", "lost", "spam", "closed")) AS due_items
-            FROM tn_leads WHERE organization_id = :organization_id', $params) ?? [];
+            FROM tn_leads l WHERE organization_id = :organization_id'.$this->leadScope('l'), $params) ?? [];
         $stats = ['total'=>(int)($summary['total']??0),'new'=>(int)($summary['new_items']??0),
             'unassigned'=>(int)($summary['unassigned_items']??0),'no_case'=>(int)($summary['no_case_items']??0),
             'due'=>(int)($summary['due_items']??0),'status'=>array_fill_keys(LeadStatus::values(),0),'intent'=>array_fill_keys($this->requestIntents(),0)];
@@ -241,7 +242,7 @@ final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInte
         return $this->all('SELECT a.*, u.full_name AS user_name FROM tn_lead_activities a
             INNER JOIN tn_leads l ON l.id = a.lead_id AND l.organization_id = :organization_id
             LEFT JOIN tn_users u ON u.id = a.user_id AND u.organization_id = l.organization_id
-            WHERE a.lead_id = :lead_id ORDER BY a.created_at DESC, a.id DESC LIMIT 40',
+            WHERE a.lead_id = :lead_id'.$this->leadScope('l').' ORDER BY a.created_at DESC, a.id DESC LIMIT 40',
             ['lead_id' => $leadId, 'organization_id' => $this->organizationId]);
     }
 
@@ -250,7 +251,7 @@ final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInte
         return $this->all('SELECT c.id, c.public_id, c.title, c.type, COALESCE(s.code, UPPER(c.stage)) stage, p.full_name
             FROM tn_client_cases c INNER JOIN tn_people p ON p.id = c.person_id AND p.organization_id = c.organization_id
             LEFT JOIN sales_pipeline_stages s ON s.id=c.stage_id AND s.organization_id=c.organization_id
-            WHERE c.status IN ("active", "paused") AND c.organization_id = :organization_id
+            WHERE c.status IN ("active", "paused") AND c.organization_id = :organization_id'.$this->dealScope('c').'
             ORDER BY c.updated_at DESC, c.id DESC LIMIT 100', ['organization_id' => $this->organizationId]);
     }
 
@@ -283,6 +284,22 @@ final readonly class MysqlClientCaseReadModel implements ClientCaseReadModelInte
             'matching', 'proposal' => 'PROPOSAL', 'viewing', 'meeting' => 'MEETING', 'negotiation' => 'NEGOTIATION',
             'deal', 'aftercare', 'won' => 'WON', 'lost' => 'LOST', default => strtoupper($value),
         };
+    }
+
+    private function dealScope(string $alias):string
+    {
+        return $this->ownerId===null?'':' AND '.$alias.'.assigned_user_id='.(int)$this->ownerId;
+    }
+
+    private function leadScope(string $alias):string
+    {
+        if ($this->ownerId===null) return '';
+        return $this->dealScope($alias).' AND ('.$alias.'.client_case_id IS NULL OR EXISTS(SELECT 1 FROM tn_client_cases sc WHERE sc.organization_id='.$alias.'.organization_id AND sc.id='.$alias.'.client_case_id'.$this->dealScope('sc').'))';
+    }
+
+    private function childScope(string $alias):string
+    {
+        return $this->ownerId===null?'':' AND EXISTS(SELECT 1 FROM tn_client_cases sc WHERE sc.organization_id='.$alias.'.organization_id AND sc.id='.$alias.'.client_case_id'.$this->dealScope('sc').')';
     }
 
     private function all(string $sql, array $params = []): array
