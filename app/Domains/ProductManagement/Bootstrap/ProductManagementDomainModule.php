@@ -76,6 +76,8 @@ final readonly class ProductManagementDomainModule implements DomainModuleInterf
             'product_management.stock.transferred',
             'product_management.price.updated',
             'product_management.price_list.created',
+            'product_management.price_list.updated',
+            'product_management.price_list.archived',
             'product_management.price_list.entry_updated',
         ];
     }
