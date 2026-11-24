@@ -474,8 +474,12 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
                 if($balance===null)throw new DomainException('Order reservation balance missing.');
                 $movement=null;
                 if($operation==='return'){
-                    $cap=$this->one("SELECT (COALESCE(SUM(CASE WHEN operation_type='commit' THEN quantity WHEN operation_type='return' THEN -quantity ELSE 0 END),0)>=?) AS allowed FROM pm_order_reservation_operations WHERE organization_id=? AND reservation_id=?",[$quantity,$org,$reservation]);
-                    if((int)($cap['allowed']??0)!==1)throw new DomainException('Return exceeds physically committed stock.');
+                    $remainingReturn=0;
+                    foreach($this->rows("SELECT operation_type,quantity FROM pm_order_reservation_operations WHERE organization_id=? AND reservation_id=? AND operation_type IN ('commit','return') FOR UPDATE",[$org,$reservation]) as $fact){
+                        if(!preg_match('/^[0-9]+\.000000$/D',(string)$fact['quantity']))throw new DomainException('Invalid order reservation operation quantity.');
+                        $remainingReturn+=($fact['operation_type']==='commit'?1:-1)*(int)$fact['quantity'];
+                    }
+                    if($quantity>$remainingReturn)throw new DomainException('Return exceeds physically committed stock.');
                     $q=$this->connection->prepare('UPDATE pm_stock_balances SET on_hand=on_hand+?,revision=revision+1 WHERE organization_id=? AND variant_id=? AND location_id=?');
                     $q->execute([$quantity,$org,$v,$l]);
                 }else{
@@ -547,7 +551,7 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
                 return json_decode((string)$existing['result_json'],true,flags:JSON_THROW_ON_ERROR);
             }
             $result=$callback();
-            $id=(string)($result['product_id']??$result['variant_id']??$result['category_id']??$result['location_id']??$result['movement_id']??bin2hex(random_bytes(16)));
+            $id=(string)($result['product_id']??$result['variant_id']??$result['category_id']??$result['location_id']??$result['movement_id']??$result['reservation_id']??bin2hex(random_bytes(16)));
             $event=new DomainEvent(bin2hex(random_bytes(16)),$org,$eventType,$aggregateType,$id,
                 ['operation'=>$operation,'result'=>$result],new EventMetadata(strlen($correlation)<=40?$correlation:substr(hash('sha256',$correlation),0,40),null,str_starts_with($actor,'shopify:')?'INTEGRATION':'USER',$actor),new \DateTimeImmutable('now',new \DateTimeZone('UTC')));
             $this->events->append($event); // writes cos_events + cos_event_outbox in this same transaction
