@@ -62,3 +62,12 @@ Only scope for the pilot: `read_products`, `read_inventory` and
 `read_locations` when required by the location query. Additional app
 scopes do not prevent reads, but they expand potential impact if a
 credential is compromised.
+
+
+## Межі запуску
+
+This pilot does not store credentials in GitHub, remotely configure the VPS,
+merge the branch, enable Product Management tenants, or claim a successful
+OAuth connection before its manual read-only smoke finishes. After a
+successful read-only canary, use the existing independent Goal/Plan/Approval
+Workflow for any native materialization. Shopify remains read-only.
