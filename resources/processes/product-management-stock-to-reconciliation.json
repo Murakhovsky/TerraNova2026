@@ -1,0 +1,178 @@
+{
+  "schema_version": 4,
+  "id": "product_management.stock-to-reconciliation",
+  "title": "Product Stock → Reconciliation",
+  "domain": "product_management",
+  "state": "as-is",
+  "workflow": "02-workflows/product-management-stock-to-reconciliation.md",
+  "trigger": "Documented goods are received at a local warehouse",
+  "outcomes": [
+    "Physical and reserved quantities reconcile",
+    "Transfer is paired and reservations do not change physical stock",
+    "Read-only audit reports discrepancies without repair"
+  ],
+  "actors": [
+    "Warehouse manager",
+    "Independent reviewer"
+  ],
+  "steps": [
+    {
+      "id": "location",
+      "label": "Resolve warehouse",
+      "kind": "state",
+      "owner": "Warehouse manager",
+      "domain": "product_management",
+      "capability": "product_management.location.search",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Application/Service/ProductManagementService.php",
+          "symbol": "public function locations("
+        }
+      ]
+    },
+    {
+      "id": "receive",
+      "label": "Receive stock",
+      "kind": "operation",
+      "owner": "Warehouse manager",
+      "domain": "product_management",
+      "capability": "product_management.stock.receive",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Application/Service/ProductManagementService.php",
+          "symbol": "public function recordMovement("
+        }
+      ]
+    },
+    {
+      "id": "reserve",
+      "label": "Reserve available stock",
+      "kind": "operation",
+      "owner": "Warehouse manager",
+      "domain": "product_management",
+      "capability": "product_management.stock.reserve",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Application/Service/ProductManagementService.php",
+          "symbol": "public function reserveStock("
+        }
+      ]
+    },
+    {
+      "id": "release",
+      "label": "Release reservation",
+      "kind": "operation",
+      "owner": "Warehouse manager",
+      "domain": "product_management",
+      "capability": "product_management.stock.release",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Application/Service/ProductManagementService.php",
+          "symbol": "public function releaseStock("
+        }
+      ]
+    },
+    {
+      "id": "transfer",
+      "label": "Transfer to another warehouse",
+      "kind": "operation",
+      "owner": "Warehouse manager",
+      "domain": "product_management",
+      "capability": "product_management.stock.transfer",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Application/Service/ProductManagementService.php",
+          "symbol": "public function transferStock("
+        }
+      ]
+    },
+    {
+      "id": "issue",
+      "label": "Issue documented stock",
+      "kind": "operation",
+      "owner": "Warehouse manager",
+      "domain": "product_management",
+      "capability": "product_management.stock.issue",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Application/Service/ProductManagementService.php",
+          "symbol": "public function recordMovement("
+        }
+      ]
+    },
+    {
+      "id": "balance",
+      "label": "Read stock balance",
+      "kind": "state",
+      "owner": "Warehouse manager",
+      "domain": "product_management",
+      "capability": "product_management.stock.balance.get",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Application/Service/ProductManagementService.php",
+          "symbol": "public function balance("
+        }
+      ]
+    },
+    {
+      "id": "audit",
+      "label": "Reconcile ledger and reservations",
+      "kind": "outcome",
+      "owner": "Independent reviewer",
+      "domain": "product_management",
+      "capability": "product_management.analytics.reconciliation.get",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Infrastructure/Persistence/MySqlProductAnalytics.php",
+          "symbol": "public function reconciliation("
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "location",
+      "to": "receive"
+    },
+    {
+      "from": "receive",
+      "to": "reserve"
+    },
+    {
+      "from": "reserve",
+      "to": "release"
+    },
+    {
+      "from": "release",
+      "to": "transfer"
+    },
+    {
+      "from": "transfer",
+      "to": "issue"
+    },
+    {
+      "from": "issue",
+      "to": "balance"
+    },
+    {
+      "from": "balance",
+      "to": "audit"
+    }
+  ]
+}
