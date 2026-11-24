@@ -46,6 +46,26 @@
         </section>
     {% endif %}
     {% if balance is not null %}
+    <section class="cos-panel" id="stock-count">
+        <h2>Фізична інвентаризація SKU</h2>
+        <p>Фіксується фактична кількість за документом і поточна ревізія залишку {{ balance.revision }}. Коригування виконується лише після незалежних Plan та Action Approval.</p>
+        {% if notice == 'count_proposed' %}<p role="status">Goal/Plan запропоновано. Залишок не змінено цією формою.</p>{% endif %}
+        {% if countId is not empty %}
+            <p>Ідентифікатор перерахунку: <code>{{ countId }}</code></p>
+            {% if count %}
+                <p>Застосовано: {{ count.previous_on_hand }} → {{ count.counted }}; різниця {{ count.delta }}; резерв {{ count.reserved }}; ревізія {{ count.result_revision }}.</p>
+                <p>Документ: {{ count.source_ref }}. Рух: {{ count.movement_id ?? 'Нульова розбіжність' }}.</p>
+            {% else %}<p>Підтвердженого нативного запису поки немає. Перевірте стан Goal/Plan.</p>{% endif %}
+            <a href="/workspace/goals" class="btn btn-outline-primary">Goal/Plan та схвалення</a>
+        {% endif %}
+        <form method="post" action="/product-management/stock/count/propose" class="cos-toolbar">
+            <input type="hidden" name="csrf_token" value="{{ csrfToken }}"><input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000004">
+            <input type="hidden" name="variant_id" value="{{ variantId }}"><input type="hidden" name="location_id" value="{{ locationId }}"><input type="hidden" name="expected_revision" value="{{ balance.revision }}">
+            <label>Фактична кількість <input name="counted" class="form-control" required inputmode="decimal"></label>
+            <label>Документ <input name="source_ref" class="form-control" required maxlength="156" placeholder="count:ACT-1"></label>
+            <button class="btn btn-outline-primary">Запропонувати Plan</button>
+        </form>
+    </section>
     <section class="cos-panel">
         <h2>Резервування товару</h2>
         <p>Резерв зменшує доступну кількість, але не фізичний залишок. Джерело має починатися з manual:.</p>
@@ -100,7 +120,7 @@
     {% endif %}
     <section class="cos-panel">
         <h2>Задокументований рух</h2>
-        <p>Прихід, витрата чи атомарне переміщення. Негативний available та ручні коригування заборонені Domain.</p>
+        <p>Прихід, витрата чи атомарне переміщення. Негативний available заборонений; коригування через окремий схвалений перерахунок.</p>
         <form method="post" action="/product-management/stock/post" class="cos-page__stack">
             <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
             <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000001">
