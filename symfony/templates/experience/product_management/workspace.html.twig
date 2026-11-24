@@ -84,13 +84,20 @@
                     <label>Опис <textarea class="form-control" name="description" maxlength="20000" rows="3">{{ product.description|default('') }}</textarea></label>
                     <button class="btn btn-outline-primary" type="submit">Зберегти зміни</button>
                 </form>
+                <form method="post" action="/product-management/products/{{ product.product_id }}/archive" class="cos-page__stack">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000008">
+                    <input type="hidden" name="expected_revision" value="{{ product.revision }}">
+                    <label><input type="checkbox" name="confirm_archive" value="1" required> Підтверджую архівування товару. Залишки та резерви мають бути нульовими.</label>
+                    <button class="btn btn-outline-danger" type="submit">Архівувати товар</button>
+                </form>
             {% endif %}
         </section>
         <section class="cos-panel">
             <h2>Варіанти та базові ціни</h2>
             <p>Відображаються перші 30 цін у UAH. Рух залишків і ціни інших валют тут поки не редагуються.</p>
             <div class="table-responsive"><table class="table">
-                <thead><tr><th>SKU</th><th>Одиниця</th><th>Статус</th><th>Ревізія</th><th>UAH / базова ціна</th></tr></thead>
+                <thead><tr><th>SKU</th><th>Одиниця</th><th>Статус</th><th>Ревізія</th><th>UAH / базова ціна</th><th>Керування SKU</th></tr></thead>
                 <tbody>
                 {% for v in product.variants|default([]) %}
                     <tr><td>{{ v.sku }}</td><td>{{ v.uom }}</td><td>{{ v.status }}</td><td>{{ v.revision }}</td>
@@ -106,8 +113,30 @@
                                 </form>
                             {% endif %}
                         </td>
+                        <td>
+                            {% if product.status != 'archived' and v.status == 'active' %}
+                                <details><summary>Редагувати SKU</summary>
+                                    <form method="post" action="/product-management/products/{{ product.product_id }}/variants/{{ v.variant_id }}/update" class="cos-page__stack">
+                                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                        <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,16) }}{{ 'a%015x'|format(loop.index) }}">
+                                        <input type="hidden" name="expected_revision" value="{{ v.revision }}">
+                                        <label>SKU <input name="sku" class="form-control" value="{{ v.sku }}" maxlength="128" required></label>
+                                        <label>Одиниця <input name="uom" class="form-control" value="{{ v.uom }}" maxlength="16" required></label>
+                                        <label>Штрихкод <input name="barcode" class="form-control" value="{{ v.barcode|default('') }}" maxlength="128"></label>
+                                        <button class="btn btn-outline-primary" type="submit">Зберегти SKU</button>
+                                    </form>
+                                    <form method="post" action="/product-management/products/{{ product.product_id }}/variants/{{ v.variant_id }}/archive" class="cos-page__stack">
+                                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                        <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,16) }}{{ 'b%015x'|format(loop.index) }}">
+                                        <input type="hidden" name="expected_revision" value="{{ v.revision }}">
+                                        <label><input type="checkbox" name="confirm_archive" value="1" required> Підтверджую архівування SKU без залишків і резервів.</label>
+                                        <button class="btn btn-outline-danger" type="submit">Архівувати SKU</button>
+                                    </form>
+                                </details>
+                            {% endif %}
+                        </td>
                     </tr>
-                {% else %}<tr><td colspan="5">Варіанти відсутні.</td></tr>{% endfor %}
+                {% else %}<tr><td colspan="6">Варіанти відсутні.</td></tr>{% endfor %}
                 </tbody>
             </table></div>
             {% if product.status != 'archived' %}
