@@ -369,7 +369,12 @@ Manifest capabilities не задекларовані.
 - `product_management.governed.category.create`;
 - `product_management.governed.location.create`;
 - `product_management.governed.price.base.set`;
+- `product_management.governed.price.list.archive`;
+- `product_management.governed.price.list.create`;
+- `product_management.governed.price.list.entry.remove`;
 - `product_management.governed.price.list.entry.set`;
+- `product_management.governed.price.list.tier.set`;
+- `product_management.governed.price.list.update`;
 - `product_management.governed.product.archive`;
 - `product_management.governed.product.create`;
 - `product_management.governed.product.update`;
