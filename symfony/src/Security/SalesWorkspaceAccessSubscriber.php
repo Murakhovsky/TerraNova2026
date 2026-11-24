@@ -81,8 +81,9 @@ final readonly class SalesWorkspaceAccessSubscriber implements EventSubscriberIn
             if (($name==='SalesReadController'&&in_array($method,['dashboard','pipelines'],true))||$name==='SalesDashboardController') return;
             if ($name==='SalesTodayController'&&strtolower(trim((string)$request->query->get('scope','mine')))!=='team') return;
             if ($name==='SalesWriteController'&&$method==='createLead') {
-                $input=json_decode((string)$request->getContent(),true);
-                if (!is_array($input)) $input=$request->request->all();
+                $input=str_contains(strtolower((string)$request->headers->get('Content-Type','')),'application/json')
+                    ?json_decode((string)$request->getContent(),true):$request->request->all();
+                if (!is_array($input)||array_is_list($input)) $input=[];
                 foreach (['owner_id','assigned_user_id'] as $field) {
                     if (!array_key_exists($field,$input)) continue;
                     $target=$input[$field];
