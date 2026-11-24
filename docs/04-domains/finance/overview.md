@@ -82,8 +82,8 @@ Finance читає Marketing-owned snapshot лише через `MarketingSpendE
 Сервіс не експонований як публічний Capability або HTTP endpoint. `SOURCE_OBSERVATION_UNRECONCILED` не є Finance Expense, оплатою, settlement або бюджетним резервом. Публічний запис вимагає незалежного Approval через canonical Workflow/Action у F1.3. Відповідні відмови та replay перевіряються MySQL тестом.
 
 
-## M3 paid settlement admission (engineering slice)
+## M3 — підготовка фінансового врегулювання
 
-Finance prepares a deterministic, non-mutating reconciliation candidate only from native tenant-scoped exposure and terminal Marketing receipts, the exact source revision, and an independently reviewed final Meta document allocation. The candidate is restricted to the same campaign, currency, UTC period, amount and plan hash, after the approved period closes. A document review must pin the source revision; source finalization alone is insufficient. P0 rejects sub-minor rounding, account-level allocations, mismatches, and over-cap exposure rather than releasing funds.
+Finance готує детермінований кандидат врегулювання з нативного резерву, підтвердження завершення кампанії, точної ревізії спостереження та незалежно перевіреного фінансового документа Meta. Звіряються кампанія, валюта, період UTC, сума та хеш плану. Розбіжності, округлення та перевищення резерву блокують операцію.
 
-`FinancePaidSettlementPolicy` calculates proposed committed and released minor units, but intentionally returns `MATCHED_NOT_SETTLED`. It is not a callable Capability or a Finance writer. Production document intake and independent approval, trusted Marketing terminal readback, canonical financial Workflow admission and atomic idempotent settlement persistence remain release blockers. Until those are accepted, the existing exposure release fence remains in force.
+`FinancePaidSettlementPolicy` обчислює суми фіксації та звільнення резерву, але повертає `MATCHED_NOT_SETTLED`. До підключення джерела фінансових документів, незалежного погодження, канонічного виконання та атомарного журналу врегулювання резерв залишається заблокованим.

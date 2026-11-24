@@ -73,10 +73,12 @@ final class FinancePaidSettlementPolicy
             ||!is_string($document['document_sha256']??null)||!preg_match('/^[a-f0-9]{64}$/D',$document['document_sha256'])){
             throw new DomainException('Independent final provider-document review required.');
         }
-        foreach(['document_ref','provider_document_id','review_ref','reviewer_id'] as $field){
+        foreach(['document_ref','provider_document_id','review_ref'] as $field){
             if(!is_string($document[$field]??null)||!preg_match('/^[A-Za-z0-9_.:-]{3,190}$/D',$document[$field]))
                 throw new DomainException('Missing reviewed document identity.');
         }
+        if(!is_string($document['reviewer_id']??null)||!preg_match('/^[1-9][0-9]{0,18}$/D',$document['reviewer_id']))
+            throw new DomainException('Valid reviewer identity required.');
         if(($document['reviewer_id']??null)===($claim['actor_id']??null))
             throw new DomainException('Exposure claimant cannot independently review final document.');
         $amount=$document['settlement_minor']??null;
