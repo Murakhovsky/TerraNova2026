@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "analytics-reconciliation-get output",
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "OK",
+        "DRIFT",
+        "INCOMPLETE"
+      ]
+    },
+    "organization_id": {
+      "type": "string"
+    },
+    "checked_pairs": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "complete": {
+      "type": "boolean"
+    },
+    "mismatch_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "mismatches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "variant_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "location_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "on_hand": {
+            "type": "string",
+            "pattern": "^-?[0-9]+\\.[0-9]{6}$"
+          },
+          "reserved": {
+            "type": "string",
+            "pattern": "^-?[0-9]+\\.[0-9]{6}$"
+          },
+          "ledger_on_hand": {
+            "type": "string",
+            "pattern": "^-?[0-9]+\\.[0-9]{6}$"
+          },
+          "active_reserved": {
+            "type": "string",
+            "pattern": "^-?[0-9]+\\.[0-9]{6}$"
+          },
+          "balance_present": {
+            "type": "boolean"
+          },
+          "ledger_matches": {
+            "type": "boolean"
+          },
+          "reservation_matches": {
+            "type": "boolean"
+          },
+          "bounds_ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "variant_id",
+          "location_id",
+          "on_hand",
+          "reserved",
+          "ledger_on_hand",
+          "active_reserved",
+          "balance_present",
+          "ledger_matches",
+          "reservation_matches",
+          "bounds_ok"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 500
+    },
+    "automatic_repair_authorized": {
+      "type": "boolean",
+      "const": false
+    }
+  },
+  "required": [
+    "status",
+    "organization_id",
+    "checked_pairs",
+    "complete",
+    "mismatch_count",
+    "mismatches",
+    "automatic_repair_authorized"
+  ],
+  "additionalProperties": false
+}
