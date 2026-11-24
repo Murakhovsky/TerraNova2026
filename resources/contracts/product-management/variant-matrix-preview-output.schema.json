@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "variant-matrix-preview output",
+  "type": "object",
+  "required": [
+    "product_id",
+    "revision",
+    "items"
+  ],
+  "properties": {
+    "product_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "sku",
+          "options",
+          "combination_hash",
+          "status"
+        ],
+        "properties": {
+          "sku": {
+            "type": "string"
+          },
+          "options": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "combination_hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "exists",
+              "sku_conflict",
+              "ready"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "maxItems": 50,
+      "minItems": 1
+    }
+  },
+  "additionalProperties": false
+}
