@@ -2869,6 +2869,7 @@ services:
   Domains\ProductManagement\Automation\Action\ProductImportApplyHandler: ~
   Domains\ProductManagement\Automation\Action\ProductStockCountApplyHandler: ~
   Domains\ProductManagement\Automation\Action\ProductStockCountSessionApplyHandler: ~
+  Domains\ProductManagement\Automation\Action\ProductGovernedOperationHandler: ~
   Domains\ProductManagement\Automation\Action\ShopifyImportApplyHandler: ~
   Domains\ProductManagement\Bootstrap\ProductManagementDomainModule:
     arguments:
@@ -2876,6 +2877,7 @@ services:
       $shopifyHandler: '@Domains\ProductManagement\Automation\Action\ShopifyImportApplyHandler'
       $stockCountHandler: '@Domains\ProductManagement\Automation\Action\ProductStockCountApplyHandler'
       $countSessionHandler: '@Domains\ProductManagement\Automation\Action\ProductStockCountSessionApplyHandler'
+      $governedHandler: '@Domains\ProductManagement\Automation\Action\ProductGovernedOperationHandler'
   productManagementDomainModule:
     alias: Domains\ProductManagement\Bootstrap\ProductManagementDomainModule
 
@@ -3939,6 +3941,7 @@ services:
         - '@App\Persistence\ProductManagement\ProductImportRunOutcomeProvider'
         - '@App\Persistence\ProductManagement\ProductStockCountRunOutcomeProvider'
         - '@App\Persistence\ProductManagement\ProductStockCountSessionRunOutcomeProvider'
+        - '@App\Persistence\ProductManagement\ProductGovernedRunOutcomeProvider'
         - '@App\Persistence\ProductManagement\ShopifyImportRunOutcomeProvider'
         - '@Domains\Growth\Application\Service\GrowthInboundResponseOutcomeEvidenceProvider'
         - '@App\Persistence\Federation\FederationGrowthRunLinkedOutcomeEvidenceProvider'
