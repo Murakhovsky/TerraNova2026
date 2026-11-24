@@ -16,6 +16,16 @@ use Platform\Orchestration\Goal\GoalSpecification;
 final readonly class ProductGovernedPlanProposalService
 {
     public function __construct(private Connection $db,private FederationGoalStore $goals,private FederationCapabilityBindingResolver $bindings){}
+    public static function intentKey(string $intentId):string
+    {
+        if(!preg_match('/^intent-[a-f0-9]{24}$/D',$intentId))throw new DomainException('Invalid Product automation intent.');
+        return substr(hash('sha256','product-intent:'.$intentId),0,32);
+    }
+    public static function identities(string $org,string $key):array
+    {
+        $digest=hash('sha256',$org."\0".$key."\0".'pm-governed-v1');
+        return ['goal_id'=>'goal-'.substr($digest,0,24),'plan_id'=>'plan-'.substr($digest,0,24),'digest'=>$digest];
+    }
     public function propose(TenantContext $actor,string $key,string $description,array $operations):array
     {
         if(!$actor->isManager()||!$actor->allows(TenantPermissions::ACCESS)||!$actor->allows(TenantPermissions::MANAGE)
@@ -25,8 +35,8 @@ final readonly class ProductGovernedPlanProposalService
             ||!array_is_list($operations)||count($operations)<1||count($operations)>20
             ||strlen(json_encode($operations,JSON_THROW_ON_ERROR))>64000)throw new DomainException('Invalid bounded Product business proposal.');
         $org=$actor->organizationId()->value();$owner=$actor->userId()->value();
-        $digest=hash('sha256',$org."\0".$key."\0".'pm-governed-v1');
-        $goalId='goal-'.substr($digest,0,24);$planId='plan-'.substr($digest,0,24);
+        $identity=self::identities($org,$key);
+        $digest=$identity['digest'];$goalId=$identity['goal_id'];$planId=$identity['plan_id'];
         $steps=[];$seen=[];$allowed=[];
         foreach($operations as $op){
             if(!is_array($op)||count($op)!==3||!is_string($op['id']??null)||!preg_match('/^[a-z0-9][a-z0-9_:-]{0,63}$/D',$op['id'])
