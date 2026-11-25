@@ -31,12 +31,26 @@ final readonly class FinanceOrderRunOutcomeProvider implements RunScopedGoalOutc
             throw new DomainException('Invalid order outcome scope.');
         $rows=$this->db->fetchAllAssociative('SELECT w.state,w.input_digest,s.step_id,s.state AS step_state,s.result_reference,s.capability_id,a.id AS action_id,a.parameters,a.target_id,a.target_type,a.source_id,a.idempotency_key,a.correlation_id
             FROM cos_workflow_runs w JOIN cos_workflow_steps s ON s.organization_id=w.organization_id AND s.run_id=w.run_id
-            JOIN cos_actions a ON a.organization_id=s.organization_id AND s.result_reference=CONCAT("action:",a.id)
+            LEFT JOIN cos_actions a ON a.organization_id=s.organization_id AND s.result_reference=CONCAT("action:",a.id)
             WHERE w.organization_id=? AND BINARY w.organization_id=BINARY ? AND w.run_id=? AND w.definition_id="federation.approved-plan"',
             [$org,$org,$runId]);
-        if(count($rows)!==1||$rows[0]['state']!=='completed'||$rows[0]['step_state']!=='completed')
-            throw new FederationOutcomeSourceNotReady('Completed single-step order Run required.');
-        $r=$rows[0];
+        $rows=array_values(array_filter($rows,static fn(array $r):bool=>in_array($r['capability_id'],[Handler::REGISTER,Handler::RECONCILE],true)));
+        if($rows===[])throw new FederationOutcomeSourceNotReady('Completed Finance order Run required.');
+        $evidence=[];
+        foreach($rows as $r){
+            if($r['state']!=='completed'||$r['step_state']!=='completed'||!is_string($r['action_id']??null))
+                throw new FederationOutcomeSourceNotReady('Completed native Finance Action required.');
+            $reference=$this->verify($org,$runId,$r);
+            if(in_array($reference,$evidence,true))throw new DomainException('Duplicate Finance business evidence.');
+            $evidence[]=$reference;
+        }
+        return ['value'=>count($evidence),'evidence'=>$evidence,'source'=>'finance.native_order_documentary_operation.v1',
+            'window_start'=>$from->format('Y-m-d\\TH:i:s.uP'),'window_end'=>$to->format('Y-m-d\\TH:i:s.uP'),
+            'attribution'=>'run_linked_action','run_id'=>$runId];
+    }
+
+    private function verify(string $org,string $runId,array $r):string
+    {
         $proof=$this->receipts->attestForAudit(new WorkflowRunIdentity($org,$runId),$r['step_id'],$r['result_reference'],$r['input_digest']);
         if(!$proof->verified)throw new DomainException('Untrusted order Action receipt.');
         $p=json_decode($r['parameters'],true,32,JSON_THROW_ON_ERROR);
@@ -64,8 +78,6 @@ final readonly class FinanceOrderRunOutcomeProvider implements RunScopedGoalOutc
         if($row['action_id']!==$r['action_id']||(string)$row['actor_id']!==$r['source_id']||
             $row['correlation_id']!==$r['correlation_id']||!hash_equals($row['request_hash'],$hash))
             throw new DomainException('Native Finance receipt provenance differs.');
-        return ['value'=>1,'evidence'=>[$evidence],'source'=>'finance.native_order_documentary_operation.v1',
-            'window_start'=>$from->format('Y-m-d\TH:i:s.uP'),'window_end'=>$to->format('Y-m-d\TH:i:s.uP'),
-            'attribution'=>'run_linked_action','run_id'=>$runId];
+        return $evidence;
     }
 }

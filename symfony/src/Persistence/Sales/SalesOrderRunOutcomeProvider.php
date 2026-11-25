@@ -34,12 +34,26 @@ final readonly class SalesOrderRunOutcomeProvider implements RunScopedGoalOutcom
             throw new DomainException('Invalid order outcome scope.');
         $rows=$this->db->fetchAllAssociative('SELECT w.state,w.input_digest,s.step_id,s.state AS step_state,s.result_reference,s.capability_id,a.id AS action_id,a.parameters,a.target_id,a.target_type,a.source_id,a.idempotency_key,a.correlation_id
             FROM cos_workflow_runs w JOIN cos_workflow_steps s ON s.organization_id=w.organization_id AND s.run_id=w.run_id
-            JOIN cos_actions a ON a.organization_id=s.organization_id AND s.result_reference=CONCAT("action:",a.id)
+            LEFT JOIN cos_actions a ON a.organization_id=s.organization_id AND s.result_reference=CONCAT("action:",a.id)
             WHERE w.organization_id=? AND BINARY w.organization_id=BINARY ? AND w.run_id=? AND w.definition_id="federation.approved-plan"',
             [$org,$org,$runId]);
-        if(count($rows)!==1||$rows[0]['state']!=='completed'||$rows[0]['step_state']!=='completed')
-            throw new FederationOutcomeSourceNotReady('Completed single-step order Run required.');
-        $r=$rows[0];
+        $rows=array_values(array_filter($rows,static fn(array $r):bool=>in_array($r['capability_id'],SalesGovernedOrderHandler::types(),true)));
+        if($rows===[])throw new FederationOutcomeSourceNotReady('Completed Sales order Run required.');
+        $evidence=[];
+        foreach($rows as $r){
+            if($r['state']!=='completed'||$r['step_state']!=='completed'||!is_string($r['action_id']??null))
+                throw new FederationOutcomeSourceNotReady('Completed native Sales Action required.');
+            $reference=$this->verify($org,$runId,$r);
+            if(in_array($reference,$evidence,true))throw new DomainException('Duplicate Sales business evidence.');
+            $evidence[]=$reference;
+        }
+        return ['value'=>count($evidence),'evidence'=>$evidence,'source'=>'sales.native_order_operation.v1',
+            'window_start'=>$from->format('Y-m-d\\TH:i:s.uP'),'window_end'=>$to->format('Y-m-d\\TH:i:s.uP'),
+            'attribution'=>'run_linked_action','run_id'=>$runId];
+    }
+
+    private function verify(string $org,string $runId,array $r):string
+    {
         $proof=$this->receipts->attestForAudit(new WorkflowRunIdentity($org,$runId),$r['step_id'],$r['result_reference'],$r['input_digest']);
         if(!$proof->verified)throw new DomainException('Untrusted order Action receipt.');
         $p=json_decode($r['parameters'],true,32,JSON_THROW_ON_ERROR);
@@ -70,8 +84,23 @@ final readonly class SalesOrderRunOutcomeProvider implements RunScopedGoalOutcom
             $native=$this->nativeReceipts->find($org,'order.lifecycle.'.$op,$r['idempotency_key']);
             $factRow=$this->db->fetchAssociative('SELECT event_id,payload FROM sales_order_evidence WHERE organization_id=? AND BINARY organization_id=BINARY ? AND order_id=? AND revision=?',
                 [$org,$org,$p['order_id'],$p['expected_revision']+1]);
-            if(!is_string($native)||!preg_match('/^[a-f0-9]{64}$/D',$native)||!$factRow)
-                throw new DomainException('Native lifecycle receipt missing.');
+            // Same canonical item ordering and field shape as the native mutation.
+            $items=[];
+            foreach($p['items']??[] as $item){
+                if($op==='allocate'){
+                    $key=$item['line_no'].':'.($item['location_id']??'nonstock');
+                    $normalized=['line_no'=>$item['line_no'],'location_id'=>$item['location_id'],'quantity'=>$item['quantity']];
+                }else{
+                    $key=$item['allocation_id'];$normalized=['allocation_id'=>$key,'quantity'=>$item['quantity']];
+                    if($op==='return')$normalized['disposition']=$item['disposition'];
+                }
+                if(isset($items[$key]))throw new DomainException('Duplicate approved lifecycle item.');
+                $items[$key]=$normalized;
+            }
+            ksort($items,SORT_STRING);
+            $hash=hash('sha256',json_encode([(int)$r['source_id'],$op,$p['order_id'],$p['expected_revision'],$p['reference'],array_values($items)],JSON_THROW_ON_ERROR));
+            if(!is_string($native)||!hash_equals($hash,$native)||!$factRow)
+                throw new DomainException('Native lifecycle receipt missing or changed.');
             $fact=json_decode($factRow['payload'],true,32,JSON_THROW_ON_ERROR);
             $order=$this->orders->get($org,$p['order_id']);
             if($order===null||$order['revision']<$p['expected_revision']+1||$fact['organization_id']!==$org||
@@ -82,8 +111,6 @@ final readonly class SalesOrderRunOutcomeProvider implements RunScopedGoalOutcom
                 throw new DomainException('Native lifecycle event differs from approved operation.');
             $evidence='sales:order:'.$p['order_id'].':'.$fact['event_id'];
         }
-        return ['value'=>1,'evidence'=>[$evidence],'source'=>'sales.native_order_operation.v1',
-            'window_start'=>$from->format('Y-m-d\TH:i:s.uP'),'window_end'=>$to->format('Y-m-d\TH:i:s.uP'),
-            'attribution'=>'run_linked_action','run_id'=>$runId];
+        return $evidence;
     }
 }
