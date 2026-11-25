@@ -8,6 +8,9 @@ use Domains\ProductManagement\Infrastructure\Shopify\ShopifyCatalogPullService;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyClientCredentials;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyObservationStore;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyReadClient;
+use Domains\ProductManagement\Infrastructure\Shopify\ShopifyAccessReadiness;
+use Domains\ProductManagement\Infrastructure\Shopify\ShopifySeries01NativeAudit;
+use Domains\ProductManagement\Infrastructure\Shopify\ShopifyDraftWritebackService;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyImportPreviewService;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyImportRecoveryAudit;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyOrderReadbackService;
@@ -39,19 +42,23 @@ final class ProductManagementShopifyOperatorCommand extends Command
         private readonly ShopifyImportRecoveryAudit $recoveryAudit,
         private readonly ShopifyOrderReadbackService $orderReadback,
         private readonly CommerceOrderSourcePort $commerceOrders,
+        private readonly ShopifyAccessReadiness $access,
+        private readonly ShopifySeries01NativeAudit $series01,
+        private readonly ShopifyDraftWritebackService $writeback,
     ) {
         parent::__construct();
     }
 
     protected function configure(): void
     {
-        $this->addArgument('action',InputArgument::REQUIRED,'preflight|provision|status|pull|candidates|inspect|stage|audit|order|order-sandbox')
+        $this->addArgument('action',InputArgument::REQUIRED,'preflight|provision|status|pull|candidates|inspect|stage|audit|order|order-sandbox|access|series01|draft-preview|draft-audit')
             ->addOption('organization',null,InputOption::VALUE_REQUIRED,'Explicit tenant organization')
             ->addOption('shop',null,InputOption::VALUE_REQUIRED,'Existing <shop>.myshopify.com name')
             ->addOption('secret-ref',null,InputOption::VALUE_REQUIRED,'Vault ref env://COS_SHOPIFY_* or pilot legacy','shopify_env_primary')
             ->addOption('connection',null,InputOption::VALUE_REQUIRED,'Existing 32-character connection ID')
             ->addOption('pages',null,InputOption::VALUE_REQUIRED,'Maximum 1..20 product pages','1')
             ->addOption('limit',null,InputOption::VALUE_REQUIRED,'Maximum 1..50 snapshot candidates','20')
+            ->addOption('product-id',null,InputOption::VALUE_REQUIRED,'Canonical Product ID for read-only writeback preview or audit')
             ->addOption('product-gid',null,InputOption::VALUE_REQUIRED,'Observed Shopify Product GID')
             ->addOption('order-gid',null,InputOption::VALUE_REQUIRED,'Verified Shopify Order GID for read-only Order evidence')
             ->addOption('preview-id',null,InputOption::VALUE_REQUIRED,'Existing Shopify import preview ID for read-only recovery audit')
@@ -72,7 +79,7 @@ final class ProductManagementShopifyOperatorCommand extends Command
             return $this->result($output,['status'=>'INVALID_TENANT'],Command::INVALID);
         }
         try {
-            if (!in_array($action,['preflight','provision','status','pull','candidates','inspect','stage','audit','order','order-sandbox'],true)) {
+            if (!in_array($action,['preflight','provision','status','pull','candidates','inspect','stage','audit','order','order-sandbox','access','series01','draft-preview','draft-audit'],true)) {
                 return $this->result($output,['status'=>'INVALID_ACTION'],Command::INVALID);
             }
             // Supervised, read-only diagnostics are available even before tenant
@@ -112,9 +119,29 @@ final class ProductManagementShopifyOperatorCommand extends Command
                     ['status'=>'PROVISIONED_READ_ONLY','organization_id'=>$org,'connection_id'=>$connection],
                     Command::SUCCESS);
             }
+            if($action==='series01'){
+                $audit=$this->series01->inspect($org);
+                return $this->result($output,$audit,$audit['all_nine_present']?Command::SUCCESS:Command::FAILURE);
+            }
             $connection=trim((string)$input->getOption('connection'));
             if (!preg_match('/^[a-f0-9]{32}$/D',$connection)) {
                 return $this->result($output,['status'=>'INVALID_CONNECTION'],Command::INVALID);
+            }
+            if($action==='access'){
+                $row=$this->observations->connection($org,$connection);
+                $token=$this->credentials->accessToken($row['shop_domain'],$row['secret_ref'],$org,$connection);
+                $access=$this->access->inspect($row['shop_domain'],$token);
+                $access['connection_id']=$connection;
+                return $this->result($output,$access,$access['read_products']?Command::SUCCESS:Command::FAILURE);
+            }
+            if(in_array($action,['draft-preview','draft-audit'],true)){
+                $product=trim((string)$input->getOption('product-id'));
+                if(!preg_match('/^[a-f0-9]{32}$/D',$product))throw new DomainException('Canonical Product ID required.');
+                if($action==='draft-audit')return $this->result($output,$this->writeback->audit($org,$connection,$product),Command::SUCCESS);
+                $plan=$this->writeback->preview($org,$connection,$product);
+                return $this->result($output,['state'=>'preview','product_id'=>$product,'connection_id'=>$connection,
+                    'payload_digest'=>ShopifyDraftWritebackService::digest($plan),'variables'=>$plan['variables'],
+                    'requires_independent_approval'=>true],Command::SUCCESS);
             }
             if ($action==='status') {
                 return $this->result($output,$this->observations->status($org,$connection),Command::SUCCESS);
