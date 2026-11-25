@@ -50,7 +50,7 @@ final readonly class DoctrineWorkflowActionWorkerAdmission implements WorkflowAc
         private WorkflowPredecessorReceiptVerifier $predecessors,
         private ?PolicyRepositoryInterface $policies=null,
         private ?PolicyEngine $policyEngine=null,
-        private PolicyContextBuilder|\Closure|null $contexts=null,
+        private PolicyContextBuilder|\Closure|\Psr\Container\ContainerInterface|null $contexts=null,
         private ?IdentityResolverInterface $identities=null,
         private ?TenantContextFactory $tenants=null,
     ) {}
@@ -239,7 +239,11 @@ final readonly class DoctrineWorkflowActionWorkerAdmission implements WorkflowAc
             (string)$action->idempotencyKey,['federation'=>['run_id'=>$row['run_id'],'step_id'=>$row['step_id']]]);
         // Resolve the existing PolicyContextBuilder at invocation time. Domain handlers
         // themselves depend on this admission, so eager DI would form a cycle.
-        $contexts=$this->contexts instanceof \Closure ? ($this->contexts)() : $this->contexts;
+        $contexts=match(true){
+            $this->contexts instanceof \Psr\Container\ContainerInterface => $this->contexts->get('policy_context'),
+            $this->contexts instanceof \Closure => ($this->contexts)(),
+            default => $this->contexts,
+        };
         if(!$contexts instanceof PolicyContextBuilder)
             throw new DomainException('Canonical Policy context service unavailable.');
         $evaluation=$this->policyEngine->evaluate($action->type,
