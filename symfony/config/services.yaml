@@ -1,4 +1,5 @@
 parameters:
+  env(COS_SALES_ORDER_SYNC_SCHEDULES_JSON): '[]'
   env(COS_MARKETING_HERMES_PROFILES_JSON): '{}'
   env(COS_MARKETING_META_EXECUTION_PROFILES_JSON): '{}'
   env(COS_MARKETING_META_ACTIVATION_ENABLED): '0'
@@ -305,10 +306,16 @@ services:
     arguments:
       $messageBus: '@command.bus'
 
+  App\Application\Sales\Service\PeriodicSalesOrderSync:
+    arguments:
+      $db: '@cos.database.pdo'
+      $profiles: '%env(COS_SALES_ORDER_SYNC_SCHEDULES_JSON)%'
+
   App\Application\Sales\Command\RunSalesAutomationCommandHandler:
     arguments:
       $automation: '@Domains\Sales\Application\Service\SalesAutomationRunner'
       $outbox: '@App\Application\System\Service\SalesOutboxDrainer'
+      $periodicSync: '@App\Application\Sales\Service\PeriodicSalesOrderSync'
 
   App\Infrastructure\Messenger\SymfonyQueryBus:
     arguments:
