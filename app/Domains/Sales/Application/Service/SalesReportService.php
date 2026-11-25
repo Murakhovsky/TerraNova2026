@@ -8,15 +8,15 @@ use DomainException;
 /** Export-ready Sales report data, independent of the common Workspace renderer. */
 final readonly class SalesReportService
 {
-    private const REPORTS=['outcomes','forecast','conversion','stages'];
-    public function __construct(private SalesCommercialAnalyticsService $analytics) {}
+    private const REPORTS=['outcomes','forecast','conversion','stages','orders'];
+    public function __construct(private SalesCommercialAnalyticsService $analytics,private ?SalesOrderReportService $orders=null) {}
 
     public function read(string $org,int $actor,array $input):array
     {
         if (array_diff(array_keys($input),['report_id','scope','owner_id','pipeline_id','from','to'])!==[]
             ||!in_array($input['report_id']??null,self::REPORTS,true)) throw new DomainException('Unknown Sales report.');
         $id=$input['report_id'];unset($input['report_id']);
-        $data=$this->analytics->read($org,$actor,$id,$input);
+        $data=$id==='orders'?($this->orders??throw new DomainException('Order reporting unavailable.'))->read($org,$actor,$input):$this->analytics->read($org,$actor,$id,$input);
         $rows=[];
         $add=static function(string $metric,?string $value,string $unit,?string $currency=null,
             ?string $bucket=null,?string $pipeline=null,?string $fromStage=null,?string $toStage=null)use(&$rows):void{
@@ -24,7 +24,15 @@ final readonly class SalesReportService
             $rows[]=['metric'=>$metric,'value'=>$value,'unit'=>$unit,'currency'=>$currency,'bucket'=>$bucket,
                 'pipeline_id'=>$pipeline,'from_stage_id'=>$fromStage,'to_stage_id'=>$toStage];
         };
-        if ($id==='outcomes') {
+        if ($id==='orders') {
+            foreach($data['items'] as $row){
+                $c=$row['currency'];$bucket=$row['status'];
+                $add('order_count',(string)$row['order_count'],'count',$c,$bucket);
+                $add('gross_placed_value',SalesOrderReportService::decimal($row['placed_minor']),'money',$c,$bucket);
+                $add('financial_evidence_count',(string)$row['financial_evidence_count'],'count',$c,$bucket);
+                $add('net_collected_complete_cohort',$row['financial_evidence_count']===$row['order_count']?SalesOrderReportService::decimal($row['net_minor']):null,'money',$c,$bucket);
+            }
+        } elseif ($id==='outcomes') {
             foreach (['won_count','lost_count','unattributed_count','won_without_booked_value'] as $key) $add($key,(string)$data[$key],'count');
             $add('win_rate_percent',$data['win_rate_percent'],'percent');
             foreach ($data['booked_by_currency'] as $row) {

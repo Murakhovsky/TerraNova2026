@@ -8,7 +8,8 @@
         "outcomes",
         "forecast",
         "conversion",
-        "stages"
+        "stages",
+        "orders"
       ]
     },
     "scope": {

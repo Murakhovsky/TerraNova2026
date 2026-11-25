@@ -1417,7 +1417,12 @@ services:
     alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesCommercialAnalyticsReadModel
 
   Domains\Sales\Application\Service\SalesCommercialAnalyticsService: ~
-  Domains\Sales\Application\Service\SalesReportService: ~
+  Domains\Sales\Application\Service\SalesReportService:
+    arguments:
+      $orders: '@Domains\Sales\Application\Service\SalesOrderReportService'
+  Domains\Sales\Application\Service\SalesOrderReportService:
+    arguments:
+      $finance: '@Domains\Finance\Application\Contract\CommerceOrderFinancialEvidenceReadPort'
 
 
   Domains\Sales\Application\Contract\SalesWorkspaceSummaryReadPort:
@@ -3289,6 +3294,8 @@ services:
   Domains\Sales\Application\Contract\SalesOrderRepositoryInterface:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository
   Domains\Sales\Application\Contract\SalesCommerceOrderEvidencePort:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository
+  Domains\Sales\Application\Contract\SalesOrderReportReadPort:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository
   Domains\Sales\Application\Contract\SalesCommerceOrderLifecycleEvidencePort:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository

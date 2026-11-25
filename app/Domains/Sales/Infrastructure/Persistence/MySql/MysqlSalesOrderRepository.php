@@ -6,7 +6,7 @@ use Domains\Sales\Application\Contract\SalesOrderRepositoryInterface;
 use PDO;
 use LogicException;
 
-final readonly class MysqlSalesOrderRepository implements SalesOrderRepositoryInterface, \Domains\Sales\Application\Contract\SalesOrderLifecycleRepositoryInterface, \Domains\Sales\Application\Contract\SalesCommerceOrderEvidencePort, \Domains\Sales\Application\Contract\SalesOrderJourneyStore, \Domains\Sales\Application\Contract\SalesCommerceOrderLifecycleEvidencePort
+final readonly class MysqlSalesOrderRepository implements SalesOrderRepositoryInterface, \Domains\Sales\Application\Contract\SalesOrderLifecycleRepositoryInterface, \Domains\Sales\Application\Contract\SalesCommerceOrderEvidencePort, \Domains\Sales\Application\Contract\SalesOrderJourneyStore, \Domains\Sales\Application\Contract\SalesCommerceOrderLifecycleEvidencePort, \Domains\Sales\Application\Contract\SalesOrderReportReadPort
 {
     public function __construct(private PDO $connection){}
     public function create(string $org,array $order,array $lines,array $evidence):void
@@ -47,6 +47,16 @@ final readonly class MysqlSalesOrderRepository implements SalesOrderRepositoryIn
             throw new LogicException('Native placement evidence integrity failed.');
         $fact['attribution_observations']=(object)$fact['attribution_observations'];
         return $fact;
+    }
+    public function reportCandidates(string $org,?int $owner,string $from,string $to):array
+    {
+        $this->transaction();
+        $sql='SELECT order_id,owner_user_id,deal_id,status,currency,total FROM sales_orders
+            WHERE organization_id=? AND BINARY organization_id=BINARY ? AND placed_at>=? AND placed_at<?';
+        $args=[$org,$org,$from.' 00:00:00',$to.' 00:00:00'];
+        if($owner!==null){$sql.=' AND owner_user_id=?';$args[]=$owner;}
+        $q=$this->connection->prepare($sql.' ORDER BY order_id LIMIT 501 FOR UPDATE');
+        $q->execute($args);return $q->fetchAll(PDO::FETCH_ASSOC);
     }
     public function lifecycleEvidence(string $organizationId,string $orderId,int $afterRevision=1,int $limit=100):?array
     {

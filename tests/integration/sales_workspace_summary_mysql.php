@@ -48,7 +48,6 @@ try{
     $authority=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesMutationAuthority($db,$scope,new MysqlSalesAccessControl($db));
     $guard=new \Domains\Sales\Application\Service\SalesMutationGuard(new \Infrastructure\Platform\Persistence\MySql\Transaction\TransactionManager($db),$authority);
     $policy=new \App\Application\Sales\SalesDirectInvocationPolicy($entityScope,new MysqlSalesAccessControl($db),new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOfferRepository($db),$guard);
-    $reports=new \Domains\Sales\Application\Service\SalesReportService($analyticsService);
     $teamSummary=new \Domains\Sales\Application\Service\SalesTeamSummaryService(
         new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesTeamScope($db,$scope,new MysqlSalesAccessControl($db)),$read);
     $orderRepo=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository($db);
@@ -138,6 +137,8 @@ try{
         {return $this->facts[$orderId]??null;}
     };
     $lifecycle=new \Domains\Sales\Application\Service\SalesOrderLifecycleService($orderRepo,$orderRepo,$receipts,$guard,$authority,$entityScope,$productStore,$active,new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderSourceRepository($db),$financeEvidence);
+    $reports=new \Domains\Sales\Application\Service\SalesReportService($analyticsService,
+        new \Domains\Sales\Application\Service\SalesOrderReportService($orderRepo,$scope,$guard,$authority,$financeEvidence));
     $gateway=new CanonicalCapabilityGateway($catalog,$active,new FederationCapabilityBindingResolver($catalog,new DomainModuleRegistry([]),$active),[
         new SalesWorkspaceSummaryAdapter($scope,$read),
         new \App\Infrastructure\Capability\SalesWorkspaceLeadsListAdapter($scoped),
@@ -604,6 +605,34 @@ try{
     $q->execute([$org,$one]);$facts=array_map(fn($raw)=>json_decode($raw,true,512,JSON_THROW_ON_ERROR),$q->fetchAll(PDO::FETCH_COLUMN));
     $check(count($facts)===9&&array_column($facts,'revision')===range(1,9),'Immutable lifecycle evidence lost or duplicated.');
     foreach($facts as $fact)$check($fact['financial_evidence_reference']===null&&$fact['realized_revenue']===null,'O3 manufactured a Finance outcome.');
+    // O5/O6/O7: actual lifecycle commands feed the redacted attribution source and scoped report.
+    $journal=$orderRepo->lifecycleEvidence($org,$one,1,3);
+    $check($journal['order_revision']===9&&$journal['has_more']&&$journal['next_after_revision']===4&&
+        array_column($journal['events'],'revision')===[2,3,4],'Native lifecycle attribution cursor invalid.');
+    $tail=$orderRepo->lifecycleEvidence($org,$one,4,100);
+    $check(!$tail['has_more']&&array_column($tail['events'],'revision')===[5,6,7,8,9]&&
+        $tail['events'][2]['status']==='cancelled'&&$tail['events'][3]['effect_quantity']===1,'Native correction facts missing.');
+    $check($orderRepo->lifecycleEvidence('foreign-'.$token,$one)===null,'Foreign lifecycle source leaked.');
+    $day=substr($createdOrder['order']['placed_at'],0,10);
+    $orderRange=['from'=>$day,'to'=>(new DateTimeImmutable($day))->modify('+2 days')->format('Y-m-d')];
+    $orderReport=static fn(array $extra=[])=>$gateway->invoke($manager,'sales.reports.data.read',['report_id'=>'orders',...$orderRange,...$extra],'trusted_read','','order-report');
+    $r=$orderReport();$group=[];
+    foreach($r['rows'] as $row)$group[$row['currency'].'/'.$row['bucket'].'/'.$row['metric']]=$row['value'];
+    $check($r['basis']==='placed_cohort_current_state'&&$r['owner_id']===$owner&&
+        $group['EUR/cancelled/gross_placed_value']==='90.00'&&$group['EUR/completed/gross_placed_value']==='60.00'&&
+        $group['EUR/cancelled/net_collected_complete_cohort']===null,'Order report commercial/Finance separation invalid.');
+    $atomicReject(fn()=>$orderReport(['scope'=>'tenant']));
+    $atomicReject(fn()=>$orderReport(['scope'=>'owner','owner_id'=>$other]));
+    $atomicReject(fn()=>$orderReport(['pipeline_id'=>$pid]));
+    $atomicReject(fn()=>$gateway->invoke($actor('foreign-'.$token,$owner),'sales.reports.data.read',['report_id'=>'orders',...$orderRange],'trusted_read','','foreign-order-report'));
+    $financeEvidence->facts[$one]=['schema_version'=>'1.0.0','organization_id'=>$org,'order_id'=>$one,'currency'=>'EUR',
+        'evidence_reference'=>str_repeat('a',32),'revision'=>4,'captured_amount'=>'90.00','refunded_amount'=>'20.00',
+        'chargeback_amount'=>'10.00','net_collected_amount'=>'60.00','outstanding_amount'=>'30.00'];
+    $r=$orderReport();$net=array_values(array_filter($r['rows'],fn($row)=>$row['currency']==='EUR'&&$row['bucket']==='cancelled'&&$row['metric']==='net_collected_complete_cohort'));
+    $check(count($net)===1&&$net[0]['value']==='60.00','Verified net collection missing.');
+    unset($financeEvidence->facts[$one]);
+    $check(!str_contains(json_encode($r,JSON_THROW_ON_ERROR),$one),'Order aggregate leaked order identifiers.');
+    echo "Sales O5 native lifecycle source and O6 scoped order report candidate PASS.\n";
     echo "Sales O3 Product-owned E5 reserve, multi-warehouse rollback, partial fulfillment, release, cancellation, return, tenant and external ownership fences PASS.\n";
 
 
