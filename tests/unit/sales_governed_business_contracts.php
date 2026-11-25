@@ -31,6 +31,8 @@ $mapped = [];
 foreach ($types as $id) {
     $nativeId = SalesGovernedBusinessOperations::nativeId($id);
     $mapped[] = $nativeId;
+    $matching = array_values(array_filter($policies, static fn ($p): bool => $p->actionType === $id));
+    $require(count($matching) === 1 && $matching[0]->decision === \Kernel\Policy\PolicyDecision::ApprovalRequired, 'Policy coverage: '.$id);
     $native = $contracts[$nativeId];
     $governed = $contracts[$id];
     $require($native->executionBinding === 'command:'.$nativeId && $native->approvalPolicy === 'none'
