@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "analytics-movement-search input",
+  "type": "object",
+  "properties": {
+    "from": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "to": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100
+    },
+    "offset": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000000
+    }
+  },
+  "required": [
+    "from",
+    "to"
+  ],
+  "additionalProperties": false
+}

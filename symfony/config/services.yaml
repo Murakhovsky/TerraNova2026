@@ -2901,6 +2901,12 @@ services:
   documentsDomainModule:
     alias: Domains\Documents\Bootstrap\DocumentsDomainModule
 
+  Domains\ProductManagement\Infrastructure\Persistence\MySqlProductAnalytics:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\ProductManagement\Infrastructure\Persistence\MySqlStockReconciliationAudit:
+    arguments:
+      $connection: '@cos.database.pdo'
   Domains\ProductManagement\Infrastructure\Persistence\MySqlProductManagementStore:
     arguments:
       $connection: '@cos.database.pdo'
@@ -2948,13 +2954,38 @@ services:
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyCatalogPullService: ~
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyOrderReadbackService: ~
 
+  productManagementNavigationContributor:
+    alias: App\Web\Experience\Extension\Provider\ProductManagementWebProvider
+
+  App\Web\ProductManagement\ProductManagementPageController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\ProductManagement\ProductInventoryController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\ProductManagement\ProductImportController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\ProductManagement\ProductGovernedPlanController:
+    public: true
+    tags: ['controller.service_arguments']
+
   # Product Management E0: domain stays tenant-disabled until explicit activation.
   Domains\ProductManagement\Automation\Action\ProductImportApplyHandler: ~
+  Domains\ProductManagement\Automation\Action\ProductStockCountApplyHandler: ~
+  Domains\ProductManagement\Automation\Action\ProductStockCountSessionApplyHandler: ~
+  Domains\ProductManagement\Automation\Action\ProductGovernedOperationHandler: ~
   Domains\ProductManagement\Automation\Action\ShopifyImportApplyHandler: ~
   Domains\ProductManagement\Bootstrap\ProductManagementDomainModule:
     arguments:
       $importHandler: '@Domains\ProductManagement\Automation\Action\ProductImportApplyHandler'
       $shopifyHandler: '@Domains\ProductManagement\Automation\Action\ShopifyImportApplyHandler'
+      $stockCountHandler: '@Domains\ProductManagement\Automation\Action\ProductStockCountApplyHandler'
+      $countSessionHandler: '@Domains\ProductManagement\Automation\Action\ProductStockCountSessionApplyHandler'
+      $governedHandler: '@Domains\ProductManagement\Automation\Action\ProductGovernedOperationHandler'
   productManagementDomainModule:
     alias: Domains\ProductManagement\Bootstrap\ProductManagementDomainModule
 
@@ -4113,6 +4144,9 @@ services:
         - '@Domains\Sales\Application\Service\SalesLocalTaskOutcomeEvidenceProvider'
         - '@App\Persistence\Property\PropertyBulkRunOutcomeProvider'
         - '@App\Persistence\ProductManagement\ProductImportRunOutcomeProvider'
+        - '@App\Persistence\ProductManagement\ProductStockCountRunOutcomeProvider'
+        - '@App\Persistence\ProductManagement\ProductStockCountSessionRunOutcomeProvider'
+        - '@App\Persistence\ProductManagement\ProductGovernedRunOutcomeProvider'
         - '@App\Persistence\ProductManagement\ShopifyImportRunOutcomeProvider'
         - '@Domains\Growth\Application\Service\GrowthInboundResponseOutcomeEvidenceProvider'
         - '@App\Persistence\Federation\FederationGrowthRunLinkedOutcomeEvidenceProvider'
@@ -4382,3 +4416,9 @@ services:
 
   App\Application\Experience\Business\Contract\BusinessEntitySummaryReadInterface:
     alias: App\Infrastructure\Experience\Business\TenantBusinessEntitySummaryRead
+
+
+  App\Persistence\Capability\CanonicalAutomationIntentStore:
+    arguments:
+      $productPlans: '@App\Persistence\ProductManagement\ProductGovernedPlanProposalService'
+      $catalog: '@Kernel\Module\CanonicalCapabilityCatalog'

@@ -37,6 +37,8 @@ interface ProductManagementStoreInterface
     public function getProduct(string $organizationId, string $id): ?array;
     /** @return list<array<string,mixed>> */
     public function searchProducts(string $organizationId, string $query, int $limit, int $offset): array;
+    /** @return list<array<string,mixed>> */
+    public function searchLocations(string $organizationId,string $q,int $limit,int $offset):array;
     /** @return array<string,mixed> */
     public function createLocation(string $organizationId, string $code, string $name, string $key, string $actor, string $correlation): array;
     /** @return array<string,mixed> */
@@ -44,5 +46,25 @@ interface ProductManagementStoreInterface
     /** @return array<string,mixed> */
     public function transferStock(string $org,string $variantId,string $fromLocation,string $toLocation,string $qty,string $source,string $key,string $actor,string $correlation):array;
     /** @return array<string,mixed> */
+    public function reserveStock(string $org,string $variantId,string $locationId,string $qty,string $source,string $key,string $actor,string $correlation):array;
+    /** @return array<string,mixed> */
+    public function releaseStock(string $org,string $reservationId,string $reason,string $key,string $actor,string $correlation):array;
+    /** @return array<string,mixed> */
+    public function searchReservations(string $org,string $variantId,string $locationId,?string $reservationId,int $limit,int $offset):array;
+    public function applyStockCount(string $org,string $countId,string $variantId,string $locationId,string $counted,int $expectedRevision,string $source,string $key,string $actor,string $correlation):array;
+    public function applyCountSession(string $org,string $sessionId,string $location,array $rows,string $source,string $key,string $actor,string $correlation):array;
+    public function countCandidates(string $org,string $location,int $limit,int $offset):array;
+    public function getCountSession(string $org,string $sessionId):?array;
+    public function getStockCount(string $org,string $countId):?array;
+    public function defineAttribute(string $org,array $definition,string $key,string $actor,string $trace):array;
+    public function attributes(string $org,int $limit,int $offset):array;
+    public function bindAttribute(string $org,string $category,string $code,bool $required,bool $axis,string $key,string $actor,string $trace):array;
+    public function categoryAttributes(string $org,string $category):array;
+    public function setAttributes(string $org,string $product,array $changes,int $revision,string $key,string $actor,string $trace):array;
+    public function bulkSetAttributes(string $org,array $products,array $changes,string $key,string $actor,string $trace):array;
+    public function productAttributes(string $org,string $product):array;
+    public function filterAttributes(string $org,string $code,mixed $value,int $limit,int $offset):array;
+    public function variantMatrix(string $org,string $product,array $matrix):array;
+    public function createMatrix(string $org,string $product,array $matrix,int $revision,string $uom,bool $track,string $key,string $actor,string $trace):array;
     public function stockBalance(string $organizationId, string $variantId, string $locationId): array;
 }

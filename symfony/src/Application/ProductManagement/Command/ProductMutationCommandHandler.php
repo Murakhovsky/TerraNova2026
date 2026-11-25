@@ -29,6 +29,11 @@ final readonly class ProductMutationCommandHandler implements CommandHandlerInte
         $actor = $command->actorId;
         $trace = $command->correlationId;
         return match ($command->operation) {
+            'attribute.define' => $this->products->defineAttribute($org,$in,$key,$actor,$trace),
+            'attribute.category.bind' => $this->products->bindAttribute($org,(string)$in['category_id'],(string)$in['code'],(bool)$in['is_required'],(bool)$in['is_axis'],$key,$actor,$trace),
+            'attribute.product.bulk_set' => $this->products->bulkSetAttributes($org,$in['products'],$in['values'],$key,$actor,$trace),
+            'attribute.product.set' => $this->products->setAttributes($org,(string)$in['product_id'],$in['values'],(int)$in['expected_revision'],$key,$actor,$trace),
+            'variant.matrix.create' => $this->products->createMatrix($org,(string)$in['product_id'],$in['axes'],(string)$in['sku_prefix'],(int)$in['expected_revision'],(string)($in['uom']??'pcs'),(bool)($in['track_inventory']??true),$key,$actor,$trace),
             'media.attach' => $this->media->attach(
                 $org,(string)$in['product_id'],(string)$in['file_id'],
                 isset($in['variant_id'])?(string)$in['variant_id']:null,
@@ -78,6 +83,13 @@ final readonly class ProductMutationCommandHandler implements CommandHandlerInte
                 $org,(string)$in['variant_id'],(string)$in['from_location_id'],(string)$in['to_location_id'],
                 (string)$in['quantity'],(string)$in['source_ref'],$key,$actor,$trace,
             ),
+            'stock.reserve' => $this->products->reserveStock(
+                $org,(string)$in['variant_id'],(string)$in['location_id'],
+                (string)$in['quantity'],(string)$in['source_ref'],$key,$actor,$trace,
+            ),
+            'stock.release' => $this->products->releaseStock(
+                $org,(string)$in['reservation_id'],(string)$in['reason'],$key,$actor,$trace,
+            ),
             'stock.issue' => $this->products->recordMovement(
                 $org, (string) $in['variant_id'], (string) $in['location_id'],
                 '-' . (string) $in['quantity'], 'issue', (string) $in['source_ref'],
@@ -86,9 +98,16 @@ final readonly class ProductMutationCommandHandler implements CommandHandlerInte
             'import.preview' => $this->imports->preview(
                 $org,(string)$in['csv'],$actor,$key,
             ),
+            'price.list.update' => $this->prices->updateList($org,(string)$in['list_id'],(string)$in['name'],(int)$in['expected_revision'],$key,$actor,$trace),
+            'price.list.archive' => $this->prices->archiveList($org,(string)$in['list_id'],(int)$in['expected_revision'],$key,$actor,$trace),
+            'price.list.entry.remove' => $this->prices->removeListPrice($org,(string)$in['list_id'],(string)$in['variant_id'],(int)$in['expected_revision'],$key,$actor,$trace),
+            'price.list.tier.set' => $this->prices->setTier($org,(string)$in['list_id'],(string)$in['variant_id'],(string)$in['min_quantity'],$in['amount']===null?null:(string)$in['amount'],(int)$in['expected_revision'],$key,$actor,$trace),
+            'price.list.create' => $this->prices->createList($org,(string)$in['code'],(string)$in['name'],(string)$in['kind'],(string)$in['currency'],$key,$actor,$trace),
+            'price.list.entry.set' => $this->prices->setListPrice($org,(string)$in['list_id'],(string)$in['variant_id'],(string)$in['amount'],(int)$in['expected_revision'],$key,$actor,$trace),
             'price.base.set' => $this->prices->set(
                 $org, (string) $in['variant_id'], (string) $in['currency'],
                 (string) $in['amount'], $key, $actor, $trace,
+                array_key_exists('expected_revision',$in)?(int)$in['expected_revision']:null,
             ),
             default => throw new DomainException('Product Management command not supported.'),
         };

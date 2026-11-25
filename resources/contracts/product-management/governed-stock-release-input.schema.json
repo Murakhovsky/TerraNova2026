@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Governed stock-release input",
+  "type": "object",
+  "required": [
+    "target_type",
+    "target_id",
+    "parameters"
+  ],
+  "properties": {
+    "target_type": {
+      "type": "string",
+      "const": "product_governed_operation"
+    },
+    "target_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "parameters": {
+      "type": "object",
+      "required": [
+        "reservation_id",
+        "reason"
+      ],
+      "properties": {
+        "reservation_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 191
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

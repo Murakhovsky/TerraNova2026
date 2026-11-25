@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Governed price-list-entry-set input",
+  "type": "object",
+  "required": [
+    "target_type",
+    "target_id",
+    "parameters"
+  ],
+  "properties": {
+    "target_type": {
+      "type": "string",
+      "const": "product_governed_operation"
+    },
+    "target_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "parameters": {
+      "type": "object",
+      "required": [
+        "list_id",
+        "variant_id",
+        "amount",
+        "expected_revision"
+      ],
+      "properties": {
+        "list_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        },
+        "variant_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        },
+        "amount": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,15})(\\.[0-9]{1,4})?$"
+        },
+        "expected_revision": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

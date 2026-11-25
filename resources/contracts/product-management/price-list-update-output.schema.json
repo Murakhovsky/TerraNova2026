@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ProductManagement price-list-update output V1",
+  "type": "object",
+  "required": [
+    "list_id",
+    "code",
+    "name",
+    "kind",
+    "currency",
+    "status",
+    "revision"
+  ],
+  "properties": {
+    "list_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "code": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "retail",
+        "wholesale",
+        "partner"
+      ]
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Za-z]{3}$"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "archived"
+      ]
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    }
+  },
+  "additionalProperties": false
+}

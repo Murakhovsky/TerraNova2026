@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Governed price-list-entry-remove input",
+  "type": "object",
+  "required": [
+    "target_type",
+    "target_id",
+    "parameters"
+  ],
+  "properties": {
+    "target_type": {
+      "type": "string",
+      "const": "product_governed_operation"
+    },
+    "target_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "parameters": {
+      "type": "object",
+      "required": [
+        "list_id",
+        "variant_id",
+        "expected_revision"
+      ],
+      "properties": {
+        "list_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        },
+        "variant_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        },
+        "expected_revision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

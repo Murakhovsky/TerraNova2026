@@ -1,0 +1,79 @@
+{
+  "schema_version": 4,
+  "id": "product_management.csv-to-native-catalog",
+  "title": "Product CSV → Native Catalog",
+  "domain": "product_management",
+  "state": "as-is",
+  "workflow": "02-workflows/product-management-csv-to-native-catalog.md",
+  "trigger": "A bounded CSV needs validated native catalog intake",
+  "outcomes": [
+    "Staged data is reviewed before mutation",
+    "Approved import Action writes native catalog",
+    "Native batch report shows actual results"
+  ],
+  "actors": [
+    "Product manager",
+    "Approved Product Action worker",
+    "Independent reviewer"
+  ],
+  "steps": [
+    {
+      "id": "preview",
+      "label": "Stage CSV preview",
+      "kind": "operation",
+      "owner": "Product manager",
+      "domain": "product_management",
+      "capability": "product_management.import.preview",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Application/Service/CsvProductImportService.php",
+          "symbol": "public function preview("
+        }
+      ]
+    },
+    {
+      "id": "apply",
+      "label": "Apply independently approved CSV",
+      "kind": "operation",
+      "owner": "Approved Product Action worker",
+      "domain": "product_management",
+      "capability": "product_management.import.apply",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Automation/Action/ProductImportApplyHandler.php",
+          "symbol": "public function execute("
+        }
+      ]
+    },
+    {
+      "id": "report",
+      "label": "Verify native batch report",
+      "kind": "outcome",
+      "owner": "Independent reviewer",
+      "domain": "product_management",
+      "capability": "product_management.import.batch.get",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Application/Service/CsvProductImportService.php",
+          "symbol": "public function report("
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "preview",
+      "to": "apply"
+    },
+    {
+      "from": "apply",
+      "to": "report"
+    }
+  ]
+}

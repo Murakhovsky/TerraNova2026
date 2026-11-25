@@ -26,7 +26,7 @@ $pdo=new PDO(
     [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC],
 );
 foreach (['pm_products','pm_variants','pm_stock_balances','pm_stock_movements','pm_base_prices',
-          'pm_import_batches','pm_external_connections','cos_events','cos_event_outbox'] as $table) {
+          'pm_price_lists','pm_price_list_entries','pm_price_list_history','pm_price_list_tiers','pm_price_list_tier_history','pm_import_batches','pm_external_connections','cos_events','cos_event_outbox'] as $table) {
     $stmt=$pdo->prepare('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name=?');
     $stmt->execute([$table]);
     if ((int)$stmt->fetchColumn()!==1) throw new RuntimeException('Migration not applied: '.$table);
@@ -122,6 +122,12 @@ $reject(static fn()=> $products->updateVariant($org,$created['variant_id'],['bar
 $reject(static fn()=> $products->updateVariant($other,$created['variant_id'],['barcode'=>'BAD'],2,
     'pm-var-cross-'.$token,'ci-other','ci-pm'),'cross-tenant Variant update');
 $location=$products->createLocation($org,'L-'.$token,'Test warehouse','pm-loc-'.$token,'ci-user','ci-pm');
+$locFound=$products->locations($org,'L-'.$token,10,0);
+$assert(count($locFound)===1 && $locFound[0]['location_id']===$location['location_id'],
+    'tenant warehouse discovery must return the native location');
+$assert($products->locations($other,'L-'.$token,10,0)===[],
+    'warehouse discovery cannot leak another tenant');
+
 $variant=$created['variant_id'];$loc=$location['location_id'];
 $receipt=$products->recordMovement($org,$variant,$loc,'10.000000','receipt','TEST-PO','pm-in-'.$token,'ci-user','ci-pm');
 $replayed=$products->recordMovement($org,$variant,$loc,'10.000000','receipt','TEST-PO','pm-in-'.$token,'ci-user','ci-pm');
@@ -167,6 +173,89 @@ $assert(
     && (string)$set['price']==='129.9900',
     'base price replay must preserve price revision and amount'
 );
+$eur=$prices->set($org,$variant,'EUR','19.9900','pm-eur-'.$token,'ci-user','ci-pm',0);
+$assert($eur['revision']===1 && $eur['price']==='19.9900','New currency price uses independent revision');
+$eurUpdated=$prices->set($org,$variant,'EUR','21.1250','pm-eur-update-'.$token,'ci-user','ci-pm',1);
+$assert($eurUpdated['revision']===2 && $eurUpdated['price']==='21.1250','Fenced price update');
+$eurReplay=$prices->set($org,$variant,'EUR','21.1250','pm-eur-update-'.$token,'ci-user','ci-pm',1);
+ksort($eurReplay);ksort($eurUpdated);
+$assert($eurReplay===$eurUpdated,'Fenced price replay preserves receipt');
+$reject(static fn()=> $prices->set($org,$variant,'EUR','1','pm-eur-stale-'.$token,'ci-user','ci-pm',1),'Stale price revision');
+$reject(static fn()=> $prices->set($org,$variant,'EUR','21.1250','pm-eur-update-'.$token,'ci-user','ci-pm',2),'Same key different revision');
+$reject(static fn()=> $prices->set($other,$variant,'EUR','1','pm-eur-cross-'.$token,'ci-other','ci-pm',0),'Cross tenant price');
+$assert($prices->get($org,$variant,'UAH')['price']==='129.9900' && $prices->get($org,$variant,'EUR')['price']==='21.1250','Independent currency readback');
+$history=$prices->history($org,$variant,'EUR',30,0);
+$assert(count($history)===2,'Exactly two EUR history events after replay and rejected writes');
+$assert($history[0]['old_amount']==='19.9900' && $history[0]['new_amount']==='21.1250'
+    && $history[1]['old_amount']===null && $history[1]['new_amount']==='19.9900','Native history preserves previous and new prices');
+$assert(count($prices->history($org,$variant,'EUR',1,1))===1,'Bounded history pagination');
+$assert(count($prices->history($org,$variant,'UAH'))===1,'Currency history isolation');
+$assert($prices->history($other,$variant,'EUR')===[],'Foreign tenant history is not disclosed');
+$retail=$prices->createList($org,'RETAIL','Retail','retail','EUR','pm-list-retail-'.$token,'ci-user','ci-pm');
+$wholesale=$prices->createList($org,'B2B','Wholesale','wholesale','EUR','pm-list-b2b-'.$token,'ci-user','ci-pm');
+$partner=$prices->createList($org,'PARTNER','Partner','partner','UAH','pm-list-partner-'.$token,'ci-user','ci-pm');
+$replayList=$prices->createList($org,'B2B','Wholesale','wholesale','EUR','pm-list-b2b-'.$token,'ci-user','ci-pm');
+$assert($replayList['list_id']===$wholesale['list_id'],'Price list creation replay');
+$assert(count($prices->searchLists($org))===3 && $prices->searchLists($other)===[],'Tenant price list isolation');
+$assert(count($prices->searchLists($org,'B2B'))===1,'Exact price list discovery');
+$lid=$wholesale['list_id'];$retailId=$retail['list_id'];
+$empty=$prices->getListPrice($org,$lid,$variant);
+$assert($empty['found']===true && $empty['price']===null && $empty['revision']===0,'No implicit base price fallback');
+$lp=$prices->setListPrice($org,$lid,$variant,'10.0000',0,'pm-list-entry-'.$token,'ci-user','ci-pm');
+$lp2=$prices->setListPrice($org,$lid,$variant,'11.1250',1,'pm-list-entry-up-'.$token,'ci-user','ci-pm');
+$replayEntry=$prices->setListPrice($org,$lid,$variant,'11.1250',1,'pm-list-entry-up-'.$token,'ci-user','ci-pm');
+ksort($lp2);ksort($replayEntry);
+$assert($lp2===$replayEntry && $lp2['revision']===2 && $lp2['price']==='11.1250','Price list entry replay and revision');
+$reject(static fn()=> $prices->setListPrice($org,$lid,$variant,'1',1,'pm-list-stale-'.$token,'ci-user','ci-pm'),'Stale list price');
+$reject(static fn()=> $prices->setListPrice($org,$lid,$variant,'12',1,'pm-list-entry-up-'.$token,'ci-user','ci-pm'),'Reused key changed amount');
+$reject(static fn()=> $prices->setListPrice($other,$lid,$variant,'1',0,'pm-list-cross-'.$token,'ci-other','ci-pm'),'Foreign tenant list price');
+$assert($prices->getListPrice($other,$lid,$variant)['found']===false,'Foreign price not exposed');
+$assert($prices->getListPrice($org,$retailId,$variant)['price']===null && $prices->get($org,$variant,'EUR')['price']==='21.1250','List and base price isolation');
+$historyCheck=$pdo->prepare('SELECT revision,old_amount,new_amount,actor_ref FROM pm_price_list_history WHERE organization_id=? AND list_id=? AND variant_id=? ORDER BY revision');
+$historyCheck->execute([$org,$lid,$variant]);$listHistory=$historyCheck->fetchAll();
+$assert(count($listHistory)===2 && $listHistory[0]['old_amount']===null && $listHistory[1]['old_amount']==='10.0000' && $listHistory[1]['new_amount']==='11.1250' && $listHistory[1]['actor_ref']==='ci-user','Immutable list price history');
+$assert($prices->resolvePrice($org,$variant,'EUR','1',null)['price']==='21.1250','Explicit base resolution');
+$assert($prices->resolvePrice($org,$variant,'EUR','1',$retailId)['source']==='none','No implicit cross-list fallback');
+$prices->setListPrice($org,$retailId,$variant,'15',0,'pm-tier-entry-'.$token,'ci-user','ci-pm');
+$prices->setTier($org,$retailId,$variant,'10','12',0,'pm-tier-10-'.$token,'ci-user','ci-pm');
+$prices->setTier($org,$retailId,$variant,'20','9',0,'pm-tier-20-'.$token,'ci-user','ci-pm');
+$assert($prices->resolvePrice($org,$variant,'EUR','9.999999',$retailId)['price']==='15.0000','Below threshold uses explicit list entry');
+$assert($prices->resolvePrice($org,$variant,'EUR','10',$retailId)['price']==='12.0000','Inclusive exact threshold');
+$assert($prices->resolvePrice($org,$variant,'EUR','20',$retailId)['price']==='9.0000','Highest eligible threshold');
+$assert($prices->resolvePrice($org,$variant,'USD','20',$retailId)['source']==='none' && $prices->resolvePrice($other,$variant,'EUR','20',$retailId)['source']==='none','Currency and tenant fences');
+$reject(static fn()=> $prices->setTier($org,$retailId,$variant,'20','8',0,'pm-tier-stale-'.$token,'ci-user','ci-pm'),'Tier stale revision');
+$removedTier=$prices->setTier($org,$retailId,$variant,'20.000000',null,1,'pm-tier-remove-'.$token,'ci-user','ci-pm');
+$assert($removedTier['price']===null && $removedTier['revision']===2,'Tier removal tombstone');
+$tierHistory=$prices->tierHistory($org,$retailId,$variant,'20');
+$assert(count($tierHistory)===2 && $tierHistory[0]['new_amount']===null && $tierHistory[0]['old_amount']==='9.0000' && $tierHistory[0]['revision']===2,'Tier removal history');
+$assert($prices->tierHistory($org,$retailId,$variant,'20',1,1)[0]['new_amount']==='9.0000','Tier history pagination');
+$assert($prices->tierHistory($other,$retailId,$variant,'20')===[],'Tier history tenant isolation');
+$assert(count($prices->tierHistory($org,$retailId,$variant,'10'))===1,'Threshold identity isolation');
+$assert($prices->resolvePrice($org,$variant,'EUR','20',$retailId)['price']==='12.0000','Removed tier excluded');
+$removedEntry=$prices->removeListPrice($org,$retailId,$variant,1,'pm-entry-remove-'.$token,'ci-user','ci-pm');
+$assert($removedEntry['price']===null && $removedEntry['revision']===2,'Entry removal retains revision');
+$assert($prices->resolvePrice($org,$variant,'EUR','1',$retailId)['source']==='none','Removed entry not quoted');
+$assert($prices->listHistory($org,$retailId,$variant,1)[0]['new_amount']===null,'Entry removal audit history');
+$prices->setListPrice($org,$retailId,$variant,'16',2,'pm-entry-restore-'.$token,'ci-user','ci-pm');
+$assert($prices->resolvePrice($org,$variant,'EUR','1',$retailId)['price']==='16.0000','Re-add uses tombstone revision');
+$assert(count($prices->tiers($org,$retailId,$variant))===2 && $prices->tiers($other,$retailId,$variant)===[],'Tier discovery isolation');
+$listRows=$prices->searchLists($org,'B2B');
+$assert($listRows[0]['status']==='active' && $listRows[0]['revision']===1,'List initial lifecycle state');
+$renamed=$prices->updateList($org,$lid,'Wholesale updated',1,'pm-list-rename-'.$token,'ci-user','ci-pm');
+$assert($renamed['revision']===2 && $renamed['name']==='Wholesale updated','List rename');
+$reject(static fn()=> $prices->updateList($org,$lid,'Stale',1,'pm-list-rename-stale-'.$token,'ci-user','ci-pm'),'Stale list revision');
+$reject(static fn()=> $prices->archiveList($other,$lid,2,'pm-list-foreign-archive-'.$token,'ci-other','ci-pm'),'Cross tenant list archive');
+$archivedList=$prices->archiveList($org,$lid,2,'pm-list-archive-'.$token,'ci-user','ci-pm');
+$assert($prices->resolvePrice($org,$variant,'EUR','1',$lid)['source']==='none','Archived list cannot resolve current quote');
+$reject(static fn()=> $prices->setTier($org,$lid,$variant,'5','1',0,'pm-tier-archived-'.$token,'ci-user','ci-pm'),'Archived list tier mutation');
+$archivedReplay=$prices->archiveList($org,$lid,2,'pm-list-archive-'.$token,'ci-user','ci-pm');
+ksort($archivedList);ksort($archivedReplay);
+$assert($archivedReplay===$archivedList && $archivedList['status']==='archived' && $archivedList['revision']===3,'List archive replay');
+$reject(static fn()=> $prices->updateList($org,$lid,'Archived',3,'pm-list-rename-archived-'.$token,'ci-user','ci-pm'),'Archived list rename');
+$reject(static fn()=> $prices->setListPrice($org,$lid,$variant,'1',2,'pm-list-entry-archived-'.$token,'ci-user','ci-pm'),'Archived list price mutation');
+$listHistoryRead=$prices->listHistory($org,$lid,$variant,1,0);
+$assert(count($listHistoryRead)===1 && $listHistoryRead[0]['revision']===2 && $listHistoryRead[0]['new_amount']==='11.1250','Archived list history remains readable');
+$assert($prices->listHistory($other,$lid,$variant)===[] && count($prices->listHistory($org,$lid,$variant,1,1))===1,'List history tenant and page isolation');
 $csvPayload="sku,name,type,uom,track_inventory\nCSV".$token.",Sample,stock,pcs,1\n";
 $batch=$csv->preview($org,$csvPayload,'ci-user','pm-csv-stage-'.$token);
 $againBatch=$csv->preview($org,$csvPayload,'ci-user','pm-csv-stage-'.$token);
@@ -240,13 +329,33 @@ $archived=$products->archiveProduct($org,$created['product_id'],2,'pm-archive-'.
 $assert($archived['revision']===3 && $archived['status']==='archived','Product archive must preserve state');
 $reject(static fn()=> $products->updateProduct($org,$created['product_id'],['name'=>'After archive'],3,
     'pm-edit-archived-'.$token,'ci-user','ci-pm'),'archived Product cannot be edited');
+// Exact replay must return the original receipt even after the lifecycle advanced.
+$replayedVariant=$products->archiveVariant($org,$variant,2,'pm-var-archive-'.$token,'ci-user','ci-pm');
+ksort($replayedVariant);ksort($variantArchived);
+$assert($replayedVariant===$variantArchived,'Variant archive replay must return the same receipt');
+$replayedProduct=$products->archiveProduct($org,$created['product_id'],2,'pm-archive-'.$token,'ci-user','ci-pm');
+ksort($replayedProduct);ksort($archived);
+$assert($replayedProduct===$archived,'Product archive replay must return the same receipt');
+$reject(static fn()=> $products->archiveProduct($other,$created['product_id'],2,
+    'pm-archive-cross-'.$token,'ci-other','ci-pm'),'cross-tenant Product archive');
+$reject(static fn()=> $products->archiveVariant($other,$variant,2,
+    'pm-var-archive-cross-'.$token,'ci-other','ci-pm'),'cross-tenant Variant archive');
+$reject(static fn()=> $products->recordMovement($org,$variant,$loc,'1','receipt','ARCHIVE-FENCE',
+    'pm-after-archive-stock-'.$token,'ci-user','ci-pm'),'Archived Product/Variant cannot receive stock');
+$assert((string)$products->balance($org,$variant,$loc)['on_hand']==='0.000000',
+    'Archived Variant ledger remains unchanged after denied receipt');
+$reject(static fn()=> $prices->set($org,$variant,'EUR','1','pm-eur-archived-'.$token,'ci-user','ci-pm',2),'Archived Variant/Product price mutation');
+$assert($prices->get($org,$variant,'EUR')['price']==='21.1250','Archived price remains readable');
+$assert(count($prices->history($org,$variant,'EUR'))===2,'Archived SKU history remains readable');
+$reject(static fn()=> $prices->setListPrice($org,$lid,$variant,'1',2,'pm-list-archived-'.$token,'ci-user','ci-pm'),'Archived Variant list price mutation');
+$assert($prices->getListPrice($org,$lid,$variant)['price']==='11.1250','Archived list price remains readable');
 $stmt=$pdo->prepare('SELECT COUNT(*) FROM cos_events WHERE organization_id=? AND type LIKE ?');
 $stmt->execute([$org,'product_management.%']);
-$assert((int)$stmt->fetchColumn()===20,'twenty confirmed native Domain events');
+$assert((int)$stmt->fetchColumn()===35,'thirty-five confirmed native Domain events');
 $stmt=$pdo->prepare('SELECT actor_type FROM cos_events WHERE organization_id=? AND type=? LIMIT 1');
 $stmt->execute([$org,'product_management.product.created']);
 $assert($stmt->fetchColumn()==='USER','event actor uses canonical Kernel enum');
 $stmt=$pdo->prepare('SELECT COUNT(*) FROM cos_event_outbox o JOIN cos_events e ON e.id=o.event_id WHERE e.organization_id=? AND e.type LIKE ?');
 $stmt->execute([$org,'product_management.%']);
-$assert((int)$stmt->fetchColumn()===20,'same-transaction event/outbox evidence');
+$assert((int)$stmt->fetchColumn()===35,'same-transaction event/outbox evidence');
 echo "Product Management MySQL E1–E4 acceptance passed: product, ledger, price, CSV, integration inbox.\n";

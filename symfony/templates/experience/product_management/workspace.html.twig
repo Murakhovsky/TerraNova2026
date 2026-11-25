@@ -1,0 +1,437 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+{% block title %}{{ pageTitle }} | Terra Nova COS{% endblock %}
+{% block workspace_content %}
+<div class="cos-page__stack">
+    <header class="cos-page__section-head">
+        <div>
+            <small>Product Management · Native COS catalog</small>
+            <h1>{{ pageTitle }}</h1>
+            <p>Товари, варіанти, категорії та базові ціни. Shopify і Sales не беруть участі в цих операціях.</p>
+        </div>
+    </header>
+    <nav class="cos-toolbar" aria-label="Product Management">
+        <a class="btn btn-outline-secondary" href="/product-management/dashboard">Dashboard</a>
+        <a class="btn btn-outline-secondary" href="/product-management">Каталог</a>
+        <a class="btn btn-outline-secondary" href="/product-management/categories">Категорії</a>
+        <a class="btn btn-outline-secondary" href="/product-management/price-lists">Прайс-листи</a>
+        <a class="btn btn-outline-secondary" href="/product-management/attributes">Атрибути</a>
+    </nav>
+    {% if notice == 'created' or notice == 'updated' %}
+        <p role="status" class="alert alert-success">Операцію збережено. Дані повторно прочитані з Domain.</p>
+    {% endif %}
+
+    {% if section == 'dashboard' %}
+        {% include 'experience/product_management/dashboard.html.twig' %}
+    {% elseif section == 'catalog' %}
+        <section class="cos-panel">
+            <h2>Пошук товарів</h2>
+            <form method="get" action="/product-management" class="cos-toolbar">
+                <label class="flex-grow-1">Назва або SKU
+                    <input name="q" class="form-control" value="{{ q }}" maxlength="200" placeholder="Назва або SKU">
+                </label>
+                <button type="submit" class="btn btn-outline-primary">Знайти</button>
+            </form>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead><tr><th>Товар</th><th>SKU</th><th>Тип</th><th>Статус</th><th>Складський облік</th></tr></thead>
+                    <tbody>
+                    {% for row in rows %}
+                        <tr>
+                            <td><a href="/product-management/products/{{ row.product_id|url_encode }}">{{ row.name }}</a></td>
+                            <td>{{ row.sku }}</td><td>{{ row.product_type }}</td><td>{{ row.status }}</td>
+                            <td>{{ row.track_inventory ? 'Так' : 'Ні' }}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="5">Нічого не знайдено у цій організації.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <nav class="cos-toolbar" aria-label="Пагінація товарів">
+                {% if pageNumber > 1 %}
+                    <a class="btn btn-outline-secondary" href="/product-management?q={{ q|url_encode }}&page={{ pageNumber - 1 }}">Попередня</a>
+                {% endif %}
+                <span>Сторінка {{ pageNumber }}</span>
+                {% if hasNext %}
+                    <a class="btn btn-outline-secondary" href="/product-management?q={{ q|url_encode }}&page={{ pageNumber + 1 }}">Наступна</a>
+                {% endif %}
+            </nav>
+        </section>
+        <section class="cos-panel">
+            <h2>Новий товар</h2>
+            <form method="post" action="/product-management/products" class="cos-page__stack">
+                <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000001">
+                <label>Назва <input name="name" class="form-control" required maxlength="255"></label>
+                <label>SKU <input name="sku" class="form-control" required maxlength="128"></label>
+                <label>Тип <select name="type" class="form-select">
+                    <option value="stock">Товар</option><option value="material">Матеріал</option>
+                    <option value="service">Послуга</option><option value="digital">Цифровий продукт</option>
+                </select></label>
+                <label>Одиниця виміру <input name="uom" class="form-control" value="pcs" maxlength="16" required></label>
+                <label><input type="checkbox" name="track_inventory" value="1" checked> Вести складський облік (для товарів і матеріалів)</label>
+                <button type="submit" class="btn btn-primary">Створити товар</button>
+            </form>
+        </section>
+
+    {% elseif section == 'attributes' %}
+        {% include 'experience/product_management/attributes.html.twig' %}
+    {% elseif section == 'product-attributes' %}
+        {% include 'experience/product_management/product_attributes.html.twig' %}
+    {% elseif section == 'product' %}
+        <section class="cos-panel">
+            <h2>{{ product.name }}</h2>
+            <a href="/product-management/products/{{ product.product_id }}/attributes">Характеристики та матриця варіацій</a>
+            <p>Тип: {{ product.product_type }} · Статус: {{ product.status }} · Ревізія: {{ product.revision }}</p>
+            <p>Ідентифікатор: <code>{{ product.product_id }}</code></p>
+            {% if product.status != 'archived' %}
+                <form method="post" action="/product-management/products/{{ product.product_id }}/update" class="cos-page__stack">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000002">
+                    <input type="hidden" name="expected_revision" value="{{ product.revision }}">
+                    <label>Назва <input class="form-control" name="name" value="{{ product.name }}" required maxlength="255"></label>
+                    <label>Бренд <input class="form-control" name="brand" value="{{ product.brand|default('') }}" maxlength="190"></label>
+                    <label>Опис <textarea class="form-control" name="description" maxlength="20000" rows="3">{{ product.description|default('') }}</textarea></label>
+                    <button class="btn btn-outline-primary" type="submit">Зберегти зміни</button>
+                </form>
+                <form method="post" action="/product-management/products/{{ product.product_id }}/archive" class="cos-page__stack">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000008">
+                    <input type="hidden" name="expected_revision" value="{{ product.revision }}">
+                    <label><input type="checkbox" name="confirm_archive" value="1" required> Підтверджую архівування товару. Залишки та резерви мають бути нульовими.</label>
+                    <button class="btn btn-outline-danger" type="submit">Архівувати товар</button>
+                </form>
+            {% endif %}
+        </section>
+        <section class="cos-panel">
+            <h2>Варіанти та базові ціни</h2>
+            <p>Базова ціна зберігається окремо для кожної валюти. Автоматичної конвертації немає.</p>
+            <form method="get" action="/product-management/products/{{ product.product_id }}" class="cos-toolbar">
+                <label>Валюта (три літери) <input class="form-control" name="currency" value="{{ priceCurrency }}" maxlength="3" pattern="[A-Za-z]{3}" required></label>
+                <button class="btn btn-outline-primary" type="submit">Показати ціни</button>
+            </form>
+            <nav class="cos-toolbar" aria-label="Сторінки цін">
+                {% if pricePage > 1 %}<a href="?currency={{ priceCurrency }}&amp;price_page={{ pricePage - 1 }}">Попередні 30 цін</a>{% endif %}
+                <span>Сторінка {{ pricePage }}</span>
+                {% if priceHasNext %}<a href="?currency={{ priceCurrency }}&amp;price_page={{ pricePage + 1 }}">Наступні 30 цін</a>{% endif %}
+            </nav>
+            <div class="table-responsive"><table class="table">
+                <thead><tr><th>SKU</th><th>Одиниця</th><th>Статус</th><th>Ревізія</th><th>{{ priceCurrency }} / базова ціна</th><th>Керування SKU</th></tr></thead>
+                <tbody>
+                {% for v in product.variants|default([]) %}
+                    <tr><td>{{ v.sku }}</td><td>{{ v.uom }}</td><td>{{ v.status }}</td><td>{{ v.revision }}</td>
+                        <td>
+                            {% if prices[v.variant_id] is defined %}
+                            {% set price = prices[v.variant_id] %}
+                            {{ price.price is null ? 'Не встановлено' : price.price }} · rev {{ price.revision }}
+                            <a href="?currency={{ priceCurrency }}&amp;price_page={{ pricePage }}&amp;history_variant={{ v.variant_id }}#price-history">Історія ціни</a>
+                            {% if product.status != 'archived' and v.status == 'active' %}
+                                <form class="cos-toolbar" method="post" action="/product-management/products/{{ product.product_id }}/price">
+                                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                    <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,16) }}{{ 'c%015x'|format(loop.index) }}">
+                                    <input type="hidden" name="variant_id" value="{{ v.variant_id }}">
+                                    <input type="hidden" name="currency" value="{{ priceCurrency }}">
+                                    <input type="hidden" name="expected_revision" value="{{ price.revision }}">
+                                    <input class="form-control" name="amount" aria-label="Ціна {{ priceCurrency }} для {{ v.sku }}" value="{{ price.price|default('') }}" placeholder="0.0000" required pattern="[0-9]+(\.[0-9]{1,4})?">
+                                    <button type="submit" class="btn btn-outline-primary">Ціна</button>
+                                </form>
+                            {% endif %}
+                            {% else %}<span>На іншій сторінці цін</span>{% endif %}
+                        </td>
+                        <td>
+                            {% if product.status != 'archived' and v.status == 'active' %}
+                                <details><summary>Редагувати SKU</summary>
+                                    <form method="post" action="/product-management/products/{{ product.product_id }}/variants/{{ v.variant_id }}/update" class="cos-page__stack">
+                                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                        <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,16) }}{{ 'a%015x'|format(loop.index) }}">
+                                        <input type="hidden" name="expected_revision" value="{{ v.revision }}">
+                                        <label>SKU <input name="sku" class="form-control" value="{{ v.sku }}" maxlength="128" required></label>
+                                        <label>Одиниця <input name="uom" class="form-control" value="{{ v.uom }}" maxlength="16" required></label>
+                                        <label>Штрихкод <input name="barcode" class="form-control" value="{{ v.barcode|default('') }}" maxlength="128"></label>
+                                        <button class="btn btn-outline-primary" type="submit">Зберегти SKU</button>
+                                    </form>
+                                    <form method="post" action="/product-management/products/{{ product.product_id }}/variants/{{ v.variant_id }}/archive" class="cos-page__stack">
+                                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                        <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,16) }}{{ 'b%015x'|format(loop.index) }}">
+                                        <input type="hidden" name="expected_revision" value="{{ v.revision }}">
+                                        <label><input type="checkbox" name="confirm_archive" value="1" required> Підтверджую архівування SKU без залишків і резервів.</label>
+                                        <button class="btn btn-outline-danger" type="submit">Архівувати SKU</button>
+                                    </form>
+                                </details>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% else %}<tr><td colspan="6">Варіанти відсутні.</td></tr>{% endfor %}
+                </tbody>
+            </table></div>
+            {% if product.status != 'archived' %}
+                <h3>Додати варіант</h3>
+                <form method="post" class="cos-toolbar" action="/product-management/products/{{ product.product_id }}/variants">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000004">
+                    <label>SKU <input class="form-control" name="sku" maxlength="128" required></label>
+                    <label>Одиниця <input class="form-control" name="uom" value="pcs" maxlength="16" required></label>
+                    <button class="btn btn-primary" type="submit">Додати</button>
+                </form>
+            {% endif %}
+        </section>
+        <section class="cos-panel" id="list-price">
+            <h2>Ціна в прайс-листі</h2>
+            <p>Виберіть явний код прайс-листа та SKU. Базова ціна не підставляється автоматично.</p>
+            <form method="get" action="/product-management/products/{{ product.product_id }}#list-price" class="cos-toolbar">
+                <label>Код прайс-листа <input name="list_code" class="form-control" required maxlength="64" value="{{ selectedList.code|default('') }}"></label>
+                <label>SKU <select name="list_variant" class="form-select" required>
+                    {% for v in product.variants|default([]) %}<option value="{{ v.variant_id }}" {% if listVariant and listVariant.variant_id == v.variant_id %}selected{% endif %}>{{ v.sku }}</option>{% endfor %}
+                </select></label>
+                <label>Кількість <input name="quote_qty" class="form-control" value="{{ quoteQty }}" required></label>
+                <button class="btn btn-outline-primary">Показати ціну</button>
+            </form>
+            {% if selectedList and listPrice %}
+                <p>{{ selectedList.name }} · {{ selectedList.kind }} · {{ selectedList.status }} · {{ listPrice.currency }} · {{ listVariant.sku }}: {{ listPrice.price is null ? 'Не встановлено' : listPrice.price }} · rev {{ listPrice.revision }}</p>
+                {% if product.status != 'archived' and listVariant.status == 'active' and selectedList.status == 'active' %}
+                <form method="post" action="/product-management/products/{{ product.product_id }}/list-price" class="cos-toolbar">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000009">
+                    <input type="hidden" name="list_code" value="{{ selectedList.code }}">
+                    <input type="hidden" name="list_id" value="{{ selectedList.list_id }}">
+                    <input type="hidden" name="variant_id" value="{{ listVariant.variant_id }}">
+                    <input type="hidden" name="expected_revision" value="{{ listPrice.revision }}">
+                    <label>Ціна {{ listPrice.currency }} <input class="form-control" name="amount" value="{{ listPrice.price|default('') }}" required maxlength="21"></label>
+                    <button class="btn btn-outline-primary">Зберегти ціну</button>
+                </form>
+                {% if listPrice.price is not null %}
+                <form method="post" action="/product-management/products/{{ product.product_id }}/list-price" class="cos-toolbar">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}"><input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000011">
+                    <input type="hidden" name="list_code" value="{{ selectedList.code }}"><input type="hidden" name="list_id" value="{{ selectedList.list_id }}"><input type="hidden" name="variant_id" value="{{ listVariant.variant_id }}">
+                    <input type="hidden" name="expected_revision" value="{{ listPrice.revision }}"><input type="hidden" name="price_action" value="entry_remove">
+                    <label><input type="checkbox" name="confirm_remove" value="yes" required> Підтверджую видалення ціни</label><button class="btn btn-outline-danger">Видалити ціну</button>
+                </form>
+                {% endif %}
+                {% endif %}
+                <h3>Кількісні ціни</h3>
+                <p>Ціна за одиницю для кількості {{ quoteQty }}: {{ quote.price ?? 'Не визначено' }} {{ quote.currency }} ({{ quote.source }}). Пороги незалежні від базової позиції прайс-листа.</p>
+                <table class="table"><thead><tr><th>Від кількості</th><th>Ціна за одиницю</th><th>Ревізія</th><th>Дії</th></tr></thead><tbody>
+                {% for t in tiers %}
+                    <tr><td>{{ t.min_quantity }}</td><td>{{ t.price ?? 'Видалено' }}</td><td>{{ t.revision }}</td><td><a href="?list_code={{ selectedList.code }}&amp;list_variant={{ listVariant.variant_id }}&amp;tier_history_min={{ t.min_quantity }}&amp;tier_page={{ tierPage }}#tier-history">Історія</a>
+                    {% if product.status != 'archived' and listVariant.status == 'active' and selectedList.status == 'active' %}
+                    <form method="post" action="/product-management/products/{{ product.product_id }}/list-price" class="cos-toolbar">
+                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}"><input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,16) }}{{ 'd%015x'|format(loop.index*2) }}">
+                        <input type="hidden" name="list_code" value="{{ selectedList.code }}"><input type="hidden" name="list_id" value="{{ selectedList.list_id }}"><input type="hidden" name="variant_id" value="{{ listVariant.variant_id }}">
+                        <input type="hidden" name="expected_revision" value="{{ t.revision }}"><input type="hidden" name="price_action" value="tier_set"><input type="hidden" name="min_quantity" value="{{ t.min_quantity }}">
+                        <label>Ціна <input name="amount" class="form-control" value="{{ t.price ?? '' }}" required></label><button class="btn btn-outline-primary">Зберегти</button>
+                    </form>
+                    {% if t.price is not null %}
+                    <form method="post" action="/product-management/products/{{ product.product_id }}/list-price" class="cos-toolbar">
+                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}"><input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,16) }}{{ 'd%015x'|format(loop.index*2+1) }}">
+                        <input type="hidden" name="list_code" value="{{ selectedList.code }}"><input type="hidden" name="list_id" value="{{ selectedList.list_id }}"><input type="hidden" name="variant_id" value="{{ listVariant.variant_id }}">
+                        <input type="hidden" name="expected_revision" value="{{ t.revision }}"><input type="hidden" name="price_action" value="tier_remove"><input type="hidden" name="min_quantity" value="{{ t.min_quantity }}">
+                        <label><input type="checkbox" name="confirm_remove" value="yes" required> Підтверджую</label><button class="btn btn-outline-danger">Видалити</button>
+                    </form>
+                    {% endif %}
+                    {% endif %}</td></tr>
+                {% else %}<tr><td colspan="4">Порогів немає.</td></tr>{% endfor %}</tbody></table>
+                {% if tierPage > 1 %}<a href="?list_code={{ selectedList.code }}&amp;list_variant={{ listVariant.variant_id }}&amp;tier_page={{ tierPage-1 }}#list-price">Попередня</a>{% endif %}
+                {% if tiers|length == 30 and tierPage < 333334 %}<a href="?list_code={{ selectedList.code }}&amp;list_variant={{ listVariant.variant_id }}&amp;tier_page={{ tierPage+1 }}#list-price">Наступна</a>{% endif %}
+                {% if product.status != 'archived' and listVariant.status == 'active' and selectedList.status == 'active' %}
+                <form method="post" action="/product-management/products/{{ product.product_id }}/list-price" class="cos-toolbar">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}"><input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000012">
+                    <input type="hidden" name="list_code" value="{{ selectedList.code }}"><input type="hidden" name="list_id" value="{{ selectedList.list_id }}"><input type="hidden" name="variant_id" value="{{ listVariant.variant_id }}">
+                    <input type="hidden" name="expected_revision" value="0"><input type="hidden" name="price_action" value="tier_set">
+                    <label>Від кількості <input name="min_quantity" class="form-control" required></label><label>Ціна <input name="amount" class="form-control" required></label><button class="btn btn-primary">Додати поріг</button>
+                </form>
+                {% endif %}
+            {% endif %}
+            {% if selectedList and tierHistoryMinimum is not empty %}
+                <section id="tier-history">
+                    <h3>Історія кількісної ціни від {{ tierHistoryMinimum }}</h3>
+                    <table class="table"><thead><tr><th>Ревізія</th><th>Попередня</th><th>Нова</th><th>Автор</th><th>Дата</th></tr></thead><tbody>
+                    {% for h in tierHistory %}<tr><td>{{ h.revision }}</td><td>{{ h.old_amount ?? '—' }}</td><td>{{ h.new_amount ?? 'Видалено' }}</td><td>{{ h.actor_ref }}</td><td>{{ h.created_at }}</td></tr>
+                    {% else %}<tr><td colspan="5">Історія відсутня.</td></tr>{% endfor %}</tbody></table>
+                    {% if tierHistoryPage > 1 %}<a href="?list_code={{ selectedList.code }}&amp;list_variant={{ listVariant.variant_id }}&amp;tier_history_min={{ tierHistoryMinimum }}&amp;tier_history_page={{ tierHistoryPage-1 }}#tier-history">Попередня</a>{% endif %}
+                    {% if tierHistory|length == 30 and tierHistoryPage < 333334 %}<a href="?list_code={{ selectedList.code }}&amp;list_variant={{ listVariant.variant_id }}&amp;tier_history_min={{ tierHistoryMinimum }}&amp;tier_history_page={{ tierHistoryPage+1 }}#tier-history">Наступна</a>{% endif %}
+                </section>
+            {% endif %}
+            {% if listHistory %}
+                <h3>Історія ціни прайс-листа</h3>
+                <table class="table"><thead><tr><th>Ревізія</th><th>Попередня</th><th>Нова</th><th>Автор</th><th>Дата</th></tr></thead><tbody>
+                {% for h in listHistory.items %}<tr><td>{{ h.revision }}</td><td>{{ h.old_amount ?? '—' }}</td><td>{{ h.new_amount ?? 'Видалено' }}</td><td>{{ h.actor_ref }}</td><td>{{ h.created_at }}</td></tr>
+                {% else %}<tr><td colspan="5">Історія відсутня.</td></tr>{% endfor %}</tbody></table>
+                <nav class="cos-toolbar">
+                {% if listHistoryPage > 1 %}<a href="?list_code={{ selectedList.code }}&amp;list_variant={{ listVariant.variant_id }}&amp;list_history_page={{ listHistoryPage-1 }}#list-price">Попередня</a>{% endif %}
+                {% if listHistory.items|length == 30 and listHistoryPage < 333334 %}<a href="?list_code={{ selectedList.code }}&amp;list_variant={{ listVariant.variant_id }}&amp;list_history_page={{ listHistoryPage+1 }}#list-price">Наступна</a>{% endif %}
+                </nav>
+            {% endif %}
+            <a href="/product-management/price-lists">Перелік прайс-листів</a>
+        </section>
+        {% if priceHistory is not null %}
+        <section class="cos-panel" id="price-history">
+            <h2>Історія ціни: {{ historyVariant.sku }} · {{ priceCurrency }}</h2>
+            <p>Незмінювані записи Domain. Дата відображена так, як її зберігає база даних.</p>
+            <div class="table-responsive"><table class="table">
+                <thead><tr><th>Дата</th><th>Попередня ціна</th><th>Нова ціна</th><th>Автор</th><th>Запис</th></tr></thead>
+                <tbody>{% for entry in priceHistory.items %}
+                    <tr><td>{{ entry.created_at }}</td><td>{{ entry.old_amount is null ? '—' : entry.old_amount }}</td>
+                    <td>{{ entry.new_amount }}</td><td>{{ entry.actor_ref }}</td><td><code>{{ entry.price_event_id }}</code></td></tr>
+                {% else %}<tr><td colspan="5">Історія відсутня.</td></tr>{% endfor %}</tbody>
+            </table></div>
+            <nav class="cos-toolbar" aria-label="Історія ціни">
+                {% if historyPage > 1 %}<a href="?currency={{ priceCurrency }}&amp;price_page={{ pricePage }}&amp;history_variant={{ historyVariant.variant_id }}&amp;history_page={{ historyPage - 1 }}#price-history">Попередня</a>{% endif %}
+                <span>Сторінка {{ historyPage }}</span>
+                {% if priceHistory.items|length == 30 and historyPage < 333334 %}<a href="?currency={{ priceCurrency }}&amp;price_page={{ pricePage }}&amp;history_variant={{ historyVariant.variant_id }}&amp;history_page={{ historyPage + 1 }}#price-history">Наступна</a>{% endif %}
+            </nav>
+        </section>
+        {% endif %}
+        <section class="cos-panel">
+            <h2>Категорії товару</h2>
+            <p>
+                {% for c in product.categories|default([]) %}
+                    <span class="badge text-bg-secondary">{{ c.name }}</span>
+                {% else %}Без категорій{% endfor %}
+            </p>
+            {% if product.status != 'archived' %}
+                <form method="post" class="cos-toolbar" action="/product-management/products/{{ product.product_id }}/categories">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000005">
+                    <label>Категорія
+                        <select class="form-select" name="category_id" required>
+                            {% for c in categories %}
+                                <option value="{{ c.category_id }}">{{ c.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <button class="btn btn-outline-primary" type="submit" {% if categories is empty %}disabled{% endif %}>Призначити</button>
+                </form>
+                <a href="/product-management/categories">Керування категоріями</a>
+            {% endif %}
+        </section>
+        <section class="cos-panel">
+            <h2>Зображення товару</h2>
+            <p>Посилання на перевірені файли COS Documents. Файли й байти зберігає Documents/Storage, тут лише контрольований зв'язок із Product.</p>
+            <div class="table-responsive"><table class="table">
+                <thead><tr><th>Роль</th><th>Файл</th><th>Варіант</th><th>Checksum</th><th>Дії</th></tr></thead>
+                <tbody>{% for image in product.media|default([]) %}
+                    <tr>
+                        <td>{{ image.role }}</td><td>{{ image.file_id }}</td>
+                        <td>{{ image.variant_id|default('Товар') }}</td>
+                        <td><code>{{ image.checksum|slice(0,16) }}</code></td>
+                        <td>
+                            {% if product.status != 'archived' %}
+                                <form method="post" action="/product-management/products/{{ product.product_id }}/media/{{ image.media_id }}/detach">
+                                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                    <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}{{ '%08d'|format(loop.index + 4000) }}">
+                                    <button type="submit" class="btn btn-outline-danger">Від'єднати</button>
+                                </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% else %}<tr><td colspan="5">Зображень поки немає.</td></tr>{% endfor %}
+                </tbody>
+            </table></div>
+            {% if product.status != 'archived' %}
+                <form method="post" action="/product-management/products/{{ product.product_id }}/media" class="cos-page__stack">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00003000">
+                    <label>ID зображення з Documents
+                        <input class="form-control" name="file_id" maxlength="80" pattern="[A-Za-z0-9_-]+" required placeholder="Ідентифікатор перевіреного файлу">
+                    </label>
+                    <label>Роль
+                        <select name="role" class="form-select">
+                            <option value="gallery">Галерея</option><option value="cover">Обкладинка</option>
+                        </select>
+                    </label>
+                    <label>Прив'язати до варіанта (необов'язково)
+                        <select name="variant_id" class="form-select">
+                            <option value="">Загальний Product</option>
+                            {% for v in product.variants|default([]) %}
+                                {% if v.status == 'active' %}<option value="{{ v.variant_id }}">{{ v.sku }}</option>{% endif %}
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label>Порядок <input class="form-control" name="sort_order" type="number" min="0" max="100000" value="100" required></label>
+                    <button type="submit" class="btn btn-outline-primary">Додати перевірене зображення</button>
+                </form>
+            {% endif %}
+        </section>
+        <section class="cos-panel">
+            <h2>Локалізація товару</h2>
+            {% for t in product.translations|default([]) %}
+                <p><strong>{{ t.locale }}</strong>: {{ t.name }}</p>
+            {% else %}<p>Перекладів ще немає.</p>{% endfor %}
+            {% if product.status != 'archived' %}
+                <form method="post" class="cos-page__stack" action="/product-management/products/{{ product.product_id }}/translations">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000006">
+                    <label>Мова <select class="form-select" name="locale"><option value="uk">Українська</option><option value="en">English</option></select></label>
+                    <label>Локалізована назва <input class="form-control" name="name" required maxlength="255"></label>
+                    <label>Локалізований опис <textarea class="form-control" name="description" maxlength="20000" rows="2"></textarea></label>
+                    <button class="btn btn-outline-primary" type="submit">Зберегти переклад</button>
+                </form>
+            {% endif %}
+        </section>
+    {% elseif section == 'price-lists' %}
+        <section class="cos-panel">
+            <h2>Прайс-листи організації</h2>
+            <table class="table"><thead><tr><th>Код</th><th>Назва</th><th>Тип</th><th>Валюта</th><th>Статус</th><th>Дії</th></tr></thead><tbody>
+                {% for p in lists %}<tr><td>{{ p.code }}</td><td>{{ p.name }}</td><td>{{ p.kind }}</td><td>{{ p.currency }}</td><td>{{ p.status }} · rev {{ p.revision }}</td><td>
+                {% if p.status == 'active' %}
+                    <form method="post" action="/product-management/price-lists/{{ p.list_id }}/change" class="cos-toolbar">
+                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                        <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}{{ '%08x'|format(loop.index*2+256) }}">
+                        <input type="hidden" name="code" value="{{ p.code }}"><input type="hidden" name="expected_revision" value="{{ p.revision }}">
+                        <input type="hidden" name="action" value="update">
+                        <label>Назва <input name="name" value="{{ p.name }}" required maxlength="255" class="form-control"></label><button class="btn btn-outline-primary">Зберегти</button>
+                    </form>
+                    <form method="post" action="/product-management/price-lists/{{ p.list_id }}/change" class="cos-toolbar">
+                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                        <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}{{ '%08x'|format(loop.index*2+257) }}">
+                        <input type="hidden" name="code" value="{{ p.code }}"><input type="hidden" name="expected_revision" value="{{ p.revision }}">
+                        <input type="hidden" name="action" value="archive">
+                        <label><input type="checkbox" name="confirm_archive" value="yes" required> Підтверджую архівування</label><button class="btn btn-outline-danger">Архівувати</button>
+                    </form>
+                {% endif %}</td></tr>
+                {% else %}<tr><td colspan="6">Прайс-листів немає.</td></tr>{% endfor %}
+            </tbody></table>
+            <nav class="cos-toolbar">
+                {% if listPage > 1 %}<a href="?page={{ listPage - 1 }}">Попередня</a>{% endif %}
+                <span>Сторінка {{ listPage }}</span>
+                {% if listHasNext %}<a href="?page={{ listPage + 1 }}">Наступна</a>{% endif %}
+            </nav>
+            <p>Для зміни ціни відкрийте потрібний товар у каталозі та введіть код прайс-листа.</p>
+        </section>
+        <section class="cos-panel">
+            <h2>Створити прайс-лист</h2>
+            <form method="post" action="/product-management/price-lists" class="cos-page__stack">
+                <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000010">
+                <label>Код <input name="code" class="form-control" required maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9_-]*"></label>
+                <label>Назва <input name="name" class="form-control" required maxlength="255"></label>
+                <label>Тип <select name="kind" class="form-select"><option value="retail">Роздрібний</option><option value="wholesale">Гуртовий</option><option value="partner">Партнерський</option></select></label>
+                <label>Валюта <input name="currency" class="form-control" required maxlength="3" pattern="[A-Za-z]{3}" value="UAH"></label>
+                <button class="btn btn-primary">Створити</button>
+            </form>
+        </section>
+    {% elseif section == 'categories' %}
+        <section class="cos-panel">
+            <h2>Категорії організації</h2>
+            {% for c in categories %}
+                <div class="cos-page__section-head"><strong>{{ c.name }}</strong><span>{{ c.slug }} · {{ c.category_id }}</span></div>
+            {% else %}<p>Категорій ще немає.</p>{% endfor %}
+        </section>
+        <section class="cos-panel">
+            <h2>Створити категорію</h2>
+            <form method="post" action="/product-management/categories" class="cos-page__stack">
+                <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000007">
+                <label>Назва <input class="form-control" name="name" maxlength="255" required></label>
+                <label>Slug <input class="form-control" name="slug" maxlength="190" pattern="[a-z0-9]+(-[a-z0-9]+)*" required></label>
+                <label>Батьківська категорія
+                    <select class="form-select" name="parent_id"><option value="">Коренева</option>
+                        {% for c in categories %}<option value="{{ c.category_id }}">{{ c.name }}</option>{% endfor %}
+                    </select>
+                </label>
+                <button class="btn btn-primary" type="submit">Створити категорію</button>
+            </form>
+        </section>
+    {% endif %}
+</div>
+{% endblock %}

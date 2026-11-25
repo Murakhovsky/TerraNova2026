@@ -2,7 +2,7 @@
 title: Product Management — паспорт домену COS
 description: Власність, компоненти, бізнес-контракти та обмеження production readiness.
 status: draft
-updated: 2026-11-20
+updated: 2026-11-24
 kind: domain
 contract: domain-v1
 domain_id: product_management
@@ -19,6 +19,16 @@ domain_id: product_management
     {
       "id": "catalog",
       "capability_ids": [
+        "product_management.attribute.define",
+        "product_management.attribute.search",
+        "product_management.attribute.category.bind",
+        "product_management.attribute.category.get",
+        "product_management.attribute.product.set",
+        "product_management.attribute.product.bulk_set",
+        "product_management.attribute.product.get",
+        "product_management.attribute.product.filter",
+        "product_management.variant.matrix.preview",
+        "product_management.variant.matrix.create",
         "product_management.product.create",
         "product_management.product.get",
         "product_management.product.search",
@@ -40,6 +50,15 @@ domain_id: product_management
       "id": "inventory",
       "capability_ids": [
         "product_management.location.create",
+        "product_management.location.search",
+        "product_management.stock.reserve",
+        "product_management.stock.count.apply",
+        "product_management.stock.count.get",
+        "product_management.stock.count.session.apply",
+        "product_management.stock.count.session.get",
+        "product_management.stock.count.session.candidates",
+        "product_management.stock.reservation.search",
+        "product_management.stock.release",
         "product_management.stock.balance.get"
       ]
     },
@@ -56,7 +75,64 @@ domain_id: product_management
       "id": "pricing",
       "capability_ids": [
         "product_management.price.base.set",
-        "product_management.price.base.get"
+        "product_management.price.base.get",
+        "product_management.price.history.search",
+        "product_management.price.list.create",
+        "product_management.price.list.search",
+        "product_management.price.list.entry.set",
+        "product_management.price.list.entry.get",
+        "product_management.price.list.update",
+        "product_management.price.list.archive",
+        "product_management.price.list.history.search",
+        "product_management.price.list.entry.remove",
+        "product_management.price.list.tier.set",
+        "product_management.price.list.tier.search",
+        "product_management.price.list.tier.history.search",
+        "product_management.price.resolve"
+      ]
+    },
+    {
+      "id": "governed_operations",
+      "capability_ids": [
+        "product_management.governed.product.create",
+        "product_management.governed.variant.matrix.create",
+        "product_management.governed.attribute.product.bulk_set",
+        "product_management.governed.price.base.set",
+        "product_management.governed.stock.receive",
+        "product_management.governed.stock.issue",
+        "product_management.governed.stock.reserve",
+        "product_management.governed.stock.release",
+        "product_management.governed.stock.transfer",
+        "product_management.governed.price.list.entry.set",
+        "product_management.governed.product.archive",
+        "product_management.governed.product.update",
+        "product_management.governed.variant.archive",
+        "product_management.governed.variant.update",
+        "product_management.governed.category.create",
+        "product_management.governed.category.assign",
+        "product_management.governed.translation.upsert",
+        "product_management.governed.variant.create",
+        "product_management.governed.location.create",
+        "product_management.governed.price.list.create",
+        "product_management.governed.price.list.update",
+        "product_management.governed.price.list.archive",
+        "product_management.governed.price.list.entry.remove",
+        "product_management.governed.price.list.tier.set",
+        "product_management.governed.media.attach",
+        "product_management.governed.media.detach",
+        "product_management.governed.attribute.define",
+        "product_management.governed.attribute.category.bind",
+        "product_management.governed.attribute.product.set"
+      ]
+    },
+    {
+      "id": "analytics",
+      "capability_ids": [
+        "product_management.analytics.summary.get",
+        "product_management.analytics.stock.search",
+        "product_management.analytics.movement.search",
+        "product_management.analytics.quality.search",
+        "product_management.analytics.reconciliation.get"
       ]
     },
     {
@@ -70,7 +146,14 @@ domain_id: product_management
       ]
     }
   ],
-  "process_ids": [],
+  "process_ids": [
+    "product_management.catalog-to-variants",
+    "product_management.csv-to-native-catalog",
+    "product_management.governed-business-cycle",
+    "product_management.physical-count-to-correction",
+    "product_management.pricing-to-quote",
+    "product_management.stock-to-reconciliation"
+  ],
   "readiness": {
     "level": "UNKNOWN",
     "evidence": []
@@ -96,6 +179,8 @@ Owns Product, Variant/SKU, Categories, Media references, Locations, Stock Ledger
 | Inventory | Locations та balances | MySQL |
 | Movements | Ledger та stock transfer | MySQL |
 | Pricing | BasePrice та history | MySQL |
+| Analytics | Native read-only assortment, stock and quality metrics | MySQL PASS on b61482c; current HEAD pending |
+| Governed operations | Signed intent, canonical Plan and native readback | New E2E pending |
 | Integration | CSV, Shopify read-only, approved import, conflicts | Mock/MySQL; live canary pending |
 
 Це функціональна декомпозиція, не незалежні modules або executors.
@@ -118,7 +203,7 @@ Sales/Procurement/Finance/Property користуються опублікова
 
 ## 8. Процеси та результати
 
-Статус у Process Registry: `exempt`, із відкладеним formal business process для керованого sync та advanced stock workflows. `process_ids=[]` є актуальним registry mapping, а не оцінкою обсягу функціоналу.
+Статус у Process Registry: `covered`. Шість канонічних процесів охоплюють каталог, ціноутворення, склад, фізичний перерахунок, CSV та керований AI-цикл. Моделі не є доказом runtime/production acceptance.
 
 ## 9. Tenant, Policy та Security
 
@@ -126,11 +211,11 @@ Tenant isolation у Domain/Kernel. COS Integration Vault керує Shopify cred
 
 ## 10. Робочий простір Unified Workspace
 
-Повний Product/Inventory/Integration Workspace, UI approval та UX-E2E залишаються окремим acceptance gate. Операторський CLI не замінює human UI.
+Product/Inventory/Attributes/Pricing/Dashboard Workspace та review intents реалізовані; повне UI approval та UX-E2E залишаються acceptance gate. Операторський CLI не замінює human UI.
 
 ## 11. Operations та Recovery
 
-Невідомий результат partial native import переводить Action preview у `blocked`. Read-only audit збирає Product, Variant, Price, mapping та receipt evidence. Ні автоматичний replay, ні пряме редагування даних не допускаються.
+Read-only E5 Stock audit звіряє on_hand з ledger і reserved з активними резервами; DRIFT або INCOMPLETE не є readiness. Невідомий результат partial native import переводить Action preview у `blocked`. Read-only audit збирає Product, Variant, Price, mapping та receipt evidence. Ні автоматичний replay, ні пряме редагування даних не допускаються.
 
 ## 12. Готовність і докази
 
@@ -138,7 +223,7 @@ Tenant isolation у Domain/Kernel. COS Integration Vault керує Shopify cred
 
 ## 13. План розвитку, борги та рішення
 
-E4: live Shopify OAuth/scopes canary, cursor/freshness/throttle, independent recovery soak, approval UI та sign-off. E5 advanced stock; E6 guarded Shopify write-back після окремого рішення власника.
+Native release: all CI at candidate SHA, actual browser and independent approval acceptance, live agent/LLM test, explicit operator sign-off. All 29 planned governed operation contracts are implemented; final integrated CI and actual agent acceptance remain required. Dynamic output substitution and historical verification of successive mutable writes are not implemented. Optional Shopify: independent live OAuth/scopes canary and recovery; write-back only after separate ownership decision.
 
 ## 14. Карта джерел
 

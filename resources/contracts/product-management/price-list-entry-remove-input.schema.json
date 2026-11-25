@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Product Management price-list-entry-remove input V1",
+  "type": "object",
+  "required": [
+    "list_id",
+    "variant_id",
+    "expected_revision"
+  ],
+  "properties": {
+    "list_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "variant_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "expected_revision": {
+      "type": "integer",
+      "minimum": 1
+    }
+  },
+  "additionalProperties": false
+}

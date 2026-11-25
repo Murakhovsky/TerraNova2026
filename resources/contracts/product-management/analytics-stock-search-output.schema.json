@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "analytics-stock-search output",
+  "type": "object",
+  "properties": {
+    "scope": {
+      "type": "string",
+      "enum": [
+        "recorded_active_positions",
+        "selected_active_location_all_tracked_skus"
+      ]
+    },
+    "threshold_basis": {
+      "type": "string",
+      "enum": [
+        "operator_quantity_not_forecast"
+      ]
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "variant_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "uom": {
+            "type": "string"
+          },
+          "product_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "location_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "location_code": {
+            "type": "string"
+          },
+          "on_hand": {
+            "type": "string",
+            "pattern": "^-?[0-9]+\\.[0-9]{6}$"
+          },
+          "reserved": {
+            "type": "string",
+            "pattern": "^-?[0-9]+\\.[0-9]{6}$"
+          },
+          "available": {
+            "type": "string",
+            "pattern": "^-?[0-9]+\\.[0-9]{6}$"
+          },
+          "balance_present": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "variant_id",
+          "sku",
+          "uom",
+          "product_id",
+          "name",
+          "location_id",
+          "location_code",
+          "on_hand",
+          "reserved",
+          "available",
+          "balance_present"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 100
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100
+    },
+    "offset": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000000
+    }
+  },
+  "required": [
+    "scope",
+    "threshold_basis",
+    "items",
+    "limit",
+    "offset"
+  ],
+  "additionalProperties": false
+}

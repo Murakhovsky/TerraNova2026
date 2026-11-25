@@ -1,0 +1,209 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+{% block title %}Складський облік | Terra Nova COS{% endblock %}
+{% block workspace_content %}
+<div class="cos-page__stack">
+    <header class="cos-page__section-head"><div>
+        <small>Product Management · COS Inventory Ledger</small>
+        <h1>Складський облік</h1>
+        <p>Native COS залишки. Shopify-спостереження та застарілі зовнішні кількості сюди не підмішуються.</p>
+    </div></header>
+    <nav class="cos-toolbar" aria-label="Product Management">
+        <a class="btn btn-outline-secondary" href="/product-management">Каталог</a>
+        <a class="btn btn-outline-secondary" href="/product-management/categories">Категорії</a>
+        <a class="btn btn-outline-secondary" href="/product-management/stock">Склади</a>
+    </nav>
+    {% if notice == 'created' or notice == 'posted' %}
+        <p class="alert alert-success" role="status">Результат перевірено за актуальними даними COS.</p>
+    {% endif %}
+    <section class="cos-panel">
+        <h2>Вибір товару й складу</h2>
+        <p>Перші 100 SKU і складів. Для інших використовуйте Capability Library або пошук каталогу.</p>
+        <form method="get" action="/product-management/stock" class="cos-toolbar">
+            <label>Варіант / SKU
+                <select name="variant" class="form-select" required>
+                    <option value="">Оберіть SKU</option>
+                    {% for item in catalog %}
+                        <option value="{{ item.variant_id }}" {% if variantId == item.variant_id %}selected{% endif %}>{{ item.name }} · {{ item.sku }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>Склад
+                <select name="location" class="form-select">
+                    <option value="">Усі рухи SKU</option>
+                    {% for loc in locations %}
+                        <option value="{{ loc.location_id }}" {% if locationId == loc.location_id %}selected{% endif %}>{{ loc.code }} · {{ loc.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <button class="btn btn-outline-primary" type="submit">Показати</button>
+        </form>
+    </section>
+    <section class="cos-panel" id="stock-session">
+        <h2>Масова інвентаризація складу</h2>
+        <form method="get" action="/product-management/stock#stock-session" class="cos-toolbar">
+            <label>Склад <select name="location" required class="form-select">
+                <option value="">Оберіть склад</option>
+                {% for loc in locations %}<option value="{{ loc.location_id }}" {% if locationId == loc.location_id %}selected{% endif %}>{{ loc.code }} · {{ loc.name }}</option>{% endfor %}
+            </select></label><button class="btn btn-outline-primary" type="submit">Показати позиції</button>
+        </form>
+        {% if notice == 'session_proposed' %}<p role="status">Сесію запропоновано. Залишки не змінено. Потрібні незалежні схвалення.</p>{% endif %}
+        {% if sessionId is not empty %}
+            <p>Сесія: <code>{{ sessionId }}</code></p>
+            <a href="/workspace/goals">Перейти до Goal/Plan та схвалень</a>
+            {% if session %}
+                <p>Документ {{ session.source_ref }} · застосовано {{ session.row_count }} позицій.</p>
+                <div class="table-responsive"><table class="table"><thead><tr><th>Variant</th><th>Було</th><th>Факт</th><th>Різниця</th><th>Рух</th></tr></thead><tbody>
+                {% for r in session.rows %}<tr><td>{{ r.variant_id }}</td><td>{{ r.previous_on_hand }}</td><td>{{ r.counted }}</td><td>{{ r.delta }}</td><td>{{ r.movement_id ?? 'Без руху' }}</td></tr>{% endfor %}
+                </tbody></table></div>
+            {% else %}<p>Підтвердженого нативного результату ще немає.</p>{% endif %}
+        {% endif %}
+        {% if locationId is not empty %}
+            <p>До 50 SKU в одній атомарній сесії. Заповніть тільки перераховані позиції: порожнє поле виключає SKU, 0 означає фактичну відсутність. Для наступної сторінки створіть окремий документ.</p>
+            {% if candidates is not empty %}
+            <form method="post" action="/product-management/stock/count/session/propose" class="cos-page__stack">
+                <input type="hidden" name="csrf_token" value="{{ csrfToken }}"><input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000005">
+                <input type="hidden" name="location_id" value="{{ locationId }}">
+                <label>Документ інвентаризації <input name="source_ref" class="form-control" required maxlength="156" placeholder="count:ACT-2026-1"></label>
+                <div class="table-responsive"><table class="table"><thead><tr><th>SKU / товар</th><th>Облік</th><th>Резерв</th><th>Ревізія</th><th>Факт</th></tr></thead><tbody>
+                {% for r in candidates %}<tr data-count-variant="{{ r.variant_id }}"><td>{{ r.sku }} · {{ r.name }}</td><td>{{ r.on_hand }}</td><td>{{ r.reserved }}</td><td>{{ r.revision }}</td><td>
+                    <input type="hidden" name="revisions[{{ r.variant_id }}]" value="{{ r.revision }}">
+                    <input class="form-control" aria-label="Фактична кількість {{ r.sku }}" name="counts[{{ r.variant_id }}]" inputmode="decimal" maxlength="21">
+                </td></tr>{% endfor %}
+                </tbody></table></div>
+                <button class="btn btn-primary" type="submit">Запропонувати сесію</button>
+            </form>
+            {% else %}<p>Доступних локальних SKU на цій сторінці немає.</p>{% endif %}
+            <nav class="cos-toolbar">
+                {% if sessionPage > 1 %}<a href="?location={{ locationId }}&amp;session_page={{ sessionPage-1 }}#stock-session">Попередня</a>{% endif %}
+                {% if candidates|length == 50 and sessionPage < 200001 %}<a href="?location={{ locationId }}&amp;session_page={{ sessionPage+1 }}#stock-session">Наступна</a>{% endif %}
+            </nav>
+        {% endif %}
+    </section>
+    {% if balance is not null %}
+        <section class="cos-kpi-strip">
+            <twig:CosMetric label="На складі" value="{{ balance.on_hand }}" hint="native ledger" />
+            <twig:CosMetric label="Зарезервовано" value="{{ balance.reserved }}" hint="native reservations" />
+            <twig:CosMetric label="Доступно" value="{{ balance.available }}" hint="on_hand − reserved" />
+        </section>
+    {% endif %}
+    {% if balance is not null %}
+    <section class="cos-panel" id="stock-count">
+        <h2>Фізична інвентаризація SKU</h2>
+        <p>Фіксується фактична кількість за документом і поточна ревізія залишку {{ balance.revision }}. Коригування виконується лише після незалежних Plan та Action Approval.</p>
+        {% if notice == 'count_proposed' %}<p role="status">Goal/Plan запропоновано. Залишок не змінено цією формою.</p>{% endif %}
+        {% if countId is not empty %}
+            <p>Ідентифікатор перерахунку: <code>{{ countId }}</code></p>
+            {% if count %}
+                <p>Застосовано: {{ count.previous_on_hand }} → {{ count.counted }}; різниця {{ count.delta }}; резерв {{ count.reserved }}; ревізія {{ count.result_revision }}.</p>
+                <p>Документ: {{ count.source_ref }}. Рух: {{ count.movement_id ?? 'Нульова розбіжність' }}.</p>
+            {% else %}<p>Підтвердженого нативного запису поки немає. Перевірте стан Goal/Plan.</p>{% endif %}
+            <a href="/workspace/goals" class="btn btn-outline-primary">Goal/Plan та схвалення</a>
+        {% endif %}
+        <form method="post" action="/product-management/stock/count/propose" class="cos-toolbar">
+            <input type="hidden" name="csrf_token" value="{{ csrfToken }}"><input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000004">
+            <input type="hidden" name="variant_id" value="{{ variantId }}"><input type="hidden" name="location_id" value="{{ locationId }}"><input type="hidden" name="expected_revision" value="{{ balance.revision }}">
+            <label>Фактична кількість <input name="counted" class="form-control" required inputmode="decimal"></label>
+            <label>Документ <input name="source_ref" class="form-control" required maxlength="156" placeholder="count:ACT-1"></label>
+            <button class="btn btn-outline-primary">Запропонувати Plan</button>
+        </form>
+    </section>
+    <section class="cos-panel">
+        <h2>Резервування товару</h2>
+        <p>Резерв зменшує доступну кількість, але не фізичний залишок. Джерело має починатися з manual:.</p>
+        <form method="post" action="/product-management/stock/reservation" class="cos-toolbar">
+            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+            <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000003">
+            <input type="hidden" name="action" value="reserve">
+            <input type="hidden" name="variant_id" value="{{ variantId }}"><input type="hidden" name="location_id" value="{{ locationId }}">
+            <label>Кількість <input name="quantity" class="form-control" inputmode="decimal" required></label>
+            <label>Підстава <input name="source_ref" class="form-control" placeholder="manual:ORDER-1" maxlength="157" required></label>
+            <button class="btn btn-primary" type="submit">Зарезервувати</button>
+        </form>
+        <div class="table-responsive"><table class="table">
+            <thead><tr><th>Підстава</th><th>Кількість</th><th>Статус</th><th>Дата</th><th>Дії / причина</th></tr></thead>
+            <tbody>{% for r in reservations %}
+                <tr data-reservation-id="{{ r.reservation_id }}"><td>{{ r.source_ref }}</td><td>{{ r.quantity }}</td><td>{{ r.status }}</td><td>{{ r.created_at }}</td><td>
+                {% if r.status == 'active' %}
+                <form method="post" action="/product-management/stock/reservation" class="cos-toolbar">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}{{ '%08x'|format(loop.index+256) }}">
+                    <input type="hidden" name="action" value="release"><input type="hidden" name="reservation_id" value="{{ r.reservation_id }}">
+                    <input type="hidden" name="variant_id" value="{{ variantId }}"><input type="hidden" name="location_id" value="{{ locationId }}">
+                    <label>Причина <input name="reason" class="form-control" maxlength="191" required></label>
+                    <label><input type="checkbox" name="confirm_release" value="yes" required> Підтверджую</label>
+                    <button class="btn btn-outline-danger" type="submit">Звільнити</button>
+                </form>
+                {% else %}{{ r.release_reason }}{% endif %}</td></tr>
+            {% else %}<tr><td colspan="5">Резервів немає.</td></tr>{% endfor %}</tbody>
+        </table></div>
+        <nav class="cos-toolbar">
+            {% if reservationPage > 1 %}<a href="?variant={{ variantId }}&amp;location={{ locationId }}&amp;reservation_page={{ reservationPage-1 }}">Попередня</a>{% endif %}
+            {% if reservations|length == 30 and reservationPage < 333334 %}<a href="?variant={{ variantId }}&amp;location={{ locationId }}&amp;reservation_page={{ reservationPage+1 }}">Наступна</a>{% endif %}
+        </nav>
+    </section>
+    {% endif %}
+    {% if variantId is not empty %}
+        <section class="cos-panel">
+            <h2>Останні 30 рухів SKU</h2>
+            <div class="table-responsive"><table class="table">
+                <thead><tr><th>Дата</th><th>Тип</th><th>Зміна</th><th>Склад</th><th>Документ</th></tr></thead>
+                <tbody>{% for movement in movements %}
+                    <tr>
+                        <td>{{ movement.created_at|default('—') }}</td>
+                        <td>{{ movement.movement_type }}</td>
+                        <td>{{ movement.quantity_delta }}</td>
+                        <td>{{ movement.location_id }}</td>
+                        <td>{{ movement.source_ref }}</td>
+                    </tr>
+                {% else %}<tr><td colspan="5">Рухів ще немає.</td></tr>{% endfor %}</tbody>
+            </table></div>
+        </section>
+    {% endif %}
+    <section class="cos-panel">
+        <h2>Задокументований рух</h2>
+        <p>Прихід, витрата чи атомарне переміщення. Негативний available заборонений; коригування через окремий схвалений перерахунок.</p>
+        <form method="post" action="/product-management/stock/post" class="cos-page__stack">
+            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+            <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000001">
+            <label>Операція
+                <select name="kind" class="form-select">
+                    <option value="receive">Прихід</option><option value="issue">Витрата</option>
+                    <option value="transfer">Переміщення між складами</option>
+                </select>
+            </label>
+            <label>Варіант / SKU <select name="variant_id" class="form-select" required>
+                {% for item in catalog %}<option value="{{ item.variant_id }}" {% if variantId == item.variant_id %}selected{% endif %}>{{ item.sku }} · {{ item.name }}</option>{% endfor %}
+            </select></label>
+            <label>Склад (для приходу/витрати) або склад-відправник
+                <select name="from_location_id" class="form-select" required>
+                    {% for loc in locations %}<option value="{{ loc.location_id }}" {% if loc.location_id == locationId %}selected{% endif %}>{{ loc.code }} · {{ loc.name }}</option>{% endfor %}
+                </select>
+            </label>
+            <label>Склад-одержувач (лише для переміщення)
+                <select name="to_location_id" class="form-select">
+                    <option value="">Не використовується</option>
+                    {% for loc in locations %}<option value="{{ loc.location_id }}">{{ loc.code }} · {{ loc.name }}</option>{% endfor %}
+                </select>
+            </label>
+            <label>Кількість <input name="quantity" class="form-control" required inputmode="decimal" placeholder="1.000000" pattern="[0-9]+(\.[0-9]{1,6})?"></label>
+            <label>Документ / підстава <input name="source_ref" class="form-control" required maxlength="191" placeholder="Акт, накладна або посилання"></label>
+            <button class="btn btn-primary" type="submit" {% if catalog is empty or locations is empty %}disabled{% endif %}>Провести в COS</button>
+        </form>
+    </section>
+    <section class="cos-panel">
+        <h2>Склади організації</h2>
+        <p>Локації доступні тільки у межах вашого tenant.</p>
+        {% for loc in locations %}
+            <div class="cos-page__section-head"><strong>{{ loc.code }} · {{ loc.name }}</strong><span>{{ loc.status }}</span></div>
+        {% else %}<p>Складів ще немає.</p>{% endfor %}
+        <h3>Новий склад</h3>
+        <form method="post" action="/product-management/stock/locations" class="cos-page__stack">
+            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+            <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000002">
+            <label>Код <input name="code" class="form-control" maxlength="60" required></label>
+            <label>Назва <input name="name" class="form-control" maxlength="255" required></label>
+            <button class="btn btn-outline-primary" type="submit">Створити склад</button>
+        </form>
+    </section>
+</div>
+{% endblock %}

@@ -397,7 +397,9 @@ final readonly class CsvProductImportService
         $rows=$this->query('SELECT row_no,sku,status,error_code,product_id FROM pm_import_rows WHERE organization_id=? AND batch_id=? ORDER BY row_no',[$org,$batchId])->fetchAll(PDO::FETCH_ASSOC);
         $counts=[];
         foreach ($rows as $r) $counts[$r['status']]=($counts[$r['status']]??0)+1;
-        return ['batch_id'=>$batchId,'state'=>$batch['state'],'digest'=>$batch['digest'],'rows_digest'=>$batch['rows_digest'],'counts'=>$counts,'rows'=>$rows];
+        return ['batch_id'=>$batchId,'state'=>$batch['state'],'digest'=>$batch['digest'],'rows_digest'=>$batch['rows_digest'],
+            'goal_id'=>$batch['goal_id']??null,'plan_id'=>$batch['plan_id']??null,
+            'counts'=>$counts,'rows'=>$rows];
     }
 
     /** @param list<mixed> $params */

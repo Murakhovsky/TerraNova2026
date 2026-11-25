@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ProductManagementStockReleaseInputV1",
+  "type": "object",
+  "required": [
+    "reservation_id",
+    "reason"
+  ],
+  "properties": {
+    "reservation_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 191
+    }
+  },
+  "additionalProperties": false
+}

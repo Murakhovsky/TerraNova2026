@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ProductManagementLocationSearchOutputV1",
+  "type": "object",
+  "required": [
+    "items",
+    "limit",
+    "offset"
+  ],
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "location_id",
+          "code",
+          "name",
+          "status"
+        ],
+        "properties": {
+          "location_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "limit": {
+      "type": "integer"
+    },
+    "offset": {
+      "type": "integer"
+    }
+  },
+  "additionalProperties": false
+}

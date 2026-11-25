@@ -35,6 +35,20 @@ final readonly class CanonicalAutomationIntentController
         }
     }
 
+    public function submitProduct(Request $request):JsonResponse
+    {
+        $body=(string)$request->getContent();
+        if(strlen($body)>65536)return self::reply(['error'=>'payload_too_large'],413);
+        try{
+            return self::reply($this->intents->submitProduct(
+                (string)$request->headers->get('X-COS-Automation-Origin',''),
+                (string)$request->headers->get('X-COS-Automation-Timestamp',''),
+                (string)$request->headers->get('X-COS-Automation-Nonce',''),
+                (string)$request->headers->get('X-COS-Automation-Signature',''),$body),202);
+        }catch(DomainException|\JsonException){return self::reply(['error'=>'invalid_or_untrusted_automation_request'],403);}
+        catch(Throwable){return self::reply(['error'=>'automation_intake_unavailable'],503);}
+    }
+
     /** @param array<string,mixed> $data */
     private static function reply(array $data,int $status):JsonResponse
     {

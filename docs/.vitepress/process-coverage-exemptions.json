@@ -30,11 +30,6 @@
       "domain": "procurement",
       "owner": "COS Architecture",
       "reason": "V1 skeleton only; executable Procurement process models are intentionally deferred until Procurement runtime implementation."
-    },
-    {
-      "domain": "product_management",
-      "owner": "COS Product Management",
-      "reason": "E0–E4 pilot includes bounded Product Management capabilities and Shopify read-only ingestion; canonical business Process Registry workflow is deferred until governed sync and stock orchestration are independently accepted."
     }
   ]
 }

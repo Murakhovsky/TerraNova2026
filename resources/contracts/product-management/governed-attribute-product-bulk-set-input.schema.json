@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Governed attribute-product-bulk-set input",
+  "type": "object",
+  "required": [
+    "target_type",
+    "target_id",
+    "parameters"
+  ],
+  "properties": {
+    "target_type": {
+      "type": "string",
+      "const": "product_governed_operation"
+    },
+    "target_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "products": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "product_id": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{32}$"
+              },
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "product_id",
+              "expected_revision"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1,
+          "maxItems": 20
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,39}$"
+              },
+              "value": {
+                "type": [
+                  "string",
+                  "boolean",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "code",
+              "value"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1,
+          "maxItems": 10
+        }
+      },
+      "required": [
+        "products",
+        "values"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,27 @@
+-- E5 approved physical stock count, immutable native evidence.
+CREATE TABLE IF NOT EXISTS pm_stock_counts (
+ organization_id VARCHAR(190) NOT NULL,
+ count_id CHAR(32) NOT NULL,
+ variant_id CHAR(32) NOT NULL,
+ location_id CHAR(32) NOT NULL,
+ source_ref VARCHAR(191) NOT NULL,
+ counted DECIMAL(20,6) NOT NULL,
+ previous_on_hand DECIMAL(20,6) NOT NULL,
+ reserved DECIMAL(20,6) NOT NULL,
+ delta DECIMAL(20,6) NOT NULL,
+ expected_revision BIGINT UNSIGNED NOT NULL,
+ result_revision BIGINT UNSIGNED NOT NULL,
+ movement_id CHAR(32) NULL,
+ action_key VARCHAR(191) NOT NULL,
+ actor_ref VARCHAR(100) NOT NULL,
+ created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+ PRIMARY KEY (organization_id,count_id),
+ UNIQUE KEY uq_pm_count_origin (organization_id,variant_id,location_id,source_ref),
+ UNIQUE KEY uq_pm_count_action (organization_id,action_key),
+ CONSTRAINT fk_pm_count_variant FOREIGN KEY (organization_id,variant_id) REFERENCES pm_variants (organization_id,variant_id),
+ CONSTRAINT fk_pm_count_location FOREIGN KEY (organization_id,location_id) REFERENCES pm_locations (organization_id,location_id),
+ CONSTRAINT fk_pm_count_movement FOREIGN KEY (organization_id,movement_id) REFERENCES pm_stock_movements (organization_id,movement_id),
+ CONSTRAINT ck_pm_count_bounds CHECK (counted>=reserved AND reserved>=0 AND previous_on_hand>=reserved),
+ CONSTRAINT ck_pm_count_delta CHECK (delta=counted-previous_on_hand AND ((delta=0 AND movement_id IS NULL) OR (delta<>0 AND movement_id IS NOT NULL))),
+ CONSTRAINT ck_pm_count_revision CHECK (result_revision=expected_revision+1)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

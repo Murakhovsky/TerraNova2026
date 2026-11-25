@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Product Management reservation search output",
+  "type": "object",
+  "required": [
+    "items",
+    "limit",
+    "offset"
+  ],
+  "properties": {
+    "items": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "required": [
+          "reservation_id",
+          "variant_id",
+          "location_id",
+          "source_ref",
+          "quantity",
+          "status",
+          "release_reason",
+          "revision",
+          "created_at",
+          "released_at"
+        ],
+        "properties": {
+          "reservation_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "variant_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "location_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "source_ref": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]{6}$"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "released"
+            ]
+          },
+          "release_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "released_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100
+    },
+    "offset": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000000
+    }
+  },
+  "additionalProperties": false
+}

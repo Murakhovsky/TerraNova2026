@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Domains\ProductManagement\Infrastructure\Persistence;
 
 use Domains\ProductManagement\Application\Contract\ProductManagementStoreInterface;
+use Domains\ProductManagement\Domain\AttributeRules;
 use DomainException;
 use Kernel\Event\Contract\EventStoreInterface;
 use Kernel\Event\DomainEvent;
@@ -50,7 +51,7 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
     {
         return $this->mutate($org,'variant.update',$key,[$variantId,$changes,$expectedRevision],$actor,$correlation,
             function()use($org,$variantId,$changes,$expectedRevision):array {
-                $variant=$this->one('SELECT v.sku,v.revision,v.status,p.status AS product_status FROM pm_variants v JOIN pm_products p ON p.organization_id=v.organization_id AND p.product_id=v.product_id WHERE v.organization_id=? AND v.variant_id=? FOR UPDATE',
+                $variant=$this->one('SELECT v.sku,v.product_id,v.revision,v.status,p.status AS product_status FROM pm_variants v JOIN pm_products p ON p.organization_id=v.organization_id AND p.product_id=v.product_id WHERE v.organization_id=? AND v.variant_id=? FOR UPDATE',
                     [$org,$variantId]);
                 if ($variant===null||$variant['status']!=='active'||$variant['product_status']==='archived') {
                     throw new DomainException('Variant or parent Product is inactive.');
@@ -58,10 +59,12 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
                 $this->assertShopifyLocalOwnership($org,'variant',$variantId);
                 if ((int)$variant['revision']!==$expectedRevision) throw new DomainException('Variant revision conflict.');
                 if (isset($changes['sku']) && $changes['sku']!==$variant['sku']) {
-                    $history=$this->one('SELECT movement_id FROM pm_stock_movements WHERE organization_id=? AND variant_id=? LIMIT 1',
+                    $history=$this->one('SELECT movement_id FROM pm_stock_movements WHERE organization_id=? AND variant_id=? LIMIT 1 FOR UPDATE',
                         [$org,$variantId]);
                     if ($history!==null) throw new DomainException('Cannot change SKU after stock movements.');
                 }
+                if(array_key_exists('options_json',$changes)&&$this->one('SELECT variant_id FROM pm_variant_matrix_identities WHERE organization_id=? AND product_id=? LIMIT 1',[$org,$variant['product_id']])!==null)
+                    throw new DomainException('Managed matrix options are immutable; create a new combination.');
                 $allowed=['sku','uom','barcode','options_json'];
                 $set=[];$values=[];
                 foreach($changes as $field=>$value) {
@@ -78,9 +81,9 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
     {
         return $this->mutate($org,'variant.archive',$key,[$variantId,$expectedRevision],$actor,$correlation,
             function()use($org,$variantId,$expectedRevision):array {
-                $variant=$this->one('SELECT revision,status FROM pm_variants WHERE organization_id=? AND variant_id=? FOR UPDATE',
+                $variant=$this->one('SELECT v.revision,v.status,p.status AS product_status FROM pm_variants v JOIN pm_products p ON p.organization_id=v.organization_id AND p.product_id=v.product_id WHERE v.organization_id=? AND v.variant_id=? FOR UPDATE',
                     [$org,$variantId]);
-                if ($variant===null||$variant['status']!=='active') throw new DomainException('Variant absent or archived.');
+                if ($variant===null||$variant['status']!=='active'||$variant['product_status']==='archived') throw new DomainException('Variant or parent Product absent or archived.');
                 $this->assertShopifyLocalOwnership($org,'variant',$variantId);
                 if ((int)$variant['revision']!==$expectedRevision) throw new DomainException('Variant revision conflict.');
                 $balance=$this->one('SELECT location_id FROM pm_stock_balances WHERE organization_id=? AND variant_id=? AND (on_hand<>0 OR reserved<>0) LIMIT 1 FOR UPDATE',
@@ -120,8 +123,8 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
                 if ($row===null||$row['status']==='archived') throw new DomainException('Product absent or archived.');
                 $this->assertShopifyLocalOwnership($organizationId,'product',$productId);
                 if ((int)$row['revision']!==$expectedRevision) throw new DomainException('Product revision conflict.');
-                $reserved=$this->one('SELECT COUNT(*) AS total FROM pm_stock_balances b JOIN pm_variants v ON v.organization_id=b.organization_id AND v.variant_id=b.variant_id WHERE v.organization_id=? AND v.product_id=? AND (b.on_hand<>0 OR b.reserved<>0)',[$organizationId,$productId]);
-                if ($reserved!==null && (int)$reserved['total']>0) throw new DomainException('Product has nonzero stock or reservations.');
+                $reserved=$this->one('SELECT b.location_id FROM pm_stock_balances b JOIN pm_variants v ON v.organization_id=b.organization_id AND v.variant_id=b.variant_id WHERE v.organization_id=? AND v.product_id=? AND (b.on_hand<>0 OR b.reserved<>0) LIMIT 1 FOR UPDATE',[$organizationId,$productId]);
+                if ($reserved!==null) throw new DomainException('Product has nonzero stock or reservations.');
                 $this->execute("UPDATE pm_products SET status='archived',revision=revision+1 WHERE organization_id=? AND product_id=?",[$organizationId,$productId]);
                 return ['product_id'=>$productId,'revision'=>$expectedRevision+1,'status'=>'archived'];
             },'product_management.product.archived','Product');
@@ -282,6 +285,21 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    /** @return list<array<string,mixed>> */
+    public function searchLocations(string $organizationId,string $q,int $limit,int $offset):array
+    {
+        $stmt=$this->connection->prepare('SELECT location_id,code,name,status FROM pm_locations
+            WHERE organization_id=:org AND (code LIKE :code OR name LIKE :name)
+            ORDER BY code,location_id LIMIT :lim OFFSET :off');
+        $stmt->bindValue(':org',$organizationId);
+        $stmt->bindValue(':code','%'.$q.'%');
+        $stmt->bindValue(':name','%'.$q.'%');
+        $stmt->bindValue(':lim',$limit,PDO::PARAM_INT);
+        $stmt->bindValue(':off',$offset,PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function createLocation(string $organizationId, string $code, string $name, string $key, string $actor, string $correlation): array
     {
         return $this->mutate($organizationId, 'location.create', $key, [$code,$name], $actor, $correlation,
@@ -297,7 +315,7 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
     {
         return $this->mutate($organizationId,'stock.movement',$key,[$variantId,$locationId,$delta,$kind,$source],$actor,$correlation,
             function () use ($organizationId,$variantId,$locationId,$delta,$kind,$source,$key,$actor): array {
-                $variant=$this->one('SELECT v.track_inventory,v.status,p.status AS product_status FROM pm_variants v JOIN pm_products p ON p.organization_id=v.organization_id AND p.product_id=v.product_id WHERE v.organization_id=? AND v.variant_id=?', [$organizationId,$variantId]);
+                $variant=$this->one('SELECT v.track_inventory,v.status,p.status AS product_status FROM pm_variants v JOIN pm_products p ON p.organization_id=v.organization_id AND p.product_id=v.product_id WHERE v.organization_id=? AND v.variant_id=? FOR UPDATE', [$organizationId,$variantId]);
                 $location=$this->one('SELECT status FROM pm_locations WHERE organization_id=? AND location_id=?', [$organizationId,$locationId]);
                 if ($variant === null || (int)$variant['track_inventory'] !== 1 || $variant['status'] !== 'active' || $variant['product_status'] === 'archived'
                     || $location === null || $location['status'] !== 'active') {
@@ -524,6 +542,253 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
             [$org,substr(hash('sha256',$key),0,32),$reservation,$operation,$quantity,$movement,$source,$actor]);
     }
 
+    /** Native count document + correction ledger + receipt and event commit together. */
+    public function applyStockCount(string $org,string $countId,string $variantId,string $locationId,string $counted,int $expectedRevision,string $source,string $key,string $actor,string $correlation):array
+    {
+        return $this->mutate($org,'stock.count.apply',$key,[$countId,$variantId,$locationId,$counted,$expectedRevision,$source],$actor,$correlation,
+            function()use($org,$countId,$variantId,$locationId,$counted,$expectedRevision,$source,$key,$actor):array{
+                return $this->applyCountLine($org,$countId,$variantId,$locationId,$counted,$expectedRevision,$source,$key,$actor);
+            },'product_management.stock.count_applied','StockCount');
+    }
+
+    /** Caller holds the outer native receipt transaction. No nested commit. */
+    private function applyCountLine(string $org,string $countId,string $variantId,string $locationId,string $counted,int $expectedRevision,string $source,string $key,string $actor):array
+    {
+        $variant=$this->one('SELECT v.track_inventory,v.status,p.status AS product_status FROM pm_variants v JOIN pm_products p ON p.organization_id=v.organization_id AND p.product_id=v.product_id WHERE v.organization_id=? AND v.variant_id=? FOR UPDATE',[$org,$variantId]);
+        if($variant===null||(int)$variant['track_inventory']!==1||$variant['status']!=='active'||$variant['product_status']==='archived')
+            throw new DomainException('Active trackable Variant required.');
+        $this->assertShopifyLocalOwnership($org,'variant',$variantId);
+        $loc=$this->one('SELECT status FROM pm_locations WHERE organization_id=? AND location_id=? FOR UPDATE',[$org,$locationId]);
+        if($loc===null||$loc['status']!=='active')throw new DomainException('Active tenant stock location required.');
+        $this->execute('INSERT IGNORE INTO pm_stock_balances (organization_id,variant_id,location_id,revision) VALUES (?,?,?,0)',[$org,$variantId,$locationId]);
+        $old=$this->one('SELECT on_hand,reserved,revision,CAST(CAST(? AS DECIMAL(20,6))-on_hand AS DECIMAL(20,6)) AS delta,
+            (CAST(? AS DECIMAL(20,6))>=reserved) AS bounds_ok FROM pm_stock_balances WHERE organization_id=? AND variant_id=? AND location_id=? FOR UPDATE',
+            [$counted,$counted,$org,$variantId,$locationId]);
+        if($old===null||(int)$old['revision']!==$expectedRevision||(int)$old['bounds_ok']!==1)
+            throw new DomainException('Stock changed since count or count is below reserved quantity.');
+        $this->execute('UPDATE pm_stock_balances SET on_hand=?,revision=revision+1 WHERE organization_id=? AND variant_id=? AND location_id=?',
+            [$counted,$org,$variantId,$locationId]);
+        $movement=null;
+        if($old['delta']!=='0.000000'){
+            $movement=bin2hex(random_bytes(16));
+            $this->execute('INSERT INTO pm_stock_movements (organization_id,movement_id,variant_id,location_id,quantity_delta,movement_type,source_ref,idempotency_key,actor_ref) VALUES (?,?,?,?,?,?,?,?,?)',
+                [$org,$movement,$variantId,$locationId,$old['delta'],'adjustment',$source,$key,$actor]);
+        }
+        $this->execute('INSERT INTO pm_stock_counts (organization_id,count_id,variant_id,location_id,source_ref,counted,previous_on_hand,reserved,delta,expected_revision,result_revision,movement_id,action_key,actor_ref)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+            [$org,$countId,$variantId,$locationId,$source,$counted,$old['on_hand'],$old['reserved'],$old['delta'],$expectedRevision,$expectedRevision+1,$movement,$key,$actor]);
+        $result=$this->getStockCount($org,$countId);
+        if($result===null)throw new DomainException('Count receipt missing.');
+        return $result;
+    }
+
+    public function applyCountSession(string $org,string $sessionId,string $location,array $rows,string $source,string $key,string $actor,string $correlation):array
+    {
+        return $this->mutate($org,'stock.count.session.apply',$key,[$sessionId,$location,$rows,$source],$actor,$correlation,
+            function()use($org,$sessionId,$location,$rows,$source,$key,$actor):array{
+                $this->execute('INSERT INTO pm_stock_count_sessions (organization_id,session_id,location_id,source_ref,action_key,actor_ref,row_count) VALUES (?,?,?,?,?,?,?)',
+                    [$org,$sessionId,$location,$source,$key,$actor,count($rows)]);
+                foreach($rows as $row){
+                    $variant=$row['variant_id'];
+                    $id=substr(hash('sha256',$sessionId.':'.$variant),0,32);
+                    // Child identity is derived from the one approved parent Action; never dispatched as an Action.
+                    $lineKey='wf:'.hash('sha256',$key.':'.$variant);
+                    $this->applyCountLine($org,$id,$variant,$location,$row['counted'],$row['expected_revision'],$source,$lineKey,$actor);
+                    $this->execute('INSERT INTO pm_stock_count_session_lines (organization_id,session_id,count_id) VALUES (?,?,?)',[$org,$sessionId,$id]);
+                }
+                $result=$this->getCountSession($org,$sessionId);
+                if($result===null||count($result['rows'])!==count($rows))throw new DomainException('Session receipt incomplete.');
+                return $result;
+            },'product_management.stock.count_session_applied','StockCountSession');
+    }
+
+    public function countCandidates(string $org,string $location,int $limit,int $offset):array
+    {
+        $sql="SELECT v.variant_id,v.sku,p.name,CAST(COALESCE(b.on_hand,0) AS DECIMAL(20,6)) AS on_hand,
+            CAST(COALESCE(b.reserved,0) AS DECIMAL(20,6)) AS reserved,COALESCE(b.revision,0) AS revision
+            FROM pm_locations l JOIN pm_variants v ON v.organization_id=l.organization_id
+            JOIN pm_products p ON p.organization_id=v.organization_id AND p.product_id=v.product_id
+            LEFT JOIN pm_stock_balances b ON b.organization_id=v.organization_id AND b.variant_id=v.variant_id AND b.location_id=l.location_id
+            WHERE l.organization_id=:org AND l.location_id=:loc AND l.status='active' AND v.status='active'
+              AND v.track_inventory=1 AND p.status<>'archived'
+              AND NOT EXISTS (SELECT 1 FROM pm_external_mappings m JOIN pm_external_connections c ON c.organization_id=m.organization_id AND c.connection_id=m.connection_id
+                WHERE m.organization_id=v.organization_id AND ((m.entity_type='variant' AND m.canonical_id=v.variant_id) OR (m.entity_type='product' AND m.canonical_id=v.product_id))
+                AND c.provider='shopify' AND c.mode='shopify_authoritative' AND c.status='ready')
+            ORDER BY v.variant_id LIMIT :lim OFFSET :off";
+        $stmt=$this->connection->prepare($sql);
+        $stmt->bindValue(':org',$org);$stmt->bindValue(':loc',$location);
+        $stmt->bindValue(':lim',$limit,PDO::PARAM_INT);$stmt->bindValue(':off',$offset,PDO::PARAM_INT);$stmt->execute();
+        return array_map(static function(array $row):array{$row['revision']=(int)$row['revision'];return $row;},$stmt->fetchAll(PDO::FETCH_ASSOC));
+    }
+
+    public function getCountSession(string $org,string $sessionId):?array
+    {
+        $head=$this->one('SELECT session_id,location_id,source_ref,action_key,actor_ref,row_count,created_at FROM pm_stock_count_sessions WHERE organization_id=? AND session_id=?',[$org,$sessionId]);
+        if($head===null)return null;
+        $head['row_count']=(int)$head['row_count'];
+        $links=$this->rows('SELECT c.count_id FROM pm_stock_count_session_lines l JOIN pm_stock_counts c ON c.organization_id=l.organization_id AND c.count_id=l.count_id WHERE l.organization_id=? AND l.session_id=? ORDER BY c.variant_id',[$org,$sessionId]);
+        $head['rows']=array_map(fn(array $link):array=>$this->getStockCount($org,$link['count_id'])??throw new DomainException('Count evidence missing.'),$links);
+        return $head;
+    }
+
+    public function getStockCount(string $org,string $countId):?array
+    {
+        $row=$this->one('SELECT count_id,variant_id,location_id,source_ref,counted,previous_on_hand,reserved,delta,expected_revision,result_revision,movement_id,action_key,actor_ref,created_at
+            FROM pm_stock_counts WHERE organization_id=? AND count_id=?',[$org,$countId]);
+        if($row!==null){
+            $row['expected_revision']=(int)$row['expected_revision'];$row['result_revision']=(int)$row['result_revision'];
+        }
+        return $row;
+    }
+
+    private function decodeAttribute(array $row):array
+    {
+        $row['choices']=json_decode($row['choices_json'],true,flags:JSON_THROW_ON_ERROR);unset($row['choices_json']);
+        foreach(['is_required','is_axis'] as $flag)if(isset($row[$flag]))$row[$flag]=(bool)$row[$flag];
+        return $row;
+    }
+    private function attributeDefinition(string $org,string $code):array
+    {
+        $row=$this->one('SELECT code,name,value_type,unit,choices_json FROM pm_attribute_definitions WHERE organization_id=? AND code=?',[$org,$code]);
+        if($row===null)throw new DomainException('Unknown tenant attribute.');
+        return $this->decodeAttribute($row);
+    }
+    public function defineAttribute(string $org,array $definition,string $key,string $actor,string $trace):array
+    {
+        return $this->mutate($org,'attribute.define',$key,[$definition],$actor,$trace,function()use($org,$definition):array{
+            $this->execute('INSERT INTO pm_attribute_definitions (organization_id,code,name,value_type,unit,choices_json) VALUES (?,?,?,?,?,?)',
+                [$org,$definition['code'],$definition['name'],$definition['value_type'],$definition['unit'],json_encode($definition['choices'],JSON_THROW_ON_ERROR)]);
+            return $this->attributeDefinition($org,$definition['code']);
+        },'product_management.attribute.defined','Attribute');
+    }
+    public function attributes(string $org,int $limit,int $offset):array
+    {
+        $stmt=$this->connection->prepare('SELECT code,name,value_type,unit,choices_json FROM pm_attribute_definitions WHERE organization_id=:org ORDER BY code LIMIT :lim OFFSET :off');
+        $stmt->bindValue(':org',$org);$stmt->bindValue(':lim',$limit,PDO::PARAM_INT);$stmt->bindValue(':off',$offset,PDO::PARAM_INT);$stmt->execute();
+        return array_map($this->decodeAttribute(...),$stmt->fetchAll(PDO::FETCH_ASSOC));
+    }
+    public function bindAttribute(string $org,string $category,string $code,bool $required,bool $axis,string $key,string $actor,string $trace):array
+    {
+        return $this->mutate($org,'attribute.category.bind',$key,[$category,$code,$required,$axis],$actor,$trace,function()use($org,$category,$code,$required,$axis):array{
+            $def=$this->attributeDefinition($org,$code);
+            if($axis&&$def['value_type']!=='enum')throw new DomainException('Matrix axis must be enum.');
+            if($this->one('SELECT category_id FROM pm_categories WHERE organization_id=? AND category_id=? FOR UPDATE',[$org,$category])===null)
+                throw new DomainException('Unknown tenant category.');
+            $this->execute('INSERT INTO pm_category_attributes (organization_id,category_id,code,is_required,is_axis) VALUES (?,?,?,?,?)',[$org,$category,$code,(int)$required,(int)$axis]);
+            return ['category_id'=>$category,'code'=>$code,'is_required'=>$required,'is_axis'=>$axis];
+        },'product_management.attribute.category_bound','Category');
+    }
+    public function categoryAttributes(string $org,string $category):array
+    {
+        return array_map($this->decodeAttribute(...),$this->rows('SELECT d.code,d.name,d.value_type,d.unit,d.choices_json,a.is_required,a.is_axis FROM pm_category_attributes a JOIN pm_attribute_definitions d ON d.organization_id=a.organization_id AND d.code=a.code WHERE a.organization_id=? AND a.category_id=? ORDER BY d.code',[$org,$category]));
+    }
+    private function applicableAttributes(string $org,string $product):array
+    {
+        $rows=$this->rows('SELECT d.code,d.name,d.value_type,d.unit,d.choices_json,x.is_required,x.is_axis FROM (SELECT pc.organization_id,a.code,MAX(a.is_required) AS is_required,MAX(a.is_axis) AS is_axis FROM pm_product_categories pc JOIN pm_category_attributes a ON a.organization_id=pc.organization_id AND a.category_id=pc.category_id WHERE pc.organization_id=? AND pc.product_id=? GROUP BY pc.organization_id,a.code) x JOIN pm_attribute_definitions d ON d.organization_id=x.organization_id AND d.code=x.code ORDER BY d.code',[$org,$product]);
+        $map=[];foreach($rows as $row)$map[$row['code']]=$this->decodeAttribute($row);
+        return $map;
+    }
+    private function lockAttributeProduct(string $org,string $product,int $revision):array
+    {
+        $row=$this->one('SELECT product_type,status,revision FROM pm_products WHERE organization_id=? AND product_id=? FOR UPDATE',[$org,$product]);
+        if($row===null||$row['status']==='archived'||(int)$row['revision']!==$revision)throw new DomainException('Active Product and current revision required.');
+        $this->assertShopifyLocalOwnership($org,'product',$product);return $row;
+    }
+    public function setAttributes(string $org,string $product,array $changes,int $revision,string $key,string $actor,string $trace):array
+    {
+        return $this->mutate($org,'attribute.product.set',$key,[$product,$changes,$revision],$actor,$trace,function()use($org,$product,$changes,$revision):array{
+            $this->applyAttributePatch($org,$product,$changes,$revision);
+            return $this->productAttributes($org,$product);
+        },'product_management.attribute.product_set','Product');
+    }
+    private function applyAttributePatch(string $org,string $product,array $changes,int $revision):void
+    {
+    $this->lockAttributeProduct($org,$product,$revision);
+    $defs=$this->applicableAttributes($org,$product);
+    foreach($changes as $code=>$value){
+        if(!isset($defs[$code]))throw new DomainException('Attribute not in assigned category set.');
+        if($value===null){
+            if($defs[$code]['is_required'])throw new DomainException('Required value cannot be removed.');
+            $this->execute('DELETE FROM pm_product_attribute_values WHERE organization_id=? AND product_id=? AND code=?',[$org,$product,$code]);
+        }else{
+            $value=AttributeRules::value($defs[$code],$value);
+            $this->execute('INSERT INTO pm_product_attribute_values (organization_id,product_id,code,value_json) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE value_json=VALUES(value_json)',[$org,$product,$code,json_encode($value,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE)]);
+        }
+    }
+    $this->execute('UPDATE pm_products SET revision=revision+1 WHERE organization_id=? AND product_id=?',[$org,$product]);
+    }
+
+    public function bulkSetAttributes(string $org,array $products,array $changes,string $key,string $actor,string $trace):array
+    {
+        return $this->mutate($org,'attribute.product.bulk_set',$key,[$products,$changes],$actor,$trace,function()use($org,$products,$changes):array{
+            $items=[];
+            foreach($products as $id=>$revision){
+                $this->applyAttributePatch($org,(string)$id,$changes,$revision);
+                $after=$this->productAttributes($org,(string)$id);
+                $values=[];foreach($after['items'] as $row)if(array_key_exists($row['code'],$changes))$values[]=['code'=>$row['code'],'value'=>$row['value']];
+                if(count($values)!==count($changes))throw new DomainException('Bulk attribute evidence missing.');
+                $items[]=['product_id'=>(string)$id,'revision'=>$revision+1,'values'=>$values];
+            }
+            return ['items'=>$items];
+        },'product_management.attribute.bulk_set','ProductAttributeBatch');
+    }
+
+    public function productAttributes(string $org,string $product):array
+    {
+        $p=$this->one('SELECT revision FROM pm_products WHERE organization_id=? AND product_id=?',[$org,$product]);
+        if($p===null)return ['found'=>false,'product_id'=>$product,'revision'=>0,'items'=>[]];
+        $values=[];foreach($this->rows('SELECT code,value_json FROM pm_product_attribute_values WHERE organization_id=? AND product_id=?',[$org,$product]) as $row)$values[$row['code']]=json_decode($row['value_json'],true,flags:JSON_THROW_ON_ERROR);
+        $items=[];foreach($this->applicableAttributes($org,$product) as $code=>$def)$items[]=$def+['value'=>$values[$code]??null,'missing_required'=>$def['is_required']&&!array_key_exists($code,$values)];
+        return ['found'=>true,'product_id'=>$product,'revision'=>(int)$p['revision'],'items'=>$items];
+    }
+    public function filterAttributes(string $org,string $code,mixed $value,int $limit,int $offset):array
+    {
+        $value=AttributeRules::value($this->attributeDefinition($org,$code),$value);
+        $stmt=$this->connection->prepare("SELECT p.product_id,p.name,p.status,p.revision FROM pm_product_attribute_values a JOIN pm_products p ON p.organization_id=a.organization_id AND p.product_id=a.product_id WHERE a.organization_id=:org AND a.code=:code AND JSON_CONTAINS(a.value_json,CAST(:value AS JSON)) AND p.status<>'archived' ORDER BY p.product_id LIMIT :lim OFFSET :off");
+        $stmt->bindValue(':org',$org);$stmt->bindValue(':code',$code);$stmt->bindValue(':value',json_encode($value,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE));$stmt->bindValue(':lim',$limit,PDO::PARAM_INT);$stmt->bindValue(':off',$offset,PDO::PARAM_INT);$stmt->execute();
+        return array_map(static function(array $row):array{$row['revision']=(int)$row['revision'];return $row;},$stmt->fetchAll(PDO::FETCH_ASSOC));
+    }
+    public function variantMatrix(string $org,string $product,array $matrix):array
+    {
+        $p=$this->one('SELECT status,revision FROM pm_products WHERE organization_id=? AND product_id=?',[$org,$product]);
+        if($p===null||$p['status']==='archived')throw new DomainException('Active tenant Product required.');
+        $defs=$this->applicableAttributes($org,$product);
+        $existing=[];
+        foreach($this->rows('SELECT variant_id,sku,options_json FROM pm_variants WHERE organization_id=? AND product_id=?',[$org,$product]) as $v){
+            if($v['options_json']===null)continue;
+            $options=json_decode($v['options_json'],true,flags:JSON_THROW_ON_ERROR);
+            if(!is_array($options)||$options===[])continue;
+            ksort($options,SORT_STRING);$existing[hash('sha256',json_encode($options,JSON_THROW_ON_ERROR))]=$v['variant_id'];
+        }
+        $items=[];
+        foreach($matrix as $row){
+            foreach($row['options'] as $code=>$value){
+                if(!isset($defs[$code])||!$defs[$code]['is_axis'])throw new DomainException('Matrix axis not assigned to Product category.');
+                AttributeRules::value($defs[$code],$value);
+            }
+            $sku=$this->one('SELECT variant_id FROM pm_variants WHERE organization_id=? AND sku=?',[$org,$row['sku']]);
+            $items[]=$row+['status'=>isset($existing[$row['combination_hash']])?'exists':($sku!==null?'sku_conflict':'ready')];
+        }
+        return ['product_id'=>$product,'revision'=>(int)$p['revision'],'items'=>$items];
+    }
+    public function createMatrix(string $org,string $product,array $matrix,int $revision,string $uom,bool $track,string $key,string $actor,string $trace):array
+    {
+        return $this->mutate($org,'variant.matrix.create',$key,[$product,$matrix,$revision,$uom,$track],$actor,$trace,function()use($org,$product,$matrix,$revision,$uom,$track):array{
+            $p=$this->lockAttributeProduct($org,$product,$revision);
+            if($track&&in_array($p['product_type'],['service','digital'],true))throw new DomainException('Non-stock matrix cannot track inventory.');
+            $preview=$this->variantMatrix($org,$product,$matrix);$items=[];
+            foreach($preview['items'] as $row){
+                if($row['status']!=='ready')throw new DomainException('Matrix contains an existing combination or SKU conflict.');
+                $id=bin2hex(random_bytes(16));
+                $this->execute('INSERT INTO pm_variants (organization_id,variant_id,product_id,sku,uom,track_inventory,options_json) VALUES (?,?,?,?,?,?,?)',[$org,$id,$product,$row['sku'],$uom,(int)$track,json_encode($row['options'],JSON_THROW_ON_ERROR)]);
+                $this->execute('INSERT INTO pm_variant_matrix_identities (organization_id,product_id,variant_id,combination_hash) VALUES (?,?,?,?)',[$org,$product,$id,$row['combination_hash']]);
+                $items[]=['variant_id'=>$id,'sku'=>$row['sku'],'combination_hash'=>$row['combination_hash']];
+            }
+            $this->execute('UPDATE pm_products SET revision=revision+1 WHERE organization_id=? AND product_id=?',[$org,$product]);
+            return ['product_id'=>$product,'revision'=>$revision+1,'items'=>$items];
+        },'product_management.variant.matrix_created','Product');
+    }
+
     public function stockBalance(string $organizationId, string $variantId, string $locationId): array
     {
         $variant=$this->one('SELECT track_inventory FROM pm_variants WHERE organization_id=? AND variant_id=?',[$organizationId,$variantId]);
@@ -557,7 +822,7 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
                 return json_decode((string)$existing['result_json'],true,flags:JSON_THROW_ON_ERROR);
             }
             $result=$callback();
-            $id=(string)($result['product_id']??$result['variant_id']??$result['category_id']??$result['location_id']??$result['movement_id']??$result['reservation_id']??bin2hex(random_bytes(16)));
+            $id=(string)($result['product_id']??$result['session_id']??$result['count_id']??$result['reservation_id']??$result['variant_id']??$result['category_id']??$result['code']??$result['location_id']??$result['movement_id']??bin2hex(random_bytes(16)));
             $event=new DomainEvent(bin2hex(random_bytes(16)),$org,$eventType,$aggregateType,$id,
                 ['operation'=>$operation,'result'=>$result],new EventMetadata(strlen($correlation)<=40?$correlation:substr(hash('sha256',$correlation),0,40),null,str_starts_with($actor,'shopify:')?'INTEGRATION':'USER',$actor),new \DateTimeImmutable('now',new \DateTimeZone('UTC')));
             $this->events->append($event); // writes cos_events + cos_event_outbox in this same transaction

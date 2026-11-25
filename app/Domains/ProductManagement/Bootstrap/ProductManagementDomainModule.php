@@ -10,6 +10,9 @@ use Kernel\Module\Contract\BootstrapPolicyProvidingModuleInterface;
 use Kernel\Policy\ActionPolicy;
 use Kernel\Policy\PolicyDecision;
 use Domains\ProductManagement\Automation\Action\ProductImportApplyHandler;
+use Domains\ProductManagement\Automation\Action\ProductStockCountApplyHandler;
+use Domains\ProductManagement\Automation\Action\ProductStockCountSessionApplyHandler;
+use Domains\ProductManagement\Automation\Action\ProductGovernedOperationHandler;
 use Domains\ProductManagement\Automation\Action\ShopifyImportApplyHandler;
 use Kernel\Module\Contract\EventOwningModuleInterface;
 use Kernel\Rule\Contract\RuleContextProviderInterface;
@@ -22,18 +25,23 @@ final readonly class ProductManagementDomainModule implements DomainModuleInterf
     public function __construct(
         private ?ProductImportApplyHandler $importHandler = null,
         private ?ShopifyImportApplyHandler $shopifyHandler = null,
+        private ?ProductStockCountApplyHandler $stockCountHandler = null,
+        private ?ProductStockCountSessionApplyHandler $countSessionHandler = null,
+        private ?ProductGovernedOperationHandler $governedHandler = null,
     ) {}
 
     public function name(): string { return 'product_management'; }
     public function actionTypes():array {
-        return array_values(array_filter([
+        return array_merge(array_values(array_filter([
             $this->importHandler===null?null:ProductImportApplyHandler::TYPE,
             $this->shopifyHandler===null?null:ShopifyImportApplyHandler::TYPE,
-        ]));
+            $this->stockCountHandler===null?null:ProductStockCountApplyHandler::TYPE,
+            $this->countSessionHandler===null?null:ProductStockCountSessionApplyHandler::TYPE,
+        ])), $this->governedHandler===null?[]:ProductGovernedOperationHandler::types());
     }
 
     public function actionHandlers():array {
-        return array_values(array_filter([$this->importHandler,$this->shopifyHandler]));
+        return array_values(array_filter([$this->importHandler,$this->shopifyHandler,$this->stockCountHandler,$this->countSessionHandler,$this->governedHandler]));
     }
 
     public function policies(string $organizationId):array {
@@ -47,6 +55,20 @@ final readonly class ProductManagementDomainModule implements DomainModuleInterf
             $policyId=substr(hash('sha256',$organizationId.':shopify-import-approved-v1'),0,32);
             $policies[]=new ActionPolicy($policyId,$organizationId,ShopifyImportApplyHandler::TYPE,[],
                 PolicyDecision::ApprovalRequired,10,'Shopify import requires independently approved canonical Action.');
+        }
+        if($this->stockCountHandler!==null) {
+            $policyId=substr(hash('sha256',$organizationId.':product-stock-count-approved-v1'),0,32);
+            $policies[]=new ActionPolicy($policyId,$organizationId,ProductStockCountApplyHandler::TYPE,[],
+                PolicyDecision::ApprovalRequired,10,'Physical stock count requires independent approved canonical Action.');
+        }
+        if($this->countSessionHandler!==null) {
+            $policyId=substr(hash('sha256',$organizationId.':product-stock-session-approved-v1'),0,32);
+            $policies[]=new ActionPolicy($policyId,$organizationId,ProductStockCountSessionApplyHandler::TYPE,[],
+                PolicyDecision::ApprovalRequired,10,'Atomic physical count session requires independent approval.');
+        }
+        if($this->governedHandler!==null)foreach(ProductGovernedOperationHandler::types() as $type){
+            $policies[]=new ActionPolicy(substr(hash('sha256',$organizationId.':'.$type.':v1'),0,32),
+                $organizationId,$type,[],PolicyDecision::ApprovalRequired,10,'Independent approved Product business operation.');
         }
         return $policies;
     }
@@ -68,6 +90,11 @@ final readonly class ProductManagementDomainModule implements DomainModuleInterf
             'product_management.media.detached',
             'product_management.variant.created',
             'product_management.variant.updated',
+            'product_management.attribute.defined',
+            'product_management.attribute.category_bound',
+            'product_management.attribute.product_set',
+            'product_management.attribute.bulk_set',
+            'product_management.variant.matrix_created',
             'product_management.variant.archived',
             'product_management.category.created',
             'product_management.category.assigned',
@@ -80,7 +107,15 @@ final readonly class ProductManagementDomainModule implements DomainModuleInterf
             'product_management.stock.order_commit',
             'product_management.stock.order_release',
             'product_management.stock.order_return',
+            'product_management.stock.count_applied',
+            'product_management.stock.count_session_applied',
             'product_management.price.updated',
+            'product_management.price_list.created',
+            'product_management.price_list.updated',
+            'product_management.price_list.archived',
+            'product_management.price_list.entry_updated',
+            'product_management.price_list.entry_removed',
+            'product_management.price_list.tier_changed',
         ];
     }
 }

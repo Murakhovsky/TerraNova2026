@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "variant-matrix-create output",
+  "type": "object",
+  "required": [
+    "product_id",
+    "revision",
+    "items"
+  ],
+  "properties": {
+    "product_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "variant_id",
+          "sku",
+          "combination_hash"
+        ],
+        "properties": {
+          "variant_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "combination_hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "additionalProperties": false
+      },
+      "maxItems": 50,
+      "minItems": 1
+    }
+  },
+  "additionalProperties": false
+}

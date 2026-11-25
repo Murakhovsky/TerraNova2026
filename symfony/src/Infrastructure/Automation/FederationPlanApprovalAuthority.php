@@ -13,7 +13,7 @@ use PDO;
  * records a decision. This is deliberately NOT a Domain Action handler.
  * Other action families keep their existing authority policies.
  */
-final readonly class FederationPlanApprovalAuthority
+final readonly class FederationPlanApprovalAuthority implements \Kernel\Approval\Contract\ApprovalAuthorityInterface
 {
     public function __construct(private PDO $connection) {}
 
@@ -23,7 +23,11 @@ final readonly class FederationPlanApprovalAuthority
         Approval $approval,
         Action $action,
     ): void {
-        if ($action->type !== 'cos.federation.plan.approval') return;
+        // Independently approved canonical Product Actions use the same
+        // membership and self-approval fence as their Plan.
+        if ($action->type !== 'cos.federation.plan.approval'
+            && !in_array($action->type, \Domains\ProductManagement\Automation\Action\ProductGovernedOperationHandler::types(),true)
+            && !in_array($action->type,['product_management.stock.count.apply','product_management.stock.count.session.apply','product_management.import.apply','product_management.shopify.import.apply'],true)) return;
 
         if ($action->sourceType !== 'USER'
             || $action->sourceId === $userId
@@ -32,7 +36,7 @@ final readonly class FederationPlanApprovalAuthority
             || $approval->approverType !== 'ROLE'
             || $approval->approverId !== 'manager'
         ) {
-            throw new DomainException('Federation Plan requires an independent tenant manager.');
+            throw new DomainException('Approved Plan or Product Action requires an independent tenant manager.');
         }
 
         $query = $this->connection->prepare(
@@ -45,7 +49,7 @@ final readonly class FederationPlanApprovalAuthority
         );
         $query->execute(['org'=>$organizationId,'user'=>(int) $userId]);
         if ($query->fetchColumn() === false) {
-            throw new DomainException('Federation approver must be an active manager in this tenant.');
+            throw new DomainException('Approver must be an active manager in this tenant.');
         }
     }
 }

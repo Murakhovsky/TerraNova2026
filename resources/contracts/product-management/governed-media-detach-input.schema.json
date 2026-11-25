@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Governed media-detach input",
+  "type": "object",
+  "required": [
+    "target_type",
+    "target_id",
+    "parameters"
+  ],
+  "properties": {
+    "target_type": {
+      "type": "string",
+      "const": "product_governed_operation"
+    },
+    "target_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "parameters": {
+      "type": "object",
+      "required": [
+        "media_id"
+      ],
+      "properties": {
+        "media_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

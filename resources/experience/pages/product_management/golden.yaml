@@ -1,0 +1,220 @@
+pages:
+  - id: product_management.price_lists
+    route: { name: cos_product_management_price_lists, path: "/product-management/price-lists", methods: [GET] }
+    surface: workspace
+    domain: ProductManagement
+    capability: product_management.price.list.search
+    owner: ProductManagement
+    priority: P1
+    status: CONTRACTED
+    personas: [manager]
+    product:
+      primary_goal: "Manage explicit retail, wholesale and partner price lists."
+      page_purpose: "Browse and create tenant-owned price lists; edit SKU prices from Product cards."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, Toolbar]
+      optional: [EmptyState, ErrorState]
+    primary_action: product_management.price.list.create
+    states: [normal, empty, error]
+    responsive: { desktop: canonical, tablet: canonical, mobile: stacked_workspace }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: product_management.import
+    route: { name: cos_product_management_import, path: "/product-management/import", methods: [GET] }
+    surface: workspace
+    domain: ProductManagement
+    capability: product_management.import.preview
+    owner: ProductManagement
+    priority: P0
+    status: CONTRACTED
+    personas: [manager]
+    product:
+      primary_goal: "Stage a validated CSV catalog without native Product writes."
+      page_purpose: "Human preview and immutable evidence, not automatic materialization."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, Toolbar]
+      optional: [EmptyState, ErrorState]
+    primary_action: product_management.import.preview
+    states: [normal, empty, error]
+    responsive: { desktop: canonical, tablet: canonical, mobile: stacked_workspace }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: product_management.import.batch
+    route: { name: cos_product_management_import_batch, path: "/product-management/import/{id}", methods: [GET] }
+    surface: workspace
+    domain: ProductManagement
+    capability: product_management.import.batch.get
+    owner: ProductManagement
+    priority: P0
+    status: CONTRACTED
+    personas: [manager]
+    product:
+      primary_goal: "Review staged rows, duplicates and approval readiness of one CSV batch."
+      page_purpose: "Read-only batch evidence plus independently proposed Goal/Plan."
+    archetype: entity_workspace
+    patterns:
+      required: [WorkspaceHeader, EntityHeader]
+      optional: [ContextPanel, ErrorState]
+    primary_action: product_management.import.apply
+    states: [normal, error]
+    responsive: { desktop: canonical, tablet: canonical, mobile: stacked_workspace }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: product_management.stock
+    route: { name: cos_product_management_stock, path: "/product-management/stock", methods: [GET] }
+    surface: workspace
+    domain: ProductManagement
+    capability: product_management.stock.balance.get
+    owner: ProductManagement
+    priority: P0
+    status: CONTRACTED
+    personas: [manager]
+    product:
+      primary_goal: "Inspect native warehouse stock and ledger, then post documented movements."
+      page_purpose: "Human-only warehouse work; no external Shopify quantities or silent stock adjustment."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, Toolbar]
+      optional: [FilterBar, EmptyState, ErrorState]
+    primary_action: product_management.stock.receive
+    states: [normal, empty, error]
+    responsive: { desktop: canonical, tablet: canonical, mobile: stacked_workspace }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: product_management.catalog
+    route: { name: cos_product_management_index, path: "/product-management", methods: [GET] }
+    surface: workspace
+    domain: ProductManagement
+    capability: product_management.product.search
+    owner: ProductManagement
+    priority: P0
+    status: CONTRACTED
+    personas: [manager]
+    product:
+      primary_goal: "Find SKU/Product inventory and create a native COS Product."
+      page_purpose: "Human-only tenant-gated catalog via canonical Domain capability; user acceptance pending."
+    archetype: collection
+    patterns:
+      required: [PageHeader, Toolbar, DataGrid]
+      optional: [EmptyState, ErrorState]
+    primary_action: product_management.product.create
+    states: [normal, empty, error]
+    responsive: { desktop: canonical, tablet: canonical, mobile: stacked_workspace }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: product_management.product
+    route: { name: cos_product_management_product, path: "/product-management/products/{id}", methods: [GET] }
+    surface: workspace
+    domain: ProductManagement
+    capability: product_management.product.get
+    owner: ProductManagement
+    priority: P0
+    status: CONTRACTED
+    personas: [manager]
+    product:
+      primary_goal: "Inspect and manage one scoped Product, its variants, price and categories."
+      page_purpose: "Typed native Product read and safe human writes; browser acceptance pending."
+    archetype: entity_workspace
+    patterns:
+      required: [WorkspaceHeader, EntityHeader]
+      optional: [ContextPanel, ErrorState]
+    primary_action: product_management.product.update
+    states: [normal, error]
+    responsive: { desktop: canonical, tablet: canonical, mobile: stacked_workspace }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: product_management.categories
+    route: { name: cos_product_management_categories, path: "/product-management/categories", methods: [GET] }
+    surface: workspace
+    domain: ProductManagement
+    capability: product_management.category.search
+    owner: ProductManagement
+    priority: P0
+    status: CONTRACTED
+    personas: [manager]
+    product:
+      primary_goal: "Browse and create tenant Product categories."
+      page_purpose: "Category hierarchy create/assign via canonical Domain Gateway; browser acceptance pending."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, Toolbar]
+      optional: [EmptyState, ErrorState]
+    primary_action: product_management.category.create
+    states: [normal, empty, error]
+    responsive: { desktop: canonical, tablet: canonical, mobile: stacked_workspace }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: product_management.attributes
+    route: { name: cos_product_management_attributes, path: "/product-management/attributes", methods: [GET] }
+    surface: workspace
+    domain: ProductManagement
+    capability: product_management.attribute.search
+    owner: ProductManagement
+    priority: P1
+    status: CONTRACTED
+    personas: [manager]
+    product:
+      primary_goal: "Manage typed definitions, category sets and filtered bulk edits."
+      page_purpose: "Tenant-scoped Product Management Workspace; independent acceptance pending."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, Toolbar]
+      optional: [FilterBar, EmptyState, ErrorState]
+    primary_action: product_management.attribute.define
+    states: [normal, empty, error]
+    responsive: { desktop: canonical, tablet: canonical, mobile: stacked_workspace }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: product_management.product_attributes
+    route: { name: cos_product_management_product_attributes, path: "/product-management/products/{id}/attributes", methods: [GET] }
+    surface: workspace
+    domain: ProductManagement
+    capability: product_management.attribute.product.get
+    owner: ProductManagement
+    priority: P1
+    status: CONTRACTED
+    personas: [manager]
+    product:
+      primary_goal: "Manage typed product characteristics and preview variant combinations."
+      page_purpose: "Tenant-scoped Product Management Workspace; independent acceptance pending."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, Toolbar]
+      optional: [FilterBar, EmptyState, ErrorState]
+    primary_action: product_management.attribute.product.set
+    states: [normal, empty, error]
+    responsive: { desktop: canonical, tablet: canonical, mobile: stacked_workspace }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: product_management.dashboard
+    route: { name: cos_product_management_dashboard, path: "/product-management/dashboard", methods: [GET] }
+    surface: workspace
+    domain: ProductManagement
+    capability: product_management.analytics.summary.get
+    owner: ProductManagement
+    priority: P1
+    status: CONTRACTED
+    personas: [manager]
+    product:
+      primary_goal: "Review assortment, warehouse risk, movement and catalog quality."
+      page_purpose: "Tenant-scoped Product Management Workspace; independent acceptance pending."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, Toolbar]
+      optional: [FilterBar, EmptyState, ErrorState]
+    primary_action: product_management.analytics.summary.get
+    states: [normal, empty, error]
+    responsive: { desktop: canonical, tablet: canonical, mobile: stacked_workspace }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }

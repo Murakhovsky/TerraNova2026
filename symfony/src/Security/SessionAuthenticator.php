@@ -21,6 +21,7 @@ final class SessionAuthenticator extends AbstractAuthenticator implements Authen
     public function supports(Request $request): ?bool
     {
         $path=$request->getPathInfo();
+        if ($request->isMethod('POST') && $path==='/api/v1/capability-intents/product-business') return false;
         if ($path==='/api/v1/health' || preg_match('#^/api/v1/integrations/crm/[1-9][0-9]*/webhook$#',$path)===1) return false;
         if (in_array($request->getMethod(),['GET','HEAD'],true) && preg_match('#^/api/v1/public/properties(?:/|$)#',$path)===1) return false;
         if (in_array($request->getMethod(),['GET','HEAD'],true) && preg_match('#^/spatial/scene/[A-Za-z0-9_-]+$#',$path)===1) return false;
@@ -65,6 +66,7 @@ final class SessionAuthenticator extends AbstractAuthenticator implements Authen
             || str_starts_with($path,'/workspace')
             || str_starts_with($path,'/sales')
             || str_starts_with($path,'/growth')
+            || $path==='/product-management' || str_starts_with($path,'/product-management/')
             || str_starts_with($path,'/client-case')
             || str_starts_with($path,'/capital-markets')
             || str_starts_with($path,'/cos/architecture')

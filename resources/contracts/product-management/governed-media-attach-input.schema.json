@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Governed media-attach input",
+  "type": "object",
+  "required": [
+    "target_type",
+    "target_id",
+    "parameters"
+  ],
+  "properties": {
+    "target_type": {
+      "type": "string",
+      "const": "product_governed_operation"
+    },
+    "target_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "parameters": {
+      "type": "object",
+      "required": [
+        "product_id",
+        "file_id"
+      ],
+      "properties": {
+        "product_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        },
+        "file_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,80}$"
+        },
+        "variant_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "cover",
+            "gallery"
+          ]
+        },
+        "sort_order": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

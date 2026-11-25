@@ -45,6 +45,7 @@ final readonly class AutomationIntentReviewController
         if (!$this->csrf->isValid($request)) return new Response('Invalid CSRF',400);
         try {
             $adopted=$this->intents->adopt($actor,$intentId,(string)$request->request->get('digest',''));
+            if(isset($adopted['plan_id']))return new RedirectResponse('/workspace/goals?notice=plan_proposed',303);
             return new RedirectResponse('/workspace/property/bulk?batch='.rawurlencode($adopted['batch_id']),303);
         } catch(DomainException|\InvalidArgumentException $e) {
             return new Response('Review blocked: '.htmlspecialchars($e->getMessage(),ENT_QUOTES,'UTF-8'),422);

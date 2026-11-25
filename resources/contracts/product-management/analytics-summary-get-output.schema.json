@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "analytics-summary-get output",
+  "type": "object",
+  "properties": {
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "metrics": {
+      "type": "object",
+      "properties": {
+        "products_total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "products_draft": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "products_active": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "products_archived": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "active_skus": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "tracked_skus": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unavailable_skus": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reserved_skus": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "stock_positions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "active_locations": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unpriced_skus": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "products_missing_required": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "products_without_media": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unpriced_stock_skus": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "products_total",
+        "products_draft",
+        "products_active",
+        "products_archived",
+        "active_skus",
+        "tracked_skus",
+        "unavailable_skus",
+        "reserved_skus",
+        "stock_positions",
+        "active_locations",
+        "unpriced_skus",
+        "products_missing_required",
+        "products_without_media",
+        "unpriced_stock_skus"
+      ],
+      "additionalProperties": false
+    },
+    "priced_stock_at_base": {
+      "type": "string",
+      "pattern": "^-?[0-9]+\\.[0-9]{10}$"
+    },
+    "value_basis": {
+      "type": "string",
+      "enum": [
+        "current_base_price_not_cost"
+      ]
+    },
+    "value_complete": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "currency",
+    "metrics",
+    "priced_stock_at_base",
+    "value_basis",
+    "value_complete"
+  ],
+  "additionalProperties": false
+}
