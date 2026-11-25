@@ -103,6 +103,7 @@ try {
     };
     $manifest=require $root.'/app/Domains/Marketing/module.php';
     $catalog=new ModuleCatalog([ModuleDefinition::fromArray($manifest),
+        ModuleDefinition::fromArray((static fn(string $path):array=>require $path)($root.'/app/Domains/Sales/module.php')),
         new ModuleDefinition(new ModuleManifest('federation','Federation','1.0.0'),new ModuleContributions())]);
     $states=new class implements ModuleStateRepositoryInterface {
         public function enabledOverride(string $org,string $moduleId):?bool{return true;}
@@ -178,10 +179,25 @@ try {
     });
     $factory=new \Domains\Marketing\Infrastructure\Hermes\HermesAnalystExecutionFactory($profiles,$contexts,$runs,$vault,$transport,$budget,$modules);
     $handler=new \Domains\Marketing\Automation\Action\MarketingAnalystRunHandler($factory,$worker,$identityResolver,$tenantFactory,$modules);
-    $domains=new DomainModuleRegistry([new \Domains\Marketing\Bootstrap\MarketingDomainModule($handler)]);
+    $captureStore=new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingAttributionStore($pdo);
+    $commerceStore=new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingCommerceAttributionStore($pdo);
+    $orderRepo=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository($pdo);
+    $orderRead=new \App\Infrastructure\Marketing\CommerceOrderReadAdapter($modules,$orderRepo,$orderRepo,$orderRepo);
+    $leadRead=new \App\Infrastructure\Marketing\SalesAttributionReadAdapter(new \Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceReadModel($pdo),$modules);
+    $candidateRead=new \App\Infrastructure\Marketing\AttributionCandidateReadAdapter(new \Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesAttributionCandidateReadModel($pdo),$modules);
+    $funding=new class implements \Domains\Marketing\Application\Contract\MarketingFinanceFundingReadPort{
+        public function observe(TenantContext $actor,string $envelopeId,string $reservationId):?array{throw new DomainException('No funding operation in sweep.');}
+    };
+    $sweepPlans=new \Domains\Marketing\Application\Service\MarketingPaidLaunchPlanService(
+        new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidLaunchPlanStore($pdo),$campaignService,
+        new \Domains\Marketing\Application\Service\MarketingPlanningService($planning,$planningPolicy),
+        new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidReadRepository($pdo),$funding,$modules);
+    $sweepService=new \Domains\Marketing\Application\Service\MarketingAttributionSweepService($campaignService,$sweepPlans,$candidateRead,$leadRead,$orderRead,$captureStore,$commerceStore,$modules);
+    $sweepHandler=new \Domains\Marketing\Automation\Action\MarketingAttributionSweepHandler($sweepService,$worker,$identityResolver,$tenantFactory,$modules,$capabilities);
+    $domains=new DomainModuleRegistry([new \Domains\Marketing\Bootstrap\MarketingDomainModule($handler,null,$sweepHandler)]);
     $bindings=new FederationCapabilityBindingResolver($capabilities,$domains,$modules);
     $gate=new ModuleActionExecutionGate($domains,$modules,null,$worker);
-    $actionService=new ActionService(new MysqlActionRepository($pdo),new ActionExecutor([$handler],$gate));
+    $actionService=new ActionService(new MysqlActionRepository($pdo),new ActionExecutor([$handler,$sweepHandler],$gate));
     $approvalRepo=new MysqlApprovalRepository($pdo);
     $policies=new MysqlPolicyRepository($pdo);
     $engine=new PolicyEngine(new ConditionEvaluator());
@@ -189,8 +205,9 @@ try {
     $policyService=new ActionPolicyService($actionService,$policies,new MysqlPolicyEvaluationRepository($pdo),$approvalRepo,$engine,
         $transactions,null,$domains,$modules,$policyContexts);
     $outcome=new MarketingAnalystRunOutcomeProvider($db,$runs,$receipts);
+    $sweepOutcome=new \App\Persistence\Marketing\MarketingAttributionSweepOutcomeProvider($db,$captureStore,$receipts);
     $goals=new FederationGoalStore($db,$bindings,new GoalPlanValidator($capabilities),new GoalOutcomeEvaluator(),
-        new FederationTrustedOutcomeEvidenceResolver($modules,[$outcome]),$planReader);
+        new FederationTrustedOutcomeEvidenceResolver($modules,[$outcome,$sweepOutcome]),$planReader);
     $scheduler=new WorkflowStepScheduler();
     $bridge=new FederationCanonicalWorkflowBridge($db,$store,$scheduler,$goals,$planEvidence,$receipts,
         new FailClosedWorkflowNonActionReceiptEvidence(),$planReader,$capabilities,$domains,$modules,$policies,$engine,$policyContexts,$policyService,
@@ -319,6 +336,70 @@ try {
         'Forged native context was counted as a trusted outcome.');
     $assert($transport->posts===1,'Readback or review caused another remote turn.');
     echo "Marketing approved Goal/Plan/Action/Outcome native MySQL E2E with Hermes fixture PASS.\\n";
+
+    // Bounded native sweep through the same canonical Plan/Workflow/Action/Outcome path.
+    // The Plan approval evidence is a fixture, as in the analyst case above.
+    $sweepCap=\Domains\Marketing\Automation\Action\MarketingAttributionSweepHandler::TYPE;
+    $criterion=\App\Persistence\Marketing\MarketingAttributionSweepOutcomeProvider::CRITERION;
+    $sweepGoal='goal-sweep-'.$token;$sweepPlan='plan-sweep-'.$token;$sweepRun='run-sweep-'.$token;
+    $sweepApproval=bin2hex(random_bytes(16));$sweepDate='2026-02-02';
+    $insert=$pdo->prepare("INSERT INTO tn_leads (organization_id,full_name,status,utm_source,utm_medium,utm_campaign,created_at)
+        VALUES (?,'Private sweep fixture','new','google','organic',?,?)");
+    for($i=0;$i<51;$i++)$insert->execute([$org,$campaignId,$sweepDate.' 12:00:00']);
+    $input=['target_type'=>'marketing_campaign','target_id'=>$campaignId,'parameters'=>[
+        'plan_id'=>null,'source_kind'=>'lead','window_start'=>$sweepDate,'window_end'=>$sweepDate,'after'=>null,'max_pages'=>2]];
+    $goals->createGoal($actor,new \Platform\Orchestration\Goal\GoalSpecification($sweepGoal,$org,$owner,
+        'Record bounded native conversion sweep',[['id'=>$criterion,'operator'=>'at_least','expected'=>1]],[$sweepCap],1,null,null,'',[],['independent_plan','independent_action'],'always'));
+    $goals->proposePlan($actor,$sweepPlan,$sweepGoal,[['id'=>'sweep','capability_id'=>$sweepCap,'capability_version'=>'1.0.0','input'=>$input]]);
+    $deny(fn()=>$bridge->start($actor,$sweepRun,$sweepPlan,$sweepApproval),'Unapproved sweep plan started.');
+    $assert($captureStore->list($org,$campaignId,$sweepDate,$sweepDate,501,0)===[],'Plan proposal captured evidence before approval.');
+    $pdo->prepare('INSERT INTO cos_policies
+        (id,organization_id,code,name,action_type,conditions,decision,priority,version,status)
+        VALUES (?,?,"mkt-sweep-e2e","Marketing independent sweep approval",?,?,"APPROVAL_REQUIRED",1,1,"ACTIVE")')
+        ->execute([bin2hex(random_bytes(16)),$org,$sweepCap,'[]']);
+    $db->executeStatement('UPDATE cos_federation_plans SET state=:state WHERE organization_id=:org AND plan_id=:plan',
+        ['state'=>'approved','org'=>$org,'plan'=>$sweepPlan]);
+    $planJson=(string)$db->fetchOne('SELECT plan_json FROM cos_federation_plans WHERE organization_id=:org AND plan_id=:plan',['org'=>$org,'plan'=>$sweepPlan]);
+    $db->insert('cos_actions',[
+        'id'=>$sweepApproval,'organization_id'=>$org,'type'=>'cos.federation.plan.approval',
+        'target_type'=>'cos_federation_plan','target_id'=>$sweepPlan,
+        'parameters'=>json_encode(['goal_id'=>$sweepGoal,'plan_id'=>$sweepPlan,'specification_version'=>1,'plan_hash'=>hash('sha256',$planJson)],JSON_THROW_ON_ERROR),
+        'source_type'=>'USER','source_id'=>$owner,'status'=>'COMPLETED','execution_mode'=>'APPROVAL_REQUIRED','risk_level'=>'HIGH',
+        'idempotency_key'=>'plan-sweep:'.$token,'correlation_id'=>'mkt-sweep-plan-'.$token,
+    ]);
+    $db->insert('cos_policy_evaluations',[
+        'id'=>bin2hex(random_bytes(16)),'organization_id'=>$org,'action_id'=>$sweepApproval,
+        'decision'=>'APPROVAL_REQUIRED','correlation_id'=>'mkt-sweep-plan-'.$token,'evaluated_at'=>gmdate('Y-m-d H:i:s.u'),
+    ]);
+    $db->insert('cos_approvals',[
+        'id'=>bin2hex(random_bytes(16)),'organization_id'=>$org,'action_id'=>$sweepApproval,
+        'status'=>'APPROVED','approver_type'=>'USER','approver_id'=>$reviewer,'requested_by_type'=>'USER','requested_by_id'=>$owner,
+        'decided_by_type'=>'USER','decided_by_id'=>$reviewer,'decided_at'=>gmdate('Y-m-d H:i:s.u'),
+        'expires_at'=>(new DateTimeImmutable('+1 day'))->format('Y-m-d H:i:s.u'),
+    ]);
+    $assert($bridge->start($actor,$sweepRun,$sweepPlan,$sweepApproval)['execution_authority']==='platform_workflow','Sweep bypassed canonical workflow.');
+    $assert($bridge->advance($actor,$sweepRun,$sweepApproval)['state']==='running','Sweep run failed to start.');
+    $pending=$bridge->advance($actor,$sweepRun,$sweepApproval);
+    $assert($pending['state']==='awaiting_human_approval','Sweep not independently approved.');
+    $sweepAction=$pending['action_id'];
+    $assert($actionService->execute($org,$sweepAction,'sweep-unapproved')===null&&$captureStore->list($org,$campaignId,$sweepDate,$sweepDate,501,0)===[],'Unapproved sweep mutated evidence.');
+    $decisionId=(string)$db->fetchOne('SELECT id FROM cos_approvals WHERE organization_id=:org AND action_id=:action',['org'=>$org,'action'=>$sweepAction]);
+    $assert($approvalRepo->decide($org,$decisionId,ApprovalStatus::Approved,$reviewer,'CI verified sweep'),'Sweep Action independent approval failed.');
+    $actionService->queue($org,$sweepAction);
+    $out=$actionService->executeOutcome($org,$sweepAction,'sweep-approved');
+    $assert($out!==null&&$out->result->successful&&$out->result->data['scanned']===51&&$out->result->data['pages_processed']===2
+        &&$out->result->data['recorded_or_already_present']===51&&!$out->result->data['complete_coverage'],'Approved native sweep failed.');
+    $assert($actionService->execute($org,$sweepAction,'sweep-replay')===null,'Completed sweep replayed.');
+    $assert(count($captureStore->list($org,$campaignId,$sweepDate,$sweepDate,501,0))===51,'Sweep did not persist native evidence.');
+    $assert($bridge->advance($actor,$sweepRun,$sweepApproval)['state']==='step_completed','Sweep canonical receipt not attested.');
+    $assert($bridge->advance($actor,$sweepRun,$sweepApproval)['state']==='completed','Sweep workflow not completed.');
+    $evaluation=$goals->recordEvaluation($actor,'mkt-sweep-eval-'.$token,$sweepRun);
+    $assert(($evaluation['result']??null)==='satisfied'&&($evaluation['criteria'][0]['observed']??null)===1,'Sweep Goal native receipt did not satisfy outcome.');
+    $sweepKey=(string)$db->fetchOne('SELECT idempotency_key FROM cos_actions WHERE organization_id=? AND id=?',[$org,$sweepAction]);
+    $db->executeStatement('UPDATE marketing_attribution_capture_intents SET request_hash=? WHERE organization_id=? AND idempotency_key=?',
+        [str_repeat('0',64),$org,$sweepKey]);
+    $deny(fn()=>$sweepOutcome->observeRun($actor,$sweepRun,$criterion,new DateTimeImmutable('-1 day'),new DateTimeImmutable('+1 day')),'Tampered sweep scope accepted as outcome.');
+    echo "Marketing M4 canonical approved sweep Action, multipage native capture and independently read Goal receipt PASS (Plan evidence fixture).\n";
 } finally {
     if($oldRollout===false)putenv('COS_FEDERATION_CANONICAL_ORGANIZATION');
     else putenv('COS_FEDERATION_CANONICAL_ORGANIZATION='.$oldRollout);
