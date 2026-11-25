@@ -3084,6 +3084,13 @@ services:
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyHttpTransportInterface:
     alias: Domains\ProductManagement\Infrastructure\Shopify\CurlShopifyHttpTransport
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyReadClient: ~
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyAccessReadiness: ~
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifySeries01NativeAudit:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyDraftWritebackService:
+    arguments:
+      $connection: '@cos.database.pdo'
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyCommerceOrderSource: ~
   Domains\ProductManagement\Application\Contract\CommerceOrderSourcePort:
     alias: Domains\ProductManagement\Infrastructure\Shopify\ShopifyCommerceOrderSource
@@ -3131,10 +3138,12 @@ services:
   Domains\ProductManagement\Automation\Action\ProductStockCountSessionApplyHandler: ~
   Domains\ProductManagement\Automation\Action\ProductGovernedOperationHandler: ~
   Domains\ProductManagement\Automation\Action\ShopifyImportApplyHandler: ~
+  Domains\ProductManagement\Automation\Action\ShopifyDraftWritebackHandler: ~
   Domains\ProductManagement\Bootstrap\ProductManagementDomainModule:
     arguments:
       $importHandler: '@Domains\ProductManagement\Automation\Action\ProductImportApplyHandler'
       $shopifyHandler: '@Domains\ProductManagement\Automation\Action\ShopifyImportApplyHandler'
+      $writebackHandler: '@Domains\ProductManagement\Automation\Action\ShopifyDraftWritebackHandler'
       $stockCountHandler: '@Domains\ProductManagement\Automation\Action\ProductStockCountApplyHandler'
       $countSessionHandler: '@Domains\ProductManagement\Automation\Action\ProductStockCountSessionApplyHandler'
       $governedHandler: '@Domains\ProductManagement\Automation\Action\ProductGovernedOperationHandler'
