@@ -62,7 +62,8 @@ final readonly class SalesOrderRunOutcomeProvider implements RunScopedGoalOutcom
         if($type===SalesGovernedOrderHandler::PREFIX.'create'){
             $terms=SalesOrderTerms::normalize($p);$owner=$p['owner_id']??(int)$r['source_id'];$deal=$p['deal_id']??null;
             $native=$this->nativeReceipts->find($org,'order.native.create',$r['idempotency_key']);
-            $hash=hash('sha256',json_encode([(int)$r['source_id'],$owner,$deal,$terms],JSON_THROW_ON_ERROR));
+            $customer=$p['customer_id']??null;
+            $hash=hash('sha256',json_encode($customer===null?[(int)$r['source_id'],$owner,$deal,$terms]:[(int)$r['source_id'],$owner,$deal,$terms,$customer],JSON_THROW_ON_ERROR));
             if(!is_string($native)||!preg_match('/^([a-f0-9]{64}):([a-f0-9]{32})$/D',$native,$m)||!hash_equals($hash,$m[1]))
                 throw new DomainException('Native Order creation receipt differs from approved terms.');
             $order=$this->orders->get($org,$m[2]);$fact=$this->placements->placement($org,$m[2]);
@@ -72,7 +73,7 @@ final readonly class SalesOrderRunOutcomeProvider implements RunScopedGoalOutcom
             $observations=(array)$fact['attribution_observations'];ksort($observations,SORT_STRING);
             if($fact['organization_id']!==$org||$fact['order_id']!==$m[2]||$fact['correlation_id']!==$r['correlation_id'])
                 throw new DomainException('Native Order placement identity or correlation differs.');
-            if($fact['deal_id']!==$deal||$order['owner_id']!==$owner||$order['deal_id']!==$deal)
+            if($fact['deal_id']!==$deal||$order['owner_id']!==$owner||$order['deal_id']!==$deal||($customer!==null&&$order['customer_id']!==$customer))
                 throw new DomainException('Native Order relationship differs from approved terms.');
             if($fact['order_total']!==$terms['total']||$fact['currency']!==$terms['currency']||$order['total']!==$terms['total']||$order['currency']!==$terms['currency'])
                 throw new DomainException('Native Order money differs from approved terms.');
