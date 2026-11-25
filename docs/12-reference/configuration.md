@@ -27,7 +27,7 @@ generated: true
 | `product_management` | `0.1.0` | — | 28 |
 | `property` | `1.0.0` | `propertyModuleConfigurationProvisioner` | 25 |
 | `real_estate` | `1.0.0` | — | 6 |
-| `sales` | `1.0.0` | `salesModuleConfigurationProvisioner` | 74 |
+| `sales` | `1.0.0` | `salesModuleConfigurationProvisioner` | 81 |
 | `service` | `1.0.0` | — | 7 |
 
 ## `capital_markets`
