@@ -9,6 +9,8 @@ use DateTimeImmutable;
 use Doctrine\DBAL\Connection;
 use DomainException;
 use Domains\Sales\Application\Contract\SalesMutationReceiptRepositoryInterface;
+use Domains\Sales\Application\Contract\SalesActivityEvidenceReadPort;
+use Domains\Sales\Application\Service\SalesActivityOutcomeEvidence;
 use Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface;
 use Domains\Sales\Application\Support\DealStateSnapshot;
 use Domains\Sales\Automation\Action\SalesGovernedBusinessOperations;
@@ -35,6 +37,7 @@ final readonly class SalesBusinessRunOutcomeProvider implements RunScopedGoalOut
         private SalesWorkspaceReadModelInterface $sales,
         private SalesMutationReceiptRepositoryInterface $nativeReceipts,
         private DoctrineWorkflowActionReceiptVerifier $receipts,
+        private SalesActivityEvidenceReadPort $activityEvidence,
     ) {}
 
     public function domain(): string { return 'sales'; }
@@ -56,7 +59,8 @@ final readonly class SalesBusinessRunOutcomeProvider implements RunScopedGoalOut
         $evidence=[];
         foreach ($rows as $r) {
             if (!in_array($r['capability_id'],SalesGovernedBusinessOperations::types(),true)) continue;
-            if (!isset(self::DEAL_OPERATIONS[$r['capability_id']]) && $r['capability_id']!=='sales.governed.lead.state.manage')
+            if (!isset(self::DEAL_OPERATIONS[$r['capability_id']]) && $r['capability_id']!=='sales.governed.lead.state.manage'
+                && !SalesActivityOutcomeEvidence::supports($r['capability_id']))
                 throw new FederationOutcomeSourceNotReady('Independent native proof not yet available for every Sales operation in this Run.');
             if ($r['state']!=='completed'||$r['step_state']!=='completed'||!is_string($r['action_id']??null))
                 throw new FederationOutcomeSourceNotReady('Completed Sales business Run required.');
@@ -91,6 +95,10 @@ final readonly class SalesBusinessRunOutcomeProvider implements RunScopedGoalOut
                 ||($row['status']??null)!==$p['target_status'])
                 throw new FederationOutcomeSourceNotReady('Approved lead state is no longer observable.');
             return 'sales:lead:'.$id.':'.$key;
+        }
+        if (SalesActivityOutcomeEvidence::supports($type)) {
+            return (new SalesActivityOutcomeEvidence($this->activityEvidence,$this->nativeReceipts))
+                ->verify($org,$type,$user,(string)$r['target_id'],$key,$p);
         }
         $op=self::DEAL_OPERATIONS[$type];
         $id=$p['deal_id'];
