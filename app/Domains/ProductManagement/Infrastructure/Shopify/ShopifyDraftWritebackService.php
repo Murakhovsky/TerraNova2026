@@ -107,6 +107,33 @@ final readonly class ShopifyDraftWritebackService
         }
     }
 
+    public function audit(string $org,string $conn,string $product):array
+    {
+        $shop=$this->observations->connection($org,$conn);
+        $stmt=$this->connection->prepare('SELECT state,product_gid,variant_gid,payload_hash,updated_at FROM pm_shopify_outbound_receipts WHERE organization_id=? AND connection_id=? AND product_id=?');
+        $stmt->execute([$org,$conn,$product]);$receipt=$stmt->fetch(PDO::FETCH_ASSOC);
+        if($receipt===false)return ['state'=>'not_claimed','product_id'=>$product,'automatic_replay_authorized'=>false];
+        $plan=$this->preview($org,$conn,$product);
+        $token=$this->credentials->accessToken($shop['shop_domain'],$shop['secret_ref'],$org,$conn);
+        $remote=$this->reader->query($shop['shop_domain'],$token,self::LOOKUP,['identifier'=>['handle'=>$plan['variables']['input']['handle']]]);
+        $matches=false;$mapped=false;
+        try{
+            $gid=ShopifyOutboundPlanFactory::verifyDraftReadback($remote,$plan['variables']['input']['handle'],$plan['sku'],$plan['variables']['input']['variants'][0]['price']);
+            $variant=$remote['data']['product']['variants']['nodes'][0]['id']??null;
+            $matches=$gid===$receipt['product_gid']&&$variant===$receipt['variant_gid']
+                &&($remote['data']['product']['title']??null)===$plan['variables']['input']['title']
+                &&($remote['data']['product']['variants']['pageInfo']['hasNextPage']??null)===false;
+            $mapped=($this->observations->mapping($org,$conn,'product',$gid)['canonical_id']??null)===$product
+                &&is_string($variant)&&($this->observations->mapping($org,$conn,'variant',$variant)['canonical_id']??null)===$plan['native_variant_id'];
+        }catch(DomainException){}
+        $pinned=hash_equals($receipt['payload_hash'],self::digest($plan));
+        return ['state'=>$receipt['state'],'product_id'=>$product,'connection_id'=>$conn,
+            'remote_present'=>is_array($remote['data']['product']??null),'remote_matches_receipt'=>$matches,
+            'canonical_mapping_matches'=>$mapped,'current_payload_matches'=>$pinned,
+            'independent_verified'=>$receipt['state']==='verified'&&$matches&&$mapped&&$pinned,
+            'automatic_replay_authorized'=>false];
+    }
+
     public static function digest(array $plan):string
     {
         return hash('sha256',json_encode([$plan['payload_hash'],$plan['native_variant_id'],$plan['native_revision'],$plan['price_revision'],$plan['connection_id'],$plan['organization_id']],JSON_THROW_ON_ERROR));
