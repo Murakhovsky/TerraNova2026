@@ -257,6 +257,7 @@ $check($realStore->financialEvidence($org,$id)['net_collected_amount']==='100.00
 echo "Finance actual Action + canonical financial Workflow claim, worker, receipt and checkpoint candidate PASS (pinned Plan fixture; no production cutover).\n";
 
 // O5 source-side acceptance: durable, tenant-scoped lifecycle pagination and independent Finance.
+$placementId=$sales->placement($org,$id)['event_id'];
 $check($sales->lifecycleEvidence($org,$id)===['order_revision'=>1,'events'=>[],'next_after_revision'=>1,'has_more'=>false],
     'Placement must not be emitted again as a lifecycle event.');
 $check($sales->lifecycleEvidence('foreign-'.$org,$id)===null,'Foreign tenant lifecycle read exposed evidence.');
@@ -265,7 +266,7 @@ $deny(fn()=>$sales->lifecycleEvidence($org,$id,2));
 $deny(fn()=>$sales->lifecycleEvidence($org,$id,1,101));
 $confirm=['schema_version'=>'1.0.0','event_id'=>bin2hex(random_bytes(16)),'event_type'=>'sales.commerce.order.confirm',
     'organization_id'=>$org,'order_id'=>$id,'revision'=>2,'occurred_at'=>'2026-11-25T00:01:00.000000Z',
-    'previous_status'=>'placed','status'=>'confirmed','actor_id'=>101,'reference'=>'private-confirm-fixture',
+    'previous_status'=>'placed','status'=>'confirmed','actor_id'=>(int)$requester,'reference'=>'private-confirm-fixture',
     'effects'=>[],'financial_evidence_reference'=>null,'realized_revenue'=>null,'correlation_id'=>'fixture'];
 $cancel=[...$confirm,'event_id'=>bin2hex(random_bytes(16)),'event_type'=>'sales.commerce.order.cancel','revision'=>3,
     'occurred_at'=>'2026-11-25T00:02:00.000000Z','previous_status'=>'confirmed','status'=>'cancelled','reference'=>'private-cancel-fixture'];
@@ -288,6 +289,6 @@ $check(!isset($next['events'][0]['actor_id'],$next['events'][0]['reference'])&&
     !array_key_exists('actor_id',$next['events'][0])&&!array_key_exists('reference',$next['events'][0])&&
     !array_key_exists('realized_revenue',$next['events'][0]),'Lifecycle evidence leaked private or financial fields.');
 $check($sales->lifecycleEvidence($org,$id,3)['events']===[],'Exhausted lifecycle cursor repeated events.');
-$check($sales->placement($org,$id)['event_id']===$placed['event_id'],'Lifecycle changed placement identity.');
+$check($sales->placement($org,$id)['event_id']===$placementId,'Lifecycle changed placement identity.');
 $check($realStore->financialEvidence($org,$id)['net_collected_amount']==='100.00','Cancellation incorrectly changed Finance collection.');
 echo "Sales O5 lifecycle evidence pagination, rollback, tenant isolation and Finance independence PASS.\n";
