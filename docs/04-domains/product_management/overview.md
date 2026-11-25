@@ -114,9 +114,7 @@ COS Documents/Storage; `media.detach` видаляє тільки активне
 CSRF, окремі idempotency keys і native readback.
 
 Це UX для media references, **не** окреме файлове сховище: завантаження
-файлів і генерація thumbnails залишаються в Documents. Візуальний
-file-picker, previews, масштабна галерея та повне E7 UX acceptance
-ще потребують реалізації.
+файлів і генерація thumbnails залишаються в Documents. Візуальний tenant-scoped file-picker, пошук, пагінація, перевірені previews і завантаження через існуючу Documents command bus додані. Завантаження та прив'язка є двома окремими діями; від'єднання не видаляє файл. Browser acceptance нового UX ще потребує CI.
 
 ## Розширений нативний функціонал та приймання
 

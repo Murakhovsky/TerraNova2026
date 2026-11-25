@@ -27,4 +27,8 @@ $assert(substr_count($twig,'name="csrf_token"')>=7
     'Media forms or guarded routes missing.');
 $assert(str_contains($workflow,'php tests/architecture/product_management_media_workspace_contract.php'),
     'Media Workspace architecture CI gate missing.');
+foreach(['imagePreview','uploadMedia','ProductMediaBrowserPort','UploadDocumentCommand','getimagesizefromstring','Cache-Control'] as $required)
+    $assert(str_contains($controller,$required),'Missing verified image browser/upload: '.$required);
+foreach(['cos_product_management_image_preview:','cos_product_management_product_media_upload:'] as $required)
+    $assert(str_contains($routes,$required),'Missing image route: '.$required);
 echo "Product Management native media Workspace architecture passed.\n";

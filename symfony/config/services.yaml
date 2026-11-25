@@ -3065,6 +3065,8 @@ services:
       $connection: '@cos.database.pdo'
   Domains\ProductManagement\Application\Contract\ProductMediaFileReferenceInterface:
     alias: Domains\ProductManagement\Infrastructure\Media\ExistingDocumentsImageReference
+  Domains\ProductManagement\Application\Contract\ProductMediaBrowserPort:
+    alias: Domains\ProductManagement\Infrastructure\Media\ExistingDocumentsImageReference
   Domains\ProductManagement\Application\Service\ProductMediaService: ~
   Domains\ProductManagement\Application\Service\PricingService:
     arguments:

@@ -155,6 +155,18 @@ cos_product_management_variant_archive:
   methods: [POST]
   requirements: { id: '[a-f0-9]{32}', variantId: '[a-f0-9]{32}' }
 
+cos_product_management_image_preview:
+  path: /product-management/media/images/{fileId}
+  controller: App\Web\ProductManagement\ProductManagementPageController::imagePreview
+  methods: [GET]
+  requirements: { fileId: '[A-Za-z0-9_-]{1,80}' }
+
+cos_product_management_product_media_upload:
+  path: /product-management/products/{id}/media/upload
+  controller: App\Web\ProductManagement\ProductManagementPageController::uploadMedia
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
 cos_product_management_product_media_attach:
   path: /product-management/products/{id}/media
   controller: App\Web\ProductManagement\ProductManagementPageController::attachMedia

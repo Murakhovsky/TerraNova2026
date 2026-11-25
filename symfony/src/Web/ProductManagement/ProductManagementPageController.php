@@ -9,6 +9,10 @@ use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Shell\ShellBreadcrumb;
 use App\Web\Experience\Shell\WorkspaceShellFactory;
 use DomainException;
+use Domains\ProductManagement\Application\Contract\ProductMediaBrowserPort;
+use App\Application\Documents\Command\UploadDocumentCommand;
+use Kernel\Application\Bus\CommandBusInterface;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Observability\CorrelationId;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
@@ -33,6 +37,8 @@ final readonly class ProductManagementPageController
         private CanonicalCapabilityGateway $gateway,
         private SessionCsrfValidator $csrf,
         private WorkspaceShellFactory $shells,
+        private ProductMediaBrowserPort $imageBrowser,
+        private CommandBusInterface $documents,
     ) {}
 
     public function dashboard(Request $request):Response
@@ -154,7 +160,14 @@ final readonly class ProductManagementPageController
                 $quote=$this->read($actor,'price.resolve',$scope+['currency'=>$list['currency'],'quantity'=>$quoteQty]);
                 $listHistory=$this->read($actor,'price.list.history.search',['list_id'=>$list['list_id'],'variant_id'=>$listVariantId,'limit'=>30,'offset'=>($listHistoryPage-1)*30]);
             }
+            $mediaQuery=trim((string)$request->query->get('media_q',''));
+            $mediaPage=filter_var($request->query->get('media_page','1'),FILTER_VALIDATE_INT);
+            $selectedImage=(string)$request->query->get('media_file','');
+            if(mb_strlen($mediaQuery)>100||$mediaPage===false||$mediaPage<1||$mediaPage>1001
+                ||($selectedImage!==''&&!preg_match('/^[A-Za-z0-9_-]{1,80}$/D',$selectedImage)))return new Response('Invalid image filters.',422);
+            $imageCandidates=$this->imageBrowser->candidates($actor->organizationId()->value(),$mediaQuery,30,($mediaPage-1)*30);
             return $this->render($request,$actor,'product',[
+                'imageCandidates'=>$imageCandidates,'mediaQuery'=>$mediaQuery,'mediaPage'=>$mediaPage,'selectedImage'=>$selectedImage,
                 'product'=>$product,'categories'=>$categories['items']??[], 'prices'=>$prices,
                 'priceCurrency'=>$currency,'pricePage'=>$pricePage,
                 'priceHasNext'=>count($product['variants']??[])>$pricePage*30,
@@ -651,6 +664,46 @@ final readonly class ProductManagementPageController
             error_log('product_management.workspace.price_readback_uncertain '.$e::class);
             return new Response('Price receipt obtained; current state unverified. Reload before retrying.',503);
         }
+    }
+
+    public function imagePreview(string $fileId):Response
+    {
+        $actor=$this->manager();if($actor instanceof Response)return $actor;
+        try{
+            $image=$this->imageBrowser->preview($actor->organizationId()->value(),$fileId);
+            return new Response($image['bytes'],200,['Content-Type'=>$image['mime_type'],'Cache-Control'=>'private, no-store',
+                'X-Content-Type-Options'=>'nosniff','Content-Security-Policy'=>"default-src 'none'; sandbox",'X-Robots-Tag'=>'noindex, nofollow']);
+        }catch(DomainException){return new Response('Image unavailable.',404);}
+        catch(Throwable){return new Response('Image unavailable.',503);}
+    }
+
+    /** Upload only: the subsequent Product attachment is a separate canonical command. */
+    public function uploadMedia(Request $request,string $id):Response
+    {
+        $actor=$this->guardWrite($request);if($actor instanceof Response)return $actor;
+        $product=$this->checkedProduct($actor,$id);if($product instanceof Response)return $product;
+        if(($product['status']??null)==='archived')return new Response('Archived product cannot acquire media.',422);
+        $file=$request->files->get('image');
+        $key=(string)$request->request->get('idempotency_key','');
+        $user=$actor->userId()->value();
+        if(!$file instanceof UploadedFile||!$file->isValid()||!preg_match('/^[a-f0-9]{32}$/D',$key)
+            ||!ctype_digit($user)||(int)$user<1||$file->getSize()<1||$file->getSize()>10485760)
+            return new Response('Valid image and operation key required (max 10 MiB).',422);
+        try{
+            $bytes=$file->getContent();
+            if(strlen($bytes)<1||strlen($bytes)>10485760)throw new DomainException('Invalid image size.');
+            $mime=(new \finfo(FILEINFO_MIME_TYPE))->buffer($bytes);
+            if(!in_array($mime,['image/jpeg','image/png','image/webp','image/gif'],true)||@getimagesizefromstring($bytes)===false)
+                throw new DomainException('Invalid image.');
+            $name=mb_substr($file->getClientOriginalName(),0,180);
+            $document=$this->documents->dispatch(new UploadDocumentCommand($actor->organizationId(),(int)$user,
+                CorrelationId::generate()->value(),'pm-media-upload-'.$key,['title'=>$name,'filename'=>$name,'mime_type'=>$mime,'content_base64'=>base64_encode($bytes)]));
+            $fileId=$document['current_file_id']??null;
+            if(!is_string($fileId)||!preg_match('/^[A-Za-z0-9_-]{1,80}$/D',$fileId))throw new DomainException('Documents receipt missing.');
+            $this->imageBrowser->preview($actor->organizationId()->value(),$fileId);
+            return $this->go('/product-management/products/'.$id.'?media_file='.rawurlencode($fileId).'&notice=image_uploaded#product-media');
+        }catch(DomainException|\InvalidArgumentException){return new Response('Image upload blocked. No Product attachment made.',422);}
+        catch(Throwable){return new Response('Upload outcome uncertain. Inspect Documents before retrying. No Product attachment attempted.',503);}
     }
 
     public function attachMedia(Request $request,string $id):Response
