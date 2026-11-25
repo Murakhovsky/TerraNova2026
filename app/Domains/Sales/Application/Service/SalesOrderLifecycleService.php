@@ -20,13 +20,16 @@ final readonly class SalesOrderLifecycleService
     public function __construct(private SalesOrderRepositoryInterface $orders,private SalesOrderLifecycleRepositoryInterface $lifecycle,
         private SalesMutationReceiptRepositoryInterface $receipts,private SalesMutationGuard $guard,
         private SalesMutationAuthorityInterface $authority,private SalesEntityScopeService $scope,
-        private OrderInventoryPort $inventory,private ActiveModuleResolver $modules,private \Domains\Sales\Application\Contract\SalesOrderSourceRepositoryInterface $sources){}
+        private OrderInventoryPort $inventory,private ActiveModuleResolver $modules,private \Domains\Sales\Application\Contract\SalesOrderSourceRepositoryInterface $sources,
+        private ?\Domains\Finance\Application\Contract\CommerceOrderFinancialEvidenceReadPort $finance=null){}
 
     public function read(string $org,int $actor,string $id):array
     {
         return $this->guard->run($org,$actor,function()use($org,$actor,$id):array{
             $order=$this->locked($org,$actor,$id);
-            return $this->view($org,$order,false);
+            $view=$this->view($org,$order,false);
+            $view['financial_review']=$this->financialReview($org,$order,$view);
+            return $view;
         });
     }
     public function execute(string $org,int $actor,string $operation,array $input,string $key,string $correlation):array
@@ -163,6 +166,43 @@ final readonly class SalesOrderLifecycleService
             'unallocated_quantity'=>$order['status']==='cancelled'?0:$total-$fulfilled-$reserved,
             'fulfillment_state'=>$external?'external_review':($fulfilled===0?'unfulfilled':($fulfilled===$total?'fulfilled':'partial')),
             'return_state'=>$returned===0?'none':($returned===$fulfilled?'returned':'partial'),'allocations'=>$allocations,'replayed'=>$replayed];
+    }
+    /** Read-only commercial review, never a refund instruction or accounting settlement. */
+    private function financialReview(string $org,array $order,array $view):array
+    {
+        $evidence=$this->finance?->financialEvidence($org,$order['order_id']);
+        $reasons=[];
+        if($view['status']==='cancelled')$reasons[]='cancelled_order';
+        if($view['returned_quantity']>0)$reasons[]='returned_items';
+        if($view['inventory_authority']==='external_review')$reasons[]='external_order';
+        $state='unverified';$reference=null;$revision=null;$net=null;
+        if($evidence!==null){
+            if(($evidence['organization_id']??null)!==$org||($evidence['order_id']??null)!==$order['order_id']||
+                ($evidence['currency']??null)!==$order['currency']||($evidence['schema_version']??null)!=='1.0.0'||
+                !is_int($evidence['revision']??null)||$evidence['revision']<1||
+                !is_string($evidence['evidence_reference']??null)||!preg_match('/^[a-f0-9]{32}$/D',$evidence['evidence_reference']))
+                throw new DomainException('Financial evidence identity mismatch.');
+            $reference=$evidence['evidence_reference'];$revision=$evidence['revision'];
+            $net=$evidence['net_collected_amount']??null;
+            $amount=self::minor($net);$placed=self::minor($order['total']);
+            $state=match(true){
+                $amount>$placed=>'above_placed',
+                $amount===$placed=>'equal_to_placed',
+                $amount===0=>'zero_net',
+                default=>'partial',
+            };
+            if(self::minor($evidence['chargeback_amount']??null)>0)$reasons[]='chargeback';
+            if($state==='above_placed')$reasons[]='excess_collection';
+        }
+        return ['collection_state'=>$state,'currency'=>$order['currency'],'placed_amount'=>$order['total'],
+            'net_collected_amount'=>$net,'finance_evidence_reference'=>$reference,'finance_revision'=>$revision,
+            'review_required'=>$reasons!==[],'review_reasons'=>$reasons];
+    }
+    private static function minor(mixed $amount):int
+    {
+        if(!is_string($amount)||!preg_match('/^(0|[1-9][0-9]{0,11})\.[0-9]{2}$/D',$amount))
+            throw new DomainException('Exact financial evidence amount required.');
+        return (int)str_replace('.','',$amount);
     }
     private function items(string $op,mixed $rows):array
     {
