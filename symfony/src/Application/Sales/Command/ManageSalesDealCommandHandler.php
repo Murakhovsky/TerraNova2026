@@ -56,7 +56,7 @@ final readonly class ManageSalesDealCommandHandler implements CommandHandlerInte
                 $changed=($result->data['changed']??false)===true;
             } else {
                 $result=$this->stages->execute(new ChangeDealStageCommand($org,(string)$id,$input['target_stage_id'],'USER',(string)$command->actorId,
-                    $command->correlationId,$input['lost_reason_id']??null,null,$before['stage_id'],$input['outcome']??null));
+                    $command->correlationId,$input['lost_reason_id']??null,null,$before['stage_id'],$input['outcome']??null,$command->approvedAction));
                 if (!$result->successful) throw new DomainException($result->reason??'Stage transition denied.');
                 $changed=$result->changed;
             }

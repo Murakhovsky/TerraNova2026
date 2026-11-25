@@ -107,7 +107,10 @@ final readonly class SalesGovernedBusinessHandler implements IdempotentExternalA
                 }
                 $this->policy->authorize($actor, $native, $action->parameters);
                 $data = $this->policy->execute($actor, $native, $action->parameters,
-                    fn () => $adapter->invoke($actor, $action->parameters, $this->idempotencyKey($action), $action->correlationId));
+                    fn () => ($adapter instanceof \App\Infrastructure\Capability\SalesPipelineStageManageAdapter
+                        || $adapter instanceof \App\Infrastructure\Capability\SalesDealOutcomeRecordAdapter)
+                        ? $adapter->invoke($actor,$action->parameters,$this->idempotencyKey($action),$action->correlationId,$action)
+                        : $adapter->invoke($actor,$action->parameters,$this->idempotencyKey($action),$action->correlationId));
                 if (!is_array($data)) throw new DomainException('Native Sales result missing.');
                 return $data;
             });

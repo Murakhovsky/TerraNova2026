@@ -9,5 +9,5 @@ use Kernel\Shared\Domain\OrganizationId;
 final readonly class ManageSalesDealCommand implements CommandInterface
 {
     public function __construct(public OrganizationId $organizationId,public int $actorId,
-        public string $operation,public array $input,public string $idempotencyKey,public string $correlationId) {}
+        public string $operation,public array $input,public string $idempotencyKey,public string $correlationId,public ?\Kernel\Action\Action $approvedAction=null) {}
 }
