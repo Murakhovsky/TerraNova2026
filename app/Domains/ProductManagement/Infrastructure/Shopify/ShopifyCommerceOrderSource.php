@@ -18,12 +18,6 @@ query COSCommerceOrder($id: ID!) {
   order(id: $id) {
     id createdAt updatedAt cancelledAt test edited taxesIncluded
     displayFinancialStatus displayFulfillmentStatus
-    customerJourneySummary {
-      ready firstVisit { id occurredAt utmParameters { source medium campaign } }
-      lastVisit { id occurredAt utmParameters { source medium campaign } }
-      momentsCount { count precision }
-      moments(first: 100) { nodes { occurredAt ... on CustomerVisit { id utmParameters { source medium campaign } } } pageInfo { hasNextPage hasPreviousPage } }
-    }
     originalTotalPriceSet { shopMoney { amount currencyCode } }
     totalPriceSet { shopMoney { amount currencyCode } }
     currentTotalPriceSet { shopMoney { amount currencyCode } }
@@ -33,6 +27,29 @@ query COSCommerceOrder($id: ID!) {
     lineItems(first: 100) {
       nodes { id quantity sku product { id } variant { id } originalUnitPriceSet { shopMoney { amount currencyCode } } }
       pageInfo { hasNextPage endCursor }
+    }
+  }
+}
+GQL;
+    private const JOURNEY=<<<'GQL'
+query COSCommerceOrderJourney($id: ID!) {
+  currentAppInstallation { accessScopes { handle } }
+  order(id: $id) {
+    id createdAt
+    customerJourneySummary { ready lastVisit { occurredAt utmParameters { source medium campaign } } }
+  }
+}
+GQL;
+    private const HISTORY=<<<'GQL'
+query COSCommerceOrderHistory($id: ID!) {
+  currentAppInstallation { accessScopes { handle } }
+  order(id: $id) {
+    id createdAt
+    customerJourneySummary {
+      ready firstVisit { id occurredAt utmParameters { source medium campaign } }
+      lastVisit { id occurredAt utmParameters { source medium campaign } }
+      momentsCount { count precision }
+      moments(first: 100) { nodes { occurredAt ... on CustomerVisit { id utmParameters { source medium campaign } } } pageInfo { hasNextPage hasPreviousPage } }
     }
   }
 }
@@ -82,9 +99,15 @@ GQL;
         $cancelled=$raw['cancelledAt']===null?null:self::time($raw['cancelledAt']);
         $items=$this->allLines($c['shop_domain'],$token,$externalId,$updated,$raw['lineItems']??null);
         $raw['lineItems']=$items;
-        $journey=self::journey($raw['customerJourneySummary']??null,$created);
-        $journeyHistory=self::journeyHistory($raw['customerJourneySummary']??null,$created,$externalId);
-        unset($raw['customerJourneySummary']); // Journey readiness may change independently of the Order updatedAt.
+        // Optional attribution scopes must not prevent a valid commercial import.
+        // Keep last-visit evidence independent of the larger moments query and order revision.
+        unset($raw['customerJourneySummary']);
+        $summary=$this->optionalJourney($c['shop_domain'],$token,$externalId,$created,self::JOURNEY);
+        $journey=self::journey($summary,$created);
+        $historySummary=$this->optionalJourney($c['shop_domain'],$token,$externalId,$created,self::HISTORY);
+        $journeyHistory=self::journeyHistory($historySummary,$created,$externalId);
+        // A different last visit during the two observations requires a fresh source read.
+        if($journeyHistory!==null&&self::journey($historySummary,$created)!==$journey)$journeyHistory=null;
         $reason=null;$terms=null;
         if($raw['test'])$reason='test_order';
         elseif($raw['edited']||$cancelled!==null||$current!==$original||$beforeReturns!==$original||in_array($financial,['REFUNDED','PARTIALLY_REFUNDED','VOIDED'],true))$reason='historical_or_changed_terms';
@@ -206,6 +229,20 @@ GQL;
     }
 
     /** No raw landing URL, identifiers, contact fields or arbitrary UTM values leave the provider boundary. */
+    private function optionalJourney(string $shop,string $token,string $order,string $created,string $query):?array
+    {
+        try{
+            $data=$this->read->query($shop,$token,$query,['id'=>$order])['data'];
+            self::assertOrderScope($data);
+            $row=$data['order']??null;
+            if(!is_array($row)||($row['id']??null)!==$order||self::time($row['createdAt']??null)!==$created)return null;
+            return is_array($row['customerJourneySummary']??null)?$row['customerJourneySummary']:null;
+        }catch(DomainException|\JsonException){
+            // GraphQL protected-data permission or optional provider failure is unavailable evidence,
+            // not an invalid canonical placement. No provider error/PII is persisted.
+            return null;
+        }
+    }
     private static function journeyHistory(mixed $summary,string $placed,string $order):?array
     {
         if(!is_array($summary)||($summary['ready']??null)!==true)return null;

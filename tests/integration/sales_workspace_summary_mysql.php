@@ -71,7 +71,7 @@ try{
     $shopStore->map($org,$conn,'product','gid://shopify/Product/41',str_repeat('a',32));
     $shopStore->map($org,$conn,'variant','gid://shopify/ProductVariant/42',str_repeat('b',32));
     $http=new class implements \Domains\ProductManagement\Infrastructure\Shopify\ShopifyHttpTransportInterface {
-        public bool $journeyReady=false;public string $journeyCampaign='mkt-aaaaaaaaaaaaaaaaaaaaaaaa';
+        public bool $journeyReady=false;public bool $historyDenied=false;public bool $journeyDenied=false;public string $journeyCampaign='mkt-aaaaaaaaaaaaaaaaaaaaaaaa';
         public int $reads=0;public string $updated='2026-11-24T10:00:00Z';public string $financial='PAID';
         public string $current='120.00';public bool $edited=false;public bool $fail=false;public bool $unmapped=false;public bool $truncated=false;public bool $multi=false;public bool $revisionShift=false;public bool $pageMode=false;public bool $temporaryFailure=false;
         public function post(string $url,array $headers,string $body):array
@@ -85,6 +85,10 @@ try{
             if($this->fail)return ['status'=>403,'body'=>'{}'];
             $money=static fn(string $amount)=>['shopMoney'=>['amount'=>$amount,'currencyCode'=>'EUR']];
             $data=['currentAppInstallation'=>['accessScopes'=>[['handle'=>'read_orders']]]];
+            if(($this->historyDenied&&str_contains($request['query'],'COSCommerceOrderHistory'))
+                ||($this->journeyDenied&&str_contains($request['query'],'COSCommerceOrderJourney'))){
+                return ['status'=>200,'body'=>'{"errors":[{"message":"Protected data unavailable","extensions":{"code":"ACCESS_DENIED"}}]}'];
+            }
             if(str_contains($request['query'],'COSCommerceOrderPage')){
                 $cursor=$request['variables']['after']??null;
                 if($this->pageMode){
@@ -421,7 +425,11 @@ try{
     $same=$runSource($sourceInput,'same-'.$token);
     $check($same['outcome']==='unchanged'&&$same['order_id']===$externalOrderId,'Source identity duplicated across keys.');
     $check($orderRepo->journey($org,$externalOrderId)===null,'Unready journey accepted.');
-    $http->journeyReady=true;
+    $http->journeyReady=true;$http->historyDenied=true;
+    $partialJourney=$runSource($sourceInput,'journey-history-denied-'.$token);
+    $check($partialJourney['outcome']==='unchanged'&&$orderRepo->journey($org,$externalOrderId)['state']==='observed'
+        &&$orderRepo->touchHistory($org,$externalOrderId)===null,'Optional protected history blocked native order or last visit.');
+    $http->historyDenied=false;
     $late=$runSource($sourceInput,'journey-ready-'.$token);
     $j=$orderRepo->journey($org,$externalOrderId);
     $check($late['outcome']==='unchanged'&&$j['state']==='observed'&&$j['utm_campaign']===$http->journeyCampaign
@@ -435,7 +443,9 @@ try{
     $runSource($sourceInput,'journey-conflict-'.$token);
     $check($orderRepo->journey($org,$externalOrderId)===['state'=>'conflict'],'Conflicting journey silently reassigned.');
     $check($orderRepo->touchHistory($org,$externalOrderId)===['state'=>'conflict'],'Conflicting complete history silently reassigned.');
-    $http->journeyReady=false;
+    $http->journeyDenied=true;$http->historyDenied=true;
+    $check($runSource($sourceInput,'journey-both-denied-'.$token)['outcome']==='unchanged','Optional protected customer data blocked native commercial reconciliation.');
+    $http->journeyDenied=false;$http->historyDenied=false;$http->journeyReady=false;
     $check($orderRepo->placement($org,$externalOrderId)['realized_revenue']===null,'Journey implied financial revenue.');
     echo "Sales O5 Shopify delayed journey, independent order revision, tenant, replay and conflict PASS.\n";
     $http->financial='REFUNDED';$http->current='0.00';$http->updated='2026-11-24T11:00:00Z';
