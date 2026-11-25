@@ -63,7 +63,7 @@ final readonly class MarketingCommerceAttributionService
         MarketingAttributionPolicy::window($from,$to);$p=$this->scope($actor,$campaign,$plan);$org=$actor->organizationId()->value();
         $rows=$this->orders->list($org,$campaign,$plan,$from,$to);
         if(count($rows)>500)throw new DomainException('Commerce cohort exceeds 500 captured orders; narrow date window.');
-        $counts=[];$money=[];$count=0;$unresolved=0;$plans=[];$confirmed=[];$financialCount=0;$financialInvalid=0;
+        $counts=[];$money=[];$count=0;$unresolved=0;$plans=[];$confirmed=[];$financialCount=0;$financialInvalid=0;$lifecycleCount=0;$lifecycleInvalid=0;$lifecycleUnavailable=0;$statuses=['placed'=>0,'confirmed'=>0,'cancelled'=>0,'completed'=>0];$returnedOrders=0;
         foreach($rows as $r){
             try{
                 $id=$r['plan_id'];$bound=$p;
@@ -78,6 +78,13 @@ final readonly class MarketingCommerceAttributionService
             $k=$fresh['channel'].'/'.$fresh['utm_source'].'/'.$fresh['utm_medium'].'/'.$fresh['basis'];
             $counts[$k]??=['channel'=>$fresh['channel'],'source'=>$fresh['utm_source'],'medium'=>$fresh['utm_medium'],'basis'=>$fresh['basis'],'orders'=>0];
             $counts[$k]['orders']++;
+            try{
+                $state=$this->source instanceof \Domains\Marketing\Application\Contract\MarketingCommerceLifecycleReadPort
+                    ?\Domains\Marketing\Domain\MarketingCommerceLifecyclePolicy::project($org,$fresh['order_id'],
+                        fn(int $cursor,int $limit)=>$this->source->lifecycle($actor,$fresh['order_id'],$cursor,$limit)):null;
+                if($state===null)$lifecycleUnavailable++;
+                else{$lifecycleCount++;$statuses[$state['status']]++;if($state['returned_quantity']>0)$returnedOrders++;}
+            }catch(DomainException|\LogicException $e){$lifecycleInvalid++;}
             try{
                 $f=$this->financial?->financial($actor,$fresh['order_id']);
                 if($f!==null){
@@ -97,6 +104,9 @@ final readonly class MarketingCommerceAttributionService
             'financial_evidence_count'=>$financialCount,'financial_evidence_invalid_count'=>$financialInvalid,
             'financial_evidence_status'=>$complete?'COMPLETE_CAPTURED_COHORT':($financialCount>0?'PARTIAL':($count>0||$unresolved>0?'NO_EVIDENCE':'NO_CAPTURED_ORDERS')),
             'confirmed_financial_totals'=>array_values($confirmed),
+            'lifecycle'=>['coverage'=>$lifecycleCount===$count&&$count>0&&$unresolved===0?'COMPLETE_CAPTURED_COHORT':($lifecycleCount>0?'PARTIAL':'UNAVAILABLE'),
+                'evidence_count'=>$lifecycleCount,'unavailable_count'=>$lifecycleUnavailable,'invalid_count'=>$lifecycleInvalid,
+                'current_status_counts'=>$statuses,'orders_with_returns'=>$returnedOrders],
             'roas'=>null,'causal_attribution'=>false,'deduplicated_against_deals'=>false];
     }
 }

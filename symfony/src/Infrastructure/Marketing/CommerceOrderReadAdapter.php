@@ -3,21 +3,30 @@ declare(strict_types=1);
 namespace App\Infrastructure\Marketing;
 use DomainException;
 use Domains\Marketing\Application\Contract\MarketingCommerceOrderReadPort;
+use Domains\Marketing\Application\Contract\MarketingCommerceLifecycleReadPort;
+use Domains\Sales\Application\Contract\SalesCommerceOrderLifecycleEvidencePort;
 use Domains\Sales\Application\Contract\SalesCommerceOrderEvidencePort;
 use Domains\Sales\Application\Contract\SalesCommerceOrderJourneyReadPort;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Tenant\Model\TenantContext;
-final readonly class CommerceOrderReadAdapter implements MarketingCommerceOrderReadPort
+final readonly class CommerceOrderReadAdapter implements MarketingCommerceOrderReadPort, MarketingCommerceLifecycleReadPort
 {
     // The two independently developed releases may be installed in either order.
     // Missing source is unavailable, never an empty or zero-sales report.
     public function __construct(private ActiveModuleResolver $modules,
         private ?SalesCommerceOrderEvidencePort $placements=null,
-        private ?SalesCommerceOrderJourneyReadPort $journeys=null){}
+        private ?SalesCommerceOrderJourneyReadPort $journeys=null,
+        private ?SalesCommerceOrderLifecycleEvidencePort $lifecycleEvidence=null){}
     public function assertAvailable(TenantContext $actor):void
     {
         if(!$this->modules->isEnabled($actor->organizationId()->value(),'sales')||$this->placements===null||$this->journeys===null)
             throw new DomainException('Native Sales commerce attribution source unavailable.');
+    }
+    public function lifecycle(TenantContext $actor,string $orderId,int $afterRevision,int $limit):?array
+    {
+        $this->assertAvailable($actor);
+        if(!preg_match('/^[a-f0-9]{32}$/D',$orderId))throw new DomainException('Invalid native Order ID.');
+        return $this->lifecycleEvidence?->lifecycleEvidence($actor->organizationId()->value(),$orderId,$afterRevision,$limit);
     }
     public function get(TenantContext $actor,string $orderId):?array
     {

@@ -112,7 +112,9 @@ $ad=$mediaStore->commit($org,'42','m4-media-ad-key',hash('sha256','media-ad'),$a
 $assert($ad['grain']==='ad'&&$ad['rows'][0]['external_id']==='90002','Native ad-grain receipt failed.');
 echo "Marketing M4 immutable complete provider batch, revised/empty scope, ad grain and tenant MySQL PASS\n";
 
-$commerceSource=new class implements \Domains\Marketing\Application\Contract\MarketingCommerceOrderReadPort {
+$commerceSource=new class implements \Domains\Marketing\Application\Contract\MarketingCommerceOrderReadPort, \Domains\Marketing\Application\Contract\MarketingCommerceLifecycleReadPort {
+    public array $lifecycleFacts=[];
+    public function lifecycle(\Kernel\Tenant\Model\TenantContext $actor,string $orderId,int $afterRevision,int $limit):?array{return $this->lifecycleFacts[$actor->organizationId()->value()][$orderId]??null;}
     public array $facts=[];public bool $available=true;
     public function assertAvailable(\Kernel\Tenant\Model\TenantContext $actor):void{
         if(!$this->available)throw new DomainException('Source unavailable.');
@@ -142,6 +144,26 @@ $assert($commerce->capture($actor,$c2,null,[$shopId,$badId,$orderId],'m4-commerc
 $r=$commerce->report($actor,$c2,null,'2026-01-01','2026-01-02');
 $assert($r['placed_orders']===2&&$r['placed_order_value']===[['currency'=>'EUR','minor'=>12550],['currency'=>'USD','minor'=>2000]]
     &&$r['recognized_revenue']===null&&$r['roas']===null&&!$r['deduplicated_against_deals'],'Commerce value or money semantics invalid.');
+$assert($r['lifecycle']['coverage']==='UNAVAILABLE'&&$r['lifecycle']['unavailable_count']===2,'Missing lifecycle source represented as placed orders.');
+$ev=static fn(string $id,int $revision,string $type,string $before,string $after,int $qty):array=>[
+    'schema_version'=>'1.0.0','organization_id'=>$org,'order_id'=>$orderId,'event_id'=>$id,'revision'=>$revision,
+    'event_type'=>'sales.commerce.order.'.$type,'occurred_at'=>'2026-01-02T11:00:00.000000Z',
+    'previous_status'=>$before,'status'=>$after,'effect_quantity'=>$qty];
+$events=[$ev(str_repeat('4',32),2,'confirm','placed','confirmed',0),
+    $ev(str_repeat('5',32),3,'fulfill','confirmed','confirmed',2),
+    $ev(str_repeat('6',32),4,'cancel','confirmed','cancelled',1),
+    $ev(str_repeat('7',32),5,'return','cancelled','cancelled',1)];
+$commerceSource->lifecycleFacts[$org][$orderId]=['order_revision'=>5,'events'=>$events,'next_after_revision'=>5,'has_more'=>false];
+$commerceSource->lifecycleFacts[$org][$shopId]=['order_revision'=>1,'events'=>[],'next_after_revision'=>1,'has_more'=>false];
+$lifeReport=$commerce->report($actor,$c2,null,'2026-01-01','2026-01-02');
+$assert($lifeReport['placed_orders']===2&&$lifeReport['lifecycle']['coverage']==='COMPLETE_CAPTURED_COHORT'&&
+    $lifeReport['lifecycle']['current_status_counts']['cancelled']===1&&$lifeReport['lifecycle']['orders_with_returns']===1&&
+    $lifeReport['recognized_revenue']===null,'Lifecycle correction rewrote placement or manufactured revenue.');
+$commerceSource->lifecycleFacts[$org][$orderId]['events'][1]['event_id']=$events[0]['event_id'];
+$lifeReport=$commerce->report($actor,$c2,null,'2026-01-01','2026-01-02');
+$assert($lifeReport['lifecycle']['coverage']==='PARTIAL'&&$lifeReport['lifecycle']['invalid_count']===1&&
+    $lifeReport['lifecycle']['current_status_counts']['cancelled']===0,'Invalid lifecycle replay counted.');
+$commerceSource->lifecycleFacts[$org][$orderId]['events']=$events;
 $commerceSource->facts[$org][$shopId]['journey']=['state'=>'conflict'];
 $r=$commerce->report($actor,$c2,null,'2026-01-01','2026-01-02');
 $assert($r['placed_orders']===1&&$r['unresolved_captured_orders']===1,'Conflicting source not quarantined.');
@@ -187,7 +209,8 @@ if(interface_exists(\Domains\Sales\Application\Contract\SalesOrderJourneyStore::
             ['model'=>'shopify-last-visit-utm-v1','visit_at'=>'2026-01-01T10:00:00.000000Z',...$tag]);
         $db->commit();
     }catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}
-    $nativeSource=new \App\Infrastructure\Marketing\CommerceOrderReadAdapter($modules,$nativeRepo,$nativeRepo);
+    $nativeSource=new \App\Infrastructure\Marketing\CommerceOrderReadAdapter($modules,$nativeRepo,$nativeRepo,
+        $nativeRepo instanceof \Domains\Sales\Application\Contract\SalesCommerceOrderLifecycleEvidencePort?$nativeRepo:null);
     $nativeCommerce=new \Domains\Marketing\Application\Service\MarketingCommerceAttributionService($campaignService,$plans,$nativeSource,$commerceStore,$store,$modules);
     $r=$nativeCommerce->capture($actor,$c2,null,[$nativeId],'m4-native-order-join');
     $assert($r['results'][0]['state']==='RECORDED','Native Sales -> Marketing commerce integration failed.');

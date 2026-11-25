@@ -21,7 +21,8 @@
     "financial_evidence_count",
     "financial_evidence_invalid_count",
     "financial_evidence_status",
-    "confirmed_financial_totals"
+    "confirmed_financial_totals",
+    "lifecycle"
   ],
   "properties": {
     "model": {
@@ -224,6 +225,72 @@
             "type": "integer",
             "minimum": 0
           }
+        }
+      }
+    },
+    "lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "coverage",
+        "evidence_count",
+        "unavailable_count",
+        "invalid_count",
+        "current_status_counts",
+        "orders_with_returns"
+      ],
+      "properties": {
+        "coverage": {
+          "type": "string",
+          "enum": [
+            "COMPLETE_CAPTURED_COHORT",
+            "PARTIAL",
+            "UNAVAILABLE"
+          ]
+        },
+        "evidence_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unavailable_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "invalid_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "current_status_counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "placed",
+            "confirmed",
+            "cancelled",
+            "completed"
+          ],
+          "properties": {
+            "placed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "confirmed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "cancelled": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "completed": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "orders_with_returns": {
+          "type": "integer",
+          "minimum": 0
         }
       }
     }

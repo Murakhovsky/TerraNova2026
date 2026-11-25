@@ -2765,6 +2765,7 @@ services:
     arguments:
       $placements: '@?Domains\Sales\Application\Contract\SalesCommerceOrderEvidencePort'
       $journeys: '@?Domains\Sales\Application\Contract\SalesCommerceOrderJourneyReadPort'
+      $lifecycleEvidence: '@?Domains\Sales\Application\Contract\SalesCommerceOrderLifecycleEvidencePort'
   Domains\Marketing\Application\Contract\MarketingCommerceOrderReadPort:
     alias: App\Infrastructure\Marketing\CommerceOrderReadAdapter
   Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingCommerceAttributionStore:
