@@ -7,6 +7,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use DomainException;
 use Domains\Finance\Application\Contract\FinanceBudgetRepositoryInterface;
+use Domains\Finance\Application\Contract\FinancePaidExposureClaimStore;
 use Domains\Finance\Domain\BudgetControlPolicy;
 use PDO;
 use PDOException;
@@ -17,7 +18,7 @@ use Throwable;
  * Every financial mutation: single tenant, explicit row lock, immutable event,
  * stable idempotency receipt and one transaction.
  */
-final readonly class MysqlFinanceBudgetRepository implements FinanceBudgetRepositoryInterface
+final readonly class MysqlFinanceBudgetRepository implements FinanceBudgetRepositoryInterface,FinancePaidExposureClaimStore
 {
     public function __construct(private PDO $connection){}
 
@@ -129,6 +130,7 @@ final readonly class MysqlFinanceBudgetRepository implements FinanceBudgetReposi
             $receipt=$this->receipt($org,'release',$key,$hash);
             if($receipt!==null)return $this->requireReservation($org,$receipt);
             if($row['state']!=='RESERVED')throw new DomainException('Only an outstanding reservation can be released.');
+            if($this->readExposure($org,$reservationId,true)!==null)throw new DomainException('Claimed provider exposure requires independent reconciliation; release is blocked.');
             $this->connection->prepare("UPDATE cos_finance_budget_reservations SET state='RELEASED',released_at=UTC_TIMESTAMP(6) WHERE organization_id=? AND id=?")
                 ->execute([$org,$reservationId]);
             $this->connection->prepare('UPDATE cos_finance_budget_envelopes SET reserved_minor=reserved_minor-?,revision=revision+1 WHERE organization_id=? AND id=?')
@@ -152,6 +154,69 @@ final readonly class MysqlFinanceBudgetRepository implements FinanceBudgetReposi
             $this->saveReceipt($org,'freeze',$key,$hash,$id);
             $this->event($org,$id,null,'ENVELOPE_FROZEN',0,$actor,$action,$trace,self::digest(['hash'=>$hash,'reason'=>$reason]));
             return $this->requireEnvelope($org,$id);
+        });
+    }
+
+    public function assertActiveExposure(string $org,string $envelopeId,string $reservationId,string $action):void
+    {
+        $this->transaction(function()use($org,$envelopeId,$reservationId,$action):void{
+            $e=$this->lockedEnvelope($org,$envelopeId);$r=$this->lockedReservation($org,$reservationId);
+            $claim=$this->readExposure($org,$reservationId,true);$today=self::utcToday();
+            if($claim===null||$claim['action_id']!==$action||$claim['envelope_id']!==$envelopeId
+                ||$r['envelope_id']!==$envelopeId||$e['state']!=='ACTIVE'||$r['state']!=='RESERVED'
+                ||$e['period_start']>$today||$e['period_end']<$today||$claim['amount_minor']!==(int)$r['amount_minor']
+                ||(int)$e['reserved_minor']<$claim['amount_minor']){
+                throw new DomainException('Finance exposure no longer active.');
+            }
+        });
+    }
+
+    public function exposure(string $org,string $reservationId):?array{return $this->readExposure($org,$reservationId,false);}
+
+    private function readExposure(string $org,string $reservationId,bool $locked):?array
+    {
+        $q=$this->connection->prepare('SELECT reservation_id,envelope_id,source_ref,action_id,actor_id,request_hash,plan_hash,amount_minor,currency,created_at
+            FROM cos_finance_paid_exposure_claims WHERE organization_id=? AND reservation_id=?'.($locked?' FOR UPDATE':''));
+        $q->execute([$org,$reservationId]);$row=$q->fetch(PDO::FETCH_ASSOC);
+        if(!is_array($row))return null;
+        $row['amount_minor']=(int)$row['amount_minor'];
+        return $row;
+    }
+
+    public function claimExposure(string $org,string $envelopeId,string $reservationId,string $actor,string $action,
+        string $trace,array $input):array
+    {
+        $hash=self::digest(['envelope_id'=>$envelopeId,'reservation_id'=>$reservationId,'actor'=>$actor,'action'=>$action,...$input]);
+        return $this->transaction(function()use($org,$envelopeId,$reservationId,$actor,$action,$trace,$input,$hash):array{
+            // Same lock order as release. No provider call in this transaction.
+            $e=$this->lockedEnvelope($org,$envelopeId);
+            $r=$this->lockedReservation($org,$reservationId);
+            if($r['envelope_id']!==$envelopeId)throw new DomainException('Exposure envelope mismatch.');
+            $existing=$this->readExposure($org,$reservationId,true);
+            if($existing!==null){
+                if(!hash_equals($existing['request_hash'],$hash))throw new DomainException('Reservation already claimed by another exposure.');
+                // Replay cannot authorize a second external mutation.
+                return [...$existing,'fresh'=>false];
+            }
+            $this->expectedRevision($e,$input['expected_revision']);
+            $today=self::utcToday();
+            if($e['state']!=='ACTIVE'||$r['state']!=='RESERVED'||$e['source_domain']!=='marketing'||$r['source_domain']!=='marketing'
+                ||$e['source_ref']!==$input['source_ref']||$r['source_operation_key']!==$input['source_operation_key']
+                ||$e['currency']!==$input['currency']||(int)$r['amount_minor']!==$input['amount_minor']
+                ||(int)$e['reserved_minor']<$input['amount_minor']||$e['period_start']>$today||$e['period_end']<$today
+                ||$e['period_start']>$input['period_start']||$e['period_end']<$input['period_end']
+                ||$today>$input['period_end']){
+                throw new DomainException('Finance exposure no longer backed by exact active reservation.');
+            }
+            $this->connection->prepare('INSERT INTO cos_finance_paid_exposure_claims
+                (organization_id,reservation_id,envelope_id,source_ref,action_id,actor_id,request_hash,plan_hash,amount_minor,currency)
+                VALUES (?,?,?,?,?,?,?,?,?,?)')->execute([$org,$reservationId,$envelopeId,$input['source_ref'],$action,$actor,
+                    $hash,$input['plan_hash'],$input['amount_minor'],$input['currency']]);
+            $this->connection->prepare('UPDATE cos_finance_budget_envelopes SET revision=revision+1 WHERE organization_id=? AND id=?')
+                ->execute([$org,$envelopeId]);
+            $this->event($org,$envelopeId,$reservationId,'PAID_EXPOSURE_CLAIMED',$input['amount_minor'],$actor,$action,$trace,$hash);
+            $claim=$this->exposure($org,$reservationId)??throw new DomainException('Exposure receipt missing.');
+            return [...$claim,'fresh'=>true];
         });
     }
 

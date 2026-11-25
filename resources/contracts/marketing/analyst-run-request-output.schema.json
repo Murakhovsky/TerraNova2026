@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "pattern": "^mkar-[a-f0-9]{24}$"
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "SUCCEEDED"
+      ]
+    },
+    "context_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "paid_activation_approved": {
+      "type": "boolean",
+      "const": false
+    }
+  },
+  "required": [
+    "run_id",
+    "state",
+    "context_hash",
+    "paid_activation_approved"
+  ],
+  "additionalProperties": false
+}

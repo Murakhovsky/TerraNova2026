@@ -65,5 +65,45 @@ $assert(str_contains($source,'NOT exposed as a Capability writer') &&
     str_contains($source,'$this->repository->record($organizationId,$marketingSnapshot,$correlationId)') &&
     str_contains($repository,'$this->policy->validate($raw)'),
     'Private Finance ingress must delegate to the one strict persistence-owned evidence validator.');
-echo "Finance F1 source spend evidence, exact query scope and no false Expense PASS\n";
+
+/** M3 final settlement preparation cannot mutate Finance or accept source status as a document. */
+$settlement=new \Domains\Finance\Domain\FinancePaidSettlementPolicy();
+$org='settlement-fixture';$ph=str_repeat('a',64);$planId='mkpl-'.str_repeat('1',24);
+$claim=['organization_id'=>$org,'source_ref'=>$planId,'plan_hash'=>$ph,'currency'=>'USD',
+    'reservation_id'=>'finr-'.str_repeat('2',24),'envelope_id'=>'finb-'.str_repeat('3',24),
+    'action_id'=>str_repeat('4',32),'actor_id'=>'41','amount_minor'=>3000];
+$plan=['organization_id'=>$org,'id'=>$planId,'plan_hash'=>$ph,'currency'=>'USD','lifetime_minor'=>3000,
+    'account_timezone'=>'UTC','account_id'=>$valid['ad_account_ref'],'period_start'=>'2020-01-01','period_end'=>'2020-01-07'];
+$terminal=['organization_id'=>$org,'plan_id'=>$planId,'activation_action_id'=>$claim['action_id'],
+    'state'=>'PAUSED_CONFIRMED','provider_campaign_id'=>$valid['external_id'],'pause_action_id'=>str_repeat('5',32),'unresolved_operations'=>[]];
+$observation=[...$valid,'organization_id'=>$org,'window_start'=>$plan['period_start'],'window_end'=>$plan['period_end'],
+    'reported_spend_decimal'=>'10.000000','source_status'=>'FINALIZED_BY_SOURCE'];
+$document=[...$observation,'provider'=>'meta','document_state'=>'INDEPENDENTLY_REVIEWED_FINAL',
+    'allocation_scope'=>'EXACT_CAMPAIGN_NET_MEDIA_SPEND','plan_hash'=>$ph,'pause_action_id'=>$terminal['pause_action_id'],
+    'document_sha256'=>str_repeat('6',64),'document_ref'=>'fixture-doc','provider_document_id'=>'fixture-invoice',
+    'review_ref'=>'fixture-review','reviewer_id'=>'42','settlement_minor'=>1000];
+$candidate=$settlement->prepare($org,$claim,$plan,$terminal,$observation,$document);
+$assert($candidate['state']==='MATCHED_NOT_SETTLED'&&$candidate['proposed_commit_minor']===1000
+    &&$candidate['proposed_release_minor']===2000&&!$candidate['finance_settled']&&!$candidate['expense_confirmed']
+    &&!$candidate['payment_confirmed']&&!$candidate['budget_mutated'],'Candidate must be exact and non-mutating.');
+$assert($candidate===$settlement->prepare($org,$claim,$plan,$terminal,$observation,$document),'Candidate not deterministic.');
+foreach([
+    [...$document,'organization_id'=>'foreign-tenant'],
+    [...$document,'document_state'=>'PROVISIONAL'],
+    [...$document,'external_id'=>'99999'],
+    [...$document,'currency'=>'EUR'],
+    [...$document,'source_revision'=>2],
+    [...$document,'source_hash'=>str_repeat('7',64)],
+    [...$document,'reviewer_id'=>'41'],
+    [...$document,'settlement_minor'=>1001],
+    [...$document,'settlement_minor'=>10.0],
+    [...$document,'allocation_scope'=>'ACCOUNT_TOTAL'],
+] as $bad)$blocked(static fn()=> $settlement->prepare($org,$claim,$plan,$terminal,$observation,$bad),'Unsafe financial candidate accepted.');
+$blocked(static fn()=> $settlement->prepare($org,$claim,$plan,[...$terminal,'unresolved_operations'=>['ACTIVATE']],$observation,$document),'Uncertain provider operation accepted.');
+$blocked(static fn()=> $settlement->prepare($org,$claim,$plan,$terminal,[...$observation,'reported_spend_decimal'=>'10.000001'],$document),'Implicit rounding accepted.');
+$blocked(static fn()=> $settlement->prepare($org,$claim,$plan,$terminal,[...$observation,'reported_spend_decimal'=>'31.000000'],[...$document,'settlement_minor'=>3100]),'Spend above held exposure accepted.');
+$zero=$settlement->prepare($org,$claim,$plan,$terminal,[...$observation,'reported_spend_decimal'=>'0.000000'],[...$document,'settlement_minor'=>0]);
+$assert($zero['proposed_release_minor']===3000&&!$zero['finance_settled'],'Zero spend must still remain only a candidate.');
+
+echo "Finance F1 source spend evidence, exact query scope and M3 settlement candidate PASS\n";
 

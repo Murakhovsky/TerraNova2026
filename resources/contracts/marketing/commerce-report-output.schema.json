@@ -1,0 +1,298 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "model",
+    "campaign_id",
+    "plan_id",
+    "window_start",
+    "window_end",
+    "coverage",
+    "placed_orders",
+    "unresolved_captured_orders",
+    "placed_order_value",
+    "channels",
+    "recognized_revenue",
+    "net_cash_received",
+    "roas",
+    "causal_attribution",
+    "deduplicated_against_deals",
+    "financial_evidence_count",
+    "financial_evidence_invalid_count",
+    "financial_evidence_status",
+    "confirmed_financial_totals",
+    "lifecycle"
+  ],
+  "properties": {
+    "model": {
+      "type": "string",
+      "enum": [
+        "commerce-utm-v1"
+      ]
+    },
+    "campaign_id": {
+      "type": "string",
+      "pattern": "^mkt-[a-f0-9]{24}$"
+    },
+    "plan_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^mkpl-[a-f0-9]{24}$"
+    },
+    "window_start": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d\\d-\\d\\d$"
+    },
+    "window_end": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d\\d-\\d\\d$"
+    },
+    "coverage": {
+      "type": "string",
+      "enum": [
+        "CAPTURED_PLACEMENTS_ONLY"
+      ]
+    },
+    "placed_orders": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "unresolved_captured_orders": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "placed_order_value": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "currency",
+          "minor"
+        ],
+        "properties": {
+          "currency": {
+            "type": "string",
+            "enum": [
+              "USD",
+              "EUR",
+              "UAH"
+            ]
+          },
+          "minor": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "channels": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "channel",
+          "source",
+          "medium",
+          "basis",
+          "orders"
+        ],
+        "properties": {
+          "channel": {
+            "type": "string",
+            "enum": [
+              "native",
+              "shopify"
+            ]
+          },
+          "source": {
+            "type": "string"
+          },
+          "medium": {
+            "type": "string"
+          },
+          "basis": {
+            "type": "string",
+            "enum": [
+              "PROVIDER_LAST_VISIT_UTM",
+              "OPERATOR_RECORDED_UTM"
+            ]
+          },
+          "orders": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "recognized_revenue": {
+      "type": "null"
+    },
+    "net_cash_received": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "currency",
+          "minor"
+        ],
+        "properties": {
+          "currency": {
+            "type": "string",
+            "enum": [
+              "USD",
+              "EUR",
+              "UAH"
+            ]
+          },
+          "minor": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "roas": {
+      "type": "null"
+    },
+    "causal_attribution": {
+      "type": "boolean",
+      "const": false
+    },
+    "deduplicated_against_deals": {
+      "type": "boolean",
+      "const": false
+    },
+    "financial_evidence_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "financial_evidence_invalid_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "financial_evidence_status": {
+      "type": "string",
+      "enum": [
+        "COMPLETE_CAPTURED_COHORT",
+        "PARTIAL",
+        "NO_EVIDENCE",
+        "NO_CAPTURED_ORDERS"
+      ]
+    },
+    "confirmed_financial_totals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "currency",
+          "captured_minor",
+          "refunded_minor",
+          "chargeback_minor",
+          "net_collected_minor"
+        ],
+        "properties": {
+          "currency": {
+            "type": "string",
+            "enum": [
+              "USD",
+              "EUR",
+              "UAH"
+            ]
+          },
+          "captured_minor": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "refunded_minor": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "chargeback_minor": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "net_collected_minor": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "coverage",
+        "evidence_count",
+        "unavailable_count",
+        "invalid_count",
+        "current_status_counts",
+        "orders_with_returns"
+      ],
+      "properties": {
+        "coverage": {
+          "type": "string",
+          "enum": [
+            "COMPLETE_CAPTURED_COHORT",
+            "PARTIAL",
+            "UNAVAILABLE"
+          ]
+        },
+        "evidence_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unavailable_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "invalid_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "current_status_counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "placed",
+            "confirmed",
+            "cancelled",
+            "completed"
+          ],
+          "properties": {
+            "placed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "confirmed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "cancelled": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "completed": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "orders_with_returns": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

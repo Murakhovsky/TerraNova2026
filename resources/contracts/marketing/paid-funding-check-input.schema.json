@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "plan_id": {
+      "type": "string",
+      "pattern": "^mkpl-[a-f0-9]{24}$"
+    },
+    "envelope_id": {
+      "type": "string",
+      "pattern": "^finb-[a-f0-9]{24}$"
+    },
+    "reservation_id": {
+      "type": "string",
+      "pattern": "^finr-[a-f0-9]{24}$"
+    }
+  },
+  "required": [
+    "plan_id",
+    "envelope_id",
+    "reservation_id"
+  ],
+  "additionalProperties": false
+}

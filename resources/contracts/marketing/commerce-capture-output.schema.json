@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "model",
+    "results",
+    "financial_mutation"
+  ],
+  "properties": {
+    "model": {
+      "type": "string",
+      "enum": [
+        "commerce-utm-v1"
+      ]
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "order_id",
+          "state",
+          "evidence_id"
+        ],
+        "properties": {
+          "order_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "RECORDED",
+              "REJECTED"
+            ]
+          },
+          "evidence_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^mkat-[a-f0-9]{24}$"
+          }
+        }
+      }
+    },
+    "financial_mutation": {
+      "type": "boolean",
+      "const": false
+    }
+  }
+}

@@ -3913,6 +3913,84 @@ cos_marketing_campaign:
   methods: [GET]
   requirements: { id: 'mkt-[a-f0-9]{24}' }
 
+cos_marketing_audience_save:
+  path: /marketing/campaigns/{id}/audiences
+  controller: App\Web\Marketing\MarketingPageController::saveAudience
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}' }
+
+cos_marketing_adset_save:
+  path: /marketing/campaigns/{id}/adsets
+  controller: App\Web\Marketing\MarketingPageController::saveAdset
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}' }
+
+cos_marketing_creative_create:
+  path: /marketing/campaigns/{id}/creatives
+  controller: App\Web\Marketing\MarketingPageController::createCreative
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}' }
+
+cos_marketing_creative_revise:
+  path: /marketing/campaigns/{id}/creatives/{creativeId}/revisions
+  controller: App\Web\Marketing\MarketingPageController::reviseCreative
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}', creativeId: 'mkcr-[a-f0-9]{24}' }
+
+cos_marketing_paid_plan_create:
+  path: /marketing/campaigns/{id}/paid-plans
+  controller: App\Web\Marketing\MarketingPageController::createPaidPlan
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}' }
+
+cos_marketing_paid_goal_propose:
+  path: /marketing/campaigns/{id}/paid-plans/{planId}/goals
+  controller: App\Web\Marketing\MarketingPageController::proposePaidGoal
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}', planId: 'mkpl-[a-f0-9]{24}' }
+
+cos_marketing_paid_settlement_review:
+  path: /marketing/campaigns/{id}/paid-plans/{planId}/settlement-review
+  controller: App\Web\Marketing\MarketingPageController::reviewPaidSettlement
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}', planId: 'mkpl-[a-f0-9]{24}' }
+
+cos_marketing_paid_settlement_goal:
+  path: /marketing/campaigns/{id}/paid-plans/{planId}/settlement-goal
+  controller: App\Web\Marketing\MarketingPageController::proposePaidSettlement
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}', planId: 'mkpl-[a-f0-9]{24}' }
+
+cos_marketing_analyst_plan_propose:
+  path: /marketing/campaigns/{id}/analyst-plans
+  controller: App\Web\Marketing\MarketingPageController::proposeAnalystPlan
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}' }
+
+cos_marketing_analyst_run_review:
+  path: /marketing/campaigns/{id}/analyst-runs/{runId}/review
+  controller: App\Web\Marketing\MarketingPageController::reviewAnalystRun
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}', runId: 'mkar-[a-f0-9]{24}' }
+
+cos_marketing_analyst_run_recover:
+  path: /marketing/campaigns/{id}/analyst-runs/{runId}/recover
+  controller: App\Web\Marketing\MarketingPageController::recoverAnalystRun
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}', runId: 'mkar-[a-f0-9]{24}' }
+
+cos_marketing_analyst_propose:
+  path: /marketing/campaigns/{id}/proposals
+  controller: App\Web\Marketing\MarketingPageController::propose
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}' }
+
+cos_marketing_analyst_review:
+  path: /marketing/campaigns/{id}/proposals/{proposalId}/review
+  controller: App\Web\Marketing\MarketingPageController::review
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}', proposalId: 'mkpr-[a-f0-9]{24}' }
+
 cos_marketing_accounts:
   path: /marketing/accounts
   controller: App\Web\Marketing\MarketingPageController::accounts
@@ -3933,6 +4011,21 @@ cos_marketing_performance:
   path: /marketing/performance
   controller: App\Web\Marketing\MarketingPageController::performance
   methods: [GET]
+
+cos_marketing_media_analytics_sync:
+  path: /marketing/analytics/media/sync
+  controller: App\Web\Marketing\MarketingPageController::syncMediaAnalytics
+  methods: [POST]
+
+cos_marketing_commerce_attribution_capture:
+  path: /marketing/attribution/commerce/capture
+  controller: App\Web\Marketing\MarketingPageController::captureCommerceAttribution
+  methods: [POST]
+
+cos_marketing_attribution_capture:
+  path: /marketing/attribution/capture
+  controller: App\Web\Marketing\MarketingPageController::captureAttribution
+  methods: [POST]
 
 cos_marketing_actions:
   path: /marketing/actions

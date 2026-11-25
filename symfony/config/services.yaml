@@ -1,4 +1,7 @@
 parameters:
+  env(COS_MARKETING_HERMES_PROFILES_JSON): '{}'
+  env(COS_MARKETING_META_EXECUTION_PROFILES_JSON): '{}'
+  env(COS_MARKETING_META_ACTIVATION_ENABLED): '0'
   env(COS_WORKFLOW_ACTION_WORKER_ORGANIZATION): ''
   env(COS_AI_CAPABILITY_INTENT_SECRET): ''
   env(COS_CRON_CAPABILITY_INTENT_SECRET): ''
@@ -2764,6 +2767,46 @@ services:
   Domains\Marketing\Application\Contract\MarketingCampaignRepository:
     alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingCampaignRepository
   Domains\Marketing\Application\Service\MarketingCampaignService: ~
+  Domains\Marketing\Domain\MarketingPlanningPolicy: ~
+  Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPlanningRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Marketing\Application\Contract\MarketingPlanningRepository:
+    alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPlanningRepository
+  Domains\Marketing\Application\Service\MarketingPlanningService: ~
+  Domains\Marketing\Application\Service\MarketingAnalystContextService: ~
+  Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingAnalystRunStore:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Marketing\Application\Contract\MarketingAnalystRunStore:
+    alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingAnalystRunStore
+  Domains\Marketing\Application\Service\MarketingAnalystReviewService: ~
+  Domains\Marketing\Automation\Action\MarketingAnalystRunHandler: ~
+  Domains\Marketing\Bootstrap\MarketingDomainModule:
+    arguments:
+      $paid: '@Domains\Marketing\Automation\Action\MarketingPaidLifecycleHandler'
+  marketingDomainModule:
+    alias: Domains\Marketing\Bootstrap\MarketingDomainModule
+  Domains\Marketing\Infrastructure\Hermes\HermesAnalystConfigurationRegistry:
+    arguments:
+      $profilesJson: '%env(COS_MARKETING_HERMES_PROFILES_JSON)%'
+  Domains\Marketing\Infrastructure\Hermes\CurlHermesAnalystTransport: ~
+  Domains\Marketing\Infrastructure\Hermes\HermesAnalystProfileProbe: ~
+  App\Infrastructure\Marketing\HermesAnalystOperatorPreflight:
+    arguments:
+      $governance: '@Infrastructure\Llm\MysqlLlmGovernanceRepository'
+  Domains\Marketing\Infrastructure\Hermes\HermesAnalystTransport:
+    alias: Domains\Marketing\Infrastructure\Hermes\CurlHermesAnalystTransport
+  Domains\Marketing\Infrastructure\Hermes\HermesAnalystExecutionFactory:
+    arguments:
+      $governance: '@Infrastructure\Llm\MysqlLlmGovernanceRepository'
+  App\Infrastructure\Marketing\HermesAnalystReadinessService:
+    arguments:
+      $governance: '@Infrastructure\Llm\MysqlLlmGovernanceRepository'
+  # Marketing M2b only reads native ProductManagement application models.
+  Domains\Marketing\Application\Contract\MarketingProductDraftReadPort:
+    alias: App\Infrastructure\Marketing\ProductManagementDraftReadAdapter
+  Domains\Marketing\Application\Service\MarketingProductDraftCheckService: ~
   Domains\Marketing\Infrastructure\Meta\CurlMetaHttpTransport: ~
   Domains\Marketing\Infrastructure\Meta\MetaHttpTransport:
     alias: Domains\Marketing\Infrastructure\Meta\CurlMetaHttpTransport
@@ -2776,6 +2819,66 @@ services:
   Domains\Marketing\Application\Contract\MarketingPaidReadRepository:
     alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidReadRepository
   Domains\Marketing\Application\Service\MarketingPaidReadService: ~
+  Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingAttributionStore:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Marketing\Application\Contract\MarketingAttributionStore:
+    alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingAttributionStore
+  App\Infrastructure\Marketing\SalesAttributionReadAdapter: ~
+  Domains\Marketing\Application\Contract\MarketingSalesAttributionReadPort:
+    alias: App\Infrastructure\Marketing\SalesAttributionReadAdapter
+  App\Infrastructure\Marketing\FinanceAnalyticsReadAdapter: ~
+  Domains\Marketing\Application\Contract\MarketingFinanceAnalyticsReadPort:
+    alias: App\Infrastructure\Marketing\FinanceAnalyticsReadAdapter
+  Domains\Marketing\Application\Service\MarketingAnalyticsService: ~
+  App\Infrastructure\Marketing\CommerceOrderReadAdapter:
+    arguments:
+      $placements: '@?Domains\Sales\Application\Contract\SalesCommerceOrderEvidencePort'
+      $journeys: '@?Domains\Sales\Application\Contract\SalesCommerceOrderJourneyReadPort'
+      $lifecycleEvidence: '@?Domains\Sales\Application\Contract\SalesCommerceOrderLifecycleEvidencePort'
+  Domains\Marketing\Application\Contract\MarketingCommerceOrderReadPort:
+    alias: App\Infrastructure\Marketing\CommerceOrderReadAdapter
+  Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingCommerceAttributionStore:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Marketing\Application\Contract\MarketingCommerceAttributionStore:
+    alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingCommerceAttributionStore
+  App\Infrastructure\Marketing\CommerceFinancialReadAdapter:
+    arguments:
+      $finance: '@?Domains\Finance\Application\Contract\CommerceOrderFinancialEvidenceReadPort'
+  Domains\Marketing\Application\Contract\MarketingCommerceFinancialReadPort:
+    alias: App\Infrastructure\Marketing\CommerceFinancialReadAdapter
+  Domains\Marketing\Application\Service\MarketingCommerceAttributionService: ~
+  Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingMediaAnalyticsStore:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Marketing\Application\Contract\MarketingMediaAnalyticsStore:
+    alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingMediaAnalyticsStore
+  Domains\Marketing\Application\Service\MarketingMediaAnalyticsService: ~
+  Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidLaunchPlanStore:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Marketing\Application\Contract\MarketingPaidLaunchPlanStore:
+    alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidLaunchPlanStore
+  Domains\Marketing\Application\Contract\MarketingFinanceFundingReadPort:
+    alias: App\Infrastructure\Marketing\FinanceFundingReadAdapter
+  Domains\Marketing\Application\Service\MarketingPaidLaunchPlanService: ~
+  Domains\Marketing\Application\Service\MarketingPaidOperationsReadService: ~
+  Domains\Marketing\Application\Contract\MarketingPaidExposureClaimPort:
+    alias: App\Infrastructure\Marketing\FinancePaidExposureClaimAdapter
+  Domains\Marketing\Infrastructure\Meta\MetaPaidExecutionProfiles:
+    arguments:
+      $profilesJson: '%env(COS_MARKETING_META_EXECUTION_PROFILES_JSON)%'
+      $activationEnabled: '%env(bool:COS_MARKETING_META_ACTIVATION_ENABLED)%'
+  Domains\Marketing\Infrastructure\Meta\CurlMetaWriteTransport: ~
+  Domains\Marketing\Infrastructure\Meta\MetaWriteTransport:
+    alias: Domains\Marketing\Infrastructure\Meta\CurlMetaWriteTransport
+  Domains\Marketing\Infrastructure\Meta\MetaPaidWriteAdapter: ~
+  Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidOperationJournal:
+    arguments:
+      $db: '@cos.database.pdo'
+  Domains\Marketing\Infrastructure\Meta\ApprovedMetaPaidLifecycle: ~
+  Domains\Marketing\Automation\Action\MarketingPaidLifecycleHandler: ~
 
   marketingNavigationContributor:
     alias: App\Web\Experience\Extension\Provider\MarketingWebProvider
@@ -2887,8 +2990,48 @@ services:
   Domains\Finance\Application\Contract\FinanceBudgetControlInterface:
     alias: Domains\Finance\Application\Service\FinanceBudgetControlService
   Domains\Finance\Application\Service\ApprovedFinanceBudgetOperations: ~
+  Domains\Finance\Application\Contract\FinancePaidExposureClaimStore:
+    alias: Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceBudgetRepository
+  Domains\Finance\Application\Service\ApprovedFinancePaidExposureService: ~
   Domains\Finance\Automation\Action\FinanceBudgetActionHandler: ~
-  Domains\Finance\Bootstrap\FinanceDomainModule: ~
+  Domains\Finance\Domain\FinancePaidSettlementPolicy:
+    arguments:
+      $clock: null
+  Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinancePaidSettlementRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Finance\Application\Contract\FinancePaidSettlementStore:
+    alias: Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinancePaidSettlementRepository
+  Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinancePaidSettlementReviewStore:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Finance\Application\Contract\FinancePaidSettlementReviewStore:
+    alias: Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinancePaidSettlementReviewStore
+  Domains\Documents\Application\Service\VerifiedUploadedPdfReadService:
+    arguments:
+      $connection: '@cos.database.pdo'
+  App\Infrastructure\Finance\MarketingPaidSettlementReadAdapter: ~
+  Domains\Finance\Application\Contract\MarketingPaidSettlementReadPort:
+    alias: App\Infrastructure\Finance\MarketingPaidSettlementReadAdapter
+  App\Infrastructure\Finance\DocumentsPaidSettlementReadAdapter: ~
+  Domains\Finance\Application\Contract\DocumentsPaidSettlementReadPort:
+    alias: App\Infrastructure\Finance\DocumentsPaidSettlementReadAdapter
+  App\Infrastructure\Finance\NativePaidSettlementSourceAdapter: ~
+  Domains\Finance\Application\Contract\FinancePaidSettlementSourcePort:
+    alias: App\Infrastructure\Finance\NativePaidSettlementSourceAdapter
+  Domains\Finance\Application\Service\FinancePaidSettlementReviewService: ~
+  Domains\Finance\Application\Service\FinancePaidSettlementStatusService: ~
+  App\Application\Capability\FinancePaidSettlementStatusAdapter: ~
+  App\Application\Capability\FinancePaidSettlementReviewAdapter: ~
+  Domains\Finance\Application\Contract\FinancePaidSettlementEvidencePort:
+    alias: Domains\Finance\Application\Service\FinancePaidSettlementReviewService
+  Domains\Finance\Application\Service\ApprovedFinancePaidSettlementService: ~
+  Domains\Finance\Automation\Action\FinancePaidSettlementHandler: ~
+  App\Persistence\Finance\FinancePaidSettlementGoalProposalService: ~
+  App\Persistence\Finance\FinancePaidSettlementOutcomeProvider: ~
+  Domains\Finance\Bootstrap\FinanceDomainModule:
+    arguments:
+      $settlement: '@Domains\Finance\Automation\Action\FinancePaidSettlementHandler'
   financeDomainModule:
     alias: Domains\Finance\Bootstrap\FinanceDomainModule
 
@@ -3003,6 +3146,7 @@ services:
         - '@Domains\Service\Bootstrap\ServiceDomainModule'
         - '@Domains\Growth\Bootstrap\GrowthDomainModule'
         - '@Domains\ProductManagement\Bootstrap\ProductManagementDomainModule'
+        - '@Domains\Marketing\Bootstrap\MarketingDomainModule'
 
   Kernel\Rule\Service\ConditionEvaluator: ~
 
@@ -4148,6 +4292,9 @@ services:
         - '@App\Persistence\ProductManagement\ProductStockCountSessionRunOutcomeProvider'
         - '@App\Persistence\ProductManagement\ProductGovernedRunOutcomeProvider'
         - '@App\Persistence\ProductManagement\ShopifyImportRunOutcomeProvider'
+        - '@App\Persistence\Marketing\MarketingAnalystRunOutcomeProvider'
+        - '@App\Persistence\Marketing\MarketingPaidGoalOutcomeProvider'
+        - '@App\Persistence\Finance\FinancePaidSettlementOutcomeProvider'
         - '@Domains\Growth\Application\Service\GrowthInboundResponseOutcomeEvidenceProvider'
         - '@App\Persistence\Federation\FederationGrowthRunLinkedOutcomeEvidenceProvider'
         - '@cos.federation.native_origin.research'

@@ -2,7 +2,7 @@
 title: Marketing — паспорт домену COS
 description: Межі, компоненти, доступні Capabilities і докази приймання Marketing.
 status: draft
-updated: 2026-11-20
+updated: 2026-11-24
 kind: domain
 contract: domain-v1
 domain_id: marketing
@@ -32,9 +32,64 @@ domain_id: marketing
         "marketing.paid.sync.history",
         "marketing.paid.spend.evidence.get"
       ]
+    },
+    {
+      "id": "creative_planning",
+      "capability_ids": [
+        "marketing.creative.create",
+        "marketing.creative.revise",
+        "marketing.creative.list"
+      ]
+    },
+    {
+      "id": "analyst_review",
+      "capability_ids": [
+        "marketing.analyst.context.get",
+        "marketing.analyst.run.list",
+        "marketing.analyst.run.review",
+        "marketing.analyst.run.recover",
+        "marketing.analyst.runtime.status",
+        "marketing.analyst.run.request",
+        "marketing.analyst.proposal.submit",
+        "marketing.analyst.proposal.list",
+        "marketing.analyst.proposal.review"
+      ]
+    },
+    {
+      "id": "audience_planning",
+      "capability_ids": [
+        "marketing.audience.save",
+        "marketing.audience.list",
+        "marketing.adset.save",
+        "marketing.adset.list"
+      ]
+    },
+    {
+      "id": "paid_funding",
+      "capability_ids": [
+        "marketing.paid.launch_plan.create",
+        "marketing.paid.launch_plan.get",
+        "marketing.paid.funding.check",
+        "marketing.paid.operation.status",
+        "marketing.paid.spend.compare",
+        "marketing.paid.meta.campaign.create_paused",
+        "marketing.paid.meta.campaign.activate",
+        "marketing.paid.meta.campaign.pause"
+      ]
+    },
+    {
+      "id": "attribution_analytics",
+      "capability_ids": ["marketing.attribution.capture", "marketing.attribution.discover","marketing.attribution.tracking.get","marketing.analytics.report.get", "marketing.analytics.media.report", "marketing.analytics.media.sync", "marketing.attribution.commerce.inspect", "marketing.attribution.commerce.capture", "marketing.analytics.commerce.report"]
+    },
+    {
+      "id": "product_evidence",
+      "capability_ids": [
+        "marketing.product.draft_check.get",
+        "marketing.product.selector.search"
+      ]
     }
   ],
-  "process_ids": [],
+  "process_ids": ["marketing.attribution-to-analytics", "marketing.media-import-to-report"],
   "readiness": {
     "level": "D2",
     "evidence": []
@@ -42,7 +97,7 @@ domain_id: marketing
 }
 COS-DOMAIN-PASSPORT-DATA -->
 
-> Паспорт фіксує перевірену на рівні D2 архітектуру, а не факт production-активації. Модуль за замовчуванням вимкнений; M3 платні операції заблоковані.
+> Паспорт фіксує перевірену на рівні D2 архітектуру, а не факт production-активації. Модуль за замовчуванням вимкнений; M3 операції вимагають tenant activation, підтвердженого профілю провайдера і незалежного погодження.
 
 ## 1. Ідентичність
 
@@ -59,6 +114,12 @@ Marketing володіє Campaign Draft, Meta Ad Account binding, provider Campa
 | --- | --- | --- |
 | `campaign_planning` | Чернетки та пошук внутрішніх кампаній | D2, без незалежного staging |
 | `paid_media_read` | Meta read-only snapshots, атомарність імпорту й історія sync | D2, без real Ads Manager acceptance |
+| `creative_planning` | Версії креативів, Product refs та опційний TargetSpec чернетки | D2 baseline; TargetSpec потребує CI/приймання, без provider eligibility |
+| `analyst_review` | Scoped analyst context, response policy, evidence proposals та незалежні review-рішення | D2, Hermes adapter, admission, journal, review, recovery, Kernel budget ceiling та canonical Action binding; native E2E fixture PASS, операторський preflight додано; live acceptance очікується |
+| `audience_planning` | Версії Audience і AdSet Draft, revision pins, планова потреба бюджету та Workspace editor | Backend CI green; Workspace CI/staging очікуються; без Finance reservation або Meta write |
+| `paid_funding` | Immutable funding candidate і Finance readback | D2 candidate; Finance execution claim, Meta write lifecycle, journal, Goal proposals, source comparison та Workspace; CI/live acceptance очікуються |
+| `attribution_analytics` | Exact UTM, Sales readback, джерельні медіаметрики та Finance квитанції | D2 implementation, native MySQL acceptance pending |
+| `product_evidence` | Пошук Product/SKU, Product/Variant/Price та stock-by-location readback через Product Management read port | D2, без складу/URL/Meta policy acceptance |
 
 Компоненти не є незалежними installable modules.
 
@@ -68,7 +129,7 @@ Marketing володіє Campaign Draft, Meta Ad Account binding, provider Campa
 
 ## 5. Use Cases та Capabilities
 
-Callable capabilities і точні input/output schemas належать manifest, а не цьому тексту. Початкові Query включають Campaign search/get, Meta account list/Insights query/sync history. Публічного Finance evidence export у цьому M1.1 пакеті немає.
+Callable capabilities і точні input/output schemas належать manifest, а не цьому тексту. Початкові Query включають Campaign search/get, Meta account list/Insights query/sync history. Finance-facing read-only source evidence Query присутній, але не підтверджує Expense. M2a має Creative create/revise/list і Proposal submit/list/review; M2b має tenant-safe Product draft-check, без запуску Meta.
 
 ## 6. Виконання
 
@@ -76,11 +137,11 @@ Canonical Capability Gateway виконує лише дозволені Query а
 
 ## 7. Міждоменні контракти
 
-Product є власником товару, Finance власником бюджетів та фінансового журналу, Marketing власником Meta readback. Finance-facing evidence port і підтвердження provider billing або Expense у цьому зрізі відсутні. Прямий запис Marketing до Finance DB заборонений.
+Product є власником товару, Finance власником бюджетів та фінансового журналу, Marketing власником Meta readback. Marketing evidence Query та Finance F1/readback уже в `main`; незалежного підтвердження provider billing чи Expense немає. Прямий запис Marketing до Finance DB заборонений.
 
 ## 8. Процеси та результати
 
-Поточна канонічна Process Registry має explicit Marketing exemption від завершеного наскрізного paid-execution process. Цей паспорт не заявляє M3 або M4/M5 process readiness.
+Process Registry містить два M4 процеси `marketing.attribution-to-analytics` і `marketing.media-import-to-report`. Marketing exemption знято. Source-verified topology не означає D3/D4 або повне приймання M3/M4.
 
 ## 9. Tenant, Policy та Security
 
@@ -88,7 +149,7 @@ Product є власником товару, Finance власником бюдж�
 
 ## 10. Робочий простір Unified Workspace
 
-Робочий простір містить Campaigns, Paid Media Accounts, Performance та Action Queue. Інтерфейс відображає source freshness/failures, але не підтверджує реальну витрату чи конверсію. Meta paid writes заблоковані.
+Робочий простір містить Campaigns, Paid Media Accounts, Performance та Action Queue. Інтерфейс відображає source freshness/failures, але не підтверджує реальну витрату чи конверсію. Платні дії проходять тільки через погоджений canonical Workflow; фінансове врегулювання читається з Finance ledger. Production rollout не прийнято.
 
 ## 11. Operations та Recovery
 
@@ -100,7 +161,7 @@ MySQL atomic import відхиляє часткове оновлення при 
 
 ## 13. План розвитку, борги та рішення
 
-Пріоритети: незалежне приймання Marketing M0/M1, Finance F1 і readback contract; надалі M2 Product/Hermes і M3 governed paid operations. Наявний D2 source import не легалізує жоден Meta write.
+Пріоритети: M1 Meta Ads Manager reconciliation, M2 Hermes analyst та stock/URL/ad-policy signoff, M3 governed paid operations, незалежне D3/D4 приймання. Наявний D2 source import не легалізує жоден Meta write.
 
 ## 14. Карта джерел
 

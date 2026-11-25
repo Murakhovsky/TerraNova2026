@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "plan_id": {
+      "type": "string",
+      "pattern": "^mkpl-[a-f0-9]{24}$"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "SOURCE_EXCEEDS_PLANNED_CAP",
+        "SOURCE_WITHIN_PLANNED_CAP"
+      ]
+    },
+    "source_snapshot_ref": {
+      "type": "string",
+      "pattern": "^mis-[a-f0-9]{24}$"
+    },
+    "source_revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "reported_spend_decimal": {
+      "type": "string",
+      "pattern": "^[0-9]+(?:\\.[0-9]{1,6})?$"
+    },
+    "planned_cap_minor": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000000000000
+    },
+    "currency": {
+      "type": "string",
+      "enum": [
+        "USD",
+        "EUR",
+        "UAH",
+        "PLN"
+      ]
+    },
+    "finance_settled": {
+      "type": "boolean",
+      "const": false
+    },
+    "reservation_release_authorized": {
+      "type": "boolean",
+      "const": false
+    },
+    "expense_confirmed": {
+      "type": "boolean",
+      "const": false
+    }
+  },
+  "required": [
+    "plan_id",
+    "status",
+    "source_snapshot_ref",
+    "source_revision",
+    "reported_spend_decimal",
+    "planned_cap_minor",
+    "currency",
+    "finance_settled",
+    "reservation_release_authorized",
+    "expense_confirmed"
+  ],
+  "additionalProperties": false
+}

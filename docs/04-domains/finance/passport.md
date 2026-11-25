@@ -35,6 +35,10 @@ domain_id: finance
       ]
     },
     {
+      "id": "paid_settlement",
+      "capability_ids": ["finance.ad_spend.settlement.commit", "finance.ad_spend.settlement.status", "finance.ad_spend.settlement.review"]
+    },
+    {
       "id": "marketing_spend_readback",
       "capability_ids": []
     },
@@ -80,6 +84,7 @@ Finance є єдиним authoritative writer для BudgetEnvelope, Reservation,
 | `spend_observations` | Незмінні ревізійні спостереження джерела | 1 типізований статус звіряння |
 | `sales_commercial_evidence` | Read-only accepted Sales quote evidence, no settlement | 1 typed query |
 | `order_collections` | Незмінна реєстрація, незалежна звірка й фінансовий баланс замовлень | 2 governed Actions, 2 queries |
+| `paid_settlement` | Перевірені документи, рев’ю, фінансові квитанції | 3 типізовані контракти |
 
 Наведені компоненти не є незалежно installable Domain.
 
@@ -137,3 +142,5 @@ F1.2 — приватний readback порт між Marketing і Finance. Ві�
 Sales accepted quote evidence is a read-only source observation via `SalesCommercialEvidencePort`; it does not establish collected revenue or an accounting posting. D2 remains limited to F1/F1.1.
 
 S5A/O4 adds documentary order collection evidence. The independent persisted Approval, actual RUNNING Action, pinned inputs and live tenant managers are rechecked inside the Finance write transaction. No bank/provider write or accounting recognition. Sales reads the Finance projection through the declared port. Workflow admission and D3+ remain unaccepted.
+
+Компонент `paid_settlement` володіє незалежним рев'ю документа, бюджетним ledger та контрактом `finance.ad_spend.settlement.commit`. Два окремі порти `MarketingPaidSettlementReadPort` і `DocumentsPaidSettlementReadPort` забезпечують read-only інтеграцію через Symfony, без прямого міждоменного SQL. Приймання D3/D4 та фактичне підтвердження Meta залишаються окремими воротами випуску.

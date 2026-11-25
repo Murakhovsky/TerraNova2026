@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "product_id",
+    "currency"
+  ],
+  "properties": {
+    "product_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "variant_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "location_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "destination_url": {
+      "type": "string",
+      "pattern": "^https://",
+      "maxLength": 1200
+    }
+  },
+  "additionalProperties": false
+}

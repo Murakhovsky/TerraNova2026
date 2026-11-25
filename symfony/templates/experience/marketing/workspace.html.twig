@@ -6,7 +6,7 @@
         <div>
             <small>Marketing · Controlled Paid Media</small>
             <h1>{{ pageTitle }}</h1>
-            <p>Internal campaign drafts and Meta Ads read-only observations. Paid activation and budget writes are disabled until Finance and Workflow acceptance.</p>
+            <p>Campaign planning, governed paid operations and native attribution. Provider writes and budget settlement require independent approval.</p>
         </div>
     </header>
     <nav class="cos-toolbar" aria-label="Marketing workspaces">
@@ -39,7 +39,7 @@
     {% elseif section == 'campaigns' %}
         <section class="cos-panel">
             <h2>Create a campaign draft</h2>
-            <p>No Meta ad is created. Product links are unverified until Product has an accepted read API.</p>
+            <p>No Meta ad is created. Product references remain unverified until their live Product Management readback is checked in the Campaign Workspace.</p>
             <form method="post" action="/marketing/campaigns" class="cos-page__stack">
                 <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                 <input type="hidden" name="idempotency_key" value="{{ draftKey }}">
@@ -62,8 +62,175 @@
             <h2>{{ c.name }}</h2>
             <p>{{ c.business_objective }}</p><p>{{ c.brief }}</p>
             <p>State: {{ c.status }} · Revision: {{ c.revision }} · Owner: {{ c.owner_id }}</p>
-            <h3>Product links</h3>
-            {% if c.product_refs is not empty %}<p>{{ c.product_refs|join(', ') }} (read-only, not yet verified)</p>{% else %}<p>No Product links yet.</p>{% endif %}
+            <h3>Product links and live draft check</h3>
+            {% if c.product_refs is not empty %}<p>{{ c.product_refs|join(', ') }} (stored references, not verified advertising eligibility)</p>{% else %}<p>No Product links yet.</p>{% endif %}
+            <p>Product Management is the source of truth for catalog/variant/base price. This check never verifies stock by location, destination URL, Meta policy or Finance permission.</p>
+            <form method="get" action="/marketing/campaigns/{{ c.id|url_encode }}" class="cos-page__stack">
+                <label>Find Product by name or SKU <input class="form-control" name="product_q" maxlength="200" value="{{ query.product_q|default('') }}"></label>
+                <label>Price currency <input class="form-control" name="currency" value="{{ query.currency|default('USD') }}" maxlength="3" pattern="[A-Z]{3}"></label>
+                <button class="btn btn-outline-primary" type="submit">Search catalog</button>
+            </form>
+            {% if productSearchError %}<p role="alert">{{ productSearchError }}</p>{% endif %}
+            {% if productPage %}
+                <ul>
+                {% for item in productPage.items %}
+                    <li><a href="/marketing/campaigns/{{ c.id|url_encode }}?product_q={{ query.product_q|default('')|url_encode }}&amp;product_offset={{ productPage.offset }}&amp;product_id={{ item.product_ref|url_encode }}&amp;variant_id={{ item.variant_ref|url_encode }}&amp;currency={{ query.currency|default('USD')|url_encode }}">{{ item.name }} · {{ item.sku }} ({{ item.product_status }})</a></li>
+                {% else %}
+                    <li>No selectable variants on this page.</li>
+                {% endfor %}
+                </ul>
+                {% if productPage.offset > 0 %}<a href="?product_q={{ query.product_q|default('')|url_encode }}&amp;product_offset={{ max(0, productPage.offset - productPage.limit) }}&amp;currency={{ query.currency|default('USD')|url_encode }}">Previous catalog page</a>{% endif %}
+                {% if productPage.has_more %}<a href="?product_q={{ query.product_q|default('')|url_encode }}&amp;product_offset={{ productPage.offset + productPage.limit }}&amp;currency={{ query.currency|default('USD')|url_encode }}">Next catalog page</a>{% endif %}
+            {% endif %}
+            <form method="get" action="/marketing/campaigns/{{ c.id|url_encode }}" class="cos-page__stack">
+                <label>Product Management ID (32 hex) <input class="form-control" name="product_id" required pattern="[a-f0-9]{32}" value="{{ query.product_id|default('') }}"></label>
+                <label>Variant ID (optional, 32 hex) <input class="form-control" name="variant_id" pattern="[a-f0-9]{32}" value="{{ query.variant_id|default('') }}"></label>
+                <label>Price currency <input class="form-control" name="currency" value="{{ query.currency|default('USD') }}" maxlength="3" pattern="[A-Z]{3}"></label>
+                <label>Stock location ID (optional, 32 hex) <input class="form-control" name="location_id" pattern="[a-f0-9]{32}" value="{{ query.location_id|default('') }}"></label>
+                <label>Destination URL syntax check (optional) <input class="form-control" type="url" name="destination_url" maxlength="1200" value="{{ query.destination_url|default('') }}"></label>
+                <button class="btn btn-outline-secondary" type="submit">Check Product source</button>
+            </form>
+            {% if productCheckError %}<p role="alert">{{ productCheckError }}</p>{% endif %}
+            {% if productCheck %}
+                <section class="cos-panel" aria-label="Current Product source check">
+                    <p>Product: {{ productCheck.product_status }} · Variant: {{ productCheck.variant_status }} · Price: {{ productCheck.base_price_decimal|default('not available') }} {{ productCheck.currency }}</p>
+                    <p>Product revision {{ productCheck.product_revision }}, variant revision {{ productCheck.variant_revision }}. Reference usable in a draft: {{ productCheck.can_reference_in_draft ? 'yes' : 'no' }}.</p>
+                    {% if productCheck.stock_observation is defined %}
+                        {% set stock = productCheck.stock_observation %}
+                        <p>Stock location {{ stock.location_ref }}: {{ stock.status }} · on hand {{ stock.on_hand ?? 'n/a' }} · reserved {{ stock.reserved ?? 'n/a' }} · available {{ stock.available ?? 'n/a' }} · revision {{ stock.revision ?? 'n/a' }}.</p>
+                    {% endif %}
+                    {% if productCheck.destination_syntax_status is defined %}<p>Destination: HTTPS syntax valid only; live reachability and ownership not verified.</p>{% endif %}
+                    <p><strong>Paid launch eligible: no.</strong> Still required: {{ productCheck.pending_checks|join(', ') }}. This is a live catalog readback, not a durable advertising approval.</p>
+                </section>
+            {% endif %}
+
+            {% include 'experience/marketing/planning_audience_adsets.html.twig' with {
+                campaign: c, audiences: audiences, adsets: adsets, creatives: creatives,
+                csrfToken: csrfToken, planningKey: planningKey
+            } only %}
+
+            {% include 'experience/marketing/analyst_run_journal.html.twig' with {
+                campaign: c, runs: analystRuns, offset: analystOffset, currentUserId: currentUserId, runtime: analystRuntime, creatives: creatives, adsets: adsets,
+                csrfToken: csrfToken, planningKey: planningKey
+            } only %}
+
+            {% include 'experience/marketing/paid_funding_workspace.html.twig' with {
+                campaign: c, accounts: accounts, adsets: adsets, plans: paidPlans, selected: selectedPaidPlan,
+                status: paidStatus, funding: paidFunding, spend: paidSpend, error: paidError,
+                settlementPreview: settlementPreview, settlementCandidate: settlementCandidate, settlementReceipt: settlementReceipt, settlementError: settlementError,
+                csrfToken: csrfToken, planningKey: planningKey, query: query
+            } only %}
+
+            <h3>Creative drafts</h3>
+            <p>Planning records only. Product availability, landing URL, regulatory compliance and media ownership have NOT been verified. Nothing here creates or activates an ad.</p>
+            <form method="post" action="/marketing/campaigns/{{ c.id|url_encode }}/creatives" class="cos-page__stack">
+                <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                <input type="hidden" name="idempotency_key" value="{{ planningKey }}">
+                <label>Headline <input class="form-control" name="headline" required minlength="3" maxlength="180"></label>
+                <label>Ad text <textarea class="form-control" name="primary_text" required minlength="5" maxlength="2500"></textarea></label>
+                <label>Call to action <input class="form-control" name="call_to_action" value="Learn more" required minlength="2" maxlength="80"></label>
+                <label>Destination HTTPS URL <input class="form-control" type="url" name="destination_url" required placeholder="https://shop.example.com/item"></label>
+                <label>Language <input class="form-control" name="language" value="uk" required pattern="[a-z]{2}(-[A-Z]{2})?"></label>
+                <label>Product reference (optional, unverified) <input class="form-control" name="product_ref" value="{{ productCheck and productCheck.can_reference_in_draft ? productCheck.product_ref : '' }}"></label>
+                <label>Variant reference (optional, unverified) <input class="form-control" name="variant_ref" pattern="[a-f0-9]{32}" value="{{ productCheck and productCheck.can_reference_in_draft ? productCheck.variant_ref|default('') : '' }}"></label>
+                <label>Stock location reference (optional, unverified) <input class="form-control" name="location_ref" pattern="[a-f0-9]{32}" value="{{ productCheck and productCheck.can_reference_in_draft ? productCheck.stock_observation.location_ref|default('') : '' }}"></label>
+                <label>Media SHA-256 (optional) <input class="form-control" name="media_sha256" maxlength="64"></label>
+                <label>Target market country codes (optional, comma-separated) <input class="form-control" name="target_market_countries" maxlength="100" placeholder="UA, PL"></label>
+                <label>Audience hypothesis (optional, unverified) <textarea class="form-control" name="target_audience_hypothesis" maxlength="500"></textarea></label>
+                <p>Supply both TargetSpec fields or neither. Planning only, no provider audience or policy verification.</p>
+                <button class="btn btn-outline-primary" type="submit">Save creative draft</button>
+            </form>
+
+            {% for creative in creatives %}
+            <section class="cos-panel">
+                <div class="cos-page__section-head">
+                    <div><strong>{{ creative.content.headline }}</strong> <small>{{ creative.status }} · revision {{ creative.revision }}</small></div>
+                    <small>Author {{ creative.actor_id }} · {{ creative.id }}</small>
+                </div>
+                <p>{{ creative.content.primary_text }}</p>
+                <p>{{ creative.content.call_to_action }} · {{ creative.content.language }} · {{ creative.content.destination_url }}</p>
+                <p>Product: {{ creative.content.product_ref|default('not linked') }} · {{ creative.content.product_verification }} · URL {{ creative.content.destination_verification }}</p>
+                {% if creative.content.variant_ref is defined %}<p>Variant {{ creative.content.variant_ref }} · Location {{ creative.content.location_ref|default('not selected') }} (unverified references)</p>{% endif %}
+                {% if creative.content.target_spec is defined %}
+                    <p>Draft target markets: {{ creative.content.target_spec.market_countries|join(', ') }} · {{ creative.content.target_spec.verification_status }}</p>
+                    <p>Audience hypothesis: {{ creative.content.target_spec.audience_hypothesis }}</p>
+                {% endif %}
+                <details>
+                    <summary>Revise this creative (appends a version)</summary>
+                    <form method="post" action="/marketing/campaigns/{{ c.id|url_encode }}/creatives/{{ creative.id|url_encode }}/revisions" class="cos-page__stack">
+                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                        <input type="hidden" name="idempotency_key" value="mkt-revise-{{ creative.id }}-{{ creative.revision }}-{{ planningKey }}">
+                        <input type="hidden" name="expected_revision" value="{{ creative.revision }}">
+                        <label>Headline <input class="form-control" name="headline" required value="{{ creative.content.headline }}"></label>
+                        <label>Ad text <textarea class="form-control" name="primary_text" required>{{ creative.content.primary_text }}</textarea></label>
+                        <label>Call to action <input class="form-control" name="call_to_action" required value="{{ creative.content.call_to_action }}"></label>
+                        <label>Destination URL <input class="form-control" name="destination_url" required value="{{ creative.content.destination_url }}"></label>
+                        <label>Language <input class="form-control" name="language" required value="{{ creative.content.language }}"></label>
+                        <label>Product reference <input class="form-control" name="product_ref" value="{{ creative.content.product_ref|default('') }}"></label>
+                        <label>Variant reference <input class="form-control" name="variant_ref" pattern="[a-f0-9]{32}" value="{{ creative.content.variant_ref|default('') }}"></label>
+                        <label>Stock location reference <input class="form-control" name="location_ref" pattern="[a-f0-9]{32}" value="{{ creative.content.location_ref|default('') }}"></label>
+                        <label>Media SHA-256 <input class="form-control" name="media_sha256" value="{{ creative.content.media_sha256|default('') }}"></label>
+                        <label>Target market country codes <input class="form-control" name="target_market_countries" maxlength="100" value="{{ creative.content.target_spec.market_countries|default([])|join(', ') }}"></label>
+                        <label>Audience hypothesis <textarea class="form-control" name="target_audience_hypothesis" maxlength="500">{{ creative.content.target_spec.audience_hypothesis|default('') }}</textarea></label>
+                        <button class="btn btn-outline-secondary" type="submit">Save next creative revision</button>
+                    </form>
+                </details>
+                <details>
+                    <summary>Submit a human analyst recommendation about this revision</summary>
+                    <p>Evidence is recorded as a source reference, not verified automatically. Hermes delegation is not connected in this milestone.</p>
+                    <form method="post" action="/marketing/campaigns/{{ c.id|url_encode }}/proposals" class="cos-page__stack">
+                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                        <input type="hidden" name="idempotency_key" value="mkt-propose-{{ creative.id }}-{{ creative.revision }}-{{ planningKey }}">
+                        <input type="hidden" name="campaign_revision" value="{{ c.revision }}">
+                        <input type="hidden" name="creative_id" value="{{ creative.id }}">
+                        <input type="hidden" name="creative_revision" value="{{ creative.revision }}">
+                        <input type="hidden" name="evidence_ref" value="{{ planningEvidenceRef }}">
+                        <label>Recommendation <textarea class="form-control" name="recommendation" required minlength="8" maxlength="4000"></textarea></label>
+                        <label>Rationale <textarea class="form-control" name="rationale" required minlength="8" maxlength="4000"></textarea></label>
+                        <label>Evidence note <textarea class="form-control" name="evidence_note" required minlength="3" maxlength="500"></textarea></label>
+                        <button class="btn btn-outline-primary" type="submit">Submit for independent human review</button>
+                    </form>
+                </details>
+            </section>
+            {% else %}
+                <p>No creative drafts. Create a human-owned draft above.</p>
+            {% endfor %}
+
+            <h3>Analyst proposals and independent review</h3>
+            <p>Accepting a recommendation does NOT approve a Campaign, verify a Product, reserve funds or authorize Meta delivery.</p>
+            {% for proposal in proposals %}
+            <section class="cos-panel">
+                <div class="cos-page__section-head">
+                    <strong>{{ proposal.status }} · {{ proposal.origin }} proposal</strong>
+                    <small>{{ proposal.id }} · submitted by {{ proposal.submitted_by }} · revision {{ proposal.revision }}</small>
+                </div>
+                <p><strong>Suggested action:</strong> {{ proposal.recommendation }}</p>
+                <p><strong>Rationale:</strong> {{ proposal.rationale }}</p>
+                <p>Creative {{ proposal.creative_id }} (revision {{ proposal.creative_revision }}); Campaign revision {{ proposal.campaign_revision }}</p>
+                {% for item in proposal.evidence %}
+                    <p>Evidence: {{ item.source_type }} / {{ item.reference }} · {{ item.note }} · {{ item.verification_status }}</p>
+                {% endfor %}
+                {% if proposal.status == 'PROPOSED' and proposal.submitted_by != currentUserId %}
+                    <form method="post" action="/marketing/campaigns/{{ c.id|url_encode }}/proposals/{{ proposal.id|url_encode }}/review" class="cos-page__stack">
+                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                        <input type="hidden" name="idempotency_key" value="mkt-review-{{ proposal.id }}-{{ planningKey }}">
+                        <input type="hidden" name="expected_revision" value="{{ proposal.revision }}">
+                        <label>Reviewer reason <input class="form-control" name="reason" required minlength="5" maxlength="300"></label>
+                        <div class="cos-toolbar">
+                            <button class="btn btn-outline-primary" type="submit" name="decision" value="ACCEPT">Accept recommendation</button>
+                            <button class="btn btn-outline-secondary" type="submit" name="decision" value="REJECT">Reject recommendation</button>
+                        </div>
+                    </form>
+                {% elseif proposal.status == 'PROPOSED' %}
+                    <p>Awaiting a different manager. Self-approval is forbidden.</p>
+                {% else %}
+                    <p>Reviewed by {{ proposal.reviewed_by }} · {{ proposal.review_reason }} · {{ proposal.reviewed_at }}</p>
+                {% endif %}
+            </section>
+            {% else %}
+                <p>No proposals yet. First create a creative and submit evidence-backed human feedback.</p>
+            {% endfor %}
+
             <h3>Activation and approvals</h3><p>Blocked: Finance F1 and independent Workflow approval have not been accepted.</p>
         </section>
     {% elseif section == 'accounts' %}
@@ -131,7 +298,8 @@
                 </article>
             {% else %}<p>No imported Meta hierarchy. Connect and sync an authorized account to see provider campaigns, ad sets and ads.</p>{% endfor %}
         </section>
-        <section class="cos-panel"><h2>Attribution and Finance</h2><p>No accepted Shopify/Sales attribution or Finance expense reconciliation yet. ROAS and net profit are not confirmed.</p></section>
+        {% include 'experience/marketing/media_analytics.html.twig' %}
+        {% include 'experience/marketing/attribution_analytics.html.twig' %}
     {% elseif section == 'actions' %}
         <section class="cos-panel"><h2>Blocked paid operations</h2>
             <p>Campaign activation, changes to budgets, new paused provider objects and autonomous agent edits are unavailable until F1 + canonical Workflow acceptance.</p>

@@ -64,10 +64,13 @@ expectDomainSkeleton($financeDefinition->manifest->enabledByDefault === false,
 $financeIds=array_column((require dirname(__DIR__,2).'/app/Domains/Finance/module.php')['contributions']['capability_contracts'],'id');
 $financeF1=array_filter($financeIds,static fn(string $id):bool=>str_starts_with($id,'finance.budget.')||$id==='finance.ad_spend.reconciliation.status');
 expectDomainSkeleton(count($financeF1)===8,'Finance F1 retains eight canonical typed capabilities, including reconciliation read.');
-expectDomainSkeleton(count($financeIds)===13 && in_array('finance.sales.commercial_evidence.read',$financeIds,true),
+expectDomainSkeleton(count($financeIds)===16 && in_array('finance.sales.commercial_evidence.read',$financeIds,true),
     'Finance additionally exposes accepted Sales evidence read-only.');
 foreach (['finance.order.payment.register','finance.order.payment.reconcile','finance.order.payment.operations.read','finance.order.financial_evidence.read'] as $id) {
     expectDomainSkeleton(in_array($id,$financeIds,true),'Missing Finance order contract: '.$id);
+}
+foreach (['finance.ad_spend.settlement.commit','finance.ad_spend.settlement.status','finance.ad_spend.settlement.review'] as $id) {
+    expectDomainSkeleton(in_array($id,$financeIds,true),'Missing Finance settlement contract: '.$id);
 }
 
 $serviceDefinition = ModuleDefinition::fromArray(require dirname(__DIR__, 2) . '/app/Domains/Service/module.php');

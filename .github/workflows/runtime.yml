@@ -201,6 +201,30 @@ jobs:
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
         run: php tests/integration/product_management_approved_csv_mysql.php
+      - name: Marketing M2b Product source readback unit and schema gates
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/unit/marketing_product_draft_check.php
+      - name: Marketing M2b real MySQL Product source, tenant and price acceptance
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/integration/marketing_product_draft_mysql.php
+      - name: Marketing M2 real MySQL Creative and independent analyst review
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/integration/marketing_m2_planning_mysql.php
+      - name: Marketing M4 native attribution and analytics MySQL
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/integration/marketing_m4_attribution_mysql.php
+      - name: Marketing approved analyst Goal Workflow Action Outcome native MySQL E2E
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/integration/marketing_analyst_approved_goal_e2e_mysql.php
+      - name: Marketing M3 approved paid lifecycle native MySQL E2E
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/integration/marketing_paid_approved_goal_e2e_mysql.php
       - name: Marketing Meta real MySQL atomic sync and rollback acceptance
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
@@ -534,7 +558,7 @@ jobs:
           docker compose exec -T \
             -e COS_CM_POOL_APPROVAL_TEST=1 \
             -e COS_TEST_AUTOLOAD=/var/www/html/symfony/vendor/autoload.php \
-            php php -d memory_limit=256M /tmp/cm-pool-approval.php
+            php php -d memory_limit=512M /tmp/cm-pool-approval.php
       - name: P1 Provider expansion and read-only raw replay provenance MySQL
         run: |
           docker compose cp tests/integration/capital_markets_raw_replay_provenance_mysql.php php:/tmp/cm-replay-provenance.php

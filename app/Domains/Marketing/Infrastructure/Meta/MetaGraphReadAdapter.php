@@ -95,7 +95,8 @@ final readonly class MetaGraphReadAdapter implements PaidMediaProviderInterface
                 if(count($items)>1000)throw new DomainException('Meta sync exceeds bounded object count; use smaller scope.');
             }
             $cursor=$response['paging']['cursors']['after']??null;
-            if(!isset($response['paging']['next'])||!is_string($cursor)||$cursor==='')return $items;
+            if(!isset($response['paging']['next']))return $items;
+            if(!is_string($cursor)||$cursor==='')throw new DomainException('Incomplete Meta pagination cursor.');
             if(strlen($cursor)>1000||isset($seen[$cursor]))throw new DomainException('Invalid or repeated Meta cursor.');
             $seen[$cursor]=true;$after=$cursor;
         }

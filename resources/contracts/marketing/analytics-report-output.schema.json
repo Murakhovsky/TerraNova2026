@@ -1,0 +1,195 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "campaign_id",
+    "plan_id",
+    "window_start",
+    "window_end",
+    "model",
+    "coverage",
+    "leads",
+    "won_deals",
+    "won_deal_value",
+    "media",
+    "settlement",
+    "recognized_revenue_confirmed",
+    "roas",
+    "profit",
+    "causal_attribution",
+    "cost_per_captured_lead",
+    "cost_per_captured_won_deal",
+    "sales_calendar",
+    "sales_cutoff",
+    "qualified_leads",
+    "linked_deals",
+    "lead_to_won_percent",
+    "unknown_value_count",
+    "missing_source_count",
+    "source_drift_count",
+    "channels"
+  ],
+  "properties": {
+    "campaign_id": {
+      "type": "string",
+      "pattern": "^mkt-[a-f0-9]{24}$"
+    },
+    "plan_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^mkpl-[a-f0-9]{24}$"
+    },
+    "window_start": {
+      "type": "string"
+    },
+    "window_end": {
+      "type": "string"
+    },
+    "model": {
+      "type": "string",
+      "const": "utm-exact-v1"
+    },
+    "coverage": {
+      "type": "string",
+      "const": "CAPTURED_NATIVE_LEADS_ONLY"
+    },
+    "leads": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "won_deals": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "won_deal_value": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "currency",
+          "minor"
+        ],
+        "properties": {
+          "currency": {
+            "type": "string"
+          },
+          "minor": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "media": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "settlement": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "recognized_revenue_confirmed": {
+      "type": "boolean",
+      "const": false
+    },
+    "roas": {
+      "type": "null"
+    },
+    "profit": {
+      "type": "null"
+    },
+    "causal_attribution": {
+      "type": "boolean",
+      "const": false
+    },
+    "cost_per_captured_lead": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "cost_per_captured_won_deal": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "sales_calendar": {
+      "type": "string",
+      "const": "NATIVE_STORED_CALENDAR"
+    },
+    "sales_cutoff": {
+      "type": "string"
+    },
+    "qualified_leads": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "linked_deals": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "lead_to_won_percent": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "unknown_value_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "missing_source_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "source_drift_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "channels": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source",
+          "medium",
+          "leads",
+          "qualified_leads",
+          "won_deals"
+        ],
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "medium": {
+            "type": "string"
+          },
+          "leads": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "qualified_leads": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "won_deals": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

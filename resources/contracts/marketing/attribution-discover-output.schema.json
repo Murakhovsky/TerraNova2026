@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "model",
+    "matches",
+    "scanned",
+    "next_offset",
+    "complete_coverage"
+  ],
+  "properties": {
+    "model": {
+      "type": "string",
+      "const": "utm-exact-v1"
+    },
+    "matches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "lead_id",
+          "plan_id",
+          "created_at",
+          "utm_source",
+          "utm_medium",
+          "utm_campaign",
+          "evidence_hash",
+          "model"
+        ],
+        "properties": {
+          "lead_id": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,17}$"
+          },
+          "plan_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "utm_source": {
+            "type": "string"
+          },
+          "utm_medium": {
+            "type": "string"
+          },
+          "utm_campaign": {
+            "type": "string"
+          },
+          "evidence_hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "model": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "scanned": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 50
+    },
+    "next_offset": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "complete_coverage": {
+      "type": "boolean",
+      "const": false
+    }
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "campaign_id",
+    "plan_id",
+    "tags",
+    "query_string",
+    "model"
+  ],
+  "properties": {
+    "campaign_id": {
+      "type": "string",
+      "pattern": "^mkt-[a-f0-9]{24}$"
+    },
+    "plan_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^mkpl-[a-f0-9]{24}$"
+    },
+    "tags": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "utm_source",
+        "utm_medium",
+        "utm_campaign"
+      ],
+      "properties": {
+        "utm_source": {
+          "type": "string"
+        },
+        "utm_medium": {
+          "type": "string"
+        },
+        "utm_campaign": {
+          "type": "string"
+        }
+      }
+    },
+    "query_string": {
+      "type": "string"
+    },
+    "model": {
+      "type": "string",
+      "const": "utm-exact-v1"
+    }
+  }
+}

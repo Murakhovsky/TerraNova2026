@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "reservation_id",
+    "envelope_id",
+    "action_id",
+    "actor_id",
+    "candidate_hash",
+    "currency",
+    "reserved_minor",
+    "committed_minor",
+    "released_minor",
+    "created_at",
+    "state",
+    "finance_settled",
+    "expense_confirmed",
+    "payment_confirmed",
+    "fresh"
+  ],
+  "properties": {
+    "reservation_id": {
+      "type": "string",
+      "pattern": "^finr-[a-f0-9]{24}$"
+    },
+    "envelope_id": {
+      "type": "string",
+      "pattern": "^finb-[a-f0-9]{24}$"
+    },
+    "action_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "actor_id": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]{0,18}$"
+    },
+    "candidate_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "currency": {
+      "enum": [
+        "USD",
+        "EUR",
+        "UAH",
+        "PLN"
+      ],
+      "type": "string"
+    },
+    "reserved_minor": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000000000000
+    },
+    "committed_minor": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000000000000
+    },
+    "released_minor": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000000000000
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "state": {
+      "const": "SETTLED",
+      "type": "string"
+    },
+    "finance_settled": {
+      "const": true,
+      "type": "boolean"
+    },
+    "expense_confirmed": {
+      "const": false,
+      "type": "boolean"
+    },
+    "payment_confirmed": {
+      "const": false,
+      "type": "boolean"
+    },
+    "fresh": {
+      "type": "boolean"
+    }
+  }
+}

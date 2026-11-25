@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "campaign_id": {
+      "type": "string",
+      "pattern": "^mkt-[a-f0-9]{24}$"
+    },
+    "campaign_revision": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2000000000
+    },
+    "creative_id": {
+      "type": "string",
+      "pattern": "^mkcr-[a-f0-9]{24}$"
+    },
+    "creative_revision": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2000000000
+    },
+    "adset_id": {
+      "type": "string",
+      "pattern": "^mkas-[a-f0-9]{24}$"
+    },
+    "adset_revision": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2000000000
+    }
+  },
+  "required": [
+    "campaign_id",
+    "campaign_revision",
+    "creative_id",
+    "creative_revision"
+  ],
+  "additionalProperties": false
+}
