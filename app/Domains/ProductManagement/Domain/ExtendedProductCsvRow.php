@@ -36,7 +36,7 @@ final class ExtendedProductCsvRow
         }unset($v);
         foreach($categories as $c)if(!is_string($c)||!preg_match('/^[a-f0-9]{32}$/D',$c))throw new DomainException('Invalid category identity.');
         if(count(array_unique($categories))!==count($categories))throw new DomainException('Duplicate category.');
-        foreach(AttributeRules::changes($attributes===[]?[['code'=>'empty','value'=>null]]:$attributes) as $value)
+        if($attributes!==[])foreach(AttributeRules::changes($attributes) as $value)
             if($value!==null&&!is_string($value)&&!is_bool($value))throw new DomainException('Invalid typed attribute.');
         foreach($media as &$image){
             if(!is_array($image)||array_diff(array_keys($image),['file_id','sku','role','sort_order'])!==[]

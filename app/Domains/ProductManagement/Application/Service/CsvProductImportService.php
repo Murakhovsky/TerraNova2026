@@ -53,14 +53,14 @@ final readonly class CsvProductImportService
             if ($first===false) throw new DomainException('CSV missing header.');
             $separator=substr_count($first,';')>substr_count($first,',')?';':',';
             rewind($input);
-            $header=fgetcsv($input,0,$separator);
+            $header=fgetcsv($input,0,$separator,'"','');
             $extended=$header===ExtendedProductCsvRow::HEADER;
             if (!$extended&&$header!==['sku','name','type','uom','track_inventory']) {
                 throw new DomainException('CSV header must match legacy or extended format.');
             }
             if($extended&&($this->assembly===null||$this->files===null))throw new DomainException('Extended assembly import not available.');
             $rows=[];$seen=[];$no=0;
-            while (($fields=fgetcsv($input,0,$separator))!==false) {
+            while (($fields=fgetcsv($input,0,$separator,'"',''))!==false) {
                 if ($fields===[null]) continue;
                 if (++$no>5000) throw new DomainException('CSV staging limited to 5000 items per batch.');
                 $status='ready';$error=null;$payload=[];

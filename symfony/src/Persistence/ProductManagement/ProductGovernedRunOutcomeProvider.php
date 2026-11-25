@@ -74,12 +74,15 @@ final readonly class ProductGovernedRunOutcomeProvider implements RunScopedGoalO
                     array_push($ids,...$found);
                     if(isset($v['price']))array_push($ids,...$verifyChild('price:'.$i,'price.set','price.base.set',['variant_id'=>$vid,'currency'=>$v['price']['currency'],'amount'=>$v['price']['amount'],'expected_revision'=>0]));
                 }
+                $actualCategories=array_column($fresh['categories'],'category_id');$expectedCategories=$p['category_ids']??[];
+                sort($actualCategories,SORT_STRING);sort($expectedCategories,SORT_STRING);
+                $this->require($actualCategories===$expectedCategories,'assembly category cardinality');
                 foreach($p['category_ids']??[] as $i=>$cid)array_push($ids,...$verifyChild('category:'.$i,'category.assign','category.assign',['product_id'=>$pid,'category_id'=>$cid]));
                 if(!empty($p['attributes'])){
                     // New product, category assignment does not advance the Product revision.
                     array_push($ids,...$verifyChild('attributes','attribute.product.set','attribute.product.set',['product_id'=>$pid,'values'=>$p['attributes'],'expected_revision'=>1]));
                 }
-                $this->require(count($r['media_ids']??[])===count($p['media']??[]),'assembly media count');
+                $this->require(count($r['media_ids']??[])===count($p['media']??[])&&count($fresh['media'])===count($p['media']??[]),'assembly media count');
                 foreach($p['media']??[] as $i=>$image){
                     $params=['product_id'=>$pid,'file_id'=>$image['file_id'],'role'=>$image['role']??'gallery','sort_order'=>$image['sort_order']??0];
                     if(isset($image['sku']))$params['variant_id']=$reported[ProductRules::sku($image['sku'])]??'';

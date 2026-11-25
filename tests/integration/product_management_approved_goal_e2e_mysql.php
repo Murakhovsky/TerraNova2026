@@ -288,13 +288,13 @@ try {
     $db->executeStatement('UPDATE pm_base_prices SET amount=? WHERE organization_id=? AND variant_id=? AND currency=?',['26.0000',$org,$primary['variant_id'],'USD']);
     $deny(fn()=>$goals->recordEvaluation($actor,'pm-eval-rich-tampered-'.$token,$runId),'Tampered rich CSV price satisfied Goal');
     $db->executeStatement('UPDATE pm_base_prices SET amount=? WHERE organization_id=? AND variant_id=? AND currency=?',['25.5000',$org,$primary['variant_id'],'USD']);
-    $storage->delete($fileKey);
     // Product-owned evidence drift must not be silently counted as success.
     $db->executeStatement('UPDATE pm_import_rows SET receipt_key=:fake
         WHERE organization_id=:org AND batch_id=:batch AND row_no=1',
         ['fake'=>'FORGED-RECEIPT','org'=>$org,'batch'=>$batch['batch_id']]);
     $deny(fn()=>$goals->recordEvaluation($actor,'pm-eval-tampered-'.$token,$runId),
         'tampered Product CSV receipt satisfied Goal again');
+    $storage->delete($fileKey);
     echo "Product CSV approved Goal/Plan/Action/Outcome FULL native MySQL E2E PASS.\n";
 } finally {
     if($oldRollout===false)putenv('COS_FEDERATION_CANONICAL_ORGANIZATION');
