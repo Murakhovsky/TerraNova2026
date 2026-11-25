@@ -322,8 +322,11 @@ final readonly class SalesBusinessRunOutcomeProvider implements RunScopedGoalOut
                 if(!is_string($receipt)||!hash_equals('done:'.$hash,$receipt))
                     throw new DomainException('CRM recovery receipt mismatch.');
                 // This proves admission/requeue, not successful remote processing.
-            } elseif($row['status']!=='COMPLETED') {
-                throw new FederationOutcomeSourceNotReady('CRM inbox processing is not complete.');
+            } else {
+                $hash=hash('sha256',json_encode([$user,$id,$p['revision']],JSON_THROW_ON_ERROR));
+                $receipt=$this->nativeReceipts->find($org,'crm.inbox.process',$key);
+                if($row['status']!=='COMPLETED'||!is_string($receipt)||!hash_equals('done:'.$hash,$receipt))
+                    throw new FederationOutcomeSourceNotReady('CRM processing has no matching native completion receipt.');
             }
             return 'sales:crm:'.$id.':'.$key;
         }

@@ -22,6 +22,9 @@ final readonly class SalesDirectInvocationPolicy implements TransactionalCapabil
     {
         $org=$actor->organizationId()->value();$user=(int)$actor->userId()->value();
         $id=$contract->id;
+        // CRM processor owns a separately committed claim and locks live actor
+        // authority inside its native apply transaction. Never wrap that claim.
+        if($id==='sales.crm.inbox.process')return $operation();
         $permission=match(true){
             $id==='sales.team.manage'=>SalesCapability::AdminTeamsManage->value,
             (str_starts_with($id,'sales.crm.inbox.')||str_starts_with($id,'sales.order.source.'))=>SalesCapability::AdminIntegrationsManage->value,

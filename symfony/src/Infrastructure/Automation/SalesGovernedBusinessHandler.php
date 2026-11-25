@@ -92,7 +92,7 @@ final readonly class SalesGovernedBusinessHandler implements IdempotentExternalA
             }
             if ($adapter === null) throw new DomainException('Native Sales command adapter unavailable.');
 
-            $result = $this->transactions->transactional(function () use ($action, $native, $adapter): array {
+            $authorize = function () use ($action, $native): \Kernel\Tenant\Model\TenantContext {
                 $this->approval->assertApprovedBusinessExecution($action);
                 $identity = $this->identities->resolve(
                     UserId::fromString($action->sourceId), OrganizationId::fromString($action->organizationId));
@@ -106,6 +106,18 @@ final readonly class SalesGovernedBusinessHandler implements IdempotentExternalA
                     throw new DomainException('Live Sales actor permission missing.');
                 }
                 $this->policy->authorize($actor, $native, $action->parameters);
+                return $actor;
+            };
+            if($nativeId==='sales.crm.inbox.process'){
+                if(!$adapter instanceof \App\Infrastructure\Capability\SalesCrmInboxProcessAdapter)
+                    throw new DomainException('CRM processing requires native claim-aware adapter.');
+                $actor=$this->transactions->transactional($authorize);
+                $result=$adapter->invoke($actor,$action->parameters,$this->idempotencyKey($action),$action->correlationId,$authorize);
+                if(!is_array($result))throw new DomainException('Native CRM completion missing.');
+                return ExecutionResult::success($result);
+            }
+            $result = $this->transactions->transactional(function () use ($action, $native, $adapter,$authorize): array {
+                $actor=$authorize();
                 $data = $this->policy->execute($actor, $native, $action->parameters,
                     fn () => ($adapter instanceof \App\Infrastructure\Capability\SalesPipelineStageManageAdapter
                         || $adapter instanceof \App\Infrastructure\Capability\SalesDealOutcomeRecordAdapter)

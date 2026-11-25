@@ -157,8 +157,12 @@ try{
         ->execute([$org,'crm-recover-'.$token.'@example.test',password_hash($token,PASSWORD_DEFAULT),'CRM CI manager','manager','active']);
     $managerId=(int)$a->lastInsertId();
     $a->prepare('INSERT INTO cos_organization_memberships (organization_id,user_id,role,status) VALUES (?,?,?,?)')->execute([$org,$managerId,'manager','ACTIVE']);
+    $a->prepare('INSERT INTO sales_user_capabilities(organization_id,user_id,capability,status,granted_by,created_at,updated_at) VALUES (?,?,"sales.admin.integrations.manage","ACTIVE",?,NOW(6),NOW(6))')->execute([$org,$managerId,$managerId]);
+    $access=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAccessControl($a);
+    $scope=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesWorkspaceScope($a,$access);
+    $guard=new \Domains\Sales\Application\Service\SalesMutationGuard($tx,new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesMutationAuthority($a,$scope,$access));
     $handler=new RecoverCrmInboxCommandHandler($repo,new MysqlSalesMutationReceiptRepository($a),$tx,new IntegrationMutationAudit(new MysqlAuditRepository($a)));
-    $bus=new SymfonyCommandBus(new MessageBus([new HandleMessageMiddleware(new HandlersLocator([RecoverCrmInboxCommand::class=>[$handler],ProcessCrmInboxNowCommand::class=>[new ProcessCrmInboxNowCommandHandler($repo,$processor)]]))]));
+    $bus=new SymfonyCommandBus(new MessageBus([new HandleMessageMiddleware(new HandlersLocator([RecoverCrmInboxCommand::class=>[$handler],ProcessCrmInboxNowCommand::class=>[new ProcessCrmInboxNowCommandHandler($repo,$processor,$guard,new MysqlSalesMutationReceiptRepository($a))]]))]));
     $moduleCatalog=new ModuleCatalog([ModuleDefinition::fromArray(require dirname(__DIR__,2).'/app/Domains/Sales/module.php')]);
     $catalog=new CanonicalCapabilityCatalog($moduleCatalog);
     $state=new class implements ModuleStateRepositoryInterface {
@@ -195,6 +199,8 @@ try{
     $check($processHandler($makeProcess($current['revision']),'process')===['inbox_id'=>$dead,'status'=>'COMPLETED','replayed'=>false],'Native CRM processing receipt missing.');
     $check($processHandler($makeProcess($current['revision']),'another-key')===['inbox_id'=>$dead,'status'=>'COMPLETED','replayed'=>true],'Completed item replay failed.');
     $check((int)$read($dead)['attempts']===1,'Replay duplicated claim.');
+    $nativeReceipt=(new MysqlSalesMutationReceiptRepository($a))->find($org,'crm.inbox.process','process');
+    $check($nativeReceipt==='done:'.hash('sha256',json_encode([$managerId,$dead,$current['revision']],JSON_THROW_ON_ERROR)),'Native process receipt mismatch.');
     $check($recover($input,$key)===[...$receipt,'replayed'=>true] && $read($dead)['status']==='COMPLETED','Recovery replay reset a completed item.');
     $q=$b->prepare("SELECT COUNT(*) FROM cos_audit_log WHERE organization_id=? AND subject_id=? AND action='sales.crm.inbox.recover' AND JSON_UNQUOTE(JSON_EXTRACT(metadata,'$.reason_code'))='mapping_repaired'");
     $q->execute([$org,$dead]);
@@ -208,6 +214,8 @@ try{
         $a->prepare('DELETE FROM cos_crm_inbox WHERE organization_id=? AND id=?')->execute([$org,$id]);
     }
     if($managerId!==null){
+        $a->prepare('DELETE FROM sales_user_capabilities WHERE organization_id=? AND user_id=?')->execute([$org,$managerId]);
+        $a->prepare('DELETE FROM sales_operation_receipts WHERE organization_id=? AND operation_type="crm.inbox.process" AND idempotency_key="process"')->execute([$org]);
         $a->prepare('DELETE FROM cos_organization_memberships WHERE organization_id=? AND user_id=?')->execute([$org,$managerId]);
         $a->prepare('DELETE FROM tn_users WHERE id=? AND organization_id=?')->execute([$managerId,$org]);
     }
