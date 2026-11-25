@@ -364,10 +364,15 @@ Manifest capabilities не задекларовані.
 - `product_management.category.assign`;
 - `product_management.category.create`;
 - `product_management.category.search`;
+- `product_management.governed.attribute.category.bind`;
+- `product_management.governed.attribute.define`;
 - `product_management.governed.attribute.product.bulk_set`;
+- `product_management.governed.attribute.product.set`;
 - `product_management.governed.category.assign`;
 - `product_management.governed.category.create`;
 - `product_management.governed.location.create`;
+- `product_management.governed.media.attach`;
+- `product_management.governed.media.detach`;
 - `product_management.governed.price.base.set`;
 - `product_management.governed.price.list.archive`;
 - `product_management.governed.price.list.create`;
