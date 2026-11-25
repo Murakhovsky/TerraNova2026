@@ -22,7 +22,8 @@
     "financial_evidence_invalid_count",
     "financial_evidence_status",
     "confirmed_financial_totals",
-    "lifecycle"
+    "lifecycle",
+    "deduplication"
   ],
   "properties": {
     "model": {
@@ -168,8 +169,7 @@
       "const": false
     },
     "deduplicated_against_deals": {
-      "type": "boolean",
-      "const": false
+      "type": "boolean"
     },
     "financial_evidence_count": {
       "type": "integer",
@@ -290,6 +290,61 @@
         },
         "orders_with_returns": {
           "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "deduplication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "captured_leads",
+        "won_deals",
+        "placed_orders",
+        "overlapping_won_deals",
+        "unresolved_order_links",
+        "unresolved_lead_evidence",
+        "unique_outcomes"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "UNAVAILABLE",
+            "PARTIAL",
+            "COMPLETE_CAPTURED_COHORT"
+          ]
+        },
+        "captured_leads": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "won_deals": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "placed_orders": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "overlapping_won_deals": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unresolved_order_links": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unresolved_lead_evidence": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unique_outcomes": {
+          "type": [
+            "integer",
+            "null"
+          ],
           "minimum": 0
         }
       }

@@ -138,7 +138,24 @@ $commerceSource->facts[$org][$badId]=$fact($badId,str_repeat('3',32),'native','E
 $assert($commerce->inspect($actor,$c2,null,$shopId)['state']==='UNRESOLVED','Absent Shopify journey became conversion.');
 $commerceSource->facts[$org][$shopId]['journey']=['state'=>'observed','evidence_hash'=>str_repeat('f',64),'model'=>'shopify-last-visit-utm-v1',
     'visit_at'=>'2026-01-01T10:00:00.000000Z',...$tag];
+// Use the live native Sales lead/deal backlink; order association is immutable placement evidence.
+$db->prepare("UPDATE tn_leads SET utm_medium='organic' WHERE organization_id=? AND id=?")->execute([$org,$id]);
+$commerceSource->facts[$org][$orderId]['placement']['deal_id']=$deal;
+$commerceSource->facts[$org][$shopId]['placement']['deal_id']=null;
+$dedupCommerce=new \Domains\Marketing\Application\Service\MarketingCommerceAttributionService($campaignService,$plans,$commerceSource,$commerceStore,$store,$modules,null,$sales);
+$dedupCommerce->capture($actor,$c2,null,[$orderId],'m4-linked-order-capture');
+$d=$dedupCommerce->report($actor,$c2,null,'2026-01-01','2026-01-02');
+$assert($d['deduplicated_against_deals']&&$d['deduplication']['captured_leads']===1&&$d['deduplication']['won_deals']===1
+    &&$d['deduplication']['overlapping_won_deals']===1&&$d['deduplication']['unique_outcomes']===1,'Linked Lead/Deal/Order counted twice.');
+$db->prepare("UPDATE tn_leads SET utm_medium='email' WHERE organization_id=? AND id=?")->execute([$org,$id]);
+$d=$dedupCommerce->report($actor,$c2,null,'2026-01-01','2026-01-02');
+$assert(!$d['deduplicated_against_deals']&&$d['deduplication']['unique_outcomes']===null&&$d['deduplication']['unresolved_lead_evidence']===1,'Lead drift silently counted.');
+$db->prepare("UPDATE tn_leads SET utm_medium='organic' WHERE organization_id=? AND id=?")->execute([$org,$id]);
 $receipt=$commerce->capture($actor,$c2,null,[$orderId,$shopId,$badId],'m4-commerce-capture');
+$d=$dedupCommerce->report($actor,$c2,null,'2026-01-01','2026-01-02');
+$assert(!$d['deduplicated_against_deals']&&$d['deduplication']['overlapping_won_deals']===1
+    &&$d['deduplication']['unique_outcomes']===null&&$d['deduplication']['unresolved_order_links']===1,'Unlinked provider order assumed distinct.');
+echo "Marketing captured Lead/Deal/Order deduplication and unresolved provider relationship PASS\n";
 $assert(array_column($receipt['results'],'state','order_id')===[$orderId=>'RECORDED',$shopId=>'RECORDED',$badId=>'REJECTED'],'Exact commerce attribution failed.');
 $assert($commerce->capture($actor,$c2,null,[$shopId,$badId,$orderId],'m4-commerce-capture')===$receipt,'Commerce capture replay changed.');
 $r=$commerce->report($actor,$c2,null,'2026-01-01','2026-01-02');
@@ -212,6 +229,8 @@ if(interface_exists(\Domains\Sales\Application\Contract\SalesOrderJourneyStore::
     $nativeSource=new \App\Infrastructure\Marketing\CommerceOrderReadAdapter($modules,$nativeRepo,$nativeRepo,
         $nativeRepo instanceof \Domains\Sales\Application\Contract\SalesCommerceOrderLifecycleEvidencePort?$nativeRepo:null);
     $nativeCommerce=new \Domains\Marketing\Application\Service\MarketingCommerceAttributionService($campaignService,$plans,$nativeSource,$commerceStore,$store,$modules);
+    $nativeFact=$nativeSource->get($actor,$nativeId);
+    $assert(array_key_exists('deal_id',$nativeFact['placement'])&&$nativeFact['placement']['deal_id']===null,'Native placement deal relationship lost.');
     $r=$nativeCommerce->capture($actor,$c2,null,[$nativeId],'m4-native-order-join');
     $assert($r['results'][0]['state']==='RECORDED','Native Sales -> Marketing commerce integration failed.');
     echo "Marketing M4.10 native Sales repository -> Marketing attribution PASS\n";

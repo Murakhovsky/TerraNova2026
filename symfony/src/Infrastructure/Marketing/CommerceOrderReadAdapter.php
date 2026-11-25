@@ -38,7 +38,7 @@ final readonly class CommerceOrderReadAdapter implements MarketingCommerceOrderR
         $j=$p['channel']==='shopify'?$this->journeys->journey($org,$orderId):null;
         // Project only commercial facts and exact source tags. No customer data, external IDs or raw click history.
         $p=array_intersect_key($p,array_flip(['schema_version','event_id','event_type','organization_id','order_id',
-            'revision','occurred_at','channel','currency','order_total','financial_evidence_reference','realized_revenue','attribution_status','provenance','attribution_observations']));
+            'revision','occurred_at','channel','deal_id','currency','order_total','financial_evidence_reference','realized_revenue','attribution_status','provenance','attribution_observations']));
         $tags=(array)($p['attribution_observations']??[]);
         $p['attribution_observations']=array_intersect_key($tags,array_flip(['utm_source','utm_medium','utm_campaign','campaign_id']));
         return ['placement'=>$p,'journey'=>$j];
