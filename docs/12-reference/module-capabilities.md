@@ -30,7 +30,7 @@ generated: true
 | `hr` | HR | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/HR/module.php` |
 | `marketing` | Marketing | `0.2.3` | `0.2.3` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Marketing/module.php` |
 | `procurement` | Procurement | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Procurement/module.php` |
-| `product_management` | Product Management | `0.1.0` | `0.15.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/ProductManagement/module.php` |
+| `product_management` | Product Management | `0.1.0` | `0.16.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/ProductManagement/module.php` |
 | `property` | Property | `1.0.0` | `1.0.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Property/module.php` |
 | `real_estate` | Real Estate | `1.0.0` | `0.2.0` | `>=0.11.0 <0.12.0` | так | property, sales | `app/Domains/RealEstate/module.php` |
 | `sales` | Sales | `1.0.0` | `0.8.6` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Sales/module.php` |
@@ -384,7 +384,7 @@ Manifest capabilities не задекларовані.
 - обробники jobs: —;
 - внески API routes: —;
 - постачальники конфігурації: —;
-- міграції: `app/migrations/20261118_000152_product_management_catalog.sql`, `app/migrations/20261118_000153_product_management_inventory.sql`, `app/migrations/20261118_000154_product_management_prices_import.sql`, `app/migrations/20261118_000155_product_management_shopify_read.sql`, `app/migrations/20261119_000156_product_management_approved_import.sql`, `app/migrations/20261119_000157_product_management_media_links.sql`, `app/migrations/20261119_000158_product_management_import_plan_binding.sql`, `app/migrations/20261119_000159_product_management_shopify_import_preview.sql`, `app/migrations/20261119_000160_product_management_shopify_approved_apply.sql`, `app/migrations/20261120_000161_product_management_shopify_identity_claim.sql`, `app/migrations/20261124_000162_product_management_reservations.sql`, `app/migrations/20261124_000162_product_management_shopify_order_pointer.sql`, `app/migrations/20261124_000190_product_management_price_lists.sql`, `app/migrations/20261124_000191_product_management_price_list_lifecycle.sql`, `app/migrations/20261124_000192_product_management_price_tiers.sql`, `app/migrations/20261124_000193_product_management_stock_counts.sql`, `app/migrations/20261124_000194_product_management_count_sessions.sql`, `app/migrations/20261124_000195_product_management_attributes.sql`, `app/migrations/20261125_009007_product_order_reservation_evidence.sql`.
+- міграції: `app/migrations/20261118_000152_product_management_catalog.sql`, `app/migrations/20261118_000153_product_management_inventory.sql`, `app/migrations/20261118_000154_product_management_prices_import.sql`, `app/migrations/20261118_000155_product_management_shopify_read.sql`, `app/migrations/20261119_000156_product_management_approved_import.sql`, `app/migrations/20261119_000157_product_management_media_links.sql`, `app/migrations/20261119_000158_product_management_import_plan_binding.sql`, `app/migrations/20261119_000159_product_management_shopify_import_preview.sql`, `app/migrations/20261119_000160_product_management_shopify_approved_apply.sql`, `app/migrations/20261120_000161_product_management_shopify_identity_claim.sql`, `app/migrations/20261124_000162_product_management_reservations.sql`, `app/migrations/20261124_000162_product_management_shopify_order_pointer.sql`, `app/migrations/20261124_000190_product_management_price_lists.sql`, `app/migrations/20261124_000191_product_management_price_list_lifecycle.sql`, `app/migrations/20261124_000192_product_management_price_tiers.sql`, `app/migrations/20261124_000193_product_management_stock_counts.sql`, `app/migrations/20261124_000194_product_management_count_sessions.sql`, `app/migrations/20261124_000195_product_management_attributes.sql`, `app/migrations/20261125_009007_product_order_reservation_evidence.sql`, `app/migrations/20261126_009100_product_attribute_lifecycle.sql`.
 
 ### Задекларовані capabilities
 
@@ -396,6 +396,7 @@ Manifest capabilities не задекларовані.
 - `product_management.attribute.category.bind`;
 - `product_management.attribute.category.get`;
 - `product_management.attribute.define`;
+- `product_management.attribute.lifecycle.change`;
 - `product_management.attribute.product.bulk_set`;
 - `product_management.attribute.product.filter`;
 - `product_management.attribute.product.get`;
