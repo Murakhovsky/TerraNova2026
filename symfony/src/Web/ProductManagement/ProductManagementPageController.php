@@ -10,8 +10,7 @@ use App\Web\Experience\Shell\ShellBreadcrumb;
 use App\Web\Experience\Shell\WorkspaceShellFactory;
 use DomainException;
 use Domains\ProductManagement\Application\Contract\ProductMediaBrowserPort;
-use App\Application\Documents\Command\UploadDocumentCommand;
-use Kernel\Application\Bus\CommandBusInterface;
+use App\Application\ProductManagement\ProductMediaDocumentUpload;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Observability\CorrelationId;
@@ -38,7 +37,7 @@ final readonly class ProductManagementPageController
         private SessionCsrfValidator $csrf,
         private WorkspaceShellFactory $shells,
         private ProductMediaBrowserPort $imageBrowser,
-        private CommandBusInterface $documents,
+        private ProductMediaDocumentUpload $documents,
     ) {}
 
     public function dashboard(Request $request):Response
@@ -696,8 +695,7 @@ final readonly class ProductManagementPageController
             if(!in_array($mime,['image/jpeg','image/png','image/webp','image/gif'],true)||@getimagesizefromstring($bytes)===false)
                 throw new DomainException('Invalid image.');
             $name=mb_substr($file->getClientOriginalName(),0,180);
-            $document=$this->documents->dispatch(new UploadDocumentCommand($actor->organizationId(),(int)$user,
-                CorrelationId::generate()->value(),'pm-media-upload-'.$key,['title'=>$name,'filename'=>$name,'mime_type'=>$mime,'content_base64'=>base64_encode($bytes)]));
+            $document=$this->documents->upload($actor,$key,CorrelationId::generate()->value(),$name,$mime,$bytes);
             $fileId=$document['current_file_id']??null;
             if(!is_string($fileId)||!preg_match('/^[A-Za-z0-9_-]{1,80}$/D',$fileId))throw new DomainException('Documents receipt missing.');
             $this->imageBrowser->preview($actor->organizationId()->value(),$fileId);

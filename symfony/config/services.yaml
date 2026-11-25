@@ -3108,6 +3108,7 @@ services:
   productManagementNavigationContributor:
     alias: App\Web\Experience\Extension\Provider\ProductManagementWebProvider
 
+  App\Application\ProductManagement\ProductMediaDocumentUpload: ~
   App\Web\ProductManagement\ProductManagementPageController:
     public: true
     tags: ['controller.service_arguments']
