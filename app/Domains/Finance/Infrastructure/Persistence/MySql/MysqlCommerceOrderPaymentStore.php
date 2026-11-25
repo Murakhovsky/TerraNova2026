@@ -100,14 +100,22 @@ final readonly class MysqlCommerceOrderPaymentStore implements CommerceOrderFina
     {
         if($o['kind']==='capture')return 0;
         $parent=$this->operation($org,$id,$o['parent_id']);
-        if($this->one('SELECT id FROM cos_finance_order_reconciliations WHERE organization_id=? AND operation_id=?',[$org,$parent['id']])===null)throw new DomainException('Parent operation is not reconciled.');
-        $used=$this->one('SELECT COALESCE(SUM(o.amount_minor),0) AS total FROM cos_finance_order_operations o JOIN cos_finance_order_reconciliations c ON c.organization_id=o.organization_id AND c.operation_id=o.id WHERE o.organization_id=? AND o.order_id=? AND o.parent_id=?',[$org,$id,$parent['id']]);
-        $available=(int)$parent['amount_minor']-(int)$used['total'];
+        // Balance locking serializes writers, but a caller/authority may already
+        // have established a REPEATABLE READ snapshot. Exposure must use current
+        // locking reads, not that snapshot, before admitting another debit.
+        if($this->one('SELECT id FROM cos_finance_order_reconciliations WHERE organization_id=? AND operation_id=? FOR UPDATE',[$org,$parent['id']])===null)throw new DomainException('Parent operation is not reconciled.');
+        $used=$this->currentAmount('SELECT o.amount_minor FROM cos_finance_order_operations o JOIN cos_finance_order_reconciliations c ON c.organization_id=o.organization_id AND c.operation_id=o.id WHERE o.organization_id=? AND o.order_id=? AND o.parent_id=? FOR UPDATE',[$org,$id,$parent['id']]);
+        $available=(int)$parent['amount_minor']-$used;
         if($o['kind']!=='chargeback_reversal'){
-            $r=$this->one("SELECT COALESCE(SUM(r.amount_minor),0) AS total FROM cos_finance_order_operations r JOIN cos_finance_order_reconciliations c ON c.organization_id=r.organization_id AND c.operation_id=r.id JOIN cos_finance_order_operations b ON b.organization_id=r.organization_id AND b.id=r.parent_id WHERE r.organization_id=? AND r.order_id=? AND b.parent_id=? AND r.kind='chargeback_reversal'",[$org,$id,$parent['id']]);
-            $available+=(int)$r['total'];
+            $available+=$this->currentAmount("SELECT r.amount_minor FROM cos_finance_order_operations r JOIN cos_finance_order_reconciliations c ON c.organization_id=r.organization_id AND c.operation_id=r.id JOIN cos_finance_order_operations b ON b.organization_id=r.organization_id AND b.id=r.parent_id WHERE r.organization_id=? AND r.order_id=? AND b.parent_id=? AND r.kind='chargeback_reversal' FOR UPDATE",[$org,$id,$parent['id']]);
         }
         return $available;
+    }
+    private function currentAmount(string $sql,array $args):int
+    {
+        $q=$this->connection->prepare($sql);$q->execute($args);$total=0;
+        while(($amount=$q->fetchColumn())!==false)$total+=(int)$amount;
+        return $total;
     }
     private function active(string $org):void
     {
