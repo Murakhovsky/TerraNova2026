@@ -49,9 +49,20 @@
       <form method="post" action="/product-management/products/{{ product.product_id }}/attributes" class="cos-page__stack" data-turbo="false">
         <input type="hidden" name="csrf_token" value="{{ csrfToken }}"><input type="hidden" name="action" value="preview">
         <label>Префікс SKU <input name="sku_prefix" class="form-control" required maxlength="60" value="{{ matrixInput.sku_prefix ?? '' }}"></label>
-        <label>Вісі та вибрані значення (JSON)
-          <textarea name="axes" class="form-control" rows="5" required>{% if matrixInput %}{{ matrixInput.axes|json_encode }}{% else %}[{% set first = true %}{% for d in attributes.items %}{% if d.is_axis %}{% if not first %},{% endif %}{"code":{{ d.code|json_encode }},"choices":{{ d.choices|json_encode }}}{% set first = false %}{% endif %}{% endfor %}]{% endif %}</textarea>
-        </label>
+        {% set selectedAxes = {} %}
+        {% for axis in matrixInput.axes ?? [] %}
+          {% set selectedAxes = selectedAxes|merge({(axis.code): axis.choices}) %}
+        {% endfor %}
+        {% for d in attributes.items %}
+          {% if d.is_axis and d.value_type == 'enum' %}
+            <fieldset class="border rounded p-2">
+              <legend class="fs-6">{{ d.name }}</legend>
+              {% for choice in d.choices %}
+                <label class="d-block"><input type="checkbox" name="axis_choices[{{ d.code }}][]" value="{{ choice }}" {% if choice in (selectedAxes[d.code] ?? []) %}checked{% endif %}> {{ choice }}</label>
+              {% endfor %}
+            </fieldset>
+          {% endif %}
+        {% endfor %}
         <button type="submit" class="btn btn-outline-primary">Попередній перегляд</button>
       </form>
       {% if preview %}
