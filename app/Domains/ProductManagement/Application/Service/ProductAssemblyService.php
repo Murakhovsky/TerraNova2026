@@ -64,7 +64,7 @@ final readonly class ProductAssemblyService
                     $image['sort_order']??0,$child('media:'.$i),$actor,$trace)['media_id'];
             }
             return ['product_id'=>$pid,'variant_id'=>$created['variant_id'],'sku'=>$created['sku'],
-                'variants'=>array_map(static fn($sku,$id)=>['sku'=>$sku,'variant_id'=>$id],array_keys($ids),array_values($ids)),
+                'variants'=>array_map(static fn($sku,$id)=>['sku'=>(string)$sku,'variant_id'=>$id],array_keys($ids),array_values($ids)),
                 'media_ids'=>$mediaIds,'status'=>'draft'];
         });
     }

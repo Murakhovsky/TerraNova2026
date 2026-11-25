@@ -95,6 +95,7 @@ domain_id: product_management
       "id": "governed_operations",
       "capability_ids": [
         "product_management.governed.product.create",
+        "product_management.governed.product.assemble",
         "product_management.governed.variant.matrix.create",
         "product_management.governed.attribute.product.bulk_set",
         "product_management.governed.price.base.set",
@@ -223,7 +224,7 @@ Read-only E5 Stock audit звіряє on_hand з ledger і reserved з акти�
 
 ## 13. План розвитку, борги та рішення
 
-Native release: all CI at candidate SHA, actual browser and independent approval acceptance, live agent/LLM test, explicit operator sign-off. All 29 planned governed operation contracts are implemented; final integrated CI and actual agent acceptance remain required. Dynamic output substitution and historical verification of successive mutable writes are not implemented. Optional Shopify: independent live OAuth/scopes canary and recovery; write-back only after separate ownership decision.
+Native release: all CI at candidate SHA, actual browser and independent approval acceptance, live agent/LLM test, explicit operator sign-off. All 29 planned governed operation contracts plus the Product-owned assembly Action are implemented; final integrated CI and actual agent acceptance remain required. Dynamic output substitution and historical verification of successive mutable writes are not implemented. Optional Shopify: independent live OAuth/scopes canary and recovery; write-back only after separate ownership decision.
 
 ## 14. Карта джерел
 

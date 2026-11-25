@@ -7,7 +7,7 @@
   "workflow": "02-workflows/product-management-governed-business-cycle.md",
   "trigger": "Signed AI or CRON intent is reviewed and adopted into an approved Plan",
   "outcomes": [
-    "Eight approved native operations produce independently verified effects",
+    "Nine approved native operations produce independently verified effects, including atomic draft assembly",
     "No unapproved Action or second executor",
     "Ledger and current native results are verified"
   ],
@@ -142,6 +142,22 @@
           "symbol": "'stock.release'=>$this->products->releaseStock"
         }
       ]
+    },
+    {
+      "id": "assemble",
+      "label": "Assemble a complete draft Product",
+      "kind": "operation",
+      "owner": "Approved Product Action worker",
+      "domain": "product_management",
+      "capability": "product_management.governed.product.assemble",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Application/Service/ProductAssemblyService.php",
+          "symbol": "public function assemble"
+        }
+      ]
     }
   ],
   "edges": [
@@ -172,6 +188,10 @@
     {
       "from": "bulk",
       "to": "release"
+    },
+    {
+      "from": "release",
+      "to": "assemble"
     }
   ]
 }

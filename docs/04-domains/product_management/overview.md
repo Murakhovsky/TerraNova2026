@@ -31,7 +31,7 @@ version: 0.1.0
 schema_version: 0.15.0
 runtime: tenant-disabled by default
 persistence: 17 registered migrations; production acceptance pending
-capabilities: 94 typed contracts (31 queries, 30 direct human commands, 33 approved Actions)
+capabilities: 95 typed contracts (31 queries, 30 direct human commands, 34 approved Actions)
 Shopify: read-only; no outbound writes
 process model: six canonical Process Registry models; independent release acceptance pending
 ```
@@ -120,6 +120,6 @@ CSRF, окремі idempotency keys і native readback.
 
 Прайс-листи retail/wholesale/partner, історія, quantity tiers та explicit quote resolution доступні через нативні контракти. Типізовані атрибути, категорійні набори, bulk patches і матриці SKU використовують ревізії, перевірку ownership та незалежний readback. Dashboard читає асортимент, склад, рухи, якість і reconciliation без Shopify.
 
-AI/CRON подає підписаний intent без execution authority. Незалежне review та Plan/Action Approval передують канонічному Workflow. Двадцять дев'ять спеціальних governed operations і чотири інші approved Actions не покривають усіх 30 human commands. Динамічна підстановка вихідних даних між кроками не підтримана. Наявність контрактів не підтверджує live AI acceptance.
+AI/CRON подає підписаний intent без execution authority. Незалежне review та Plan/Action Approval передують канонічному Workflow. Тридцять спеціальних governed operations і чотири інші approved Actions не покривають усіх 30 human commands. Динамічна підстановка вихідних даних між кроками не підтримана. Наявність контрактів не підтверджує live AI acceptance.
 
 Докази та обмеження: [паспорт](./passport.md), [DAS-001 acceptance](../../10-operations/das-001-domain-acceptance.md).

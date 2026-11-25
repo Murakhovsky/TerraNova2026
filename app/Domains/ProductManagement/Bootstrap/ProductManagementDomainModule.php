@@ -85,6 +85,7 @@ final readonly class ProductManagementDomainModule implements DomainModuleInterf
     {
         return [
             'product_management.product.created',
+            'product_management.product.assembled',
             'product_management.translation.upserted',
             'product_management.media.attached',
             'product_management.media.detached',
