@@ -1,0 +1,24 @@
+name: COS Shopify SERIES01 operator contract
+on:
+  push:
+    branches: [feature/shopify-series01-server-operator-20261124]
+    paths:
+      - '.github/workflows/cos-shopify-series01-operator-contract.yml'
+      - 'bin/shopify-series01-operator.sh'
+      - 'tests/architecture/shopify_series01_operator_contract.php'
+  pull_request:
+    paths:
+      - '.github/workflows/cos-shopify-series01-operator-contract.yml'
+      - 'bin/shopify-series01-operator.sh'
+      - 'tests/architecture/shopify_series01_operator_contract.php'
+permissions:
+  contents: read
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash -n bin/shopify-series01-operator.sh
+      - run: php -l tests/architecture/shopify_series01_operator_contract.php
+      - run: php tests/architecture/shopify_series01_operator_contract.php

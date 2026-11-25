@@ -97,6 +97,8 @@ $db=DriverManager::getConnection([
 ]);
 $token=bin2hex(random_bytes(7));
 $org='fed-e2e-'.$token;
+$effect=getenv('COS_TEST_WORKFLOW_EFFECT')?:'external';
+if(!in_array($effect,['internal','external','financial','irreversible'],true))throw new RuntimeException('Invalid E2E effect fixture.');
 $owner='owner-'.$token;
 $approver='approver-'.$token;
 $goalId='goal-'.$token;
@@ -125,6 +127,18 @@ $personId=0;
 try {
     $pdo->prepare('INSERT INTO cos_organizations (id,name,status) VALUES (:org,:name,"ACTIVE")')
         ->execute(['org'=>$org,'name'=>'Federation acceptance isolated tenant']);
+    if(in_array($effect,['financial','irreversible'],true)){
+        $users=[];
+        foreach(['owner','reviewer'] as $label){
+            $pdo->prepare('INSERT INTO tn_users (organization_id,email,password_hash,full_name,role,status) VALUES (?,?,?,?, "manager","active")')->execute([$org,$label.'-'.$token.'@example.invalid','test-only',$label]);
+            $uid=(string)$pdo->lastInsertId();
+            $pdo->prepare('INSERT INTO cos_organization_memberships (organization_id,user_id,role,status) VALUES (?,?,"manager","ACTIVE")')->execute([$org,(int)$uid]);
+            $users[]=$uid;
+        }
+        [$owner,$approver]=$users;
+        $actor=new TenantContext(UserId::fromString($owner),OrganizationId::fromString($org),
+            OrganizationRole::fromString('manager'),[Permission::fromString(TenantPermissions::MANAGE)]);
+    }
     $pdo->prepare('INSERT INTO tn_people (organization_id,public_id,full_name)
                    VALUES (:org,:public,:name)')
         ->execute(['org'=>$org,'public'=>'PN-'.$token,'name'=>'MySQL acceptance test person']);
@@ -176,7 +190,7 @@ try {
         id:'sales.create_task',version:'1.0.0',ownerDomain:'sales',kind:'command',
         inputSchema:'resources/contracts/sales/create-task-input.schema.json',
         outputSchema:'resources/contracts/sales/create-task-output.schema.json',
-        executionBinding:'action:sales.create_task',async:true,sideEffectLevel:'external',
+        executionBinding:'action:sales.create_task',async:true,sideEffectLevel:$effect,
         permission:TenantPermissions::MANAGE,approvalPolicy:'required',idempotency:'required',
         timeoutPolicy:['seconds'=>90],retryPolicy:['max_attempts'=>1],
         failureContract:'Uncertain CRM response requires operator reconciliation',
@@ -200,8 +214,12 @@ try {
     $claimAdmission=new DoctrineWorkflowActionClaimAdmission($db,$planEvidence,$capabilities,$modules);
     $store=new DoctrineWorkflowExecutionStore($db,$receipts,$claimAdmission);
     $workerAdmission=new DoctrineWorkflowActionWorkerAdmission($db,$planEvidence,$capabilities,$modules,
-        new WorkflowPredecessorReceiptVerifier($receipts,new FailClosedWorkflowNonActionReceiptEvidence()));
-    $gateway=new ModuleActionExecutionGate($domains,$modules,null,$workerAdmission);
+        new WorkflowPredecessorReceiptVerifier($receipts,new FailClosedWorkflowNonActionReceiptEvidence()),
+        new MysqlPolicyRepository($pdo),new PolicyEngine(new ConditionEvaluator()),new PolicyContextBuilder($domains),
+        new \App\Infrastructure\Persistence\MySql\MysqlIdentityRepository($pdo),
+        new \Kernel\Tenant\Service\TenantContextFactory(new \App\Security\RoleTenantPermissionResolver()));
+    $cutover=new \App\Persistence\Workflow\FailClosedWorkflowActionWorkerAdmission($workerAdmission,$org);
+    $gateway=new ModuleActionExecutionGate($domains,$modules,null,$cutover);
     $executor=new ActionExecutor([$handler],$gateway);
     $repository=new MysqlActionRepository($pdo);
     $actionService=new ActionService($repository,$executor);
@@ -253,7 +271,7 @@ try {
     $steps=[[
         'id'=>'task','depends_on'=>[],'capability_id'=>'sales.create_task',
         'capability_version'=>'1.0.0','owner_domain'=>'sales',
-        'execution_binding'=>'action:sales.create_task','side_effect_level'=>'external',
+        'execution_binding'=>'action:sales.create_task','side_effect_level'=>$effect,
         'approval_policy'=>'required','idempotency'=>'required',
         'input'=>['target_type'=>'deal','target_id'=>(string)$caseId,
             'parameters'=>['title'=>'Canonical Goal MySQL acceptance task']],
@@ -381,6 +399,10 @@ try {
     $assert($approvals->decide($org,$approvalId,ApprovalStatus::Approved,$approver,'CI authorized'),
         'independent human approval failed');
     $actionService->queue($org,$actionId);
+    $queued=$actionService->find($org,$actionId);
+    $assert($queued!==null,'Queued canonical Action unavailable.');
+    $reject(static fn()=> (new \App\Persistence\Workflow\FailClosedWorkflowActionWorkerAdmission($workerAdmission,''))->assertAuthorized($queued),'default worker rollout must remain fail closed');
+    $reject(static fn()=> (new \App\Persistence\Workflow\FailClosedWorkflowActionWorkerAdmission($workerAdmission,'foreign-tenant'))->assertAuthorized($queued),'foreign tenant worker rollout');
     // TIMESTAMP second precision: the native task must be after the
     // microsecond-precision canonical Run creation.
     sleep(2);
@@ -503,14 +525,14 @@ try {
         'SELECT COUNT(*) FROM tn_client_case_activities
          WHERE organization_id=:org AND activity_type="task"',
         ['org'=>$org])===1,'Sales wrote more than one native task');
-    echo "Federation canonical Goal full MySQL E2E PASS: Goal/Plan -> Approval -> one Action -> worker -> attested receipt -> Run -> native Sales Outcome; negative replay/receipt/tenant fences.\n";
+    echo "Federation canonical Goal $effect fixture full MySQL E2E PASS: Goal/Plan -> Approval -> one Action -> worker -> attested receipt -> Run -> native Sales Outcome; negative replay/receipt/tenant fences.\n";
 } finally {
     // Isolated test tenant only. Retain no temporary business records.
     foreach (['cos_federation_evaluations','cos_workflow_steps','cos_workflow_runs',
         'cos_approvals','cos_policy_evaluations','cos_action_attempts','cos_actions',
         'cos_policies','cos_federation_steps','cos_federation_runs','cos_federation_plans',
         'cos_federation_goal_specs','cos_federation_goals',
-        'tn_client_case_activities','tn_client_cases','tn_people'] as $table) {
+        'tn_client_case_activities','tn_client_cases','tn_people','cos_organization_memberships','tn_users'] as $table) {
         $pdo->prepare("DELETE FROM $table WHERE organization_id=:org")->execute(['org'=>$org]);
     }
     $pdo->prepare('DELETE FROM cos_organizations WHERE id=:org')->execute(['org'=>$org]);

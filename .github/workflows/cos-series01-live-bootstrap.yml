@@ -1,0 +1,94 @@
+name: COS SERIES01 authorized dev bootstrap
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/cos-series01-live-bootstrap.yml'
+      - 'symfony/src/Command/ProductManagementSeries01CutoverCommand.php'
+      - 'app/Domains/ProductManagement/Infrastructure/Shopify/ShopifyObservationStore.php'
+      - 'bin/series01-live-bootstrap.sh'
+      - 'tests/architecture/series01_live_cutover_contract.php'
+  workflow_run:
+    workflows: [Runtime]
+    types: [completed]
+permissions:
+  contents: read
+jobs:
+  contract:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - run: php -l symfony/src/Command/ProductManagementSeries01CutoverCommand.php
+      - run: php -l app/Domains/ProductManagement/Infrastructure/Shopify/ShopifyObservationStore.php
+      - run: bash -n bin/series01-live-bootstrap.sh
+      - run: php tests/architecture/series01_live_cutover_contract.php
+
+  bootstrap:
+    if: >
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: AWS TN2026
+    concurrency:
+      group: cos-series01-live-bootstrap
+      cancel-in-progress: false
+    env:
+      EXPECTED_SHA: ${{ github.event.workflow_run.head_sha }}
+      DEV_PATH: ${{ vars.DEV_PATH }}
+      DEV_HOST: ${{ secrets.DEV_HOST }}
+      DEV_USER: ${{ secrets.DEV_USER }}
+      DEV_PORT: ${{ secrets.DEV_PORT }}
+      DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+    steps:
+      - name: Checkout current main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Refuse stale Runtime success and invalid target
+        id: guard
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$EXPECTED_SHA" =~ ^[a-f0-9]{40}$ ]] || exit 2
+          if [[ "$(git rev-parse HEAD)" != "$EXPECTED_SHA" ]]; then
+            echo "Runtime completed for superseded revision; no operation."
+            echo 'proceed=no' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          [[ "$DEV_PATH" == '/opt/cos' ]] || { echo "::error::Unexpected dev deployment path"; exit 2; }
+          for name in DEV_HOST DEV_USER DEV_PORT DEV_SSH_KEY; do
+            [[ -n "${!name:-}" ]] || { echo "::error::Missing $name"; exit 2; }
+          done
+          [[ "$DEV_PORT" =~ ^[0-9]{1,5}$ ]] || exit 2
+          echo 'proceed=yes' >> "$GITHUB_OUTPUT"
+      - name: Protected SSH
+        if: steps.guard.outputs.proceed == 'yes'
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$DEV_SSH_KEY" > "$HOME/.ssh/key"
+          chmod 600 "$HOME/.ssh/key"
+          ssh-keyscan -T 10 -p "$DEV_PORT" -H "$DEV_HOST" > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test -s "$HOME/.ssh/known_hosts"
+      - name: Supervised native Product activation, Shopify connection and CSV preview
+        if: steps.guard.outputs.proceed == 'yes'
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          printf -v remote '%q ' sudo -n bash /opt/cos/bin/series01-live-bootstrap.sh "$EXPECTED_SHA"
+          # The deploy artifact excludes /resources/pilots; stream the exact
+          # source-controlled 9-SKU fixture over the trusted SSH channel.
+          # Neither the remote host nor PHP container stores an extra CSV copy.
+          fixture=resources/pilots/series01/approved-import-candidate.csv
+          [[ "$(sha256sum "$fixture" | cut -d' ' -f1)" == "f8122e58f81f61d112be1bd0db0e5ae8f20fda5d6dcce57eab4fa69a0e2a058c" ]] || {
+            echo "::error::SERIES01_CSV_DIGEST_MISMATCH"; exit 2;
+          }
+          ssh -T -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes \
+            -i "$HOME/.ssh/key" -p "$DEV_PORT" \
+            "$DEV_USER@$DEV_HOST" "$remote" < "$fixture"

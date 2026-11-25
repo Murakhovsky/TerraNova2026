@@ -38,7 +38,9 @@ $connection = DriverManager::getConnection([
     'password'=>(string)(getenv('DB_PASSWORD')?:''),
     'charset'=>'utf8mb4',
 ]);
-$effect=getenv('COS_TEST_FINANCIAL_WORKFLOW')==='1'?'financial':'external';
+$effect=getenv('COS_TEST_WORKFLOW_EFFECT')?:'external';
+if(!in_array($effect,['internal','external','financial','irreversible'],true))throw new RuntimeException('Invalid receipt effect fixture.');
+$high=in_array($effect,['financial','irreversible'],true);
 $token=bin2hex(random_bytes(6));
 $org='wf-proof-'.$token;
 $actor=new TenantContext(
@@ -98,6 +100,12 @@ $actionRef='action:'.$actionId;
 $proofRequest=new WorkflowReceiptRequest($id,$actor,'publish',$actionRef,$draft->inputDigest);
 $keys=['org'=>$org,'run'=>$runId];
 try {
+    $explicitPolicy=null;
+    if($high){
+        $connection->executeStatement('INSERT INTO cos_organizations (id,name,status) VALUES (?,?,"ACTIVE")',[$org,'Workflow receipt fixture']);
+        $explicitPolicy=bin2hex(random_bytes(16));
+        $connection->executeStatement('INSERT INTO cos_policies (id,organization_id,code,name,action_type,conditions,decision,priority,version,status) VALUES (?,?,?,?,?,?,"APPROVAL_REQUIRED",1,1,"ACTIVE")',[$explicitPolicy,$org,'receipt-proof','Explicit receipt policy','test.publish','[]']);
+    }
     $store->create($draft,$actor);
     $command=new WorkflowRunCommand($id,$actor,1,$draft->correlationId);
     $store->compareAndTransition(new WorkflowRunTransition(
@@ -137,8 +145,8 @@ try {
     $connection->executeStatement(
         'INSERT INTO cos_policy_evaluations
            (id,organization_id,action_id,policy_id,decision,correlation_id,evaluated_at)
-         VALUES (:id,:org,:action,NULL,"APPROVAL_REQUIRED",:correlation,NOW(6))',
-        ['id'=>$policyId,'org'=>$org,'action'=>$actionId,
+         VALUES (:id,:org,:action,:policy,"APPROVAL_REQUIRED",:correlation,NOW(6))',
+        ['id'=>$policyId,'org'=>$org,'action'=>$actionId,'policy'=>$explicitPolicy,
             'correlation'=>$draft->correlationId],
     );
     $approvalId=bin2hex(random_bytes(16));
@@ -154,6 +162,16 @@ try {
          'approver'=>$independent,'owner'=>$actor->userId()->value()],
     );
 
+    // For high-risk evidence the human decision must predate actual execution.
+    $connection->executeStatement('UPDATE cos_approvals SET decided_at=DATE_SUB(NOW(6),INTERVAL 1 MINUTE) WHERE organization_id=? AND action_id=?',[$org,$actionId]);
+    if($high){
+        $connection->executeStatement('UPDATE cos_policies SET action_type="*" WHERE organization_id=? AND id=?',[$org,$explicitPolicy]);
+        $expectDenied(static fn()=> $verifier->attest($proofRequest),'high-risk wildcard receipt policy');
+        $connection->executeStatement('UPDATE cos_policies SET action_type="test.publish" WHERE organization_id=? AND id=?',[$org,$explicitPolicy]);
+        $connection->executeStatement('UPDATE cos_approvals SET decided_at=DATE_ADD(NOW(6),INTERVAL 1 MINUTE) WHERE organization_id=? AND action_id=?',[$org,$actionId]);
+        $expectDenied(static fn()=> $verifier->attest($proofRequest),'approval after execution');
+        $connection->executeStatement('UPDATE cos_approvals SET decided_at=DATE_SUB(NOW(6),INTERVAL 1 MINUTE) WHERE organization_id=? AND action_id=?',[$org,$actionId]);
+    }
     $proof=$verifier->attest($proofRequest);
     if(!$proof->verified || $proof->evidenceReference!==$actionRef
         || $proof->provider!=='canonical-action') {
@@ -240,7 +258,7 @@ try {
     if(!$verifier->attest($proofRequest)->verified) {
         throw new RuntimeException('Canonical Action receipt did not recover after restored trusted evidence.');
     }
-    echo "Workflow canonical Action receipt MySQL passed: approved Plan port, immutable input, Action key, independent human approval, Policy and exactly-one attempt.\n";
+    echo "Workflow $effect canonical Action receipt MySQL passed: approved Plan port, immutable input, Action key, independent human approval, Policy and exactly-one attempt.\n";
 } finally {
     $connection->executeStatement('DELETE FROM cos_approvals WHERE organization_id=:org',['org'=>$org]);
     $connection->executeStatement('DELETE FROM cos_policy_evaluations WHERE organization_id=:org',['org'=>$org]);
@@ -248,4 +266,8 @@ try {
     $connection->executeStatement('DELETE FROM cos_actions WHERE organization_id=:org',['org'=>$org]);
     $connection->executeStatement('DELETE FROM cos_workflow_steps WHERE organization_id=:org',['org'=>$org]);
     $connection->executeStatement('DELETE FROM cos_workflow_runs WHERE organization_id=:org',['org'=>$org]);
+    if($high){
+        $connection->executeStatement('DELETE FROM cos_policies WHERE organization_id=?',[$org]);
+        $connection->executeStatement('DELETE FROM cos_organizations WHERE id=?',[$org]);
+    }
 }

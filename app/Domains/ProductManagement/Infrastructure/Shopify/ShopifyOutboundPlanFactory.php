@@ -56,9 +56,17 @@ GRAPHQL;
      * @param array<string,mixed> $canonical
      * @return array<string,mixed>
      */
-    public static function draftProduct(string $org,string $connectionId,array $canonical,string $priceUsd):array
+    public static function draftProduct(string $org,string $connectionId,array $canonical,string $priceUsd,string $verifiedShopCurrency):array
     {
         self::scope($org,$connectionId);
+        // Shopify MoneyInput interprets a bare amount in the shop's currency.
+        // SERIES01 prices are USD business hypotheses. An actual UAH shop
+        // must never publish/create a 390 UAH listing for a $390 quote.
+        // Production FX conversion belongs to a separately approved pricing
+        // contract with rate, timestamp and shop-currency evidence.
+        if ($verifiedShopCurrency !== 'USD') {
+            throw new DomainException('SERIES01 USD price cannot be written to a non-USD Shopify store.');
+        }
         $productId=$canonical['product_id']??null;
         if(!is_string($productId)||!preg_match('/^[a-f0-9]{32}$/D',$productId)) {
             throw new DomainException('Canonical Product ID required before Shopify staging.');
@@ -104,6 +112,7 @@ GRAPHQL;
             'kind'=>'product_set_draft','shop_domain_scope'=>'connection_id_only',
             'organization_id'=>$org,'connection_id'=>$connectionId,'product_id'=>$productId,
             'sku'=>$sku,'payload_hash'=>$payloadHash,
+            'canonical_currency'=>'USD','required_shop_currency'=>$verifiedShopCurrency,
             'query'=>self::PRODUCT_SET,'variables'=>$variables,
             'readback_query'=>self::PRODUCT_READBACK,
             'requires_approved_action'=>true,'publishable'=>false,

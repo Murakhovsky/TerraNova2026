@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Persistence\Workflow;
 
+use Platform\Workflow\Service\DurableWorkflowTransitionPolicy;
+
 use Doctrine\DBAL\Connection;
 use DomainException;
 use Platform\Workflow\Contract\WorkflowNonActionReceiptEvidenceInterface;
@@ -41,7 +43,7 @@ final readonly class WorkflowReceiptAttestationRouter implements WorkflowReceipt
         if (!$ctx || $ctx['input_digest']!==$request->inputDigest) {
             throw new DomainException('Workflow receipt scope differs from pinned Run.');
         }
-        if (in_array($ctx['side_effect_level'],['external','financial'],true)) return $this->actions->attest($request);
+        if (DurableWorkflowTransitionPolicy::isActionEffect($ctx['side_effect_level'])) return $this->actions->attest($request);
         if ($ctx['side_effect_level']!=='none' || $ctx['definition_id']!=='federation.approved-plan'
             || !in_array($ctx['state'],['claimed','waiting','completed'],true)
             || ($ctx['result_reference']!==null

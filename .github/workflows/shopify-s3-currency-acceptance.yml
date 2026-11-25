@@ -1,0 +1,23 @@
+name: COS Shopify currency safety acceptance
+on:
+  push:
+    branches: [fix/shopify-s3-shop-currency-fence-20261124]
+    paths:
+      - '.github/workflows/shopify-s3-currency-acceptance.yml'
+      - 'app/Domains/ProductManagement/Infrastructure/Shopify/ShopifyOutboundPlanFactory.php'
+      - 'tests/architecture/shopify_outbound_plan_contract.php'
+  pull_request:
+    paths:
+      - '.github/workflows/shopify-s3-currency-acceptance.yml'
+      - 'app/Domains/ProductManagement/Infrastructure/Shopify/ShopifyOutboundPlanFactory.php'
+      - 'tests/architecture/shopify_outbound_plan_contract.php'
+permissions:
+  contents: read
+jobs:
+  currency-fence:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - run: php -l app/Domains/ProductManagement/Infrastructure/Shopify/ShopifyOutboundPlanFactory.php
+      - run: php tests/architecture/shopify_outbound_plan_contract.php

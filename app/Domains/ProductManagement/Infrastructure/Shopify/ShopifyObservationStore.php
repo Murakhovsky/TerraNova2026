@@ -41,10 +41,31 @@ final readonly class ShopifyObservationStore
         ShopifyReadClient::assertShopDomain($shopDomain);
         if ($org===''||strlen($org)>190) throw new DomainException('Unsupported connection provisioning.');
         ShopifyClientCredentials::assertSecretReference($secretRef);
-        $id=bin2hex(random_bytes(16));
-        $this->query('INSERT INTO pm_external_connections (organization_id,connection_id,provider,shop_domain,secret_ref,status) VALUES (?,?,?,?,?,?)',
-            [$org,$id,'shopify',$shopDomain,$secretRef,'ready']);
-        return $id;
+        // Shopify webhook routing requires exactly one active connection per shop.
+        // Serialize provisioning across all tenants to avoid duplicate ready
+        // connections when an operator retries a timed-out cutover job.
+        $lock='pm-shop:'.substr(hash('sha256',$shopDomain),0,48);
+        $held=(int)$this->query('SELECT GET_LOCK(?,0)',[$lock])->fetchColumn();
+        if($held!==1) throw new DomainException('Shopify provisioning is already in progress.');
+        try {
+            $ready=$this->query('SELECT organization_id,connection_id,secret_ref FROM pm_external_connections
+                WHERE provider=? AND shop_domain=? AND status=? LIMIT 2',
+                ['shopify',$shopDomain,'ready'])->fetchAll(PDO::FETCH_ASSOC);
+            if(count($ready)>1) throw new DomainException('Shopify shop has ambiguous existing ready connections.');
+            if(count($ready)===1) {
+                if((string)$ready[0]['organization_id']!==$org
+                    ||(string)$ready[0]['secret_ref']!==$secretRef) {
+                    throw new DomainException('Shopify shop already belongs to another owner or credential reference.');
+                }
+                return (string)$ready[0]['connection_id'];
+            }
+            $id=bin2hex(random_bytes(16));
+            $this->query('INSERT INTO pm_external_connections (organization_id,connection_id,provider,shop_domain,secret_ref,status) VALUES (?,?,?,?,?,?)',
+                [$org,$id,'shopify',$shopDomain,$secretRef,'ready']);
+            return $id;
+        } finally {
+            $this->query('SELECT RELEASE_LOCK(?)',[$lock]);
+        }
     }
 
     /** @return array<string,mixed>|null */
