@@ -784,8 +784,10 @@ $teamId=$teamResult['team']['team_id'];
 $runBusiness('team.manage',['operation'=>'member_set','team_id'=>$teamId,'configuration_version'=>1,
     'user_id'=>(int)$reviewer,'role'=>'MEMBER','member_status'=>'ACTIVE','assignment_enabled'=>true,
     'approval_enabled'=>false,'assignment_weight'=>1],'sales_team_intent',bin2hex(random_bytes(16)));
-$assignLead=$runBusiness('lead.intake',['full_name'=>'R1 assignment lead','email'=>'r1-assign-'.$nonce.'@example.test'],'sales_intent',bin2hex(random_bytes(16)));
-$assignDeal=(int)$businessRead->lead($org,$assignLead['lead_id'])['client_case_id'];
+$assignLead=$runBusiness('lead.create',['full_name'=>'R1 assignment lead','email'=>'r1-assign-'.$nonce.'@example.test'],'sales_intent',bin2hex(random_bytes(16)));
+$runBusiness('lead.qualify',['lead_id'=>$assignLead['lead_id'],'expected_status'=>'new','target_status'=>'contacted'],'lead',(string)$assignLead['lead_id']);
+$assignDeal=$runBusiness('client_case.create',['lead_id'=>$assignLead['lead_id']],'lead',(string)$assignLead['lead_id'])['case_id'];
+$check((int)$businessRead->deal($org,$assignDeal)['assigned_user_id']===(int)$requester,'Assignment fixture must start with requester-owned Deal.');
 $assignState=\Domains\Sales\Application\Support\DealStateSnapshot::fromNative($businessDeals->getForStageChange($org,(string)$assignDeal),$org,$assignDeal);
 $assignment=$runBusiness('deal.owner.assign',['deal_id'=>$assignDeal,'expected_revision'=>$assignState['revision'],'owner_id'=>(int)$reviewer],'deal',(string)$assignDeal);
 $check($assignment['state']['owner_id']===(int)$reviewer&&(int)$businessRead->deal($org,$assignDeal)['assigned_user_id']===(int)$reviewer,'Governed owner assignment readback failed.');
