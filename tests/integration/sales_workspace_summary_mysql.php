@@ -71,7 +71,7 @@ try{
     $shopStore->map($org,$conn,'product','gid://shopify/Product/41',str_repeat('a',32));
     $shopStore->map($org,$conn,'variant','gid://shopify/ProductVariant/42',str_repeat('b',32));
     $http=new class implements \Domains\ProductManagement\Infrastructure\Shopify\ShopifyHttpTransportInterface {
-        public bool $fulfillmentScope=true;public bool $fulfillmentTruncated=false;public bool $journeyReady=false;public string $journeyCampaign='mkt-aaaaaaaaaaaaaaaaaaaaaaaa';
+        public bool $returnScope=true;public bool $badReturn=false;public bool $fulfilledLifecycle=false;public bool $lifecycleCountMismatch=false;public bool $fulfillmentScope=true;public bool $fulfillmentTruncated=false;public bool $journeyReady=false;public string $journeyCampaign='mkt-aaaaaaaaaaaaaaaaaaaaaaaa';
         public int $reads=0;public string $updated='2026-11-24T10:00:00Z';public string $financial='PAID';
         public string $current='120.00';public bool $edited=false;public bool $fail=false;public bool $unmapped=false;public bool $truncated=false;public bool $multi=false;public bool $revisionShift=false;public bool $pageMode=false;public bool $temporaryFailure=false;
         public function post(string $url,array $headers,string $body):array
@@ -87,10 +87,27 @@ try{
             $data=['currentAppInstallation'=>['accessScopes'=>[['handle'=>'read_orders']]]];
             if(str_contains($request['query'],'COSCommerceFulfillmentEvidence')){
                 if($this->fulfillmentScope)foreach(['merchant_managed','third_party','assigned'] as $scope)$data['currentAppInstallation']['accessScopes'][]=['handle'=>'read_'.$scope.'_fulfillment_orders'];
-                $data['order']=['id'=>$request['variables']['id'],'updatedAt'=>$this->updated,'test'=>false,'cancelledAt'=>null,'displayFulfillmentStatus'=>'UNFULFILLED',
+                $data['order']=['id'=>$request['variables']['id'],'updatedAt'=>$this->updated,'test'=>false,'cancelledAt'=>null,'displayFulfillmentStatus'=>$this->fulfilledLifecycle?'FULFILLED':'UNFULFILLED',
                     'fulfillmentOrders'=>['nodes'=>[['id'=>'gid://shopify/FulfillmentOrder/900','status'=>'OPEN','requestStatus'=>'UNSUBMITTED','assignedLocation'=>['location'=>['id'=>'gid://shopify/Location/88']],
                         'lineItems'=>['nodes'=>[['id'=>'gid://shopify/FulfillmentOrderLineItem/901','totalQuantity'=>1,'remainingQuantity'=>1,'lineItem'=>['id'=>'gid://shopify/LineItem/77']]],'pageInfo'=>['hasNextPage'=>false]]]],
                         'pageInfo'=>['hasNextPage'=>$this->fulfillmentTruncated]]];
+                if(str_contains($request['query'],'COSCommerceFulfillmentEvidenceLifecycle')){
+                    if($this->returnScope)$data['currentAppInstallation']['accessScopes'][]=['handle'=>'read_returns'];
+                    $o=&$data['order'];$o['edited']=false;
+                    $o['lineItems']=['nodes'=>[['id'=>'gid://shopify/LineItem/77','quantity'=>1]],'pageInfo'=>['hasNextPage'=>false]];
+                    $o['fulfillmentsCount']=['count'=>$this->lifecycleCountMismatch?2:($this->fulfilledLifecycle?1:0),'precision'=>'EXACT'];
+                    $o['fulfillments']=[];$o['returns']=['nodes'=>[],'pageInfo'=>['hasNextPage'=>false]];
+                    if($this->fulfilledLifecycle){
+                        $o['fulfillmentOrders']['nodes'][0]['status']='CLOSED';
+                        $o['fulfillmentOrders']['nodes'][0]['lineItems']['nodes'][0]['remainingQuantity']=0;
+                        $o['fulfillments']=[['id'=>'gid://shopify/Fulfillment/701','status'=>'SUCCESS','location'=>['id'=>'gid://shopify/Location/88'],
+                            'fulfillmentLineItems'=>['nodes'=>[['id'=>'gid://shopify/FulfillmentLineItem/702','quantity'=>1,'lineItem'=>['id'=>'gid://shopify/LineItem/77']]],'pageInfo'=>['hasNextPage'=>false]]]];
+                        $o['returns']['nodes']=[['id'=>'gid://shopify/Return/703','status'=>'CLOSED','returnLineItems'=>['nodes'=>[
+                            ['__typename'=>'ReturnLineItem','id'=>'gid://shopify/ReturnLineItem/704','quantity'=>1,'processedQuantity'=>$this->badReturn?2:1,'fulfillmentLineItem'=>['id'=>'gid://shopify/FulfillmentLineItem/702']]],
+                            'pageInfo'=>['hasNextPage'=>false]]]];
+                    }
+                    unset($o);
+                }
             }elseif(str_contains($request['query'],'COSCommerceOrderPage')){
                 $cursor=$request['variables']['after']??null;
                 if($this->pageMode){
@@ -105,7 +122,7 @@ try{
             }else{
                 $data['order']=['id'=>$request['variables']['id'],'createdAt'=>'2026-11-24T09:00:00Z','updatedAt'=>$this->updated,'cancelledAt'=>null,'test'=>false,
                     'customerJourneySummary'=>['ready'=>$this->journeyReady,'lastVisit'=>['occurredAt'=>'2026-11-24T08:00:00Z','utmParameters'=>['source'=>'meta','medium'=>'paid_social','campaign'=>$this->journeyCampaign]]],
-                    'edited'=>$this->edited,'taxesIncluded'=>true,'displayFinancialStatus'=>$this->financial,'displayFulfillmentStatus'=>'UNFULFILLED',
+                    'edited'=>$this->edited,'taxesIncluded'=>true,'displayFinancialStatus'=>$this->financial,'displayFulfillmentStatus'=>$this->fulfilledLifecycle?'FULFILLED':'UNFULFILLED',
                     'originalTotalPriceSet'=>$money('120.00'),'totalPriceSet'=>$money('120.00'),'currentTotalPriceSet'=>$money($this->current),
                     'totalDiscountsSet'=>$money('0.00'),'totalTaxSet'=>$money('20.00'),'totalShippingPriceSet'=>$money('0.00'),
                     'lineItems'=>['nodes'=>[['id'=>'gid://shopify/LineItem/77','quantity'=>1,'sku'=>'LAMP-1','product'=>['id'=>'gid://shopify/Product/41'],
@@ -737,6 +754,42 @@ try{
     $q=$db->prepare('SELECT COUNT(*) FROM sales_order_external_fulfillment_evidence WHERE organization_id=? AND request_key=?');$q->execute([$org,$r3key]);$check((int)$q->fetchColumn()===1,'External evidence duplicated.');
     $reject(fn()=>$reconcile->reconcile($org,$owner,array_diff_key($r3input,['include_fulfillment_evidence'=>true]),$r3key,'r3-ci'));
     $check($orderRepo->get($org,$externalOrderId)===$beforeR3,'External evidence changed native commercial order.');
+    // Independently observed provider fulfillment/return, not a local stock or Finance effect.
+    $http->fulfilledLifecycle=true;$http->updated='2026-11-25T15:00:00Z';
+    $lifeInput=[...$r3input,'include_lifecycle_evidence'=>true];$lifeKey='r3-life-'.$token;
+    $http->returnScope=false;$reject(fn()=>$reconcile->reconcile($org,$owner,$lifeInput,$lifeKey,'r3-ci'));$http->returnScope=true;
+    $http->lifecycleCountMismatch=true;$reject(fn()=>$reconcile->reconcile($org,$owner,$lifeInput,$lifeKey,'r3-ci'));$http->lifecycleCountMismatch=false;
+    $http->badReturn=true;$reject(fn()=>$reconcile->reconcile($org,$owner,$lifeInput,$lifeKey,'r3-ci'));$http->badReturn=false;
+    $life=$reconcile->reconcile($org,$owner,$lifeInput,$lifeKey,'r3-ci');
+    $check($life['order_id']===$externalOrderId,'Provider lifecycle changed order identity.');
+    $lifeView=(new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderSourceRepository($db))->latestForOrder($org,$externalOrderId)['fulfillment_evidence'];
+    $check($lifeView['provider_lifecycle']===['provider_fulfilled_quantity'=>1,'assigned_pending_quantity'=>0,'return_requested_quantity'=>1,'return_processed_quantity'=>1,'cancelled_unfulfilled_quantity'=>null,'review_reasons'=>[]]
+        &&$lifeView['current_order_revision']&&!$lifeView['local_stock_write_allowed']&&!$lifeView['physical_commitment_verified'],'Provider lifecycle quantities or stock fences invalid.');
+    $check($reconcile->reconcile($org,$owner,$lifeInput,$lifeKey,'r3-ci')['replayed'],'Lifecycle replay failed.');
+    $reject(fn()=>$reconcile->reconcile($org,$owner,$r3input,$lifeKey,'r3-ci'));
+    $check($orderRepo->get($org,$externalOrderId)===$beforeR3,'Provider fulfillment/return modified native order or stock authority.');
+    // Independent deterministic partial/cancellation proof: quantities are tied to provider line IDs.
+    $normalizer=\Domains\ProductManagement\Infrastructure\Shopify\ShopifyFulfillmentEvidenceNormalizer::class;
+    $line='gid://shopify/LineItem/77';$fl='gid://shopify/FulfillmentLineItem/702';
+    $complete=static fn(array $nodes):array=>['nodes'=>$nodes,'pageInfo'=>['hasNextPage'=>false]];
+    $rawLife=['order'=>['id'=>$providerOrder,'updatedAt'=>'2026-11-25T15:00:00Z','test'=>false,'cancelledAt'=>null,'edited'=>false,'displayFulfillmentStatus'=>'PARTIALLY_FULFILLED',
+        'lineItems'=>$complete([['id'=>$line,'quantity'=>3]]),
+        'fulfillmentOrders'=>$complete([['id'=>'gid://shopify/FulfillmentOrder/900','status'=>'IN_PROGRESS','requestStatus'=>'UNSUBMITTED','assignedLocation'=>['location'=>['id'=>'gid://shopify/Location/88']],
+            'lineItems'=>$complete([['id'=>'gid://shopify/FulfillmentOrderLineItem/901','totalQuantity'=>3,'remainingQuantity'=>1,'lineItem'=>['id'=>$line]]])]]),
+        'fulfillmentsCount'=>['count'=>1,'precision'=>'EXACT'],
+        'fulfillments'=>[['id'=>'gid://shopify/Fulfillment/701','status'=>'SUCCESS','location'=>['id'=>'gid://shopify/Location/88'],
+            'fulfillmentLineItems'=>$complete([['id'=>$fl,'quantity'=>2,'lineItem'=>['id'=>$line]]])]],
+        'returns'=>$complete([['id'=>'gid://shopify/Return/703','status'=>'OPEN','returnLineItems'=>$complete([['__typename'=>'ReturnLineItem','id'=>'gid://shopify/ReturnLineItem/704','quantity'=>1,'processedQuantity'=>0,'fulfillmentLineItem'=>['id'=>$fl]]])]])]];
+    $partial=$normalizer::normalize($rawLife,$providerOrder,true)['lifecycle']['lines'][$line];
+    $check($partial['ordered']===3&&$partial['provider_fulfilled']===2&&$partial['assigned_pending']===1&&$partial['return_requested']===1&&$partial['return_processed']===0&&$partial['cancelled_unfulfilled']===null,'Partial quantities invalid.');
+    $rawLife['order']['cancelledAt']='2026-11-25T15:00:00Z';
+    $rawLife['order']['fulfillmentOrders']['nodes'][0]['status']='CLOSED';
+    $rawLife['order']['fulfillmentOrders']['nodes'][0]['lineItems']['nodes'][0]['remainingQuantity']=0;
+    $cancelled=$normalizer::normalize($rawLife,$providerOrder,true)['lifecycle']['lines'][$line];
+    $check($cancelled['cancelled_unfulfilled']===1&&$cancelled['provider_fulfilled']===2,'Cancellation residual incorrectly included fulfilled units.');
+    $rawLife['order']['fulfillments'][0]['fulfillmentLineItems']['nodes'][0]['quantity']=4;
+    $reject(fn()=>$normalizer::normalize($rawLife,$providerOrder,true));
+    echo "Sales R3.3 full provider lifecycle, partial quantity, return processing, cancellation, immutable line binding, replay and no stock effect PASS.\n";
     echo "Sales R3 Product-owned fulfillment assignment readback, location mapping, scope/pagination fences, durable evidence and no stock effect PASS.\n";
     echo "Sales S5 scoped exact summary, redacted lists and timeline PASS.\n";
 }finally{$db->rollBack();}
