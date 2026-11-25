@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "state",
+    "evidence",
+    "financial_mutation"
+  ],
+  "properties": {
+    "state": {
+      "type": "string",
+      "enum": [
+        "MATCHED",
+        "UNRESOLVED"
+      ]
+    },
+    "evidence": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "model": {
+          "type": "string",
+          "enum": [
+            "commerce-utm-v1"
+          ]
+        },
+        "order_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        },
+        "placement_event_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        },
+        "plan_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^mkpl-[a-f0-9]{24}$"
+        },
+        "occurred_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d\\.\\d{6}Z$"
+        },
+        "channel": {
+          "type": "string",
+          "enum": [
+            "native",
+            "shopify"
+          ]
+        },
+        "basis": {
+          "type": "string",
+          "enum": [
+            "PROVIDER_LAST_VISIT_UTM",
+            "OPERATOR_RECORDED_UTM"
+          ]
+        },
+        "journey_hash": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "visit_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d\\.\\d{6}Z$"
+        },
+        "utm_source": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$"
+        },
+        "utm_medium": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$"
+        },
+        "utm_campaign": {
+          "type": "string",
+          "pattern": "^(mkt|mkpl)-[a-f0-9]{24}$"
+        },
+        "currency": {
+          "type": "string",
+          "enum": [
+            "USD",
+            "EUR",
+            "UAH"
+          ]
+        },
+        "placed_total_minor": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "evidence_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "model",
+        "order_id",
+        "placement_event_id",
+        "plan_id",
+        "occurred_at",
+        "channel",
+        "basis",
+        "journey_hash",
+        "visit_at",
+        "utm_source",
+        "utm_medium",
+        "utm_campaign",
+        "currency",
+        "placed_total_minor",
+        "evidence_hash"
+      ],
+      "additionalProperties": false
+    },
+    "financial_mutation": {
+      "type": "boolean",
+      "const": false
+    }
+  }
+}

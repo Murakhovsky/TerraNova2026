@@ -1,0 +1,41 @@
+<section class="cos-panel" aria-label="Media analytics">
+    <h2>Media analytics · exact provider batches</h2>
+    <p>Separate account / campaign / ad set / ad levels. Only a complete imported batch is aggregated. Provider defaults and conversion categories do not establish native conversions.</p>
+    <form method="get" action="/marketing/performance" class="cos-page__stack">
+        <label>Account <select name="media_account" class="form-select" required>
+            {% for a in accounts %}<option value="{{ a.id }}" {% if query.media_account|default(accountId) == a.id %}selected{% endif %}>{{ a.ad_account_id }} · {{ a.currency }} · {{ a.timezone }}</option>{% endfor %}
+        </select></label>
+        <label>Grain <select name="media_grain" class="form-select">
+            {% for g in ['account','campaign','adset','ad'] %}<option value="{{ g }}" {% if query.media_grain|default('campaign') == g %}selected{% endif %}>{{ g }}</option>{% endfor %}
+        </select></label>
+        <label>From <input type="date" class="form-control" name="media_from" value="{{ query.media_from|default(analyticsFrom) }}" required></label>
+        <label>To <input type="date" class="form-control" name="media_to" value="{{ query.media_to|default(analyticsTo) }}" required></label>
+        <label>Baseline from <input type="date" class="form-control" name="media_baseline_from" value="{{ query.media_baseline_from|default('') }}"></label>
+        <label>Baseline to <input type="date" class="form-control" name="media_baseline_to" value="{{ query.media_baseline_to|default('') }}"></label>
+        <button class="btn btn-outline-primary">Open imported report</button>
+    </form>
+    {% if mediaError %}<p role="alert">{{ mediaError }}</p>{% endif %}
+    {% if query.media_account is defined %}
+        <form method="post" action="/marketing/analytics/media/sync" class="cos-page__stack">
+            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+            <input type="hidden" name="idempotency_key" value="{{ planningKey }}-media">
+            {% for field in ['media_account','media_grain','media_from','media_to'] %}<input type="hidden" name="{{ field }}" value="{{ attribute(query,field)|default('') }}">{% endfor %}
+            <button class="btn btn-outline-secondary">Import this exact scope from Meta (read only)</button>
+        </form>
+    {% endif %}
+    {% if mediaAnalytics %}
+        {% set m=mediaAnalytics %}
+        <p>{{ m.id }} · {{ m.grain }} · {{ m.window_start }}–{{ m.window_end }} · {{ m.currency }} · {{ m.timezone }} · imported {{ m.created_at }} · account revision {{ m.account_revision }}.</p>
+        {% if not m.account_revision_current %}<p role="alert">Historical account revision. Reimport to obtain a current account batch.</p>{% endif %}
+        <p>Reported spend {{ m.totals.reported_spend_decimal }} {{ m.currency }} · impressions {{ m.totals.impressions ?? 'unknown' }} · clicks {{ m.totals.clicks ?? 'unknown' }} · CTR {{ m.totals.ctr_percent ?? 'unknown' }}% · CPC {{ m.totals.cpc ?? 'unknown' }} · CPM {{ m.totals.cpm ?? 'unknown' }}.</p>
+        {% if m.comparison %}
+            <p>Compared with {{ m.comparison.baseline_window_start }}–{{ m.comparison.baseline_window_end }}: spend Δ {{ m.comparison.deltas.reported_spend_delta_decimal }} {{ m.currency }}, clicks Δ {{ m.comparison.deltas.clicks ?? 'unknown' }}, CTR Δ {{ m.comparison.deltas.ctr_percent ?? 'unknown' }} percentage points.</p>
+        {% endif %}
+        <table class="table"><thead><tr><th>Provider ID / source</th><th>Spend</th><th>Impressions</th><th>Clicks</th><th>CTR %</th><th>CPC</th><th>CPM</th></tr></thead><tbody>
+            {% for r in m.rows %}
+                <tr><td>{{ r.external_id }}<br><small>{{ r.source_snapshot_ref }} · r{{ r.source_revision }}</small></td><td>{{ r.reported_spend_decimal }}</td><td>{{ r.impressions ?? 'unknown' }}</td><td>{{ r.clicks ?? 'unknown' }}</td><td>{{ r.ctr_percent ?? 'unknown' }}</td><td>{{ r.cpc ?? 'unknown' }}</td><td>{{ r.cpm ?? 'unknown' }}</td></tr>
+                {% if r.provider_actions %}<tr><td colspan="7">Provider-reported action categories: {% for a in r.provider_actions %}{{ a.action_type }}={{ a.value }}{% if not loop.last %}; {% endif %}{% endfor %}. Not native conversions.</td></tr>{% endif %}
+            {% else %}<tr><td colspan="7">Provider returned an empty complete batch; this does not prove no delivery.</td></tr>{% endfor %}
+        </tbody></table>
+    {% endif %}
+</section>

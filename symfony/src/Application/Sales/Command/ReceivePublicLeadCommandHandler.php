@@ -17,7 +17,7 @@ final readonly class ReceivePublicLeadCommandHandler implements CommandHandlerIn
     {
         $result = $this->writes
             ->forOrganization($command->organizationId->value())
-            ->receivePublicLead($command->input, $command->sourcePage);
+            ->receivePublicLead($command->input, $command->sourcePage,$command->actorId,$command->correlationId);
 
         return $result->ok
             ? SalesMutationResult::success($result->code, $result->data)
@@ -26,6 +26,9 @@ final readonly class ReceivePublicLeadCommandHandler implements CommandHandlerIn
                 match ($result->code) {
                     'contact_required' => 'Вкажіть ім’я та телефон або email.',
                     'invalid_email' => 'Перевірте email.',
+                    'submission_id_required' => 'Оновіть сторінку та надішліть заявку ще раз.',
+                    'submission_conflict' => 'Цю форму вже використано. Оновіть сторінку для нової заявки.',
+                    'invalid_property' => 'Обʼєкт більше недоступний. Оновіть сторінку.',
                     default => 'Заявку не вдалося зберегти.',
                 },
                 $result->data,

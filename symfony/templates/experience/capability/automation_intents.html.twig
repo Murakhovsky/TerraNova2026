@@ -4,14 +4,14 @@
 <section class="cos-page__stack" data-cos-automation-review>
   <header class="cos-card">
     <h1 class="cos-card__title">Запити від AI та CRON</h1>
-    <p class="cos-card__copy">Це лише підготовлені запити. Машина не отримує прав на створення Property, погодження чи запуск Workflow.</p>
+    <p class="cos-card__copy">Це лише підготовлені запити. Машина не отримує прав на зміну Product або Property, погодження чи запуск Workflow.</p>
     <a class="cos-button cos-button--ghost" href="/workspace/property/bulk">Імпорт Property</a>
   </header>
   <section class="cos-card">
     <h2 class="cos-card__title">Очікують перевірки</h2>
     {% for item in intents %}
       <div class="cos-card">
-        <strong>{{ item.origin }} · {{ item.intent_id }}</strong>
+        <strong>{{ item.origin }} · {{ item.intent_kind|default('property') }} · {{ item.intent_id }}</strong>
         <p class="cos-card__copy">Отримано: {{ item.created_at }}</p>
         <a class="cos-button cos-button--ghost" href="{{ path('cos_automation_intents_workspace', {'intent':item.intent_id}) }}">Перевірити дані</a>
       </div>
@@ -23,17 +23,25 @@
     <section class="cos-card">
       <h2 class="cos-card__title">Перевірка {{ current.intent_id }}</h2>
       <p class="cos-card__copy">Джерело: {{ current.origin }} · Стан: {{ current.state }}.</p>
+      {% if current.kind|default('property') == 'product' %}
+        <h3>{{ current.description }}</h3>
+        {% for operation in current.operations %}
+          <div class="cos-card"><strong>{{ operation.id }} · {{ operation.capability_id }}</strong><pre class="cos-card__copy">{{ operation.parameters|json_encode }}</pre></div>
+        {% endfor %}
+        {% if current.adopted_plan_id %}<a href="/workspace/goals">Goal Plan {{ current.adopted_plan_id }}</a>{% endif %}
+      {% else %}
       {% for property in current.items %}
         <div class="cos-card">
           <strong>{{ property.type_code }} · {{ property.city }}</strong>
           <p class="cos-card__copy">{{ property.address }} · {{ property.area_total|default('площа не задана') }} м²</p>
         </div>
       {% endfor %}
+      {% endif %}
       {% if current.state == 'pending_review' %}
         <form method="post" action="{{ path('cos_automation_intents_adopt', {'intentId':current.intent_id}) }}">
           <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
           <input type="hidden" name="digest" value="{{ current.digest }}">
-          <button type="submit" class="cos-button cos-button--primary">Прийняти в Property staging</button>
+          <button type="submit" class="cos-button cos-button--primary">{{ current.kind|default('property') == 'product' ? 'Прийняти та створити Product Goal/Plan' : 'Прийняти в Property staging' }}</button>
         </form>
         <p class="cos-card__copy">Прийняття НЕ погоджує Plan та НЕ запускає Action. Потрібні окремі погодження у Goals.</p>
       {% endif %}

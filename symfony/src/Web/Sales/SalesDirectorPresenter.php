@@ -26,6 +26,9 @@ final class SalesDirectorPresenter
         $operations = $this->array($data['operations'] ?? null);
         $forecast = $this->array($data['forecast'] ?? null);
         $quality = $this->array($data['quality'] ?? null);
+        $canonical=$this->array($data['canonical']??null);
+        $outcomes=$this->array($canonical['outcomes']??null);
+        $conversion=$this->array($canonical['conversion']??null);
 
         return new SalesDirectorViewModel(
             filters: [
@@ -34,29 +37,32 @@ final class SalesDirectorPresenter
                 'pipeline_id' => $pipelineId ?? '',
             ],
             kpis: [
-                ['label' => 'Closed win rate', 'value' => $this->percent($this->array($headline['closed_win_rate'] ?? null)['rate'] ?? null)],
+                ['label' => 'Closed win rate', 'value' => $canonical!==[]?$this->exactPercent($outcomes['win_rate_percent']??null):$this->percent($this->array($headline['closed_win_rate'] ?? null)['rate'] ?? null)],
+                ['label' => 'Lead conversion (all pipelines)', 'value'=>$this->exactPercent($conversion['conversion_percent']??null)],
                 ['label' => 'Created cohort win rate', 'value' => $this->percent($this->array($headline['created_cohort_win_rate'] ?? null)['rate'] ?? null)],
                 ['label' => 'Stuck deals', 'value' => (string) (int) ($headline['stuck_deal_count'] ?? 0)],
-                ['label' => 'Forecast coverage', 'value' => $this->percent($this->array($forecast['coverage'] ?? null)['expected_close_rate'] ?? null)],
+                ['label' => 'Forecast coverage', 'value' => $canonical!==[]?$this->canonicalCoverage($canonical):$this->percent($this->array($forecast['coverage'] ?? null)['expected_close_rate'] ?? null)],
             ],
             executiveGrid: $this->grid(
-                $this->executiveRows($headline),
+                $canonical!==[]?$this->canonicalMoneyRows($canonical,$headline):$this->executiveRows($headline),
                 [
                     new DataGridColumn('currency', 'Currency', mobilePriority: 10),
                     new DataGridColumn('pipeline', 'Pipeline', mobilePriority: 20, align: 'end'),
                     new DataGridColumn('weighted', 'Weighted pipeline', mobilePriority: 30, align: 'end'),
                     new DataGridColumn('forecast', 'Forecast', mobilePriority: 40, align: 'end'),
-                    new DataGridColumn('risk', 'Current at risk', mobilePriority: 50, align: 'end'),
+                    new DataGridColumn('forecast_weighted', 'Weighted forecast', mobilePriority: 45, align: 'end'),
+                    new DataGridColumn('booked', 'Booked won', mobilePriority: 46, align: 'end'),
+                    new DataGridColumn('risk', 'Risk estimate', mobilePriority: 50, align: 'end'),
                 ],
             ),
             transitionGrid: $this->grid(
-                $this->transitionRows($historical),
+                $canonical!==[]?$this->canonicalStageRows($canonical):$this->transitionRows($historical),
                 [
                     new DataGridColumn('pipeline', 'Pipeline', mobilePriority: 10),
                     new DataGridColumn('from', 'From', mobilePriority: 20),
                     new DataGridColumn('to', 'To', mobilePriority: 30),
-                    new DataGridColumn('transitions', 'Transitions', mobilePriority: 40, align: 'end'),
-                    new DataGridColumn('conversion', 'Conversion', mobilePriority: 50, align: 'end'),
+                    new DataGridColumn('transitions', 'Stage entries', mobilePriority: 40, align: 'end'),
+                    new DataGridColumn('duration', 'Complete mean (h)', mobilePriority: 50, align: 'end'),
                 ],
             ),
             velocity: [
@@ -88,10 +94,70 @@ final class SalesDirectorPresenter
             qualityNotes: [
                 (string) ($quality['historical_policy'] ?? ''),
                 $this->attributionNote($this->array($quality['performance_attribution'] ?? null)),
-                trim((string) ($quality['currency_policy'] ?? '') . ' Currencies are never mixed.'),
+                trim((string) ($quality['currency_policy'] ?? '') . ' Currencies are never mixed. Booked and forecast use canonical calendar-day reports; risk is an indicative legacy projection.'),
             ],
             error: $error,
         );
+    }
+
+    private function canonicalCoverage(array $canonical):string
+    {
+        $total=0;$scheduled=0;
+        foreach ($this->list($canonical['forecast']['buckets']??null) as $bucket) {
+            $count=(int)($bucket['deal_count']??0);$total+=$count;
+            if (($bucket['bucket']??null)!=='unscheduled') $scheduled+=$count;
+        }
+        return $this->percent($total>0?$scheduled/$total:null);
+    }
+
+    private function canonicalMoneyRows(array $canonical,array $headline):array
+    {
+        $summary=$this->list($canonical['summary']['money_by_currency']??null);
+        $booked=$this->list($canonical['outcomes']['booked_by_currency']??null);
+        $forecast=[];
+        foreach ($this->list($canonical['forecast']['buckets']??null) as $bucket) {
+            if (($bucket['bucket']??null)==='in_period') $forecast=$this->list($bucket['money_by_currency']??null);
+        }
+        $risk=$this->list($headline['at_risk_by_currency']??null);
+        $currencies=[];
+        foreach ([$summary,$booked,$forecast,$risk] as $source) foreach ($source as $row) {
+            if (in_array($row['currency']??null,['USD','EUR','UAH'],true)) $currencies[$row['currency']]=true;
+        }
+        ksort($currencies);$rows=[];
+        foreach (array_keys($currencies) as $currency) {
+            $s=$this->currency($summary,$currency);$b=$this->currency($booked,$currency);$f=$this->currency($forecast,$currency);
+            $r=$this->currency($risk,$currency);
+            $rows[]=['currency'=>$currency,'pipeline'=>$this->exactMoney($s['pipeline_value']??null,$currency),
+                'weighted'=>$this->exactMoney($s['weighted_value']??null,$currency),
+                'forecast'=>$this->exactMoney($f['pipeline_value']??null,$currency),
+                'forecast_weighted'=>$this->exactMoney($f['weighted_value']??null,$currency),
+                'booked'=>$this->exactMoney($b['booked_value']??null,$currency),
+                'risk'=>isset($r['value'])?'~'.$this->money($r['value'],$currency):'—'];
+        }
+        return $rows;
+    }
+
+    private function canonicalStageRows(array $canonical):array
+    {
+        $rows=[];
+        foreach ($this->list($canonical['stages']['items']??null) as $row) {
+            $rows[]=['pipeline'=>(string)($row['pipeline_id']??'—'),'from'=>(string)($row['from_stage_id']??'Initial'),
+                'to'=>(string)($row['to_stage_id']??'—'),'transitions'=>(string)(int)($row['entry_count']??0),
+                'duration'=>$this->duration($row['average_duration_seconds']??null)];
+        }
+        return $rows;
+    }
+
+    private function exactPercent(mixed $value):string
+    {
+        return is_string($value)&&preg_match('/^[0-9]+[.][0-9]{2}$/D',$value)===1?$value.'%':'—';
+    }
+
+    private function exactMoney(mixed $value,string $currency):string
+    {
+        if (!is_string($value)||preg_match('/^[0-9]+[.][0-9]{2}$/D',$value)!==1) return '—';
+        [$whole,$fraction]=explode('.',$value);
+        return preg_replace('/\B(?=(\d{3})+(?!\d))/',' ',$whole).'.'.$fraction.' '.$currency;
     }
 
     /** @param array<string,mixed> $headline @return list<array<string,string>> */
@@ -123,6 +189,8 @@ final class SalesDirectorPresenter
                 'pipeline' => $this->money($pipeline['pipeline_value'] ?? 0, $currency),
                 'weighted' => $this->money($pipeline['weighted_pipeline'] ?? 0, $currency),
                 'forecast' => $this->money($forecast['value'] ?? 0, $currency),
+                'forecast_weighted' => '—',
+                'booked' => '—',
                 'risk' => $this->money($risk['value'] ?? 0, $currency),
             ];
         }
@@ -141,6 +209,7 @@ final class SalesDirectorPresenter
                 'to' => (string) ($row['to_stage_code'] ?? ''),
                 'transitions' => (string) (int) ($row['transition_count'] ?? 0),
                 'conversion' => $this->percent($row['conversion_rate'] ?? null),
+                'duration' => '—',
             ];
         }
 

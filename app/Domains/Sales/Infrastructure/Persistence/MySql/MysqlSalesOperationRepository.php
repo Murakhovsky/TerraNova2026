@@ -144,10 +144,11 @@ final readonly class MysqlSalesOperationRepository implements SalesOperationRepo
         int $activityId,
         ?int $userId,
     ): ?array {
+        if (!$this->lockDeal($organizationId,$dealId,false)) return null;
         // Activity ids are not globally trusted. Organization + deal + open state form the mutation boundary.
         $statement = $this->connection->prepare(
             'SELECT activity_type,title FROM tn_client_case_activities '
-            . 'WHERE id=:activity_id AND organization_id=:org AND client_case_id=:deal AND completed_at IS NULL LIMIT 1'
+            . 'WHERE id=:activity_id AND organization_id=:org AND client_case_id=:deal AND completed_at IS NULL AND cancelled_at IS NULL LIMIT 1 FOR UPDATE'
         );
         $statement->execute([
             'activity_id' => $activityId,
@@ -161,7 +162,7 @@ final readonly class MysqlSalesOperationRepository implements SalesOperationRepo
 
         $update = $this->connection->prepare(
             'UPDATE tn_client_case_activities SET completed_at=NOW(),user_id=COALESCE(user_id,:user_id) '
-            . 'WHERE id=:activity_id AND organization_id=:org AND client_case_id=:deal AND completed_at IS NULL'
+            . 'WHERE id=:activity_id AND organization_id=:org AND client_case_id=:deal AND completed_at IS NULL AND cancelled_at IS NULL'
         );
         $update->execute([
             'user_id' => $userId,
@@ -190,10 +191,11 @@ final readonly class MysqlSalesOperationRepository implements SalesOperationRepo
         int $activityId,
         DateTimeImmutable $dueAt,
     ): bool {
+        if (!$this->lockDeal($organizationId,$dealId,true)) return false;
         // Resolve the activity under the same tenant/deal/open predicate before changing any Deal projection.
         $type = $this->connection->prepare(
             'SELECT activity_type FROM tn_client_case_activities '
-            . 'WHERE id=:activity_id AND organization_id=:org AND client_case_id=:deal AND completed_at IS NULL LIMIT 1'
+            . 'WHERE id=:activity_id AND organization_id=:org AND client_case_id=:deal AND completed_at IS NULL AND cancelled_at IS NULL LIMIT 1 FOR UPDATE'
         );
         $type->execute([
             'activity_id' => $activityId,
@@ -207,7 +209,7 @@ final readonly class MysqlSalesOperationRepository implements SalesOperationRepo
 
         $statement = $this->connection->prepare(
             'UPDATE tn_client_case_activities SET due_at=:due_at '
-            . 'WHERE id=:activity_id AND organization_id=:org AND client_case_id=:deal AND completed_at IS NULL'
+            . 'WHERE id=:activity_id AND organization_id=:org AND client_case_id=:deal AND completed_at IS NULL AND cancelled_at IS NULL'
         );
         $statement->execute([
             'due_at' => $dueAt->format('Y-m-d H:i:s'),
@@ -221,6 +223,14 @@ final readonly class MysqlSalesOperationRepository implements SalesOperationRepo
         }
 
         return true;
+    }
+
+    private function lockDeal(string $org,string $id,bool $requireOpen):bool
+    {
+        if (!$this->connection->inTransaction()) throw new \LogicException('Activity mutation requires transaction.');
+        $q=$this->connection->prepare('SELECT status FROM tn_client_cases WHERE organization_id=? AND id=? FOR UPDATE');
+        $q->execute([$org,$id]);$status=$q->fetchColumn();
+        return $status!==false&&(!$requireOpen||!in_array($status,['closed','lost'],true));
     }
 
     private function deal(string $org, string $id): ?array
@@ -267,7 +277,7 @@ final readonly class MysqlSalesOperationRepository implements SalesOperationRepo
         $statement = $this->connection->prepare(
             'SELECT MIN(due_at) FROM tn_client_case_activities '
             . 'WHERE organization_id=:org AND client_case_id=:id '
-            . 'AND activity_type="followup" AND completed_at IS NULL AND due_at IS NOT NULL'
+            . 'AND activity_type="followup" AND completed_at IS NULL AND cancelled_at IS NULL AND due_at IS NOT NULL'
         );
         $statement->execute(compact('org', 'id'));
         $next = $statement->fetchColumn();

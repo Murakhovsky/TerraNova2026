@@ -18,7 +18,7 @@ final readonly class DealChangeSet
             if (array_key_exists($stageField, $input)) throw new InvalidArgumentException('Deal stage can only be changed through ChangeDealStage.');
         }
         $changes = array_intersect_key($input, array_flip([
-            'priority', 'next_contact_at', 'deal_value', 'probability', 'expected_close_at',
+            'priority', 'next_contact_at', 'deal_value', 'currency', 'probability', 'expected_close_at',
         ]));
         if ($changes === []) {
             throw new InvalidArgumentException('No allowed Deal fields supplied.');
@@ -32,11 +32,14 @@ final readonly class DealChangeSet
                 $changes[$dateField] = null;
             }
         }
-        if (array_key_exists('deal_value', $changes)) {
-            $changes['deal_value'] = (float) $changes['deal_value'];
-            if ($changes['deal_value'] < 0) throw new InvalidArgumentException('Deal value cannot be negative.');
+        if (array_key_exists('deal_value',$changes) || array_key_exists('currency',$changes)) {
+            if (!is_string($changes['deal_value']??null) || preg_match('/^(0|[1-9][0-9]{0,11})\.[0-9]{2}$/D',$changes['deal_value'])!==1
+                || !is_string($changes['currency']??null) || !SalesCurrency::accepts($changes['currency'])) {
+                throw new InvalidArgumentException('Deal value requires an exact nonnegative decimal string and supported currency together.');
+            }
         }
         if (array_key_exists('probability', $changes)) {
+            if (!is_numeric($changes['probability'])) throw new InvalidArgumentException('Invalid deal probability.');
             $changes['probability'] = (float) $changes['probability'];
             if ($changes['probability'] < 0 || $changes['probability'] > 100) throw new InvalidArgumentException('Deal probability must be between 0 and 100.');
         }

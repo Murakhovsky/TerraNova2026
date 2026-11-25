@@ -28,6 +28,7 @@ final readonly class SalesFrontendMutationCommandHandler implements CommandHandl
         private ApprovalService $approvals,
         private ActionService $actions,
         private CommandBusInterface $commands,
+        private \Domains\Sales\Application\Service\SalesMutationGuard $guard,
     ) {
     }
 
@@ -38,6 +39,21 @@ final readonly class SalesFrontendMutationCommandHandler implements CommandHandl
             throw new DomainException('Authenticated actor is invalid.');
         }
 
+        if ($command->operation===SalesFrontendMutationCommand::ACTION) {
+            throw new DomainException('Legacy direct action execution requires governed workflow.');
+        }
+        if (in_array($command->operation,[SalesFrontendMutationCommand::MEETING,SalesFrontendMutationCommand::COMPLETE_ACTIVITY,
+            SalesFrontendMutationCommand::RESCHEDULE_ACTIVITY,SalesFrontendMutationCommand::LEAD_FOLLOWUP],true)) {
+            $kind=$command->operation===SalesFrontendMutationCommand::LEAD_FOLLOWUP?'lead':'deal';
+            $id=$this->positiveInt(explode(':',$command->resourceId,2)[0],'Invalid Sales entity id.');
+            return $this->guard->run($command->organizationId->value(),$command->actorId,
+                fn()=>$this->dispatchLocal($command),$kind,$id);
+        }
+        return $this->dispatchLocal($command);
+    }
+
+    private function dispatchLocal(SalesFrontendMutationCommand $command):array
+    {
         return match ($command->operation) {
             SalesFrontendMutationCommand::QUICK_EDIT => $this->quickUpdate($command),
             SalesFrontendMutationCommand::OWNER => $this->owner($command),
@@ -220,15 +236,21 @@ final readonly class SalesFrontendMutationCommandHandler implements CommandHandl
             throw new DomainException('Pending approval not found.');
         }
 
+        $action=$this->actions->find($organizationId,$approval->actionId);
+        if ($action===null||!str_starts_with($action->type,'sales.')||$action->targetType!=='deal'||$action->targetId===null||$action->status!==ActionStatus::PendingApproval) {
+            throw new DomainException('Sales approval unavailable.');
+        }
+        $dealId=$this->positiveInt($action->targetId,'Invalid deal id.');
+        return $this->guard->run($organizationId,$command->actorId,function()use($command,$organizationId,$approvalId,$approval,$decision):array{
         $note = ($note = trim((string) ($command->input['note'] ?? ''))) !== '' ? $note : null;
         if ($decision === 'approve') {
             $this->approvals->approve($organizationId, $approvalId, (string) $command->actorId, $note);
-            $this->commands->dispatch(new ExecuteSalesActionCommand($organizationId, $approval->actionId));
             return ['status' => 'APPROVED', 'action_id' => $approval->actionId];
         }
 
         $this->approvals->reject($organizationId, $approvalId, (string) $command->actorId, $note);
         return ['status' => 'REJECTED', 'action_id' => $approval->actionId];
+        },'deal',$dealId);
     }
 
     /** @return array<string,mixed> */

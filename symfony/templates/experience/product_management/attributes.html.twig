@@ -1,0 +1,56 @@
+<section class="cos-panel">
+    <h2>Довідник типізованих атрибутів</h2>
+    <p>Код, тип, одиниця та enum-значення після створення незмінні. Нове визначення не змінює існуючі SKU.</p>
+    <div class="table-responsive"><table class="table"><thead><tr><th>Код</th><th>Назва</th><th>Тип</th><th>Одиниця</th><th>Значення</th></tr></thead><tbody>
+    {% for d in defs %}<tr><td>{{ d.code }}</td><td>{{ d.name }}</td><td>{{ d.value_type }}</td><td>{{ d.unit ?? '—' }}</td><td>{{ d.choices|join(', ') }}</td></tr>{% else %}<tr><td colspan="5">Довідник порожній.</td></tr>{% endfor %}
+    </tbody></table></div>
+    <nav class="cos-toolbar">
+      {% if page > 1 %}<a href="?page={{ page-1 }}&amp;category={{ category|url_encode }}&amp;filter_code={{ filterCode|url_encode }}&amp;filter_value={{ filterValue|url_encode }}">Попередня</a>{% endif %}
+      {% if defs|length == 100 or matches|length == 100 %}<a href="?page={{ page+1 }}&amp;category={{ category|url_encode }}&amp;filter_code={{ filterCode|url_encode }}&amp;filter_value={{ filterValue|url_encode }}">Наступна</a>{% endif %}
+    </nav>
+    <form method="post" action="/product-management/attributes" class="cos-page__stack">
+      <input type="hidden" name="csrf_token" value="{{ csrfToken }}"><input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000001"><input type="hidden" name="action" value="define">
+      <label>Код <input name="code" class="form-control" required pattern="[a-z][a-z0-9_]{0,39}" placeholder="material"></label>
+      <label>Назва <input name="name" class="form-control" required maxlength="190"></label>
+      <label>Тип <select name="value_type" class="form-select"><option value="text">Текст</option><option value="decimal">Десяткове число</option><option value="boolean">Так / ні</option><option value="enum">Перелік</option></select></label>
+      <label>Одиниця (тільки decimal) <input name="unit" class="form-control" maxlength="16" placeholder="mm"></label>
+      <label>Коди значень enum через кому <input name="choices" class="form-control" placeholder="oak, walnut"></label>
+      <button type="submit" class="btn btn-primary">Створити атрибут</button>
+    </form>
+</section>
+<section class="cos-panel">
+    <h2>Набір атрибутів категорії</h2>
+    <form method="get" action="/product-management/attributes" class="cos-toolbar">
+      <label>Категорія <select name="category" class="form-select" required><option value="">Оберіть</option>{% for c in categories %}<option value="{{ c.category_id }}" {% if category == c.category_id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></label>
+      <button type="submit" class="btn btn-outline-primary">Показати набір</button>
+    </form>
+    {% if category %}
+      <table class="table"><thead><tr><th>Атрибут</th><th>Обов'язковий</th><th>Вісь матриці</th></tr></thead><tbody>{% for d in bindings %}<tr><td>{{ d.name }} ({{ d.code }})</td><td>{{ d.is_required ? 'Так' : 'Ні' }}</td><td>{{ d.is_axis ? 'Так' : 'Ні' }}</td></tr>{% else %}<tr><td colspan="3">Набір порожній.</td></tr>{% endfor %}</tbody></table>
+      <form method="post" action="/product-management/attributes" class="cos-toolbar">
+        <input type="hidden" name="csrf_token" value="{{ csrfToken }}"><input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000002"><input type="hidden" name="action" value="bind"><input type="hidden" name="category_id" value="{{ category }}">
+        <label>Код атрибута <input name="code" class="form-control" required></label><label><input type="checkbox" name="is_required" value="1"> Обов'язковий</label><label><input type="checkbox" name="is_axis" value="1"> Вісь матриці (enum)</label><button class="btn btn-primary" type="submit">Додати до набору</button>
+      </form>
+    {% endif %}
+</section>
+<section class="cos-panel">
+    <h2>Фільтр за характеристикою</h2>
+    <form method="get" action="/product-management/attributes" class="cos-toolbar">
+        <label>Код <input name="filter_code" class="form-control" required value="{{ filterCode }}"></label>
+        <label>Значення JSON <input name="filter_value" class="form-control" required value="{{ filterValue }}" placeholder='"oak" або true'></label>
+        <button type="submit" class="btn btn-outline-primary">Знайти товари</button>
+    </form>
+    {% if filterCode %}
+      {% if matches %}
+      <form method="post" action="/product-management/attributes" class="cos-page__stack">
+        <input type="hidden" name="csrf_token" value="{{ csrfToken }}"><input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000003"><input type="hidden" name="action" value="bulk">
+        <h3>Масове редагування знайдених товарів</h3>
+        <p>Виберіть до 20 товарів та до 10 атрибутів. Усі зміни застосуються разом або жодна.</p>
+        <table class="table"><thead><tr><th>Вибір</th><th>Товар</th><th>Ревізія</th></tr></thead><tbody>
+        {% for p in matches %}<tr><td><input type="checkbox" name="selected[]" value="{{ p.product_id }}" aria-label="Вибрати {{ p.name }}"><input type="hidden" name="revisions[{{ p.product_id }}]" value="{{ p.revision }}"></td><td><a href="/product-management/products/{{ p.product_id }}/attributes">{{ p.name }}</a> · {{ p.status }}</td><td>{{ p.revision }}</td></tr>{% endfor %}
+        </tbody></table>
+        <label>Зміни JSON <textarea name="values" class="form-control" required rows="4" placeholder='[{"code":"material","value":"oak"}]'></textarea></label>
+        <label><input type="checkbox" name="confirm_bulk" value="yes" required> Підтверджую пакет</label><button type="submit" class="btn btn-primary">Застосувати пакет</button>
+      </form>
+      {% else %}<p>Збігів немає.</p>{% endif %}
+    {% endif %}
+</section>

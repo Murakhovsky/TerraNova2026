@@ -34,6 +34,14 @@ final readonly class SalesInboundRequestReadAdapter implements CapabilityInvocat
         if ($request !== null && (string)($request['organization_id'] ?? '') !== $tenant) {
             throw new DomainException('Sales request read model violated tenant ownership.');
         }
+        if ($request !== null) {
+            // PDO may return integer identifiers as decimal strings. Reject
+            // missing, malformed or unrelated rows rather than coercing them.
+            $returnedId = $request['id'] ?? null;
+            if ($returnedId !== $leadId && $returnedId !== (string) $leadId) {
+                throw new DomainException('Sales request read model violated entity identity.');
+            }
+        }
         // Never expose the full Sales lead aggregate (contact PII, notes,
         // communications or activities) through the generic Capability API.
         $summary = $request === null ? null : [

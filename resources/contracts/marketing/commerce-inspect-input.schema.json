@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "campaign_id",
+    "plan_id",
+    "order_id"
+  ],
+  "properties": {
+    "campaign_id": {
+      "type": "string",
+      "pattern": "^mkt-[a-f0-9]{24}$"
+    },
+    "plan_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^mkpl-[a-f0-9]{24}$"
+    },
+    "order_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "notification_id": {
+      "type": "string"
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "not_queued",
+        "queued",
+        "processing",
+        "handed_off",
+        "failed",
+        "ambiguous",
+        "unknown"
+      ]
+    },
+    "recipient_delivery_verified": {
+      "type": "boolean",
+      "enum": [
+        false
+      ]
+    },
+    "activity_id": {
+      "type": "integer",
+      "minimum": 1
+    }
+  },
+  "required": [
+    "notification_id",
+    "state",
+    "recipient_delivery_verified",
+    "activity_id"
+  ],
+  "additionalProperties": false
+}

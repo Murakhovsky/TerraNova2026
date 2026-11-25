@@ -6,8 +6,10 @@ namespace Domains\Sales\Infrastructure\ReadModel\MySql;
 use Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface;
 use Domains\Sales\Application\Contract\SalesProposalLeadReadModelInterface;
 use PDO;
+use Domains\Sales\Application\Contract\SalesWorkspaceSummaryReadPort;
+use Domains\Sales\Application\Contract\SalesTeamSummaryReadPort;
 
-final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadModelInterface, SalesProposalLeadReadModelInterface
+final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadModelInterface, SalesProposalLeadReadModelInterface, SalesWorkspaceSummaryReadPort, SalesTeamSummaryReadPort, \Domains\Sales\Application\Contract\SalesTodayPopulationReadPort
 {
     public function __construct(private PDO $connection)
     {
@@ -15,25 +17,66 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
 
     public function dashboard(string $organizationId, ?int $ownerId = null): array
     {
-        $scope = $ownerId !== null ? ' AND c.assigned_user_id = :owner_id' : '';
-        $params = ['organization_id' => $organizationId] + ($ownerId !== null ? ['owner_id' => $ownerId] : []);
-        $kpis = $this->one(
-            'SELECT COUNT(*) active_deals, COALESCE(SUM(COALESCE(c.deal_value, c.budget_max)), 0) pipeline_value, '
-            . 'COALESCE(SUM(COALESCE(c.deal_value, c.budget_max) * COALESCE(c.probability, s.probability_default, 0) / 100), 0) expected_revenue, '
-            . 'SUM(c.next_contact_at IS NOT NULL AND c.next_contact_at < NOW()) followups_overdue, '
-            . 'SUM(c.priority IN ("high", "urgent") OR (c.last_activity_at IS NOT NULL AND c.last_activity_at < NOW() - INTERVAL 48 HOUR)) deals_at_risk '
-            . 'FROM tn_client_cases c LEFT JOIN sales_pipeline_stages s ON s.id = c.stage_id AND s.organization_id = c.organization_id '
-            . 'WHERE c.organization_id = :organization_id AND c.status IN ("active", "paused")' . $scope,
-            $params,
-        ) ?? [];
+        $summary=$this->summary($organizationId,$ownerId);
+        $kpis=$summary['counts'];
+        $kpis['money_by_currency']=$summary['money_by_currency'];
+        // Retain compatibility scalars only for a single known currency; no implicit FX.
+        $single=count($summary['money_by_currency'])===1?$summary['money_by_currency'][0]:null;
+        $kpis['pipeline_value']=$single['pipeline_value']??null;
+        $kpis['expected_revenue']=$single['weighted_value']??null;
+        $kpis['currency']=$single['currency']??null;
 
         return [
             'kpis' => $kpis,
             'today' => $this->today($organizationId, $ownerId ?? 0),
-            'at_risk' => $this->deals($organizationId, ['owner_id' => $ownerId, 'risk' => 'high', 'limit' => 8]),
+            'at_risk' => $this->deals($organizationId, ['owner_id' => $ownerId, 'risk' => 'high', 'open_only'=>true, 'limit' => 8]),
             'new_leads' => $this->leads($organizationId, ['owner_id' => $ownerId, 'status' => 'new', 'limit' => 8]),
-            'metrics' => $this->metrics($organizationId),
+            'metrics' => $ownerId===null?$this->metrics($organizationId):[],
         ];
+    }
+
+    public function summary(string $organizationId,?int $ownerId=null,?string $pipelineId=null):array
+    {
+        return $this->summaryPopulation($organizationId,$ownerId,$pipelineId,null);
+    }
+
+    public function summaryForOwners(string $org,array $owners,?string $pipeline=null):array
+    {
+        if (!array_is_list($owners)||count($owners)>1000) throw new \DomainException('Invalid team owner population.');
+        foreach ($owners as $id) if (!is_int($id)||$id<1) throw new \DomainException('Invalid team owner identity.');
+        return $this->summaryPopulation($org,null,$pipeline,array_values(array_unique($owners)));
+    }
+
+    private function summaryPopulation(string $organizationId,?int $ownerId,?string $pipelineId,?array $owners):array
+    {
+        if($organizationId===''||($ownerId!==null&&$ownerId<1))throw new \DomainException('Invalid summary scope.');
+        $where=['c.organization_id=:org','c.status IN ("active","paused")'];$params=['org'=>$organizationId];
+        if($ownerId!==null){$where[]='c.assigned_user_id=:owner';$params['owner']=$ownerId;}
+        if($pipelineId!==null){$where[]='c.pipeline_id=:pipeline';$params['pipeline']=$pipelineId;}
+        if ($owners!==null) {
+            if ($owners===[]) $where[]='1=0';
+            else {
+                $slots=[];
+                foreach ($owners as $i=>$id) {$key='team_owner_'.$i;$slots[]=':'.$key;$params[$key]=$id;}
+                $where[]='c.assigned_user_id IN ('.implode(',',$slots).')';
+            }
+        }
+        $from=' FROM tn_client_cases c LEFT JOIN sales_pipeline_stages s ON s.id=c.stage_id AND s.organization_id=c.organization_id AND s.pipeline_id=c.pipeline_id WHERE '.implode(' AND ',$where);
+        $known='c.deal_value IS NOT NULL AND c.deal_value>=0 AND UPPER(c.currency) IN ("USD","EUR","UAH")';
+        $prob='COALESCE(c.probability,s.probability_default)';
+        $valid=$known.' AND '.$prob.' BETWEEN 0 AND 100';
+        $risk='(c.priority IN ("high","urgent") OR c.next_contact_at<NOW() OR c.last_activity_at IS NULL OR c.last_activity_at<NOW()-INTERVAL 48 HOUR)';
+        $counts=$this->one('SELECT COUNT(*) active_deals,COALESCE(SUM(c.next_contact_at<NOW()),0) followups_overdue,COALESCE(SUM('.$risk.'),0) deals_at_risk,COALESCE(SUM(c.next_contact_at IS NULL),0) without_next_action,COALESCE(SUM(CASE WHEN '.$known.' THEN 1 ELSE 0 END),0) monetary_deals,COALESCE(SUM(CASE WHEN '.$valid.' THEN 1 ELSE 0 END),0) weighted_deals'.$from,$params)??[];
+        $moneySelect='COUNT(*) deal_count,CAST(SUM(c.deal_value) AS DECIMAL(30,2)) pipeline_value,CAST(ROUND(SUM(CASE WHEN '.$valid.' THEN c.deal_value*'.$prob.'/100 ELSE NULL END),2) AS DECIMAL(30,2)) weighted_value,SUM(CASE WHEN '.$valid.' THEN 1 ELSE 0 END) weighted_count';
+        $money=$this->all('SELECT UPPER(c.currency) currency,'.$moneySelect.$from.' AND '.$known.' GROUP BY UPPER(c.currency) ORDER BY UPPER(c.currency)',$params);
+        $stageRows=$this->all('SELECT c.pipeline_id,c.stage_id,COUNT(*) deal_count,COALESCE(SUM(CASE WHEN '.$known.' THEN 1 ELSE 0 END),0) monetary_deals'.$from.' GROUP BY c.pipeline_id,c.stage_id ORDER BY c.pipeline_id,c.stage_id',$params);
+        $stageMoney=$this->all('SELECT c.pipeline_id,c.stage_id,UPPER(c.currency) currency,'.$moneySelect.$from.' AND '.$known.' GROUP BY c.pipeline_id,c.stage_id,UPPER(c.currency) ORDER BY c.pipeline_id,c.stage_id,UPPER(c.currency)',$params);
+        $normal=static fn(array $row):array=>['currency'=>(string)$row['currency'],'deal_count'=>(int)$row['deal_count'],'pipeline_value'=>(string)$row['pipeline_value'],'weighted_value'=>$row['weighted_value']===null?null:(string)$row['weighted_value'],'weighted_count'=>(int)$row['weighted_count']];
+        $stages=[];foreach($stageRows as $row){
+            $by=[];foreach($stageMoney as $item)if($item['pipeline_id']===$row['pipeline_id']&&$item['stage_id']===$row['stage_id'])$by[]=$normal($item);
+            $stages[]=['pipeline_id'=>$row['pipeline_id'],'stage_id'=>$row['stage_id'],'deal_count'=>(int)$row['deal_count'],'monetary_deals'=>(int)$row['monetary_deals'],'money_by_currency'=>$by];
+        }
+        return ['scope'=>['owner_id'=>$ownerId,'pipeline_id'=>$pipelineId],'counts'=>array_map('intval',$counts),'money_by_currency'=>array_map($normal,$money),'stages'=>$stages];
     }
 
     public function leads(string $organizationId, array $filters = []): array
@@ -78,7 +121,7 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
         if ($lead === null) return null;
 
         $lead['activities'] = $this->safeAll(
-            'SELECT a.id,a.user_id,a.activity_type,a.title,a.body,a.due_at,a.completed_at,a.created_at '
+            'SELECT a.id,a.user_id,a.activity_type,a.title,a.body,a.due_at,a.completed_at,a.cancelled_at,a.cancellation_reason,a.created_at '
             . 'FROM tn_lead_activities a INNER JOIN tn_leads l ON l.id=a.lead_id '
             . 'WHERE l.organization_id=:organization_id AND a.lead_id=:lead_id ORDER BY a.created_at DESC LIMIT 100',
             ['organization_id' => $organizationId, 'lead_id' => $leadId],
@@ -112,7 +155,8 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
         }
         $owner = (int) ($filters['owner_id'] ?? 0);
         if ($owner > 0) { $where[] = 'c.assigned_user_id = :owner_id'; $params['owner_id'] = $owner; }
-        if (($filters['risk'] ?? '') === 'high') $where[] = '(c.priority IN ("high", "urgent") OR c.next_contact_at < NOW() OR c.last_activity_at < NOW() - INTERVAL 48 HOUR)';
+        if(!empty($filters['open_only']))$where[]='c.status IN ("active","paused")';
+        if (($filters['risk'] ?? '') === 'high') $where[] = '(c.priority IN ("high", "urgent") OR c.next_contact_at < NOW() OR c.last_activity_at IS NULL OR c.last_activity_at < NOW() - INTERVAL 48 HOUR)';
         $limit = $this->limit($filters['limit'] ?? 100);
         $offset = $this->offset($filters['offset'] ?? 0);
         $orderBy = $this->dealOrder($filters);
@@ -120,7 +164,7 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
             'SELECT c.id, c.public_id, c.title, c.status, c.priority, c.pipeline_id, c.stage_id, '
             . 'COALESCE(s.code, UPPER(c.stage)) stage_code, COALESCE(s.name, c.stage) stage_name, s.sort_order stage_order, '
             . 'p.full_name customer, c.assigned_user_id owner_id, u.full_name owner_name, '
-            . 'COALESCE(c.deal_value, c.budget_max) deal_value, c.currency, COALESCE(c.probability, s.probability_default) probability, '
+            . 'c.deal_value deal_value, c.currency, COALESCE(c.probability, s.probability_default) probability, '
             . 'c.last_activity_at, c.next_contact_at next_action_at, c.expected_close_at, c.created_at, c.updated_at, '
             . 'CASE WHEN c.priority IN ("high", "urgent") OR c.next_contact_at < NOW() OR c.last_activity_at < NOW() - INTERVAL 48 HOUR THEN "HIGH" ELSE "NORMAL" END risk_level '
             . 'FROM tn_client_cases c INNER JOIN tn_people p ON p.id = c.person_id AND p.organization_id = c.organization_id '
@@ -136,7 +180,7 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
         return $this->one(
             'SELECT c.*, p.full_name customer, p.phone, p.email, p.telegram, u.full_name owner_name, '
             . 'pl.name pipeline_name, COALESCE(s.code, UPPER(c.stage)) stage_code, COALESCE(s.name, c.stage) stage_name, '
-            . 'COALESCE(c.deal_value, c.budget_max) value, COALESCE(c.probability, s.probability_default) probability '
+            . 'c.deal_value value, COALESCE(c.probability, s.probability_default) probability '
             . 'FROM tn_client_cases c INNER JOIN tn_people p ON p.id = c.person_id AND p.organization_id = c.organization_id '
             . 'LEFT JOIN tn_users u ON u.id = c.assigned_user_id AND u.organization_id = c.organization_id '
             . 'LEFT JOIN sales_pipelines pl ON pl.id = c.pipeline_id AND pl.organization_id = c.organization_id '
@@ -159,11 +203,11 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
                 'detail' => $row['body'],
                 'occurred_at' => $row['created_at'],
                 'correlation_id' => null,
-                'status' => null,
+                'status' => $row['cancelled_at']!==null?'cancelled':($row['completed_at']!==null?'completed':'open'),
             ],
             $this->all(
-                'SELECT id,activity_type,title,body,created_at FROM tn_client_case_activities '
-                . 'WHERE organization_id=:organization_id AND client_case_id=:deal_id ORDER BY created_at DESC LIMIT ' . $limit,
+                'SELECT id,activity_type,title,body,created_at,cancelled_at,completed_at FROM tn_client_case_activities '
+                . 'WHERE organization_id=:organization_id AND client_case_id=:deal_id ORDER BY created_at DESC,id DESC LIMIT ' . $limit,
                 ['organization_id' => $organizationId, 'deal_id' => $dealId],
             ),
         );
@@ -181,7 +225,7 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
             ],
             $this->all(
                 'SELECT id,channel,direction,sender,recipient,body,occurred_at FROM sales_communications '
-                . 'WHERE organization_id=:organization_id AND deal_id=:deal_id ORDER BY occurred_at DESC LIMIT ' . $limit,
+                . 'WHERE organization_id=:organization_id AND deal_id=:deal_id ORDER BY occurred_at DESC,id DESC LIMIT ' . $limit,
                 ['organization_id' => $organizationId, 'deal_id' => $dealId],
             ),
         );
@@ -199,7 +243,7 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
             ],
             $this->all(
                 'SELECT id,type,CAST(payload AS CHAR) payload,occurred_at,correlation_id FROM cos_events '
-                . 'WHERE organization_id=:organization_id AND aggregate_type IN ("deal","client_case") AND aggregate_id=:deal_id ORDER BY occurred_at DESC LIMIT ' . $limit,
+                . 'WHERE organization_id=:organization_id AND aggregate_type IN ("deal","client_case") AND aggregate_id=:deal_id ORDER BY occurred_at DESC,id DESC LIMIT ' . $limit,
                 ['organization_id' => $organizationId, 'deal_id' => (string) $dealId],
             ),
         );
@@ -217,7 +261,7 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
             ],
             $this->all(
                 'SELECT id,type,CAST(parameters AS CHAR) parameters,created_at,correlation_id,status FROM cos_actions '
-                . 'WHERE organization_id=:organization_id AND target_type IN ("deal","client_case") AND target_id=:deal_id ORDER BY created_at DESC LIMIT ' . $limit,
+                . 'WHERE organization_id=:organization_id AND target_type IN ("deal","client_case") AND target_id=:deal_id ORDER BY created_at DESC,id DESC LIMIT ' . $limit,
                 ['organization_id' => $organizationId, 'deal_id' => (string) $dealId],
             ),
         );
@@ -248,8 +292,19 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
 
     public function today(string $organizationId, int $ownerId): array
     {
-        $ownerSql = $ownerId > 0 ? ' AND c.assigned_user_id = :owner_id' : '';
-        $base = ['organization_id' => $organizationId] + ($ownerId > 0 ? ['owner_id' => $ownerId] : []);
+        return $this->todayForOwners($organizationId,$ownerId>0?[$ownerId]:null);
+    }
+
+    /** Null means authorized tenant population, [] means no records. */
+    public function todayForOwners(string $organizationId,?array $owners):array
+    {
+        if ($owners!==null) {
+            if (!array_is_list($owners)||count($owners)>1000) throw new \DomainException('Invalid Sales Today population.');
+            foreach ($owners as $id) if (!is_int($id)||$id<1) throw new \DomainException('Invalid Sales Today owner.');
+        }
+        $population=$owners===null?'':($owners===[]?' AND 1=0':' AND %s.assigned_user_id IN ('.implode(',',$owners).')');
+        $ownerSql=$population===''?'':sprintf($population,'c');
+        $base=['organization_id'=>$organizationId];
         $query = fn (string $condition): array => $this->all(
             'SELECT c.id, c.public_id, c.title, p.full_name customer, c.priority, c.next_contact_at, c.last_activity_at '
             . 'FROM tn_client_cases c INNER JOIN tn_people p ON p.id = c.person_id AND p.organization_id = c.organization_id '
@@ -257,18 +312,18 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
             . ' ORDER BY c.next_contact_at IS NULL, c.next_contact_at, c.updated_at DESC LIMIT 20',
             $base,
         );
-        $activityOwnerSql = $ownerId > 0 ? ' AND c.assigned_user_id = :activity_owner_id' : '';
-        $activityBase = ['activity_org' => $organizationId] + ($ownerId > 0 ? ['activity_owner_id' => $ownerId] : []);
+        $activityOwnerSql=$ownerSql;
+        $activityBase=['activity_org'=>$organizationId];
         $activities = fn (string $type, string $condition): array => $this->all(
             'SELECT c.id, c.public_id, c.title, p.full_name customer, c.priority, a.id activity_id, a.title activity_title, a.due_at '
             . 'FROM tn_client_case_activities a INNER JOIN tn_client_cases c ON c.id=a.client_case_id AND c.organization_id=a.organization_id '
             . 'INNER JOIN tn_people p ON p.id=c.person_id AND p.organization_id=c.organization_id '
-            . 'WHERE a.organization_id=:activity_org AND a.activity_type="' . $type . '" AND a.completed_at IS NULL' . $activityOwnerSql . ' AND ' . $condition
+            . 'WHERE a.organization_id=:activity_org AND a.activity_type="' . $type . '" AND a.completed_at IS NULL AND a.cancelled_at IS NULL' . $activityOwnerSql . ' AND ' . $condition
             . ' ORDER BY a.due_at IS NULL,a.due_at,c.updated_at DESC LIMIT 20',
             $activityBase,
         );
-        $communicationOwnerSql = $ownerId > 0 ? ' AND d.assigned_user_id=:communication_owner_id' : '';
-        $communicationParams = ['communication_org' => $organizationId] + ($ownerId > 0 ? ['communication_owner_id' => $ownerId] : []);
+        $communicationOwnerSql=$population===''?'':sprintf($population,'d');
+        $communicationParams=['communication_org'=>$organizationId];
 
         return [
             'must_do' => $query('c.next_contact_at BETWEEN CURRENT_DATE() AND CURRENT_DATE() + INTERVAL 1 DAY'),
@@ -284,10 +339,10 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
             ),
             'meetings' => $activities('meeting', 'a.due_at BETWEEN CURRENT_DATE() AND CURRENT_DATE()+INTERVAL 1 DAY'),
             'followups' => $activities('followup', 'a.due_at <= CURRENT_DATE()+INTERVAL 1 DAY'),
-            'ai_recommended' => $this->safeAll(
+            'ai_recommended' => $owners!==null ? [] : $this->safeAll(
                 'SELECT a.id action_id, a.type, a.target_id deal_id, a.status, a.risk_level, a.parameters, d.reason, d.confidence '
-                . 'FROM cos_actions a LEFT JOIN cos_decisions d ON d.source_id = a.source_id '
-                . 'WHERE a.organization_id = :organization_id AND a.target_type IN ("deal", "client_case") '
+                . 'FROM cos_actions a LEFT JOIN cos_decisions d ON d.source_id = a.source_id AND d.organization_id=a.organization_id '
+                . 'WHERE a.organization_id = :organization_id AND a.type LIKE "sales.%" AND a.target_type IN ("deal", "client_case") '
                 . 'AND a.status IN ("PROPOSED", "PENDING_APPROVAL", "QUEUED") ORDER BY a.created_at DESC LIMIT 20',
                 ['organization_id' => $organizationId],
             ),
@@ -309,7 +364,7 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
         $followups = $this->one(
             'SELECT ROUND(100 * SUM(a.completed_at IS NOT NULL) / NULLIF(COUNT(*),0),2) followup_completion_rate '
             . 'FROM tn_client_case_activities a INNER JOIN tn_client_cases c ON c.id=a.client_case_id AND c.organization_id=a.organization_id '
-            . 'WHERE a.organization_id=:organization_id AND a.activity_type IN ("task","followup") AND a.created_at>=NOW()-INTERVAL ' . $days . ' DAY',
+            . 'WHERE a.organization_id=:organization_id AND a.activity_type IN ("task","followup") AND a.cancelled_at IS NULL AND a.created_at>=NOW()-INTERVAL ' . $days . ' DAY',
             $params,
         ) ?? ['followup_completion_rate' => 0];
         $ai = $this->safeOne(

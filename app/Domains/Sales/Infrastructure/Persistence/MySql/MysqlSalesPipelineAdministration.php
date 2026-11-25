@@ -329,6 +329,9 @@ final readonly class MysqlSalesPipelineAdministration implements SalesPipelineAd
                 if ((bool) $stages[$from]['is_terminal']) {
                     throw new DomainException('Terminal stages cannot have outgoing transitions.');
                 }
+                $conditions=$transition['conditions']??[];
+                if (!is_array($conditions)) throw new DomainException('Invalid transition conditions.');
+                \Domains\Sales\Domain\Policy\PipelineTransitionConditions::validate($conditions);
                 $key = $from . ':' . $to;
                 if (isset($unique[$key])) throw new DomainException('Duplicate pipeline transition.');
                 $unique[$key] = true;

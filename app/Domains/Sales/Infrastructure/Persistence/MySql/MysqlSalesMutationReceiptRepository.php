@@ -16,7 +16,7 @@ final readonly class MysqlSalesMutationReceiptRepository implements SalesMutatio
     {
         $statement = $this->connection->prepare(
             'SELECT mutation_id FROM sales_operation_receipts '
-            . 'WHERE organization_id=:organization_id AND operation_type=:operation_type AND idempotency_key=:idempotency_key LIMIT 1'
+            . 'WHERE organization_id=:organization_id AND operation_type=:operation_type AND idempotency_key=:idempotency_key LIMIT 1' . ($this->connection->inTransaction() ? ' FOR UPDATE' : '')
         );
         $statement->execute([
             'organization_id' => $organizationId,

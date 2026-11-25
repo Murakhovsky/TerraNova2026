@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "sales.activity.reschedule input v1",
+  "type": "object",
+  "properties": {
+    "deal_id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "activity_id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "due_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "deal_id",
+    "activity_id",
+    "due_at"
+  ],
+  "additionalProperties": false
+}

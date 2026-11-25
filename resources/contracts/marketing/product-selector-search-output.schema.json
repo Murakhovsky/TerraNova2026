@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "items",
+    "limit",
+    "offset",
+    "has_more",
+    "source_domain"
+  ],
+  "properties": {
+    "items": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "required": [
+          "product_ref",
+          "variant_ref",
+          "name",
+          "sku",
+          "product_status",
+          "launch_eligible"
+        ],
+        "properties": {
+          "product_ref": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "variant_ref": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 250
+          },
+          "sku": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 191
+          },
+          "product_status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "DRAFT"
+            ]
+          },
+          "launch_eligible": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 20
+    },
+    "offset": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000000
+    },
+    "has_more": {
+      "type": "boolean"
+    },
+    "source_domain": {
+      "type": "string",
+      "enum": [
+        "product_management"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,107 @@
+{% macro audience_form(campaign, audience, csrfToken, key) %}
+    <form method="post" action="/marketing/campaigns/{{ campaign.id|url_encode }}/audiences" class="cos-page__stack">
+        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+        <input type="hidden" name="idempotency_key" value="{{ key }}">
+        {% if audience %}
+            <input type="hidden" name="audience_id" value="{{ audience.id }}">
+            <input type="hidden" name="expected_revision" value="{{ audience.revision }}">
+        {% endif %}
+        <label>Audience name <input class="form-control" name="name" required minlength="3" maxlength="180" value="{{ audience.content.name|default('') }}"></label>
+        <label>Market countries (comma-separated) <input class="form-control" name="market_countries" required maxlength="100" placeholder="UA, PL" value="{{ audience.content.target_spec.market_countries|default([])|join(', ') }}"></label>
+        <label>Audience hypothesis <textarea class="form-control" name="audience_hypothesis" required minlength="5" maxlength="500">{{ audience.content.target_spec.audience_hypothesis|default('') }}</textarea></label>
+        <button class="btn btn-outline-primary" type="submit">{{ audience ? 'Save next audience revision' : 'Create audience draft' }}</button>
+    </form>
+{% endmacro %}
+
+{% macro adset_form(campaign, adset, audiences, creatives, csrfToken, key) %}
+    {% set content = adset.content|default({}) %}
+    <form method="post" action="/marketing/campaigns/{{ campaign.id|url_encode }}/adsets" class="cos-page__stack">
+        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+        <input type="hidden" name="idempotency_key" value="{{ key }}">
+        <input type="hidden" name="campaign_revision" value="{{ campaign.revision }}">
+        {% if adset %}
+            <input type="hidden" name="adset_id" value="{{ adset.id }}">
+            <input type="hidden" name="expected_revision" value="{{ adset.revision }}">
+        {% endif %}
+        <label>AdSet name <input class="form-control" name="name" required minlength="3" maxlength="180" value="{{ content.name|default('') }}"></label>
+        <label>Audience revision
+            <select class="form-control" name="audience_pin" required>
+                <option value="">Select a current Audience revision</option>
+                {% for audience in audiences %}
+                    <option value="{{ audience.id }}:{{ audience.revision }}"{% if content.audience_id|default('') == audience.id and content.audience_revision|default(0) == audience.revision %} selected{% endif %}>{{ audience.content.name }} · r{{ audience.revision }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <fieldset>
+            <legend>Current Creative revisions (1–20)</legend>
+            {% for creative in creatives %}
+                {% set pin = {'creative_id': creative.id, 'revision': creative.revision} %}
+                <label class="d-block"><input type="checkbox" name="creative_pins[]" value="{{ creative.id }}:{{ creative.revision }}"{% if pin in content.creatives|default([]) %} checked{% endif %}> {{ creative.content.headline }} · r{{ creative.revision }}</label>
+            {% else %}
+                <p>Create a Creative Draft before creating an AdSet.</p>
+            {% endfor %}
+        </fieldset>
+        <fieldset>
+            <legend>Planned placements</legend>
+            {% for placement in ['AUTOMATIC','FEED','STORIES','REELS','SEARCH'] %}
+                <label class="d-block"><input type="checkbox" name="placements[]" value="{{ placement }}"{% if placement in content.placements|default(['AUTOMATIC']) %} checked{% endif %}> {{ placement }}</label>
+            {% endfor %}
+            <p>Automatic cannot be combined with manual placements.</p>
+        </fieldset>
+        <label>Optimization
+            <select class="form-control" name="optimization" required>
+                {% for option in ['REACH','TRAFFIC','LEADS','CONVERSIONS'] %}
+                    <option value="{{ option }}"{% if content.optimization|default('TRAFFIC') == option %} selected{% endif %}>{{ option }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Planned daily budget <input class="form-control" name="planned_daily_budget" required inputmode="decimal" maxlength="15" pattern="(0|[1-9][0-9]{0,11})(\.[0-9]{1,2})?" value="{{ content.planned_daily_budget|default('') }}"></label>
+        <label>Currency <input class="form-control" name="currency" required maxlength="3" pattern="[A-Z]{3}" value="{{ content.currency|default('USD') }}"></label>
+        <p>Planning only: Finance reservation not confirmed. This does not activate an ad.</p>
+        <button class="btn btn-outline-primary" type="submit"{% if audiences is empty or creatives is empty %} disabled{% endif %}>{{ adset ? 'Save next AdSet revision' : 'Create AdSet draft' }}</button>
+    </form>
+{% endmacro %}
+
+{% import _self as forms %}
+<section class="cos-panel" aria-label="Audience and AdSet planning">
+    <h3>Audiences</h3>
+    <p>Audiences are shared within this organization. Revising one can make pinned AdSets in other campaigns stale. No personal audience lists or provider eligibility are implied.</p>
+    {% if campaign.status == 'DRAFT' %}
+        <details><summary>Create an audience</summary>{{ forms.audience_form(campaign, null, csrfToken, 'mkt-audience-' ~ planningKey) }}</details>
+    {% endif %}
+    {% for audience in audiences %}
+        <section class="cos-panel">
+            <strong>{{ audience.content.name }}</strong> · r{{ audience.revision }}
+            <p>{{ audience.content.target_spec.market_countries|join(', ') }} · {{ audience.content.target_spec.verification_status }}</p>
+            <p>{{ audience.content.target_spec.audience_hypothesis }}</p>
+            {% if campaign.status == 'DRAFT' %}
+                <details><summary>Revise shared audience</summary>{{ forms.audience_form(campaign, audience, csrfToken, 'mkt-audience-' ~ audience.id ~ '-' ~ planningKey) }}</details>
+            {% endif %}
+        </section>
+    {% else %}
+        <p>No Audience drafts yet.</p>
+    {% endfor %}
+
+    <h3>AdSet drafts</h3>
+    <p>AdSets pin this Campaign revision, one Audience revision and one or more Creative revisions. They are not imported Meta AdSets and cannot spend funds.</p>
+    {% if campaign.status == 'DRAFT' %}
+        <details><summary>Create AdSet</summary>{{ forms.adset_form(campaign, null, audiences, creatives, csrfToken, 'mkt-adset-' ~ planningKey) }}</details>
+    {% endif %}
+    {% for adset in adsets %}
+        <section class="cos-panel">
+            <strong>{{ adset.content.name }}</strong> · r{{ adset.revision }}
+            {% if adset.pins_stale %}
+                <p role="alert"><strong>STALE PINS:</strong> Campaign, Audience or Creative has changed. Select current revisions explicitly before saving the next version.</p>
+            {% endif %}
+            <p>Campaign r{{ adset.content.campaign_revision }} · Audience {{ adset.content.audience_id }} r{{ adset.content.audience_revision }}</p>
+            <ul>{% for pin in adset.content.creatives %}<li>{{ pin.creative_id }} · r{{ pin.revision }}</li>{% endfor %}</ul>
+            <p>{{ adset.content.optimization }} · {{ adset.content.placements|join(', ') }} · {{ adset.content.planned_daily_budget }} {{ adset.content.currency }} / day (unreserved)</p>
+            <p>Paid launch eligible: no.</p>
+            {% if campaign.status == 'DRAFT' %}
+                <details><summary>Revise AdSet and review pins</summary>{{ forms.adset_form(campaign, adset, audiences, creatives, csrfToken, 'mkt-adset-' ~ adset.id ~ '-' ~ planningKey) }}</details>
+            {% endif %}
+        </section>
+    {% else %}
+        <p>No AdSet drafts yet.</p>
+    {% endfor %}
+</section>

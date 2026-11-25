@@ -243,7 +243,7 @@ final readonly class MysqlMarketingPaidReadRepository implements MarketingPaidRe
                 AND a.connection_status='READ_ONLY'
                 AND a.currency=s.currency AND a.timezone=s.timezone
             WHERE s.organization_id=? AND s.account_id=? AND s.id=?
-                AND s.provider='meta' AND s.grain='campaign' LIMIT 1");
+                AND s.provider='meta' AND s.grain='campaign' LIMIT 1".($this->connection->inTransaction()?' FOR UPDATE':''));
         $stmt->execute([$organizationId,$accountId,$snapshotId]);
         $row=$stmt->fetch(PDO::FETCH_ASSOC);
         if(!is_array($row)){

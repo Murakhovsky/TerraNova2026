@@ -97,6 +97,7 @@ $repository = new class implements ClientCaseCommandRepositoryInterface {
     }
     public function propertyMatch(string $organizationId, int $matchId): ?array { return $matchId === 60 ? ['id' => 60, 'client_case_id' => 10, 'property_id' => 50, 'public_id' => 'PR-50', 'title' => 'Property'] : null; }
     public function inboundRequest(string $organizationId, int $requestId): ?array { return $this->inbound[$requestId] ?? null; }
+    public function lockInboundRequest(string $organizationId, int $requestId): ?array { return $this->inboundRequest($organizationId, $requestId); }
     public function findPerson(string $organizationId, ?string $email, ?string $phone): ?array { return null; }
     public function createPerson(string $organizationId, array $person): int { $id = ++$this->nextPersonId; $this->writes[] = ['create_person', $organizationId, $id, $person]; return $id; }
     public function refreshPerson(string $organizationId, int $personId, array $person): bool { $this->writes[] = ['refresh_person', $organizationId, $personId, $person]; return true; }

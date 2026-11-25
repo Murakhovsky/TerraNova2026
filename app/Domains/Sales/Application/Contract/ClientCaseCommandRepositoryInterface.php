@@ -11,6 +11,8 @@ interface ClientCaseCommandRepositoryInterface
     public function property(int $propertyId, bool $activeOnly = false): ?array;
     public function propertyMatch(string $organizationId, int $matchId): ?array;
     public function inboundRequest(string $organizationId, int $requestId): ?array;
+    /** Lock the tenant-owned inbound row for the lifetime of the current write transaction. */
+    public function lockInboundRequest(string $organizationId, int $requestId): ?array;
     public function findPerson(string $organizationId, ?string $email, ?string $phone): ?array;
     public function createPerson(string $organizationId, array $person): int;
     public function refreshPerson(string $organizationId, int $personId, array $person): bool;

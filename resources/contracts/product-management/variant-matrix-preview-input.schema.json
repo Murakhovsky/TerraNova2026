@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "variant-matrix-preview input",
+  "type": "object",
+  "required": [
+    "product_id",
+    "axes",
+    "sku_prefix"
+  ],
+  "properties": {
+    "product_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "axes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "code",
+          "choices"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,39}$"
+          },
+          "choices": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$"
+            },
+            "maxItems": 50,
+            "minItems": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "maxItems": 4,
+      "minItems": 1
+    },
+    "sku_prefix": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,59}$"
+    }
+  },
+  "additionalProperties": false
+}

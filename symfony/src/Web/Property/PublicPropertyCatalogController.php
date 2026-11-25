@@ -66,7 +66,7 @@ final readonly class PublicPropertyCatalogController
             $result = $this->commands->dispatch(new ReceivePublicLeadCommand(
                 OrganizationId::fromString($this->organizationId),
                 $request->request->all(),
-                $request->getRequestUri(),
+                $request->getPathInfo(),
             ));
 
             if (!$result instanceof SalesMutationResult) {
@@ -98,13 +98,12 @@ final readonly class PublicPropertyCatalogController
             $this->twig->render('experience/public/property_catalog.html.twig', [
                 'page' => $page,
                 'catalog' => $catalog,
+                'leadSubmissionId' => bin2hex(random_bytes(16)),
             ]),
             $status,
             [
                 'Content-Type' => 'text/html; charset=UTF-8',
-                'Cache-Control' => $request->isMethod('GET')
-                    ? 'public, max-age=60'
-                    : 'no-store, private',
+                'Cache-Control' => 'no-store, private',
             ],
         );
     }

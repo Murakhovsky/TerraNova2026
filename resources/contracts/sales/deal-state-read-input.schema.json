@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "sales.deal.state.read input v1",
+  "type": "object",
+  "properties": {
+    "deal_id": {
+      "type": "integer",
+      "minimum": 1
+    }
+  },
+  "required": [
+    "deal_id"
+  ],
+  "additionalProperties": false
+}

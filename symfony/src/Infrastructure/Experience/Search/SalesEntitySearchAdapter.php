@@ -6,11 +6,13 @@ namespace App\Infrastructure\Experience\Search;
 
 use App\Application\Experience\Search\Contract\SalesEntitySearchInterface;
 use App\Application\Experience\Search\EntitySearchHit;
+use App\Security\SalesRequestScope;
+use DomainException;
 use Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface;
 
 final readonly class SalesEntitySearchAdapter implements SalesEntitySearchInterface
 {
-    public function __construct(private SalesWorkspaceReadModelInterface $sales)
+    public function __construct(private SalesWorkspaceReadModelInterface $sales,private SalesRequestScope $scope)
     {
     }
 
@@ -23,11 +25,14 @@ final readonly class SalesEntitySearchAdapter implements SalesEntitySearchInterf
             return [];
         }
 
+        try {$owner=$this->scope->searchOwner($organizationId);}
+        catch (DomainException) {return [];}
+        $filters=['q'=>$query,'limit'=>$limit,'owner_id'=>$owner];
         $items = [];
 
-        foreach ($this->sales->deals($organizationId, ['q' => $query, 'limit' => $limit]) as $deal) {
+        foreach ($this->sales->deals($organizationId, $filters) as $deal) {
             $id = (int) ($deal['id'] ?? 0);
-            if ($id <= 0) {
+            if ($id <= 0 || !$this->scope->entity($organizationId, 'deal', $id)) {
                 continue;
             }
 
@@ -47,9 +52,9 @@ final readonly class SalesEntitySearchAdapter implements SalesEntitySearchInterf
             );
         }
 
-        foreach ($this->sales->leads($organizationId, ['q' => $query, 'limit' => $limit]) as $lead) {
+        foreach ($this->sales->leads($organizationId, $filters) as $lead) {
             $id = (int) ($lead['id'] ?? 0);
-            if ($id <= 0) {
+            if ($id <= 0 || !$this->scope->entity($organizationId, 'lead', $id)) {
                 continue;
             }
 

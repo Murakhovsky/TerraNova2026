@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "sales.lead.state.manage output v1",
+  "type": "object",
+  "properties": {
+    "lead_id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "contacted",
+        "qualified",
+        "viewing_planned",
+        "viewing",
+        "negotiation",
+        "won",
+        "lost",
+        "disqualified",
+        "spam",
+        "closed"
+      ]
+    },
+    "replayed": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "lead_id",
+    "status",
+    "replayed"
+  ],
+  "additionalProperties": false
+}

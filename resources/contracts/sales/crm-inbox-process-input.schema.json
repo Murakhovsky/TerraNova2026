@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SalesCrmInboxProcessInputV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "inbox_id",
+    "revision"
+  ],
+  "properties": {
+    "inbox_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "revision": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}

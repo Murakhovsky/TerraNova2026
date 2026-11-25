@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SalesLeadQualifyInputV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "lead_id",
+    "expected_status",
+    "target_status"
+  ],
+  "properties": {
+    "lead_id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "expected_status": {
+      "type": "string",
+      "enum": [
+        "new",
+        "contacted",
+        "qualified"
+      ]
+    },
+    "target_status": {
+      "type": "string",
+      "enum": [
+        "contacted",
+        "qualified",
+        "disqualified"
+      ]
+    }
+  }
+}

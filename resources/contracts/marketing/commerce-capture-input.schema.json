@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "campaign_id",
+    "plan_id",
+    "order_ids"
+  ],
+  "properties": {
+    "campaign_id": {
+      "type": "string",
+      "pattern": "^mkt-[a-f0-9]{24}$"
+    },
+    "plan_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^mkpl-[a-f0-9]{24}$"
+    },
+    "order_ids": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{32}$"
+      }
+    }
+  }
+}

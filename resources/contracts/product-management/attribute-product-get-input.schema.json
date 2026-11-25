@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "attribute-product-get input",
+  "type": "object",
+  "required": [
+    "product_id"
+  ],
+  "properties": {
+    "product_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    }
+  },
+  "additionalProperties": false
+}

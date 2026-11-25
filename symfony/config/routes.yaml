@@ -5,6 +5,196 @@ cos_product_management_import_plan_propose:
   methods: [POST]
   requirements: { batchId: '[a-f0-9]{32}' }
 
+# Product Management E7/P0: tenant-gated human workspace, never Shopify or direct DB writer.
+cos_product_management_import:
+  path: /product-management/import
+  controller: App\Web\ProductManagement\ProductImportController::index
+  methods: [GET]
+
+cos_product_management_import_preview:
+  path: /product-management/import/preview
+  controller: App\Web\ProductManagement\ProductImportController::preview
+  methods: [POST]
+
+cos_product_management_import_batch:
+  path: /product-management/import/{id}
+  controller: App\Web\ProductManagement\ProductImportController::batch
+  methods: [GET]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_product_management_import_propose:
+  path: /product-management/import/{id}/propose
+  controller: App\Web\ProductManagement\ProductImportController::propose
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_product_management_governed_plan_propose:
+  path: /api/v1/product-management/governed/plans/propose
+  controller: App\Web\ProductManagement\ProductGovernedPlanController::propose
+  methods: [POST]
+
+cos_product_management_dashboard:
+  path: /product-management/dashboard
+  controller: App\Web\ProductManagement\ProductManagementPageController::dashboard
+  methods: [GET]
+
+cos_product_management_attributes:
+  path: /product-management/attributes
+  controller: App\Web\ProductManagement\ProductManagementPageController::attributes
+  methods: [GET]
+cos_product_management_attributes_change:
+  path: /product-management/attributes
+  controller: App\Web\ProductManagement\ProductManagementPageController::changeAttributes
+  methods: [POST]
+cos_product_management_product_attributes:
+  path: /product-management/products/{id}/attributes
+  controller: App\Web\ProductManagement\ProductManagementPageController::productAttributes
+  methods: [GET]
+  requirements: { id: '[a-f0-9]{32}' }
+cos_product_management_product_attributes_change:
+  path: /product-management/products/{id}/attributes
+  controller: App\Web\ProductManagement\ProductManagementPageController::changeProductAttributes
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_product_management_stock:
+  path: /product-management/stock
+  controller: App\Web\ProductManagement\ProductInventoryController::index
+  methods: [GET]
+
+cos_product_management_location_create:
+  path: /product-management/stock/locations
+  controller: App\Web\ProductManagement\ProductInventoryController::createLocation
+  methods: [POST]
+
+cos_product_management_stock_count_session_propose:
+  path: /product-management/stock/count/session/propose
+  controller: App\Web\ProductManagement\ProductInventoryController::proposeCountSession
+  methods: [POST]
+
+cos_product_management_stock_count_propose:
+  path: /product-management/stock/count/propose
+  controller: App\Web\ProductManagement\ProductInventoryController::proposeCount
+  methods: [POST]
+
+cos_product_management_stock_reservation:
+  path: /product-management/stock/reservation
+  controller: App\Web\ProductManagement\ProductInventoryController::reservation
+  methods: [POST]
+
+cos_product_management_stock_post:
+  path: /product-management/stock/post
+  controller: App\Web\ProductManagement\ProductInventoryController::post
+  methods: [POST]
+
+cos_product_management_price_lists:
+  path: /product-management/price-lists
+  controller: App\Web\ProductManagement\ProductManagementPageController::priceLists
+  methods: [GET]
+
+cos_product_management_price_list_create:
+  path: /product-management/price-lists
+  controller: App\Web\ProductManagement\ProductManagementPageController::createPriceList
+  methods: [POST]
+
+cos_product_management_price_list_change:
+  path: /product-management/price-lists/{id}/change
+  controller: App\Web\ProductManagement\ProductManagementPageController::changePriceList
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_product_management_price_list_entry_set:
+  path: /product-management/products/{id}/list-price
+  controller: App\Web\ProductManagement\ProductManagementPageController::setListPrice
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_product_management_index:
+  path: /product-management
+  controller: App\Web\ProductManagement\ProductManagementPageController::index
+  methods: [GET]
+
+cos_product_management_create:
+  path: /product-management/products
+  controller: App\Web\ProductManagement\ProductManagementPageController::create
+  methods: [POST]
+
+cos_product_management_product:
+  path: /product-management/products/{id}
+  controller: App\Web\ProductManagement\ProductManagementPageController::product
+  methods: [GET]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_product_management_product_update:
+  path: /product-management/products/{id}/update
+  controller: App\Web\ProductManagement\ProductManagementPageController::update
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_product_management_variant_create:
+  path: /product-management/products/{id}/variants
+  controller: App\Web\ProductManagement\ProductManagementPageController::variant
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_product_management_product_archive:
+  path: /product-management/products/{id}/archive
+  controller: App\Web\ProductManagement\ProductManagementPageController::archiveProduct
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_product_management_variant_update:
+  path: /product-management/products/{id}/variants/{variantId}/update
+  controller: App\Web\ProductManagement\ProductManagementPageController::updateVariant
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}', variantId: '[a-f0-9]{32}' }
+
+cos_product_management_variant_archive:
+  path: /product-management/products/{id}/variants/{variantId}/archive
+  controller: App\Web\ProductManagement\ProductManagementPageController::archiveVariant
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}', variantId: '[a-f0-9]{32}' }
+
+cos_product_management_product_media_attach:
+  path: /product-management/products/{id}/media
+  controller: App\Web\ProductManagement\ProductManagementPageController::attachMedia
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_product_management_product_media_detach:
+  path: /product-management/products/{id}/media/{mediaId}/detach
+  controller: App\Web\ProductManagement\ProductManagementPageController::detachMedia
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}', mediaId: '[a-f0-9]{32}' }
+
+cos_product_management_product_translation:
+  path: /product-management/products/{id}/translations
+  controller: App\Web\ProductManagement\ProductManagementPageController::translate
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_product_management_product_category:
+  path: /product-management/products/{id}/categories
+  controller: App\Web\ProductManagement\ProductManagementPageController::assignCategory
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_product_management_product_price:
+  path: /product-management/products/{id}/price
+  controller: App\Web\ProductManagement\ProductManagementPageController::setPrice
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_product_management_categories:
+  path: /product-management/categories
+  controller: App\Web\ProductManagement\ProductManagementPageController::categories
+  methods: [GET]
+
+cos_product_management_category_create:
+  path: /product-management/categories
+  controller: App\Web\ProductManagement\ProductManagementPageController::createCategory
+  methods: [POST]
+
 # Product Management: signed Shopify events are staged only, never mutate stock.
 cos_product_management_shopify_webhook:
   path: /api/v1/integrations/shopify/webhook
@@ -15,6 +205,11 @@ cos_product_management_shopify_webhook:
 cos_automation_intents_submit:
   path: /api/v1/capability-intents/property-bulk
   controller: App\Http\Api\V1\Controller\CanonicalAutomationIntentController::submit
+  methods: [POST]
+
+cos_automation_intents_product_submit:
+  path: /api/v1/capability-intents/product-business
+  controller: App\Http\Api\V1\Controller\CanonicalAutomationIntentController::submitProduct
   methods: [POST]
 
 cos_automation_intents_workspace:
@@ -3718,6 +3913,84 @@ cos_marketing_campaign:
   methods: [GET]
   requirements: { id: 'mkt-[a-f0-9]{24}' }
 
+cos_marketing_audience_save:
+  path: /marketing/campaigns/{id}/audiences
+  controller: App\Web\Marketing\MarketingPageController::saveAudience
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}' }
+
+cos_marketing_adset_save:
+  path: /marketing/campaigns/{id}/adsets
+  controller: App\Web\Marketing\MarketingPageController::saveAdset
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}' }
+
+cos_marketing_creative_create:
+  path: /marketing/campaigns/{id}/creatives
+  controller: App\Web\Marketing\MarketingPageController::createCreative
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}' }
+
+cos_marketing_creative_revise:
+  path: /marketing/campaigns/{id}/creatives/{creativeId}/revisions
+  controller: App\Web\Marketing\MarketingPageController::reviseCreative
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}', creativeId: 'mkcr-[a-f0-9]{24}' }
+
+cos_marketing_paid_plan_create:
+  path: /marketing/campaigns/{id}/paid-plans
+  controller: App\Web\Marketing\MarketingPageController::createPaidPlan
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}' }
+
+cos_marketing_paid_goal_propose:
+  path: /marketing/campaigns/{id}/paid-plans/{planId}/goals
+  controller: App\Web\Marketing\MarketingPageController::proposePaidGoal
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}', planId: 'mkpl-[a-f0-9]{24}' }
+
+cos_marketing_paid_settlement_review:
+  path: /marketing/campaigns/{id}/paid-plans/{planId}/settlement-review
+  controller: App\Web\Marketing\MarketingPageController::reviewPaidSettlement
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}', planId: 'mkpl-[a-f0-9]{24}' }
+
+cos_marketing_paid_settlement_goal:
+  path: /marketing/campaigns/{id}/paid-plans/{planId}/settlement-goal
+  controller: App\Web\Marketing\MarketingPageController::proposePaidSettlement
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}', planId: 'mkpl-[a-f0-9]{24}' }
+
+cos_marketing_analyst_plan_propose:
+  path: /marketing/campaigns/{id}/analyst-plans
+  controller: App\Web\Marketing\MarketingPageController::proposeAnalystPlan
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}' }
+
+cos_marketing_analyst_run_review:
+  path: /marketing/campaigns/{id}/analyst-runs/{runId}/review
+  controller: App\Web\Marketing\MarketingPageController::reviewAnalystRun
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}', runId: 'mkar-[a-f0-9]{24}' }
+
+cos_marketing_analyst_run_recover:
+  path: /marketing/campaigns/{id}/analyst-runs/{runId}/recover
+  controller: App\Web\Marketing\MarketingPageController::recoverAnalystRun
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}', runId: 'mkar-[a-f0-9]{24}' }
+
+cos_marketing_analyst_propose:
+  path: /marketing/campaigns/{id}/proposals
+  controller: App\Web\Marketing\MarketingPageController::propose
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}' }
+
+cos_marketing_analyst_review:
+  path: /marketing/campaigns/{id}/proposals/{proposalId}/review
+  controller: App\Web\Marketing\MarketingPageController::review
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}', proposalId: 'mkpr-[a-f0-9]{24}' }
+
 cos_marketing_accounts:
   path: /marketing/accounts
   controller: App\Web\Marketing\MarketingPageController::accounts
@@ -3738,6 +4011,21 @@ cos_marketing_performance:
   path: /marketing/performance
   controller: App\Web\Marketing\MarketingPageController::performance
   methods: [GET]
+
+cos_marketing_media_analytics_sync:
+  path: /marketing/analytics/media/sync
+  controller: App\Web\Marketing\MarketingPageController::syncMediaAnalytics
+  methods: [POST]
+
+cos_marketing_commerce_attribution_capture:
+  path: /marketing/attribution/commerce/capture
+  controller: App\Web\Marketing\MarketingPageController::captureCommerceAttribution
+  methods: [POST]
+
+cos_marketing_attribution_capture:
+  path: /marketing/attribution/capture
+  controller: App\Web\Marketing\MarketingPageController::captureAttribution
+  methods: [POST]
 
 cos_marketing_actions:
   path: /marketing/actions

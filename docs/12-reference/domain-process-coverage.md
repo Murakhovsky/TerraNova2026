@@ -17,8 +17,8 @@ generated: true
 ## Підсумок
 
 - **Installable Domains:** 15
-- **Покрито канонічним процесом:** 8
-- **Явних exemptions:** 7
+- **Покрито канонічним процесом:** 10
+- **Явних exemptions:** 5
 - **Без покриття:** 0
 
 | Domain | Версія | Статус | Процесів | Кроків | Capability mapped | Capability gaps | Debt |
@@ -31,12 +31,12 @@ generated: true
 | `finance` · Finance | `0.2.2` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `growth` · Growth | `0.50.0` | `covered` | 1 | 6 | 6/6 | 0 | 0 |
 | `hr` · HR | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
-| `marketing` · Marketing | `0.1.2` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
+| `marketing` · Marketing | `0.2.3` | `covered` | 2 | 6 | 6/6 | 0 | 0 |
 | `procurement` · Procurement | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
-| `product_management` · Product Management | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
+| `product_management` · Product Management | `0.1.0` | `covered` | 6 | 38 | 38/38 | 0 | 0 |
 | `property` · Property | `1.0.0` | `covered` | 1 | 6 | 6/6 | 0 | 0 |
 | `real_estate` · Real Estate | `1.0.0` | `covered` | 1 | 7 | 7/7 | 0 | 0 |
-| `sales` · Sales | `1.0.0` | `covered` | 2 | 13 | 2/13 | 11 | 11 |
+| `sales` · Sales | `1.0.0` | `covered` | 3 | 21 | 21/21 | 0 | 0 |
 | `service` · Service | `1.0.0` | `covered` | 1 | 7 | 7/7 | 0 | 0 |
 
 ## Канонічне ownership процесів
@@ -67,7 +67,7 @@ generated: true
 
 ### Finance (`finance`)
 
-- **Exempt:** Finance F1 exposes approved tenant-safe budget mutations but no accepted end-to-end paid spend workflow, provider confirmation or accounting expense settlement. Cross-domain execution remains deferred until Marketing M3 and independent acceptance.
+- **Exempt:** Finance M3 has an implemented approved budget settlement workflow with native document review; formal Process Registry coverage remains exempt pending independent D3 acceptance. No accounting expense or payment authority.
 - **Owner:** COS Architecture
 
 ### Growth (`growth`)
@@ -81,8 +81,8 @@ generated: true
 
 ### Marketing (`marketing`)
 
-- **Exempt:** M0 Domain foundation and Meta read-only have no canonical paid-execution process; FIN-BUDGET-001 and Workflow approval acceptance must precede process activation.
-- **Owner:** COS Marketing / Architecture
+- `marketing.attribution-to-analytics`
+- `marketing.media-import-to-report`
 
 ### Procurement (`procurement`)
 
@@ -91,8 +91,12 @@ generated: true
 
 ### Product Management (`product_management`)
 
-- **Exempt:** E0–E4 pilot includes bounded Product Management capabilities and Shopify read-only ingestion; canonical business Process Registry workflow is deferred until governed sync and stock orchestration are independently accepted.
-- **Owner:** COS Product Management
+- `product_management.catalog-to-variants`
+- `product_management.csv-to-native-catalog`
+- `product_management.governed-business-cycle`
+- `product_management.physical-count-to-correction`
+- `product_management.pricing-to-quote`
+- `product_management.stock-to-reconciliation`
 
 ### Property (`property`)
 
@@ -105,6 +109,7 @@ generated: true
 ### Sales (`sales`)
 
 - `sales.lead-to-managed-case`
+- `sales.order-to-fulfillment`
 - `sales.request-to-property-match`
 
 ### Service (`service`)
@@ -125,11 +130,9 @@ generated: true
 | --- | --- | --- |
 | `construction` | COS Architecture | V1 skeleton only; executable Construction process models are intentionally deferred until Construction runtime implementation. |
 | `documents` | COS Federation / Documents | Initial Documents V0.1 provides only approved, idempotent signature REQUEST Actions. A complete canonical signature-request-to-provider-verified-signed process is deferred until authenticated human/e-sign provider attestation and durable signer proof have been integrated and positively tested; request is never equivalent to signed outcome. |
-| `finance` | COS Architecture | Finance F1 exposes approved tenant-safe budget mutations but no accepted end-to-end paid spend workflow, provider confirmation or accounting expense settlement. Cross-domain execution remains deferred until Marketing M3 and independent acceptance. |
+| `finance` | COS Architecture | Finance M3 has an implemented approved budget settlement workflow with native document review; formal Process Registry coverage remains exempt pending independent D3 acceptance. No accounting expense or payment authority. |
 | `hr` | COS Architecture | V1 skeleton only; executable HR process models are intentionally deferred until HR runtime implementation. |
-| `marketing` | COS Marketing / Architecture | M0 Domain foundation and Meta read-only have no canonical paid-execution process; FIN-BUDGET-001 and Workflow approval acceptance must precede process activation. |
 | `procurement` | COS Architecture | V1 skeleton only; executable Procurement process models are intentionally deferred until Procurement runtime implementation. |
-| `product_management` | COS Product Management | E0–E4 pilot includes bounded Product Management capabilities and Shopify read-only ingestion; canonical business Process Registry workflow is deferred until governed sync and stock orchestration are independently accepted. |
 
 ## Авторитетність і обмеження
 

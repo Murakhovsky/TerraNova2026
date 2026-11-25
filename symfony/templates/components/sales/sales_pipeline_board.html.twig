@@ -31,7 +31,7 @@
 
                         <p class="cos-sales-pipeline-card__subtitle">{{ deal.title }}</p>
                         <p class="cos-sales-pipeline-card__meta">
-                            {{ deal.owner }} · {{ deal.stageAgeEstimated ? '~' : '' }}{{ deal.daysInStage }}d in stage
+                            {{ deal.owner }} · {% if deal.daysInStage is null %}Stage age unknown{% else %}{{ deal.stageAgeEstimated ? '~' : '' }}{{ deal.daysInStage }}d in stage{% endif %}
                         </p>
 
                         <dl class="cos-sales-pipeline-card__metrics">

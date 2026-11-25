@@ -1,0 +1,177 @@
+{
+  "schema_version": 4,
+  "id": "product_management.governed-business-cycle",
+  "title": "Product Governed Business Cycle",
+  "domain": "product_management",
+  "state": "to-be",
+  "workflow": "02-workflows/product-management-governed-business-cycle.md",
+  "trigger": "Signed AI or CRON intent is reviewed and adopted into an approved Plan",
+  "outcomes": [
+    "Eight approved native operations produce independently verified effects",
+    "No unapproved Action or second executor",
+    "Ledger and current native results are verified"
+  ],
+  "actors": [
+    "Approved Product Action worker"
+  ],
+  "steps": [
+    {
+      "id": "receive",
+      "label": "Receive documented stock",
+      "kind": "operation",
+      "owner": "Approved Product Action worker",
+      "domain": "product_management",
+      "capability": "product_management.governed.stock.receive",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Automation/Action/ProductGovernedOperationHandler.php",
+          "symbol": "'stock.receive','stock.issue'"
+        }
+      ]
+    },
+    {
+      "id": "price",
+      "label": "Set revision-pinned base price",
+      "kind": "operation",
+      "owner": "Approved Product Action worker",
+      "domain": "product_management",
+      "capability": "product_management.governed.price.base.set",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Automation/Action/ProductGovernedOperationHandler.php",
+          "symbol": "'price.base.set'=>$this->prices->set"
+        }
+      ]
+    },
+    {
+      "id": "reserve",
+      "label": "Reserve stock",
+      "kind": "operation",
+      "owner": "Approved Product Action worker",
+      "domain": "product_management",
+      "capability": "product_management.governed.stock.reserve",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Automation/Action/ProductGovernedOperationHandler.php",
+          "symbol": "'stock.reserve'=>$this->products->reserveStock"
+        }
+      ]
+    },
+    {
+      "id": "issue",
+      "label": "Issue stock",
+      "kind": "operation",
+      "owner": "Approved Product Action worker",
+      "domain": "product_management",
+      "capability": "product_management.governed.stock.issue",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Automation/Action/ProductGovernedOperationHandler.php",
+          "symbol": "'stock.receive','stock.issue'"
+        }
+      ]
+    },
+    {
+      "id": "create",
+      "label": "Create separate Product",
+      "kind": "operation",
+      "owner": "Approved Product Action worker",
+      "domain": "product_management",
+      "capability": "product_management.governed.product.create",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Automation/Action/ProductGovernedOperationHandler.php",
+          "symbol": "'product.create'=>$this->products->createProduct"
+        }
+      ]
+    },
+    {
+      "id": "matrix",
+      "label": "Generate variants for known Product",
+      "kind": "operation",
+      "owner": "Approved Product Action worker",
+      "domain": "product_management",
+      "capability": "product_management.governed.variant.matrix.create",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Automation/Action/ProductGovernedOperationHandler.php",
+          "symbol": "'variant.matrix.create'=>$this->products->createMatrix"
+        }
+      ]
+    },
+    {
+      "id": "bulk",
+      "label": "Patch known Product attributes",
+      "kind": "operation",
+      "owner": "Approved Product Action worker",
+      "domain": "product_management",
+      "capability": "product_management.governed.attribute.product.bulk_set",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Automation/Action/ProductGovernedOperationHandler.php",
+          "symbol": "'attribute.product.bulk_set'=>$this->products->bulkSetAttributes"
+        }
+      ]
+    },
+    {
+      "id": "release",
+      "label": "Release existing reservation",
+      "kind": "operation",
+      "owner": "Approved Product Action worker",
+      "domain": "product_management",
+      "capability": "product_management.governed.stock.release",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Automation/Action/ProductGovernedOperationHandler.php",
+          "symbol": "'stock.release'=>$this->products->releaseStock"
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "receive",
+      "to": "price"
+    },
+    {
+      "from": "price",
+      "to": "reserve"
+    },
+    {
+      "from": "reserve",
+      "to": "issue"
+    },
+    {
+      "from": "issue",
+      "to": "create"
+    },
+    {
+      "from": "create",
+      "to": "matrix"
+    },
+    {
+      "from": "matrix",
+      "to": "bulk"
+    },
+    {
+      "from": "bulk",
+      "to": "release"
+    }
+  ]
+}

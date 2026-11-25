@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "campaign_id": {
+      "type": "string",
+      "pattern": "^mkt-[a-f0-9]{24}$"
+    },
+    "run_id": {
+      "type": "string",
+      "pattern": "^mkar-[a-f0-9]{24}$"
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 300
+    },
+    "evidence_ref": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.:-]{8,190}$"
+    },
+    "local_and_remote_stopped": {
+      "type": "boolean",
+      "const": true
+    }
+  },
+  "required": [
+    "campaign_id",
+    "run_id",
+    "reason",
+    "evidence_ref",
+    "local_and_remote_stopped"
+  ],
+  "additionalProperties": false
+}

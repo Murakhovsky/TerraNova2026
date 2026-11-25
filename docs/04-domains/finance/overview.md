@@ -60,6 +60,10 @@ Finance приймає й зберігає **окремий журнал спо�
 
 Автоматичний MySQL-тест: `tests/integration/finance_spend_observations_mysql.php` перевіряє незмінність попередніх версій, дублікати, tenant boundary, різні валюти/атрибуцію/вікна й відсутність фіктивних фінансових фактів.
 
+## F1.4. Блокування фінансового покриття зовнішньої операції
+
+Finance-owned `cos_finance_paid_exposure_claims` фіксує одноразовий execution claim за reservation, Action і immutable Marketing plan. Claim та release використовують однаковий порядок locks (envelope, reservation), перевіряють active envelope, точну суму/валюту/період/operation key і revision; replay повертає fresh=false, новий Action не може повторно використати hold. Сума лишається RESERVED. Звичайний release після claim заблокований до незалежного settlement; freeze не знімає exposure і не гарантує зупинки вже допущеного provider request. `ApprovedFinancePaidExposureService` вимагає persisted canonical approved Marketing activation Action; немає direct Capability або HTTP write. Реальний Meta activation handler ще не підключений. Тести MySQL використовують дві незалежні connections; fixture claim не є live provider acceptance.
+
 ## Відкладені залежності для Marketing
 
 1. Окремо прийняти Finance F1 у staging, включно з правами, багатокористувацькими race-сценаріями та довготривалою перевіркою інваріантів.
@@ -76,3 +80,24 @@ Finance приймає й зберігає **окремий журнал спо�
 Finance читає Marketing-owned snapshot лише через `MarketingSpendEvidenceReadPort` та окремий integration adapter. Внутрішній `FinanceMarketingSpendReadbackService` перевіряє роль менеджера, tenant, account, snapshot та source revision і зберігає свідчення у власному Finance ledger.
 
 Сервіс не експонований як публічний Capability або HTTP endpoint. `SOURCE_OBSERVATION_UNRECONCILED` не є Finance Expense, оплатою, settlement або бюджетним резервом. Публічний запис вимагає незалежного Approval через canonical Workflow/Action у F1.3. Відповідні відмови та replay перевіряються MySQL тестом.
+
+
+## M3 — підготовка фінансового врегулювання
+
+Finance готує детермінований кандидат врегулювання з нативного резерву, підтвердження завершення кампанії, точної ревізії спостереження та незалежно перевіреного фінансового документа Meta. Звіряються кампанія, валюта, період UTC, сума та хеш плану. Розбіжності, округлення та перевищення резерву блокують операцію.
+
+`FinancePaidSettlementPolicy` обчислює суми фіксації та звільнення резерву, але повертає `MATCHED_NOT_SETTLED`. До підключення джерела фінансових документів, незалежного погодження, канонічного виконання та атомарного журналу врегулювання резерв залишається заблокованим.
+
+Приватний журнал `cos_finance_paid_settlements` атомарно переводить резерв у стан `SETTLED`, фіксує погоджену суму в бюджеті, повертає невикористану частину та зберігає незмінний доказ і дві події. Повтор того самого Action повертає його квитанцію, інший Action не може повторити врегулювання. Виконання дозволяється лише через погоджений фінансовий Action та довірений порт доказів. Це бюджетна фіксація, а не банківська оплата чи бухгалтерська витрата.
+
+Marketing надає приватне читання `settlementSource`: усі три команди та сім підоперацій мають підтверджені нативні квитанції, однакові ідентифікатори кампанії та точну ревізію джерела. Цей результат сам по собі не підтверджує фінансовий документ. Для публічного виконання ще потрібні адаптер незалежно перевірених документів, контроль актуальності доказу під час врегулювання та реєстрація фінансового контракту.
+
+Погоджений фінансовий Action `finance.ad_spend.settlement.commit` приймає тільки ідентифікатори резерву, документа та джерела, хеш кандидата і ревізію бюджету. Незалежний менеджер перевіряє PDF у Documents, точну суму, ідентифікатор документа провайдера, кампанію та закритий період. Оригінальні байти PDF звіряються з SHA-256; зміна версії документа або джерела блокує попереднє погодження. Перевірка є людською, не автоматичною автентифікацією рахунку Meta. Фінансові факти повторно читаються під час транзакції з блокуванням джерела. Оплата і бухгалтерський облік залишаються поза цим контрактом.
+
+Операторський сценарій: у Marketing Workspace прочитати термінальний рекламний план, завантажений PDF і source snapshot, зафіксувати незалежне рев'ю та запропонувати фінансовий Goal. Результат Goal перевіряється через нативний журнал Finance і канонічну Action receipt, а не прапорець успіху від агента.
+
+У Capability Library також доступні `finance.ad_spend.settlement.status` (читання нативного стану або кандидата, без фінансової мутації) та `finance.ad_spend.settlement.review` (тільки людський CommandBus із явним підтвердженням перевірки, без дозволу на списання). Виконання `commit` завжди потребує окремого canonical Workflow і Approval.
+
+## S5A/O4. Фінансові факти замовлення
+
+Нативний Finance journal підтримує capture, refund, chargeback та chargeback reversal. `finance.order.payment.register` створює лише pending registration; `finance.order.payment.reconcile` незалежно звіряє суму, валюту, account, source reference, statement line і revision. Обидві операції є financial Actions, а не direct Gateway writes. Перед записом перевіряються persisted RUNNING Action, pinned parameters, policy decision, independent approved receipt та активні менеджери. `finance.order.payment.operations.read` надає обмежений журнал для звірки, `finance.order.financial_evidence.read` — підтверджений баланс або null. Sales read повертає окремий `financial_evidence`; не змінює order lifecycle або placed fact. Це documentary manual reconciliation, не автоматичний банківський readback і не бухгалтерська виручка. Production Workflow admission та фінальна acceptance залишаються окремими воротами.

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "attribute-product-filter input",
+  "type": "object",
+  "required": [
+    "code",
+    "value"
+  ],
+  "properties": {
+    "code": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,39}$"
+    },
+    "value": {
+      "type": [
+        "string",
+        "boolean"
+      ]
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100
+    },
+    "offset": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000000
+    }
+  },
+  "additionalProperties": false
+}

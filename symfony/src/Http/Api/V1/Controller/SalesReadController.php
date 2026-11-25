@@ -19,6 +19,7 @@ final readonly class SalesReadController
     public function __construct(
         private QueryBusInterface $queries,
         private TenantContextProviderInterface $tenants,
+        private \App\Security\SalesRequestEntityAuthorizationInterface $authorization,
     ) {
     }
 
@@ -50,7 +51,9 @@ final readonly class SalesReadController
         $tenant = $this->tenants->current();
         if ($tenant === null) return $this->forbidden();
 
-        $data = $this->queries->ask(new GetSalesLeadQuery($tenant->organizationId(), (int) $id));
+        $data = $this->authorization->entity($tenant->organizationId()->value(),'lead',(int)$id)
+            ?$this->queries->ask(new GetSalesLeadQuery($tenant->organizationId(), (int) $id)):null;
+        if (!$this->authorization->entity($tenant->organizationId()->value(),'lead',(int)$id)) $data=null;
         return $data === null
             ? new JsonResponse(['ok' => false, 'error' => 'Lead not found.'], 404)
             : $this->ok($data);
@@ -71,7 +74,9 @@ final readonly class SalesReadController
         $tenant = $this->tenants->current();
         if ($tenant === null) return $this->forbidden();
 
-        $data = $this->queries->ask(new GetSalesOpportunityQuery($tenant->organizationId(), (int) $id));
+        $data = $this->authorization->entity($tenant->organizationId()->value(),'deal',(int)$id)
+            ?$this->queries->ask(new GetSalesOpportunityQuery($tenant->organizationId(), (int) $id)):null;
+        if (!$this->authorization->entity($tenant->organizationId()->value(),'deal',(int)$id)) $data=null;
         return $data === null
             ? new JsonResponse(['ok' => false, 'error' => 'Opportunity not found.'], 404)
             : $this->ok($data);
@@ -87,7 +92,7 @@ final readonly class SalesReadController
 
     private function ok(mixed $data): JsonResponse
     {
-        return new JsonResponse(['ok' => true, 'data' => $data]);
+        return new JsonResponse(['ok' => true, 'data' => $data],200,['Cache-Control'=>'no-store, private']);
     }
 
     private function forbidden(): JsonResponse

@@ -210,6 +210,7 @@ final readonly class SalesWriteController
         }
 
         $status = match ($result->code) {
+            'sales_access_denied' => 403,
             'not_found', 'request_not_found', 'case_not_found' => 404,
             'idempotency_conflict', 'concurrent_stage_change' => 409,
             default => 422,

@@ -18,6 +18,8 @@ final class BuiltinNotificationTemplateRepository implements TemplateRepositoryI
         if($channel!==Channel::EMAIL)return null;
 
         return match($key){
+            'sales.activity.reminder'=>new Template('builtin-sales-reminder-email-v1','sales.activity.reminder',Channel::EMAIL,'en','{{subject}}','{{body}}'),
+            'sales.offer.email'=>new Template('builtin-sales-offer-email-v1','sales.offer.email',Channel::EMAIL,'en','{{subject}}','{{body}}'),
             self::GROWTH_OUTBOUND_MESSAGE=>new Template(
                 'builtin-growth-outbound-email-v1',
                 self::GROWTH_OUTBOUND_MESSAGE,

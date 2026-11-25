@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "analytics-stock-search input",
+  "type": "object",
+  "properties": {
+    "location_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "risk": {
+      "type": "string",
+      "enum": [
+        "all",
+        "unavailable",
+        "low",
+        "high",
+        "reserved"
+      ]
+    },
+    "low": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,13})(\\.[0-9]{1,6})?$"
+    },
+    "high": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,13})(\\.[0-9]{1,6})?$"
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100
+    },
+    "offset": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000000
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}

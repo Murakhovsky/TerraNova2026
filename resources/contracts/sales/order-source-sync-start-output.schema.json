@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "discovery_state": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "complete",
+        "review"
+      ]
+    }
+  },
+  "required": [
+    "run_id",
+    "discovery_state"
+  ],
+  "additionalProperties": false
+}

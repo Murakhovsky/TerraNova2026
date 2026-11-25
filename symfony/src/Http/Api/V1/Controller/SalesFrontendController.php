@@ -141,7 +141,7 @@ final readonly class SalesFrontendController
             $request,
             SalesFrontendMutationCommand::APPROVAL,
             $id,
-            ['decision' => 'approve', ...$this->input($request)],
+            [...$this->input($request), 'decision' => 'approve'],
         );
     }
 
@@ -151,7 +151,7 @@ final readonly class SalesFrontendController
             $request,
             SalesFrontendMutationCommand::APPROVAL,
             $id,
-            ['decision' => 'reject', ...$this->input($request)],
+            [...$this->input($request), 'decision' => 'reject'],
         );
     }
 
@@ -262,6 +262,7 @@ final readonly class SalesFrontendController
         $normalized = strtolower($message);
 
         $status = match (true) {
+            $message==='sales_access_denied', $root instanceof \Domains\Sales\Application\Service\SalesMutationDenied => 403,
             str_contains($normalized, 'not found'),
             str_contains($normalized, 'does not exist') => 404,
             str_contains($normalized, 'current status'),

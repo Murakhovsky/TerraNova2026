@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Governed attribute-category-bind input",
+  "type": "object",
+  "required": [
+    "target_type",
+    "target_id",
+    "parameters"
+  ],
+  "properties": {
+    "target_type": {
+      "type": "string",
+      "const": "product_governed_operation"
+    },
+    "target_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "parameters": {
+      "type": "object",
+      "required": [
+        "category_id",
+        "code",
+        "is_required",
+        "is_axis"
+      ],
+      "properties": {
+        "category_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        },
+        "code": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,39}$"
+        },
+        "is_required": {
+          "type": "boolean"
+        },
+        "is_axis": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

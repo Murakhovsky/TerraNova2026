@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "attribute-search output",
+  "type": "object",
+  "required": [
+    "items",
+    "limit",
+    "offset"
+  ],
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "code",
+          "name",
+          "value_type",
+          "unit",
+          "choices"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,39}$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 190
+          },
+          "value_type": {
+            "type": "string",
+            "enum": [
+              "text",
+              "decimal",
+              "boolean",
+              "enum"
+            ]
+          },
+          "unit": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 16
+          },
+          "choices": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$"
+            },
+            "maxItems": 50,
+            "minItems": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "maxItems": 100,
+      "minItems": 0
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100
+    },
+    "offset": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000000
+    }
+  },
+  "additionalProperties": false
+}

@@ -7,4 +7,6 @@ interface InboundLeadRepositoryInterface
 {
     /** @param array<string, mixed> $lead */
     public function create(string $organizationId, array $lead): int;
+
+    public function existsForUpdate(string $organizationId,int $leadId): bool;
 }

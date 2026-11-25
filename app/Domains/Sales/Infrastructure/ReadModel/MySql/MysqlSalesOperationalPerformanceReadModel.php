@@ -78,7 +78,7 @@ final readonly class MysqlSalesOperationalPerformanceReadModel implements SalesO
             . $this->ownerAtSql('a.organization_id', 'CAST(a.client_case_id AS CHAR)', 'a.due_at') . ' AS owner_id '
             . 'FROM tn_client_case_activities a '
             . 'INNER JOIN tn_client_cases d ON d.id=a.client_case_id AND CONVERT(d.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci=CONVERT(a.organization_id USING utf8mb4) COLLATE utf8mb4_unicode_ci '
-            . 'WHERE a.organization_id=:organization_id AND a.activity_type="followup" '
+            . 'WHERE a.organization_id=:organization_id AND a.activity_type="followup" AND a.cancelled_at IS NULL '
             . 'AND a.due_at>=:from_at AND a.due_at<:to_at';
         $params = [
             'organization_id' => $organizationId,

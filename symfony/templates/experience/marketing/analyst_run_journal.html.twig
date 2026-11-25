@@ -1,0 +1,65 @@
+<section class="cos-panel" aria-label="Hermes analyst execution journal">
+    <h3>Hermes analyst journal</h3>
+    <p>Advice only. Live Hermes acceptance is not yet verified. No recommendation reserves advertising funds or approves paid activation.</p>
+    {% if runtime %}
+        <p>Runtime configuration: <strong>{{ runtime.status }}</strong>. Live verified: no. Direct execution: unavailable.</p>
+        {% if runtime.max_cost_usd is not null %}<p>Conservative AI budget allowance: {{ runtime.max_cost_usd }} USD per turn · daily limit {{ runtime.daily_run_limit }}. Not an actual invoice.</p>{% endif %}
+    {% endif %}
+    {% if runtime.plan_available and campaign.status == 'DRAFT' and creatives|length > 0 %}
+        <form method="post" action="/marketing/campaigns/{{ campaign.id|url_encode }}/analyst-plans" class="cos-page__stack">
+            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+            <input type="hidden" name="idempotency_key" value="mkt-analyst-plan-{{ planningKey }}">
+            <input type="hidden" name="campaign_revision" value="{{ campaign.revision }}">
+            <label>Creative revision <select class="form-control" name="creative_pin" required>
+                {% for creative in creatives %}<option value="{{ creative.id }}:{{ creative.revision }}">{{ creative.content.headline }} · r{{ creative.revision }}</option>{% endfor %}
+            </select></label>
+            <label>Optional current AdSet <select name="adset_pin" class="form-control">
+                <option value="">No AdSet</option>
+                {% for adset in adsets %}{% if not adset.pins_stale %}<option value="{{ adset.id }}:{{ adset.revision }}">{{ adset.content.name }} · r{{ adset.revision }}</option>{% endif %}{% endfor %}
+            </select></label>
+            <button class="btn btn-outline-primary" type="submit">Propose analysis in COS Goals</button>
+            <p>Creates a Plan only. Independent Plan and Action approvals are required before a remote turn.</p>
+        </form>
+    {% endif %}
+    {% for run in runs %}
+        <section class="cos-panel">
+            <strong>{{ run.id }}</strong> · {{ run.state }} · {{ run.created_at }}
+            <p>Requested by {{ run.requested_by }} · Context {{ run.context_hash }}</p>
+            <ul>{% for pin in run.source_pins %}<li>{{ pin.alias }}: {{ pin.record_id }} · r{{ pin.revision }}</li>{% endfor %}</ul>
+            {% if run.advice %}
+                <p><strong>{{ run.advice.recommendation }}</strong></p><p>{{ run.advice.rationale }}</p>
+                <p>Runtime receipt: {{ run.advice.runtime_response_id }}. Source revisions are rechecked at acceptance.</p>
+            {% endif %}
+            {% if run.failure_code %}<p role="alert">{{ run.failure_code }}. No automatic retry.</p>{% endif %}
+            {% if run.decision %}
+                <p>Decision {{ run.decision }} by {{ run.decision_actor_id }} · {{ run.decision_at }}</p>
+                <p>{{ run.decision_reason }}</p>
+                {% if run.recovery_evidence_ref %}<p>Operator attestation reference: {{ run.recovery_evidence_ref }}. Remote outcome remains uncertain.</p>{% endif %}
+            {% elseif run.requested_by == currentUserId %}
+                <p>An independent manager must review or recover this run.</p>
+            {% elseif run.state == 'SUCCEEDED' %}
+                <form method="post" action="/marketing/campaigns/{{ campaign.id|url_encode }}/analyst-runs/{{ run.id|url_encode }}/review" class="cos-page__stack">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <input type="hidden" name="idempotency_key" value="mkt-review-{{ run.id }}-{{ planningKey }}">
+                    <label>Decision <select name="decision" required class="form-control"><option value="REJECT">Reject / dismiss advice</option><option value="ACCEPT">Accept advice for planning only</option></select></label>
+                    <label>Reason <textarea name="reason" required minlength="5" maxlength="300" class="form-control"></textarea></label>
+                    <button class="btn btn-outline-primary" type="submit">Record independent review</button>
+                </form>
+            {% elseif run.state in ['STARTED','UNCERTAIN'] and run.recovery_age_met %}
+                <form method="post" action="/marketing/campaigns/{{ campaign.id|url_encode }}/analyst-runs/{{ run.id|url_encode }}/recover" class="cos-page__stack">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <input type="hidden" name="idempotency_key" value="mkt-recover-{{ run.id }}-{{ planningKey }}">
+                    <p>Check the COS worker and the Hermes profile directly. This cannot confirm success or reverse cost.</p>
+                    <label><input type="checkbox" name="local_and_remote_stopped" value="1" required> I verified both local and remote execution have stopped.</label>
+                    <label>Operator evidence reference <input class="form-control" name="evidence_ref" required minlength="8" maxlength="190"></label>
+                    <label>Reason <textarea class="form-control" name="reason" required minlength="10" maxlength="300"></textarea></label>
+                    <button class="btn btn-outline-primary" type="submit">Record uncertain recovery</button>
+                </form>
+            {% else %}
+                <p>Recovery quarantine: at least 15 minutes and independent operator verification required.</p>
+            {% endif %}
+        </section>
+    {% else %}<p>No analyst runs on this page.</p>{% endfor %}
+    {% if offset > 0 %}<a href="?analyst_offset={{ max(0,offset-50) }}">Previous journal page</a>{% endif %}
+    {% if runs|length == 50 and offset < 1000000 %}<a href="?analyst_offset={{ offset+50 }}">Next journal page</a>{% endif %}
+</section>

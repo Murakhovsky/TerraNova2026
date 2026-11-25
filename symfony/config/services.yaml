@@ -1,4 +1,7 @@
 parameters:
+  env(COS_MARKETING_HERMES_PROFILES_JSON): '{}'
+  env(COS_MARKETING_META_EXECUTION_PROFILES_JSON): '{}'
+  env(COS_MARKETING_META_ACTIVATION_ENABLED): '0'
   env(COS_WORKFLOW_ACTION_WORKER_ORGANIZATION): ''
   env(COS_AI_CAPABILITY_INTENT_SECRET): ''
   env(COS_CRON_CAPABILITY_INTENT_SECRET): ''
@@ -144,6 +147,7 @@ services:
   App\Application\Capability\CanonicalCapabilityGateway:
     arguments:
       $adapters: !tagged_iterator cos.capability.invoker
+      $policies: ['@App\Application\Sales\SalesDirectInvocationPolicy']
 
   App\Command\CapitalMarketsInstrumentStreamTrustCommand:
     arguments:
@@ -1370,6 +1374,9 @@ services:
     arguments:
       $connection: '@cos.database.pdo'
 
+  Domains\Sales\Application\Contract\ScopedClientCaseReadModelFactoryInterface:
+    alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModelFactory
+
   Domains\Sales\Application\Contract\ClientCaseReadModelFactoryInterface:
     alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModelFactory
 
@@ -1380,8 +1387,55 @@ services:
   Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface:
     alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceReadModel
 
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesWorkspaceScope:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Sales\Application\Contract\SalesWorkspaceScopeInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesWorkspaceScope
+
+  Domains\Sales\Application\Service\SalesWorkspaceScopedReadService: ~
+  Domains\Sales\Application\Service\SalesEntityScopeService: ~
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesMutationAuthority:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Sales\Application\Contract\SalesMutationAuthorityInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesMutationAuthority
+  Domains\Sales\Application\Service\SalesMutationGuard: ~
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesTeamScope:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Sales\Application\Contract\SalesTeamScopeInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesTeamScope
+  Domains\Sales\Application\Contract\SalesTodayPopulationReadPort:
+    alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceReadModel
+  Domains\Sales\Application\Contract\SalesTeamSummaryReadPort:
+    alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceReadModel
+  Domains\Sales\Application\Service\SalesTeamSummaryService: ~
+
+  Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesCommercialAnalyticsReadModel:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Sales\Application\Contract\SalesCommercialAnalyticsReadPort:
+    alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesCommercialAnalyticsReadModel
+
+  Domains\Sales\Application\Service\SalesCommercialAnalyticsService: ~
+  Domains\Sales\Application\Service\SalesReportService:
+    arguments:
+      $orders: '@Domains\Sales\Application\Service\SalesOrderReportService'
+  Domains\Sales\Application\Service\SalesOrderReportService:
+    arguments:
+      $finance: '@Domains\Finance\Application\Contract\CommerceOrderFinancialEvidenceReadPort'
+
+
+  Domains\Sales\Application\Contract\SalesWorkspaceSummaryReadPort:
+    alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceReadModel
+
   Domains\Sales\Application\Contract\SalesProposalLeadReadModelInterface:
     alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceReadModel
+
+  App\Security\SalesRequestEntityAuthorizationInterface:
+    alias: App\Security\SalesRequestScope
 
   App\Application\Experience\Search\Contract\SalesEntitySearchInterface:
     alias: App\Infrastructure\Experience\Search\SalesEntitySearchAdapter
@@ -1398,8 +1452,12 @@ services:
       $connection: '@cos.database.pdo'
       $assignmentAuthority: '@Domains\Sales\Application\Contract\SalesAssignmentAuthorityInterface'
 
+  Domains\Sales\Application\Service\GuardedSalesWriteServiceFactory:
+    arguments:
+      $native: '@Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesWriteServiceFactory'
+
   Domains\Sales\Application\Contract\SalesWriteServiceFactoryInterface:
-    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesWriteServiceFactory
+    alias: Domains\Sales\Application\Service\GuardedSalesWriteServiceFactory
 
   Infrastructure\Platform\Persistence\MySql\Transaction\TransactionManager:
     arguments:
@@ -1445,6 +1503,7 @@ services:
     arguments:
       $attention: '@Domains\Sales\Application\Contract\SalesAttentionRepositoryInterface'
       $monitoring: '@Domains\Sales\Application\Service\SalesMonitoringService'
+      $reminders: '@Domains\Sales\Application\Service\SalesActivityReminderService'
 
 
   Infrastructure\Platform\Persistence\MySql\Operations\MysqlMetricsRecorder:
@@ -1958,6 +2017,16 @@ services:
   Domains\Sales\Application\Contract\DealRepositoryInterface:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlDealRepository
 
+  Domains\Sales\Application\Contract\DealStageRepositoryInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlDealRepository
+
+  Domains\Sales\Application\UseCase\SetDealCommercialTerms:
+    arguments:
+      $deals: '@Domains\Sales\Application\Contract\DealRepositoryInterface'
+      $state: '@Domains\Sales\Application\Contract\DealStageRepositoryInterface'
+      $events: '@Kernel\Event\EventBus'
+      $transactions: '@Kernel\Transaction\Contract\TransactionManagerInterface'
+
   Domains\Sales\Infrastructure\Persistence\MySql\MysqlPipelineRepository:
     arguments:
       $connection: '@cos.database.pdo'
@@ -2006,6 +2075,7 @@ services:
       $deals: '@Domains\Sales\Application\Contract\DealRepositoryInterface'
       $events: '@Kernel\Event\EventBus'
       $transactions: '@Kernel\Transaction\Contract\TransactionManagerInterface'
+      $authority: '@Domains\Sales\Application\Contract\SalesAssignmentAuthorityInterface'
 
   Domains\Sales\Application\Service\SalesOperationService:
     arguments:
@@ -2026,6 +2096,9 @@ services:
       $operations: '@Domains\Sales\Application\Service\SalesOperationService'
       $assignDealOwner: '@Domains\Sales\Application\UseCase\AssignDealOwner'
       $scheduleLeadFollowup: '@Domains\Sales\Application\UseCase\ScheduleLeadFollowup'
+      $offerDelivery: '@Domains\Sales\Automation\Action\QueueSalesOfferDeliveryHandler'
+      $activityReminders: '@Domains\Sales\Automation\Action\QueueSalesActivityReminderHandler'
+      $governedOrders: '@Domains\Sales\Automation\Action\SalesGovernedOrderHandler'
 
   # Capital Markets CM-FOUNDATION runtime
   Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlInstrumentRepository:
@@ -2694,6 +2767,46 @@ services:
   Domains\Marketing\Application\Contract\MarketingCampaignRepository:
     alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingCampaignRepository
   Domains\Marketing\Application\Service\MarketingCampaignService: ~
+  Domains\Marketing\Domain\MarketingPlanningPolicy: ~
+  Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPlanningRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Marketing\Application\Contract\MarketingPlanningRepository:
+    alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPlanningRepository
+  Domains\Marketing\Application\Service\MarketingPlanningService: ~
+  Domains\Marketing\Application\Service\MarketingAnalystContextService: ~
+  Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingAnalystRunStore:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Marketing\Application\Contract\MarketingAnalystRunStore:
+    alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingAnalystRunStore
+  Domains\Marketing\Application\Service\MarketingAnalystReviewService: ~
+  Domains\Marketing\Automation\Action\MarketingAnalystRunHandler: ~
+  Domains\Marketing\Bootstrap\MarketingDomainModule:
+    arguments:
+      $paid: '@Domains\Marketing\Automation\Action\MarketingPaidLifecycleHandler'
+  marketingDomainModule:
+    alias: Domains\Marketing\Bootstrap\MarketingDomainModule
+  Domains\Marketing\Infrastructure\Hermes\HermesAnalystConfigurationRegistry:
+    arguments:
+      $profilesJson: '%env(COS_MARKETING_HERMES_PROFILES_JSON)%'
+  Domains\Marketing\Infrastructure\Hermes\CurlHermesAnalystTransport: ~
+  Domains\Marketing\Infrastructure\Hermes\HermesAnalystProfileProbe: ~
+  App\Infrastructure\Marketing\HermesAnalystOperatorPreflight:
+    arguments:
+      $governance: '@Infrastructure\Llm\MysqlLlmGovernanceRepository'
+  Domains\Marketing\Infrastructure\Hermes\HermesAnalystTransport:
+    alias: Domains\Marketing\Infrastructure\Hermes\CurlHermesAnalystTransport
+  Domains\Marketing\Infrastructure\Hermes\HermesAnalystExecutionFactory:
+    arguments:
+      $governance: '@Infrastructure\Llm\MysqlLlmGovernanceRepository'
+  App\Infrastructure\Marketing\HermesAnalystReadinessService:
+    arguments:
+      $governance: '@Infrastructure\Llm\MysqlLlmGovernanceRepository'
+  # Marketing M2b only reads native ProductManagement application models.
+  Domains\Marketing\Application\Contract\MarketingProductDraftReadPort:
+    alias: App\Infrastructure\Marketing\ProductManagementDraftReadAdapter
+  Domains\Marketing\Application\Service\MarketingProductDraftCheckService: ~
   Domains\Marketing\Infrastructure\Meta\CurlMetaHttpTransport: ~
   Domains\Marketing\Infrastructure\Meta\MetaHttpTransport:
     alias: Domains\Marketing\Infrastructure\Meta\CurlMetaHttpTransport
@@ -2706,6 +2819,66 @@ services:
   Domains\Marketing\Application\Contract\MarketingPaidReadRepository:
     alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidReadRepository
   Domains\Marketing\Application\Service\MarketingPaidReadService: ~
+  Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingAttributionStore:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Marketing\Application\Contract\MarketingAttributionStore:
+    alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingAttributionStore
+  App\Infrastructure\Marketing\SalesAttributionReadAdapter: ~
+  Domains\Marketing\Application\Contract\MarketingSalesAttributionReadPort:
+    alias: App\Infrastructure\Marketing\SalesAttributionReadAdapter
+  App\Infrastructure\Marketing\FinanceAnalyticsReadAdapter: ~
+  Domains\Marketing\Application\Contract\MarketingFinanceAnalyticsReadPort:
+    alias: App\Infrastructure\Marketing\FinanceAnalyticsReadAdapter
+  Domains\Marketing\Application\Service\MarketingAnalyticsService: ~
+  App\Infrastructure\Marketing\CommerceOrderReadAdapter:
+    arguments:
+      $placements: '@?Domains\Sales\Application\Contract\SalesCommerceOrderEvidencePort'
+      $journeys: '@?Domains\Sales\Application\Contract\SalesCommerceOrderJourneyReadPort'
+      $lifecycleEvidence: '@?Domains\Sales\Application\Contract\SalesCommerceOrderLifecycleEvidencePort'
+  Domains\Marketing\Application\Contract\MarketingCommerceOrderReadPort:
+    alias: App\Infrastructure\Marketing\CommerceOrderReadAdapter
+  Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingCommerceAttributionStore:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Marketing\Application\Contract\MarketingCommerceAttributionStore:
+    alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingCommerceAttributionStore
+  App\Infrastructure\Marketing\CommerceFinancialReadAdapter:
+    arguments:
+      $finance: '@?Domains\Finance\Application\Contract\CommerceOrderFinancialEvidenceReadPort'
+  Domains\Marketing\Application\Contract\MarketingCommerceFinancialReadPort:
+    alias: App\Infrastructure\Marketing\CommerceFinancialReadAdapter
+  Domains\Marketing\Application\Service\MarketingCommerceAttributionService: ~
+  Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingMediaAnalyticsStore:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Marketing\Application\Contract\MarketingMediaAnalyticsStore:
+    alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingMediaAnalyticsStore
+  Domains\Marketing\Application\Service\MarketingMediaAnalyticsService: ~
+  Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidLaunchPlanStore:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Marketing\Application\Contract\MarketingPaidLaunchPlanStore:
+    alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidLaunchPlanStore
+  Domains\Marketing\Application\Contract\MarketingFinanceFundingReadPort:
+    alias: App\Infrastructure\Marketing\FinanceFundingReadAdapter
+  Domains\Marketing\Application\Service\MarketingPaidLaunchPlanService: ~
+  Domains\Marketing\Application\Service\MarketingPaidOperationsReadService: ~
+  Domains\Marketing\Application\Contract\MarketingPaidExposureClaimPort:
+    alias: App\Infrastructure\Marketing\FinancePaidExposureClaimAdapter
+  Domains\Marketing\Infrastructure\Meta\MetaPaidExecutionProfiles:
+    arguments:
+      $profilesJson: '%env(COS_MARKETING_META_EXECUTION_PROFILES_JSON)%'
+      $activationEnabled: '%env(bool:COS_MARKETING_META_ACTIVATION_ENABLED)%'
+  Domains\Marketing\Infrastructure\Meta\CurlMetaWriteTransport: ~
+  Domains\Marketing\Infrastructure\Meta\MetaWriteTransport:
+    alias: Domains\Marketing\Infrastructure\Meta\CurlMetaWriteTransport
+  Domains\Marketing\Infrastructure\Meta\MetaPaidWriteAdapter: ~
+  Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidOperationJournal:
+    arguments:
+      $db: '@cos.database.pdo'
+  Domains\Marketing\Infrastructure\Meta\ApprovedMetaPaidLifecycle: ~
+  Domains\Marketing\Automation\Action\MarketingPaidLifecycleHandler: ~
 
   marketingNavigationContributor:
     alias: App\Web\Experience\Extension\Provider\MarketingWebProvider
@@ -2784,6 +2957,17 @@ services:
       $sales: '@Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface'
 
 
+  Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceOrderApprovalAuthority:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Finance\Application\Contract\FinanceOrderExecutionAuthority:
+    alias: Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceOrderApprovalAuthority
+  Domains\Finance\Infrastructure\Persistence\MySql\MysqlCommerceOrderPaymentStore:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Finance\Application\Contract\CommerceOrderFinancialEvidenceReadPort:
+    alias: Domains\Finance\Infrastructure\Persistence\MySql\MysqlCommerceOrderPaymentStore
+  Domains\Finance\Automation\Action\FinanceOrderPaymentActionHandler: ~
   # Finance F1: the only budget writer, under Kernel Action + independent Policy approval.
   Domains\Finance\Domain\BudgetControlPolicy: ~
   Domains\Finance\Domain\FinanceSpendObservationPolicy: ~
@@ -2806,8 +2990,51 @@ services:
   Domains\Finance\Application\Contract\FinanceBudgetControlInterface:
     alias: Domains\Finance\Application\Service\FinanceBudgetControlService
   Domains\Finance\Application\Service\ApprovedFinanceBudgetOperations: ~
+  Domains\Finance\Application\Contract\FinancePaidExposureClaimStore:
+    alias: Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceBudgetRepository
+  Domains\Finance\Application\Service\ApprovedFinancePaidExposureService: ~
   Domains\Finance\Automation\Action\FinanceBudgetActionHandler: ~
-  Domains\Finance\Bootstrap\FinanceDomainModule: ~
+  Domains\Finance\Domain\FinancePaidSettlementPolicy:
+    arguments:
+      $clock: null
+  Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinancePaidSettlementRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Finance\Application\Contract\FinancePaidSettlementStore:
+    alias: Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinancePaidSettlementRepository
+  Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinancePaidSettlementReviewStore:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Finance\Application\Contract\FinancePaidSettlementReviewStore:
+    alias: Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinancePaidSettlementReviewStore
+  Domains\Documents\Application\Service\VerifiedUploadedPdfReadService:
+    arguments:
+      $connection: '@cos.database.pdo'
+  App\Infrastructure\Finance\MarketingPaidSettlementReadAdapter: ~
+  Domains\Finance\Application\Contract\MarketingPaidSettlementReadPort:
+    alias: App\Infrastructure\Finance\MarketingPaidSettlementReadAdapter
+  App\Infrastructure\Finance\DocumentsPaidSettlementReadAdapter: ~
+  Domains\Finance\Application\Contract\DocumentsPaidSettlementReadPort:
+    alias: App\Infrastructure\Finance\DocumentsPaidSettlementReadAdapter
+  App\Infrastructure\Finance\NativePaidSettlementSourceAdapter: ~
+  Domains\Finance\Application\Contract\FinancePaidSettlementSourcePort:
+    alias: App\Infrastructure\Finance\NativePaidSettlementSourceAdapter
+  Domains\Finance\Application\Service\FinancePaidSettlementReviewService: ~
+  Domains\Finance\Application\Service\FinancePaidSettlementStatusService: ~
+  App\Application\Capability\FinancePaidSettlementStatusAdapter: ~
+  App\Application\Capability\FinancePaidSettlementReviewAdapter: ~
+  Domains\Finance\Application\Contract\FinancePaidSettlementEvidencePort:
+    alias: Domains\Finance\Application\Service\FinancePaidSettlementReviewService
+  Domains\Finance\Application\Service\ApprovedFinancePaidSettlementService: ~
+  Domains\Finance\Automation\Action\FinancePaidSettlementHandler: ~
+  App\Persistence\Finance\FinancePaidSettlementGoalProposalService: ~
+  App\Persistence\Finance\FinancePaidSettlementOutcomeProvider: ~
+  App\Persistence\Finance\FinanceOrderRunOutcomeProvider: ~
+  App\Persistence\Sales\SalesOrderRunOutcomeProvider: ~
+  Domains\Finance\Bootstrap\FinanceDomainModule:
+    arguments:
+      $payments: '@Domains\Finance\Automation\Action\FinanceOrderPaymentActionHandler'
+      $settlement: '@Domains\Finance\Automation\Action\FinancePaidSettlementHandler'
   financeDomainModule:
     alias: Domains\Finance\Bootstrap\FinanceDomainModule
 
@@ -2820,6 +3047,12 @@ services:
   documentsDomainModule:
     alias: Domains\Documents\Bootstrap\DocumentsDomainModule
 
+  Domains\ProductManagement\Infrastructure\Persistence\MySqlProductAnalytics:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\ProductManagement\Infrastructure\Persistence\MySqlStockReconciliationAudit:
+    arguments:
+      $connection: '@cos.database.pdo'
   Domains\ProductManagement\Infrastructure\Persistence\MySqlProductManagementStore:
     arguments:
       $connection: '@cos.database.pdo'
@@ -2846,6 +3079,9 @@ services:
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyHttpTransportInterface:
     alias: Domains\ProductManagement\Infrastructure\Shopify\CurlShopifyHttpTransport
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyReadClient: ~
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyCommerceOrderSource: ~
+  Domains\ProductManagement\Application\Contract\CommerceOrderSourcePort:
+    alias: Domains\ProductManagement\Infrastructure\Shopify\ShopifyCommerceOrderSource
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyClientCredentials: ~
 
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyObservationStore:
@@ -2864,13 +3100,38 @@ services:
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyCatalogPullService: ~
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyOrderReadbackService: ~
 
+  productManagementNavigationContributor:
+    alias: App\Web\Experience\Extension\Provider\ProductManagementWebProvider
+
+  App\Web\ProductManagement\ProductManagementPageController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\ProductManagement\ProductInventoryController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\ProductManagement\ProductImportController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\ProductManagement\ProductGovernedPlanController:
+    public: true
+    tags: ['controller.service_arguments']
+
   # Product Management E0: domain stays tenant-disabled until explicit activation.
   Domains\ProductManagement\Automation\Action\ProductImportApplyHandler: ~
+  Domains\ProductManagement\Automation\Action\ProductStockCountApplyHandler: ~
+  Domains\ProductManagement\Automation\Action\ProductStockCountSessionApplyHandler: ~
+  Domains\ProductManagement\Automation\Action\ProductGovernedOperationHandler: ~
   Domains\ProductManagement\Automation\Action\ShopifyImportApplyHandler: ~
   Domains\ProductManagement\Bootstrap\ProductManagementDomainModule:
     arguments:
       $importHandler: '@Domains\ProductManagement\Automation\Action\ProductImportApplyHandler'
       $shopifyHandler: '@Domains\ProductManagement\Automation\Action\ShopifyImportApplyHandler'
+      $stockCountHandler: '@Domains\ProductManagement\Automation\Action\ProductStockCountApplyHandler'
+      $countSessionHandler: '@Domains\ProductManagement\Automation\Action\ProductStockCountSessionApplyHandler'
+      $governedHandler: '@Domains\ProductManagement\Automation\Action\ProductGovernedOperationHandler'
   productManagementDomainModule:
     alias: Domains\ProductManagement\Bootstrap\ProductManagementDomainModule
 
@@ -2888,6 +3149,7 @@ services:
         - '@Domains\Service\Bootstrap\ServiceDomainModule'
         - '@Domains\Growth\Bootstrap\GrowthDomainModule'
         - '@Domains\ProductManagement\Bootstrap\ProductManagementDomainModule'
+        - '@Domains\Marketing\Bootstrap\MarketingDomainModule'
 
   Kernel\Rule\Service\ConditionEvaluator: ~
 
@@ -3167,6 +3429,95 @@ services:
     arguments:
       $connection: '@cos.database.pdo'
 
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesScheduledActivityRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Sales\Application\Contract\SalesScheduledActivityRepositoryInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesScheduledActivityRepository
+  Domains\Sales\Application\Service\SalesScheduledActivityService: ~
+
+  Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesCrmReconciliationReadModel:
+    arguments:
+      $connection: '@cos.database.pdo'
+      $references: '@Infrastructure\Platform\Persistence\ExternalReferenceStoreInterface'
+  Domains\Sales\Application\Contract\SalesCrmReconciliationReadPort:
+    alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesCrmReconciliationReadModel
+
+  Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesActivityEvidenceReadModel:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Sales\Application\Contract\SalesActivityEvidenceReadPort:
+    alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesActivityEvidenceReadModel
+
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOfferDeliveryRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Sales\Application\Contract\SalesOfferDeliveryRepositoryInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOfferDeliveryRepository
+  Infrastructure\Platform\Notification\MysqlNotificationHandoffReadModel:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Platform\Notification\Contract\NotificationHandoffReadPort:
+    alias: Infrastructure\Platform\Notification\MysqlNotificationHandoffReadModel
+  Domains\Sales\Application\Service\SalesOfferDeliveryService: ~
+  Domains\Sales\Application\Service\SalesActivityReminderService: ~
+  Domains\Sales\Automation\Action\QueueSalesActivityReminderHandler: ~
+  Domains\Sales\Automation\Action\QueueSalesOfferDeliveryHandler: ~
+  Domains\Sales\Automation\Action\SalesGovernedOrderHandler: ~
+
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOfferRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Sales\Application\Contract\SalesOrderRepositoryInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository
+  Domains\Sales\Application\Contract\SalesCommerceOrderEvidencePort:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository
+  Domains\Sales\Application\Contract\SalesOrderReportReadPort:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository
+  Domains\Sales\Application\Contract\SalesCommerceOrderLifecycleEvidencePort:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository
+  Domains\Sales\Application\Contract\SalesOrderJourneyStore:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository
+  Domains\Sales\Application\Contract\SalesCommerceOrderJourneyReadPort:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository
+  Domains\Sales\Application\Service\SalesOrderService:
+    arguments:
+      $finance: '@Domains\Finance\Application\Contract\CommerceOrderFinancialEvidenceReadPort'
+  Domains\Sales\Application\Service\SalesOrderLifecycleService:
+    arguments:
+      $finance: '@Domains\Finance\Application\Contract\CommerceOrderFinancialEvidenceReadPort'
+  Domains\Sales\Application\Contract\SalesOrderLifecycleRepositoryInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository
+  Domains\ProductManagement\Application\Contract\OrderInventoryPort:
+    alias: Domains\ProductManagement\Infrastructure\Persistence\MySqlProductManagementStore
+  Domains\Sales\Application\Service\SalesOrderReconciliationService: ~
+  Domains\Sales\Application\Service\SalesOrderSyncService: ~
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderSyncRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Sales\Application\Contract\SalesOrderSyncRepositoryInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderSyncRepository
+  Domains\Sales\Automation\Job\SalesOrderSyncJobHandler: ~
+  Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderSourceRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Sales\Application\Contract\SalesOrderSourceRepositoryInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderSourceRepository
+
+  Domains\Sales\Application\Contract\SalesOfferRepositoryInterface:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOfferRepository
+  Domains\Sales\Application\Contract\SalesCommercialEvidencePort:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOfferRepository
+  Domains\Sales\Application\Contract\SalesOfferReferencePort:
+    alias: App\Application\Sales\SalesOfferReferenceResolver
+  Domains\Sales\Application\Service\SalesOfferService: ~
+  Domains\ProductManagement\Application\Service\ProductCommercialReference: ~
+  Domains\ProductManagement\Application\Contract\ProductCommercialReferencePort:
+    alias: Domains\ProductManagement\Application\Service\ProductCommercialReference
+
   Domains\Sales\Application\Contract\SalesMutationReceiptRepositoryInterface:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesMutationReceiptRepository
 
@@ -3175,6 +3526,9 @@ services:
       $connection: '@cos.database.pdo'
 
   Domains\Sales\Application\Contract\CrmInboxRepositoryInterface:
+    alias: Infrastructure\Integration\Crm\MysqlCrmInboxRepository
+
+  Domains\Sales\Application\Contract\CrmInboxRecoveryRepositoryInterface:
     alias: Infrastructure\Integration\Crm\MysqlCrmInboxRepository
 
   Domains\Sales\Application\Contract\CrmInboxPendingRepositoryInterface:
@@ -3245,6 +3599,9 @@ services:
     arguments:
       $connection: '@cos.database.pdo'
 
+  Domains\Sales\Application\Contract\SalesOrderActionAuthority:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesApprovalAuthority
+
   App\Infrastructure\Automation\FederationPlanApprovalAuthority:
     arguments:
       $connection: '@cos.database.pdo'
@@ -3253,6 +3610,7 @@ services:
     arguments:
       $sales: '@Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesApprovalAuthority'
       $federation: '@App\Infrastructure\Automation\FederationPlanApprovalAuthority'
+      $finance: '@Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceOrderApprovalAuthority'
 
   Kernel\Approval\Contract\ApprovalAuthorityInterface:
     alias: App\Infrastructure\Automation\CompositeActionApprovalAuthority
@@ -3566,6 +3924,7 @@ services:
         - '@Kernel\Queue\Handler\ActionExecutionJobHandler'
         - '@Kernel\Queue\Handler\AgentRunJobHandler'
         - '@runtime.sales_crm_job_handler'
+        - '@Domains\Sales\Automation\Job\SalesOrderSyncJobHandler'
         - '@runtime.capital_markets_research_backtest_job_handler'
 
   Kernel\Queue\Service\QueueWorker:
@@ -3932,7 +4291,15 @@ services:
         - '@Domains\Sales\Application\Service\SalesLocalTaskOutcomeEvidenceProvider'
         - '@App\Persistence\Property\PropertyBulkRunOutcomeProvider'
         - '@App\Persistence\ProductManagement\ProductImportRunOutcomeProvider'
+        - '@App\Persistence\ProductManagement\ProductStockCountRunOutcomeProvider'
+        - '@App\Persistence\ProductManagement\ProductStockCountSessionRunOutcomeProvider'
+        - '@App\Persistence\ProductManagement\ProductGovernedRunOutcomeProvider'
         - '@App\Persistence\ProductManagement\ShopifyImportRunOutcomeProvider'
+        - '@App\Persistence\Marketing\MarketingAnalystRunOutcomeProvider'
+        - '@App\Persistence\Marketing\MarketingPaidGoalOutcomeProvider'
+        - '@App\Persistence\Finance\FinancePaidSettlementOutcomeProvider'
+        - '@App\Persistence\Finance\FinanceOrderRunOutcomeProvider'
+        - '@App\Persistence\Sales\SalesOrderRunOutcomeProvider'
         - '@Domains\Growth\Application\Service\GrowthInboundResponseOutcomeEvidenceProvider'
         - '@App\Persistence\Federation\FederationGrowthRunLinkedOutcomeEvidenceProvider'
         - '@cos.federation.native_origin.research'
@@ -4201,3 +4568,9 @@ services:
 
   App\Application\Experience\Business\Contract\BusinessEntitySummaryReadInterface:
     alias: App\Infrastructure\Experience\Business\TenantBusinessEntitySummaryRead
+
+
+  App\Persistence\Capability\CanonicalAutomationIntentStore:
+    arguments:
+      $productPlans: '@App\Persistence\ProductManagement\ProductGovernedPlanProposalService'
+      $catalog: '@Kernel\Module\CanonicalCapabilityCatalog'

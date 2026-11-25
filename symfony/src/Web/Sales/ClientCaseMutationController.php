@@ -25,7 +25,7 @@ final readonly class ClientCaseMutationController
     public function create(Request $request): Response
     {
         $tenant=$this->mutationTenant($request); if($tenant instanceof Response)return $tenant;
-        $result=$this->write($tenant)->createOpportunity($request->request->all(),(int)$tenant->userId()->value());
+        $result=$this->write($tenant)->createOpportunity($this->ownerInput($request),(int)$tenant->userId()->value());
         $id=(int)($result->data['case_id']??0);
         return $this->redirect($id>0?'client-case/show/'.$id:'client-case',$result);
     }
@@ -35,7 +35,7 @@ final readonly class ClientCaseMutationController
         $tenant=$this->mutationTenant($request); if($tenant instanceof Response)return $tenant;
         return $this->redirect(
             'client-case/show/'.(int)$id,
-            $this->write($tenant)->updateOpportunity((int)$id,$request->request->all(),(int)$tenant->userId()->value()),
+            $this->write($tenant)->updateOpportunity((int)$id,$this->ownerInput($request),(int)$tenant->userId()->value()),
         );
     }
 
@@ -43,7 +43,7 @@ final readonly class ClientCaseMutationController
     {
         $tenant=$this->mutationTenant($request); if($tenant instanceof Response)return $tenant;
         $result=$this->write($tenant)->quickUpdateOpportunity(
-            (int)$id,$request->request->all(),(int)$tenant->userId()->value(),$this->correlation($request),
+            (int)$id,$this->ownerInput($request),(int)$tenant->userId()->value(),$this->correlation($request),
         );
         return $this->redirect($this->returnUrl($request,'client-case'),$result);
     }
@@ -101,6 +101,14 @@ final readonly class ClientCaseMutationController
         );
         $caseId=(int)($result->data['case_id']??0);
         return $this->redirect($caseId>0?'client-case/show/'.$caseId:'client-case',$result);
+    }
+
+    /** Legacy forms use zero as "current/default owner", not an assignment command. */
+    private function ownerInput(Request $request):array
+    {
+        $input=$request->request->all();
+        if (in_array($input['assigned_user_id']??null,[null,'',0,'0'],true)) unset($input['assigned_user_id']);
+        return $input;
     }
 
     private function write(TenantContext $tenant): SalesWriteServiceInterface

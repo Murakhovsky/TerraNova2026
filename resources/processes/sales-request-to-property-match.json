@@ -49,8 +49,7 @@
       "kind": "state",
       "owner": "Sales application",
       "domain": "sales",
-      "capability": null,
-      "capability_gap": "missing-domain-capability",
+      "capability": "sales.client_case.create",
       "critical": true,
       "runtime": [
         {
@@ -96,8 +95,7 @@
       "kind": "state",
       "owner": "Sales application",
       "domain": "sales",
-      "capability": null,
-      "capability_gap": "missing-domain-capability",
+      "capability": "sales.property_match.record",
       "critical": true,
       "runtime": [
         {
@@ -114,23 +112,22 @@
     },
     {
       "id": "activity-events",
-      "label": "Record Sales activity and publish case/lead events",
+      "label": "Record Sales activity and publish native activity evidence",
       "kind": "outcome",
       "owner": "Sales application",
       "domain": "sales",
-      "capability": null,
-      "capability_gap": "missing-domain-capability",
+      "capability": "sales.activity.record",
       "critical": false,
       "runtime": [
         {
           "type": "source",
-          "path": "app/Domains/Sales/Application/Service/SalesInboundService.php",
-          "symbol": "Обʼєкт додано у підбір"
+          "path": "app/Domains/Sales/Application/Service/ClientCaseCommandService.php",
+          "symbol": "addActivity("
         },
         {
           "type": "source",
-          "path": "app/Domains/Sales/Application/Service/SalesInboundService.php",
-          "symbol": "ClientCaseCreated::create"
+          "path": "app/Domains/Sales/Application/Service/ClientCaseCommandService.php",
+          "symbol": "sales.activity.recorded"
         }
       ]
     }

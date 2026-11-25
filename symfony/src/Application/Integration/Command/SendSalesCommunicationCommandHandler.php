@@ -22,6 +22,7 @@ final readonly class SendSalesCommunicationCommandHandler implements CommandHand
         private SalesMutationReceiptRepositoryInterface $receipts,
         private TransactionManagerInterface $transactions,
         private IntegrationMutationAudit $audit,
+        private \Domains\Sales\Application\Service\SalesMutationGuard $guard,
     ) {
     }
 
@@ -51,19 +52,15 @@ final readonly class SendSalesCommunicationCommandHandler implements CommandHand
 
         $organizationId = $command->organizationId->value();
         $hash = hash('sha256', json_encode([
+            'actor_id' => $command->actorId,
             'opportunity_id' => $command->opportunityId,
             'channel' => $channel,
             'body' => $body,
         ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES));
 
-        $existing = $this->receipts->find($organizationId, self::OPERATION, $key);
-        if ($existing !== null) {
-            return $this->replay($existing, $hash);
-        }
-
         $pending = 'pending:' . $hash . ':' . bin2hex(random_bytes(8));
 
-        return $this->transactions->transactional(function () use (
+        return $this->guard->run($organizationId,$command->actorId,function () use (
             $command,
             $organizationId,
             $channel,
@@ -115,7 +112,7 @@ final readonly class SendSalesCommunicationCommandHandler implements CommandHand
                 $organizationId,
                 $command->actorId,
                 $command->correlationId,
-                'sales.communication.sent',
+                ($result->data['delivery_state']??null)==='local_recorded'?'sales.communication.recorded':'sales.communication.sent',
                 (string) $command->opportunityId,
                 [
                     'channel' => $channel,
@@ -128,7 +125,7 @@ final readonly class SendSalesCommunicationCommandHandler implements CommandHand
                 'external_id' => $result->externalId,
                 ...$result->data,
             ];
-        });
+        },'deal',$command->opportunityId);
     }
 
     /** @return array<string,mixed> */
@@ -148,6 +145,8 @@ final readonly class SendSalesCommunicationCommandHandler implements CommandHand
         return [
             'replayed' => true,
             'delivery_token' => $parts[2] ?? null,
+            'recipient_delivery_verified' => false,
+            'delivery_state' => 'receipt_only',
         ];
     }
 }

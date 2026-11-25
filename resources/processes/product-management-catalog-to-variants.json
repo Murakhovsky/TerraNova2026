@@ -1,0 +1,197 @@
+{
+  "schema_version": 4,
+  "id": "product_management.catalog-to-variants",
+  "title": "Product Catalog → Variant Matrix",
+  "domain": "product_management",
+  "state": "as-is",
+  "workflow": "02-workflows/product-management-catalog-to-variants.md",
+  "trigger": "New local assortment requires structured SKU identities",
+  "outcomes": [
+    "Native Product and SKU exist",
+    "Typed category characteristics are readable",
+    "Previewed unique combinations are created without changing existing SKU"
+  ],
+  "actors": [
+    "Product manager"
+  ],
+  "steps": [
+    {
+      "id": "create",
+      "label": "Create Product",
+      "kind": "operation",
+      "owner": "Product manager",
+      "domain": "product_management",
+      "capability": "product_management.product.create",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Application/Service/ProductManagementService.php",
+          "symbol": "public function createProduct("
+        }
+      ]
+    },
+    {
+      "id": "category",
+      "label": "Create category",
+      "kind": "operation",
+      "owner": "Product manager",
+      "domain": "product_management",
+      "capability": "product_management.category.create",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Application/Service/ProductManagementService.php",
+          "symbol": "public function createCategory("
+        }
+      ]
+    },
+    {
+      "id": "assign",
+      "label": "Assign category",
+      "kind": "operation",
+      "owner": "Product manager",
+      "domain": "product_management",
+      "capability": "product_management.category.assign",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Application/Service/ProductManagementService.php",
+          "symbol": "public function assignCategory("
+        }
+      ]
+    },
+    {
+      "id": "define",
+      "label": "Define attribute",
+      "kind": "operation",
+      "owner": "Product manager",
+      "domain": "product_management",
+      "capability": "product_management.attribute.define",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Application/Service/ProductManagementService.php",
+          "symbol": "public function defineAttribute("
+        }
+      ]
+    },
+    {
+      "id": "bind",
+      "label": "Bind category attribute",
+      "kind": "operation",
+      "owner": "Product manager",
+      "domain": "product_management",
+      "capability": "product_management.attribute.category.bind",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Application/Service/ProductManagementService.php",
+          "symbol": "public function bindAttribute("
+        }
+      ]
+    },
+    {
+      "id": "set",
+      "label": "Record typed characteristics",
+      "kind": "operation",
+      "owner": "Product manager",
+      "domain": "product_management",
+      "capability": "product_management.attribute.product.set",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Application/Service/ProductManagementService.php",
+          "symbol": "public function setAttributes("
+        }
+      ]
+    },
+    {
+      "id": "preview",
+      "label": "Preview unique SKU combinations",
+      "kind": "decision",
+      "owner": "Product manager",
+      "domain": "product_management",
+      "capability": "product_management.variant.matrix.preview",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Application/Service/ProductManagementService.php",
+          "symbol": "public function variantMatrix("
+        }
+      ]
+    },
+    {
+      "id": "matrix",
+      "label": "Create variant matrix",
+      "kind": "operation",
+      "owner": "Product manager",
+      "domain": "product_management",
+      "capability": "product_management.variant.matrix.create",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Application/Service/ProductManagementService.php",
+          "symbol": "public function createMatrix("
+        }
+      ]
+    },
+    {
+      "id": "readback",
+      "label": "Read native catalog",
+      "kind": "outcome",
+      "owner": "Product manager",
+      "domain": "product_management",
+      "capability": "product_management.product.get",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Application/Service/ProductManagementService.php",
+          "symbol": "public function getProduct("
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "create",
+      "to": "category"
+    },
+    {
+      "from": "category",
+      "to": "assign"
+    },
+    {
+      "from": "assign",
+      "to": "define"
+    },
+    {
+      "from": "define",
+      "to": "bind"
+    },
+    {
+      "from": "bind",
+      "to": "set"
+    },
+    {
+      "from": "set",
+      "to": "preview"
+    },
+    {
+      "from": "preview",
+      "to": "matrix"
+    },
+    {
+      "from": "matrix",
+      "to": "readback"
+    }
+  ]
+}

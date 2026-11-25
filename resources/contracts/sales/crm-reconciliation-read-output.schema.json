@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "deal_id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "provider": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "unresolved",
+        "unsupported_provider",
+        "conflict",
+        "partial_local_record",
+        "local_verified"
+      ]
+    },
+    "native_id": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "recipient_delivery_verified": {
+      "type": "boolean",
+      "enum": [
+        false
+      ]
+    }
+  },
+  "required": [
+    "deal_id",
+    "provider",
+    "kind",
+    "state",
+    "native_id",
+    "recipient_delivery_verified"
+  ],
+  "additionalProperties": false
+}

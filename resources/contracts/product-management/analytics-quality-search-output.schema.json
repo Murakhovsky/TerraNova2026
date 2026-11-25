@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "analytics-quality-search output",
+  "type": "object",
+  "properties": {
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "missing_required",
+        "no_media",
+        "no_price",
+        "no_category"
+      ]
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "missing_required": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "has_media": {
+            "type": "boolean"
+          },
+          "has_category": {
+            "type": "boolean"
+          },
+          "unpriced_skus": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "product_id",
+          "name",
+          "status",
+          "missing_required",
+          "has_media",
+          "has_category",
+          "unpriced_skus"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 100
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100
+    },
+    "offset": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000000
+    }
+  },
+  "required": [
+    "currency",
+    "kind",
+    "items",
+    "limit",
+    "offset"
+  ],
+  "additionalProperties": false
+}

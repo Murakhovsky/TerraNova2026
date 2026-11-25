@@ -5,6 +5,7 @@ namespace App\Infrastructure\Experience\Relations;
 
 use App\Application\Experience\Relations\Contract\RelatedEntityReadInterface;
 use App\Application\Experience\Relations\RelatedEntityReference;
+use App\Security\SalesRequestEntityAuthorizationInterface;
 use Domains\Sales\Application\Contract\ClientCaseReadModelFactoryInterface;
 use Domains\Property\Contract\PropertyReferencePort;
 
@@ -17,6 +18,7 @@ final readonly class SalesPropertyRelatedEntityRead implements RelatedEntityRead
     public function __construct(
         private ClientCaseReadModelFactoryInterface $cases,
         private PropertyReferencePort $properties,
+        private SalesRequestEntityAuthorizationInterface $authorization,
     ) {}
 
     public function related(string $organizationId, string $entityType, string $entityId, int $limit = 10): array
@@ -26,6 +28,7 @@ final readonly class SalesPropertyRelatedEntityRead implements RelatedEntityRead
             return [];
         }
         $caseId = (int)$entityId;
+        if (!$this->authorization->entity($organizationId,'deal',$caseId)) return [];
         $read = $this->cases->forOrganization($organizationId);
         if ($read->case($caseId) === null) {
             return [];
@@ -54,6 +57,6 @@ final readonly class SalesPropertyRelatedEntityRead implements RelatedEntityRead
                 detail: $status !== '' ? $status : null,
             );
         }
-        return $related;
+        return $this->authorization->entity($organizationId,'deal',$caseId)?$related:[];
     }
 }

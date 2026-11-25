@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Stock count session get-input",
+  "type": "object",
+  "required": [
+    "session_id"
+  ],
+  "properties": {
+    "session_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    }
+  },
+  "additionalProperties": false
+}

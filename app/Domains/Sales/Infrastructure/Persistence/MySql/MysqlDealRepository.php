@@ -28,6 +28,14 @@ final readonly class MysqlDealRepository implements DealRepositoryInterface, Dea
                 return OperationResult::failure('Deal was not found in the current organization.');
             }
             $values = $changes->toArray();
+            $commercial=array_key_exists('deal_value',$values);
+            if ($commercial && !$this->connection->inTransaction()) return OperationResult::failure('Commercial terms require a canonical transaction.');
+            if ($commercial) {
+                $row=$this->getForStageChange($organizationId,$dealReference);
+                if ($row===null || in_array((string)$row['status'],['closed','lost'],true)) return OperationResult::failure('Terminal deal commercial terms are immutable.');
+                $accepted=(new MysqlSalesOfferRepository($this->connection))->acceptedForDeal($organizationId,(int)$dealReference);
+                if($accepted!==null&&((string)$accepted['total']!==$values['deal_value']||$accepted['currency']!==$values['currency']))return OperationResult::failure('Accepted offer fixes Deal commercial terms.');
+            }
             $sets = [];
             $parameters = ['id' => $dealReference, 'organization_id' => $organizationId];
             foreach ($values as $field => $value) {
@@ -53,8 +61,9 @@ final readonly class MysqlDealRepository implements DealRepositoryInterface, Dea
     {
         $statement = $this->connection->prepare(
             'SELECT id, organization_id, pipeline_id, stage_id, stage, status, closed_at, created_at, '
-            . 'deal_value, currency, assigned_user_id '
+            . 'deal_value, currency, assigned_user_id, lost_reason_id, lost_reason_note '
             . 'FROM tn_client_cases WHERE id = :id AND organization_id = :organization_id LIMIT 1'
+            . ($this->connection->inTransaction() ? ' FOR UPDATE' : '')
         );
         $statement->execute(['id' => $dealId, 'organization_id' => $organizationId]);
         $row = $statement->fetch(PDO::FETCH_ASSOC);
@@ -114,16 +123,18 @@ final readonly class MysqlDealRepository implements DealRepositoryInterface, Dea
     {
         try {
             $deal = $this->connection->prepare(
-                'SELECT assigned_user_id FROM tn_client_cases '
+                'SELECT assigned_user_id,status FROM tn_client_cases '
                 . 'WHERE id=:id AND organization_id=:organization_id LIMIT 1 FOR UPDATE'
             );
             $deal->execute(['id' => $dealId, 'organization_id' => $organizationId]);
-            $current = $deal->fetchColumn();
-            if ($current === false) {
+            $row = $deal->fetch(PDO::FETCH_ASSOC);
+            if (!is_array($row)) {
                 return OperationResult::failure('Deal was not found in the current organization.');
             }
 
+            $current=$row['assigned_user_id'];
             $previousOwnerId = $current !== null ? (int) $current : null;
+            if (in_array((string)$row['status'],['closed','lost'],true) && $previousOwnerId!==$ownerId) return OperationResult::failure('Terminal deal ownership is immutable.');
             if ($previousOwnerId === $ownerId) {
                 return OperationResult::success($dealId, [
                     'changed' => false,

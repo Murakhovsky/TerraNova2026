@@ -216,20 +216,26 @@ try {
   }, 'Sent canonical WEB message must persist after async projection');
 
   await page.locator('#intelligence').waitFor({ state: 'visible' });
-  const execute = page.locator('[data-sales-action] [data-decision="execute"]').first();
-  await execute.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
-  if (!await execute.count()) throw new Error('Mutation fixture requires at least one executable COS action for the Deal.');
-  const actionPanel = execute.locator('xpath=ancestor::*[@data-sales-action][1]');
-  const actionId = await actionPanel.getAttribute('data-action-id');
-  if (!actionId) throw new Error('Executable COS action must expose data-action-id.');
-  await waitMutation(page, `/api/v1/sales/actions/${actionId}/execute`, () => execute.click(), 'Execute COS action');
-  await eventually(async () => {
-    const intelligenceResponse = page.waitForResponse((response) => response.url().includes(`/api/v1/sales/opportunities/${dealId}/intelligence`) && response.request().method() === 'GET');
-    assertOk(await page.goto(absolute(dealHref), { waitUntil: 'domcontentloaded' }), 'COS action postcondition');
-    assertOk(await intelligenceResponse, 'Reloaded Deal intelligence');
-    await page.locator('[data-sales-intelligence]').waitFor({ state: 'visible' });
-    return await page.locator(`[data-sales-action][data-action-id="${actionId}"] [data-decision="execute"]`).count() === 0;
-  }, 'Executed COS action must not remain executable after async execution', 30000, 750);
+  // S5 security acceptance: a proposed AI action is observable but cannot
+  // be executed/dismissed by bypassing Platform Workflow. Positive governed
+  // execution is a separate S6 release gate, not an S5 success claim.
+  const actionId = '33333333333333333333333333333333';
+  const actionPanel = page.locator('[data-sales-action][data-action-id="' + actionId + '"]');
+  await actionPanel.waitFor({ state: 'visible', timeout: 15000 });
+  await assertCount(actionPanel.locator('[data-decision="execute"]'), 0, 'Unsafe direct execution control exposed');
+  await assertCount(actionPanel.locator('[data-sales-governed-required]'), 1, 'Governed execution boundary missing');
+  const csrf = await page.locator('[data-sales-deal-csrf-value]').first().getAttribute('data-sales-deal-csrf-value');
+  if (!csrf) throw new Error('Authenticated fixture must expose CSRF token.');
+  for (const decision of ['execute','dismiss']) {
+    const denied = await page.request.post(absolute('/api/v1/sales/actions/' + actionId + '/' + decision), {
+      headers: {'X-CSRF-Token': csrf, 'X-Idempotency-Key': 's5-denied-' + decision},
+      data: {},
+    });
+    if (denied.status() !== 403) throw new Error('Ungoverned action ' + decision + ' was not denied: ' + denied.status());
+  }
+  assertOk(await page.reload({waitUntil:'networkidle'}), 'Denied action postcondition');
+  await actionPanel.waitFor({state:'visible'});
+  if (!(await actionPanel.innerText()).includes('PROPOSED')) throw new Error('Denied action changed native status.');
 
   await context.close();
   console.log(JSON.stringify({ ok: true, suite: 'Sales V0.6.8 Epic 2 Closure mutation E2E' }, null, 2));

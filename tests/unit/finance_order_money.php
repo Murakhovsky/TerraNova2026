@@ -1,0 +1,41 @@
+<?php
+declare(strict_types=1);
+require_once dirname(__DIR__,2).'/app/Domains/Finance/Domain/CommerceOrderMoney.php';
+use Domains\Finance\Domain\CommerceOrderMoney as Money;
+$assert=static function(bool $ok):void{if(!$ok)throw new RuntimeException('Finance order assertion failed.');};
+$reject=static function(callable $fn):void{try{$fn();}catch(DomainException){return;}throw new RuntimeException('Invalid collection operation accepted.');};
+$b=['captured_minor'=>0,'refunded_minor'=>0,'chargeback_minor'=>0];
+$b=Money::apply($b,'capture',4000,0);
+$b=Money::apply($b,'capture',6000,0);
+$b=Money::apply($b,'refund',1500,4000);
+$b=Money::apply($b,'chargeback',2000,6000);
+$b=Money::apply($b,'chargeback_reversal',500,2000);
+$assert($b===['captured_minor'=>10000,'refunded_minor'=>1500,'chargeback_minor'=>1500]);
+$v=Money::projection([...$b,'organization_id'=>'test','order_id'=>str_repeat('a',32),'currency'=>'EUR','evidence_reference'=>str_repeat('b',32),'revision'=>5,'order_total_minor'=>10000]);
+$assert($v['net_collected_amount']==='70.00'&&$v['outstanding_amount']==='30.00');
+$reject(fn()=>Money::apply($b,'refund',101,100));
+$reject(fn()=>Money::apply($b,'chargeback_reversal',1501,2000));
+foreach([1.2,'01.00','1.001','-1.00','0.00'] as $bad)$reject(fn()=>Money::amount($bad));
+$assert(Money::amount('999999999999.99')===99999999999999);
+echo "Finance order collection exact money policy PASS\n";
+
+/* Pinned Workflow Action input uses the same envelope as other governed commands. */
+require_once dirname(__DIR__,2).'/vendor/autoload.php';
+$contracts=(require dirname(__DIR__,2).'/app/Domains/Finance/module.php')['contributions']['capability_contracts'];
+$id=str_repeat('a',32);
+$payload=['order_id'=>$id,'kind'=>'capture','amount'=>'40.00','currency'=>'EUR','source_account'=>'bank','source_reference'=>'source'];
+$validator=new \Platform\Orchestration\Goal\CapabilityJsonInputValidator();
+foreach($contracts as $definition){
+    if(!in_array($definition['id'],['finance.order.payment.register','finance.order.payment.reconcile'],true))continue;
+    $contract=\Kernel\Module\CapabilityContract::fromArray($definition);
+    $parameters=$payload;
+    if($contract->id==='finance.order.payment.reconcile')$parameters+=[
+        'operation_id'=>str_repeat('b',32),'statement_reference'=>'statement','expected_revision'=>0];
+    $input=['target_type'=>'sales_order','target_id'=>$id,'parameters'=>$parameters];
+    $validator->validate($contract,$input);
+    foreach([$parameters,[...$input,'target_type'=>'deal'],[...$input,'parameters'=>[...$parameters,'amount'=>1.1]]] as $bad){
+        try{$validator->validate($contract,$bad);}catch(DomainException){continue;}
+        throw new RuntimeException('Invalid canonical Finance Action envelope accepted.');
+    }
+}
+echo "Finance O4 canonical Action input schemas PASS.\n";

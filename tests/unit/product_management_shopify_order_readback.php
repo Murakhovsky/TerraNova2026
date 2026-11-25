@@ -60,3 +60,18 @@ $reject($changed,$gid);
 $changed=$source;$changed['data']['order']['createdAt']='not-a-date';
 $reject($changed,$gid);
 echo "SHOPIFY_ORDER_READBACK_NON_PII_CONTRACT_OK\n";
+
+require_once __DIR__.'/../../app/Domains/ProductManagement/Infrastructure/Shopify/ShopifySandboxOrderAcceptance.php';
+$connection=str_repeat('a',32);
+$testOrder=['channel'=>'shopify','store_reference'=>$connection,'external_order_id'=>$gid,
+    'test'=>true,'blocked_reason'=>'test_order','terms'=>null,'provider_hash'=>str_repeat('b',64),'email'=>'not-exported@example.test'];
+$sandbox=\Domains\ProductManagement\Infrastructure\Shopify\ShopifySandboxOrderAcceptance::verify($testOrder,$connection,$gid);
+if($sandbox['status']!=='SANDBOX_READBACK_VERIFIED'||$sandbox['native_order_created']||$sandbox['local_stock_mutation']||
+    $sandbox['payment_settled']||$sandbox['provider_mutation']||str_contains(json_encode($sandbox,JSON_THROW_ON_ERROR),'not-exported'))
+    throw new RuntimeException('Sandbox isolation evidence invalid.');
+foreach([['test'=>false],['terms'=>[]],['blocked_reason'=>null],['store_reference'=>str_repeat('c',32)],['provider_hash'=>'invalid']] as $patch){
+    try{\Domains\ProductManagement\Infrastructure\Shopify\ShopifySandboxOrderAcceptance::verify([...$testOrder,...$patch],$connection,$gid);}
+    catch(DomainException){continue;}
+    throw new RuntimeException('Unsafe sandbox evidence accepted.');
+}
+echo "SHOPIFY_SANDBOX_TEST_ORDER_ISOLATION_CONTRACT_OK\n";

@@ -3,6 +3,9 @@ declare(strict_types=1);
 namespace Domains\Finance\Bootstrap;
 
 use Domains\Finance\Automation\Action\FinanceBudgetActionHandler;
+use Domains\Finance\Automation\Action\FinanceOrderPaymentActionHandler;
+use Domains\Finance\Automation\Action\FinancePaidSettlementHandler;
+use Domains\Finance\Application\Service\ApprovedFinancePaidSettlementService;
 use Kernel\Module\Contract\ActionOwningModuleInterface;
 use Kernel\Module\Contract\BootstrapPolicyProvidingModuleInterface;
 use Kernel\Module\Contract\PolicyProvidingModuleInterface;
@@ -14,7 +17,7 @@ use Kernel\Policy\PolicyDecision;
 final readonly class FinanceDomainModule implements DomainModuleInterface,
     ActionOwningModuleInterface,PolicyProvidingModuleInterface,BootstrapPolicyProvidingModuleInterface
 {
-    public function __construct(private FinanceBudgetActionHandler $handler){}
+    public function __construct(private FinanceBudgetActionHandler $handler,private ?FinanceOrderPaymentActionHandler $payments=null,private ?FinancePaidSettlementHandler $settlement=null){}
     public function name():string{return 'finance';}
     public function actionTypes():array
     {
@@ -23,9 +26,11 @@ final readonly class FinanceDomainModule implements DomainModuleInterface,
             FinanceBudgetActionHandler::RESERVE,
             FinanceBudgetActionHandler::RELEASE,
             FinanceBudgetActionHandler::FREEZE,
+            ...($this->payments===null?[]:[FinanceOrderPaymentActionHandler::REGISTER,FinanceOrderPaymentActionHandler::RECONCILE]),
+            ...($this->settlement===null?[]:[ApprovedFinancePaidSettlementService::TYPE]),
         ];
     }
-    public function actionHandlers():array{return [$this->handler];}
+    public function actionHandlers():array{return array_values(array_filter([$this->handler,$this->payments,$this->settlement]));}
     public function policies(string $organizationId):array
     {
         $policies=[];
@@ -36,7 +41,7 @@ final readonly class FinanceDomainModule implements DomainModuleInterface,
             $policies[]=new ActionPolicy(
                 $id,$organizationId,$type,[],PolicyDecision::ApprovalRequired,10,
                 'Independent Finance approval required',
-                'Finance Budget Control: operation must be independently approved before any budget mutation'
+                'Finance: operation must be independently approved before any financial mutation'
             );
         }
         return $policies;

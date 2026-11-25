@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "campaign_id": {
+      "type": "string",
+      "pattern": "^mkt-[a-f0-9]{24}$"
+    }
+  },
+  "required": [
+    "campaign_id"
+  ],
+  "additionalProperties": false
+}

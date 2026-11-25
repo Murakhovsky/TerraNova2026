@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Governed price-list-tier-set input",
+  "type": "object",
+  "required": [
+    "target_type",
+    "target_id",
+    "parameters"
+  ],
+  "properties": {
+    "target_type": {
+      "type": "string",
+      "const": "product_governed_operation"
+    },
+    "target_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "parameters": {
+      "type": "object",
+      "required": [
+        "list_id",
+        "variant_id",
+        "min_quantity",
+        "amount",
+        "expected_revision"
+      ],
+      "properties": {
+        "list_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        },
+        "variant_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        },
+        "min_quantity": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,13})(\\.[0-9]{1,6})?$"
+        },
+        "amount": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^(0|[1-9][0-9]{0,15})(\\.[0-9]{1,4})?$"
+        },
+        "expected_revision": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

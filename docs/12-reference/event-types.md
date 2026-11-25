@@ -18,7 +18,7 @@ generated: true
 | --- | ---: |
 | `growth` | 107 |
 | `property` | 17 |
-| `sales` | 16 |
+| `sales` | 27 |
 
 ## Каталог
 
@@ -148,6 +148,11 @@ generated: true
 | `property` | `property.listing.published` | `Domains\Property\Automation\Event\PropertyEventType::values()` | `app/Domains/Property/Automation/Event/PropertyEventType.php` | `app/Domains/Property/Bootstrap/PropertyDomainModule.php` |
 | `property` | `property.relation_changed` | `Domains\Property\Automation\Event\PropertyEventType::values()` | `app/Domains/Property/Automation/Event/PropertyEventType.php` | `app/Domains/Property/Bootstrap/PropertyDomainModule.php` |
 | `property` | `property.structure_changed` | `Domains\Property\Automation\Event\PropertyEventType::values()` | `app/Domains/Property/Automation/Event/PropertyEventType.php` | `app/Domains/Property/Bootstrap/PropertyDomainModule.php` |
+| `sales` | `sales.activity.cancelled` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
+| `sales` | `sales.activity.completed` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
+| `sales` | `sales.activity.recorded` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
+| `sales` | `sales.activity.reminder.due` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
+| `sales` | `sales.activity.rescheduled` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
 | `sales` | `sales.deal.lost` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
 | `sales` | `sales.deal.owner_assigned` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
 | `sales` | `sales.deal.stuck` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
@@ -160,7 +165,13 @@ generated: true
 | `sales` | `sales.lead.qualified` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
 | `sales` | `sales.meeting.completed` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
 | `sales` | `sales.message.received` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
+| `sales` | `sales.message.recorded` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
 | `sales` | `sales.message.sent` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
+| `sales` | `sales.negotiation.recorded` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
 | `sales` | `sales.no_activity_detected` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
+| `sales` | `sales.offer.created` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
+| `sales` | `sales.offer.delivery.queued` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
+| `sales` | `sales.offer.revised` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
+| `sales` | `sales.offer.state_changed` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
 | `sales` | `sales.task.completed` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |
 | `sales` | `sales.task.created` | `Domains\Sales\Automation\Event\SalesEventType::all()` | `app/Domains/Sales/Automation/Event/SalesEventType.php` | `app/Domains/Sales/Bootstrap/SalesDomainModule.php` |

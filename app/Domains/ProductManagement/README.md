@@ -86,6 +86,13 @@ the connection cursor or release a replacement run. Failed requests retain
 their last completed page cursor for deliberate retry. This is a local sync
 reservation, **not** a new workflow executor or autonomous scheduler.
 
+## Tenant location discovery
+
+`product_management.location.search` is a bounded, tenant-scoped read QueryBus capability.
+It filters by warehouse code/name, returns only ID/code/name/status (no stock write),
+and supports explicit pagination. Native availability is obtained separately through
+`stock.balance.get` and never estimated from external Shopify inventory observations.
+
 ## E1 categories
 
 `category.create` creates tenant-scoped slugs and optional child nodes
@@ -410,3 +417,136 @@ B's secret. The default legacy single-store resolver remains temporarily
 available for the existing operator pilot and should not be used when
 onboarding multiple stores. This changes neither Shopify source-of-truth
 ownership nor the E4 prohibition on remote writes.
+
+## E7 native lifecycle Workspace
+
+Product cards expose native SKU/UOM/barcode updates and soft archive for Product and Variant, using the existing canonical Gateway and human manager/tenant/CSRF/idempotency guards. Each form supplies the observed revision; archive additionally requires explicit confirmation. Variant IDs are checked against the tenant Product before dispatch. An independent Product read must agree with the exact operation receipt and expected revision before a success redirect. A receipt/readback mismatch is an uncertain outcome, not authorization to repeat with a fresh key.
+
+Stock receipts/issues now lock the native Product/Variant lifecycle rows before checking eligibility; archive reads nonzero stock/reservations with a current locking read. Existing transfer already locks these rows. Variant archive also checks the parent state. No destructive deletion, new executor, Shopify or Sales behavior. Variant options remain preserved by the basic Workspace edit; advanced options editor and browser acceptance remain pending. Reservation branch must retain the same locks when integrated.
+
+## E7 multi-currency base pricing and optimistic revision fence
+
+Native Workspace supports a selected three-letter currency code and bounded pages of 30 SKU prices. Currency is not inferred or converted. The existing price.base.set input accepts optional expected_revision (0 for no current price), which the Workspace always supplies. Existing imports that omit this optional field retain their original receipt hash and call signature. Price mutations serialize with Product/Variant lifecycle locks, reject archived entities, and atomically write the immutable history and Event/Outbox. Success requires the independently read price, currency, Variant and exact next revision to match the receipt. An uncertain readback returns 503. Price lists, tier/quantity rules, channel pricing and price-history browsing are separate unfinished scope.
+
+## E7 price history query
+
+The tenant-scoped price.history.search capability reads immutable native base-price history per Variant and currency, with bounded pagination and a deterministic created_at / event ID sort. Each item includes the original and new amount, recorded actor reference, timestamp and history event ID. No price mutation, currency conversion or reconstruction of historical list prices is performed. Archived SKUs remain readable by managers. The Product card exposes this through the existing canonical query Gateway; another tenant's Variant returns no history. Current price revisions and history events are different concepts, and the existing history table does not store a revision number.
+
+## E7 explicit price lists (P1 native core)
+
+A tenant manager may create a retail, wholesale or partner list identified by a unique tenant-local code and fixed currency. The native price.list.entry.set command requires explicit list and Variant identity and expected revision (0 for an unpriced SKU). The write reuses the active Product/Variant and Shopify ownership fence, stores an immutable revision history, receipt, and native event/outbox in the same transaction. The read price.list.entry.get returns no implicit base-price fallback, FX conversion or customer eligibility. Foreign tenant identities do not reveal list currency or price. Existing list prices remain readable after archive but cannot be changed. The list search is paginated and supports exact code discovery. List lifecycle, entry removal, quantity tiers, customer/channel selection and dedicated history query are later scope. Migration advances module schema to 0.9.0.
+
+## E7 price list lifecycle and history (P2)
+
+Lists have active/archived status and an optimistic metadata revision, independent of SKU entry revisions. Existing lists become active at revision 1 via an additive migration. Update changes only the display name; code, currency and kind are immutable. Archive is terminal and blocks new entry writes; existing prices and immutable history remain readable for audit, not a quote eligibility decision. The new price.list.history.search query is tenant/list/SKU scoped and ordered by entry revision. All writes use canonical receipt/Event/Outbox and the same list row lock. Quantity tiers and explicit quote resolution remain separate scope. Schema version 0.10.0.
+
+## E5 P1 — ручне резервування, без зовнішнього Order writer
+
+`stock.reserve` та `stock.release` публікуються як tenant-manager
+capabilities із типовими Kernel permissions/idempotency. Резерв не змінює
+`on_hand` і не створює фізичний stock movement; `available` виводиться
+як `on_hand-reserved`. Реліз скидає тільки `reserved`.
+
+Операції атомарні в одному PDO transaction, ідентичність origin
+`(tenant,source_ref,variant,location)` унікальна, повторення того самого
+idempotency key повертає початковий receipt. У першому вертикальному
+зрізі дозволено тільки `manual:` source reference. SalesOrder/OrderLine
+не існує як підтверджений зовнішній контракт, і автоматичне резервування
+від Sales/OMS, automatic expiry та partial release **не дозволені**.
+Рішення описане в ADR-0017.
+
+## E5 P2 — concurrent reservation + read-only stock reconciliation
+
+Two independent MySQL/PHP workers simultaneously compete for the last
+available Stock. The CI gate
+`tests/integration/product_management_stock_concurrency_mysql.php`
+requires that only one overcommitting writer wins, concurrent identical
+idempotency keys yield one Reservation receipt, and concurrent distinct
+release keys release a Reservation only once. All paths must preserve
+same-transaction Event/Outbox and the immutable movement ledger.
+
+`MySqlStockReconciliationAudit` reads a **single consistent SQL statement**
+over all tenant Stock balances, movement sums and active reservations. It
+reports `DRIFT` when either `on_hand != SUM(movements)` or
+`reserved != SUM(active reservations)`, including missing projection rows.
+It reports `INCOMPLETE` when limited output excludes unscanned pairs;
+neither status is accepted as healthy. No repair or implicit stock posting
+is allowed.
+
+Server operator only (read-only and fail-closed):
+
+```sh
+docker compose exec -T -e COS_PRODUCT_STOCK_AUDIT_ENABLED=1 php \
+  php bin/console cos:product:stock:audit --organization=TENANT_ID --limit=100
+```
+
+The operator must be explicitly run by an authorized server administrator
+on a deployed tenant with the Product Management module enabled. The command
+does not expose a new AI/CRON or public API mutation path and does not
+auto-reconcile any conflict. A full clean audit requires `status=OK` and
+`complete=true`. High-cardinality tenants require an explicit larger
+limit or a future paginated read audit; a truncated response is not evidence.
+
+## E5/E7 integrated reservation Workspace
+
+Tenant managers can browse paginated reservations by SKU and warehouse, create manual reservations and explicitly release active reservations. `stock.reservation.search` independently verifies identity/status and balance readback. No automatic expiry, partial release or Sales order writer is admitted by ADR-0017. All mutations use existing Gateway → CommandBus → Domain and uncertain post-write verification returns 503.
+
+## E7 quantity tiers and explicit price resolution
+
+A list entry can be removed using a revisioned null-amount tombstone; history and previous receipts are retained. Tiers are independent SKU/list/minimum-quantity prices, versioned and removable using a null amount. Quantity thresholds are exact DECIMAL(20,6) and inclusive. price.resolve uses the highest active eligible threshold, then the explicit list entry if present; without a list it uses the requested currency base price only. It returns no quote for archived lists or archived Product/Variant, and never infers customer eligibility, converts FX or falls back across lists. Tiers remain independent of removed list entries. Schema 0.12.0. Tier history is stored atomically; browsing tier history and approval-based stock adjustments remain distinct work.
+
+Advanced pricing Workspace: managers can add, update, remove and restore quantity thresholds; explicitly remove list entries; preview the selected price for a quantity. Every mutation compares an exact independently queried entry/tier with its receipt. Price removal and tier removal require explicit confirmation. This does not provide an automated Sales quote or change Sales order ownership.
+
+Quantity-tier history is now available through `price.list.tier.history.search` and the Product card, including deleted thresholds, actor, revision, timestamp and old/new amount. Scope is tenant/list/Variant/exact minimum quantity. Read-only; no migration.
+
+## E5 approved physical count (single SKU/location)
+
+The Workspace proposes a canonical Goal and immutable Plan containing count document identity, actual nonnegative DECIMAL quantity, observed stock revision and explicit source document. It cannot change stock. The sole mutation is stock.count.apply, an existing Kernel Action Worker handler requiring independent Plan and Action approval, active module, high risk and canonical Workflow idempotency. It locks Product/Variant, location and balance; stale revisions, foreign scope, Shopify-owned writes and quantities below reserved are denied. An immutable count row, correction ledger movement (only for a nonzero delta), balance revision, Domain Event/Outbox and receipt commit atomically. A zero discrepancy still records a count and advances revision without creating a fake movement. stock.count.get exposes independent tenant-scoped evidence; the Goal outcome provider attests the actual Workflow Action and independently checks count and ledger identity/values. Stock count requests never imply a Sales/OMS order. Multi-SKU batch inventory is not part of this single-position implementation. Full MySQL E2E exercises Goal, pinned Plan, approval evidence fixture, independent Action approval and Worker admission; browser acceptance remains separate.
+
+## E5 atomic multi-SKU inventory sessions / E7 browser acceptance
+
+A single warehouse session captures 1–50 distinct explicitly counted local SKU positions, sorted by Variant identity. The paginated candidates query returns exact quantity, reserved amount and revision (including uninitialized zero balances); Shopify-authoritative and archived/non-stock Variants are excluded. Empty input excludes a row, explicit zero counts an empty position. Each page can be a separate count document; there is no implicit whole-warehouse coverage assertion. The Plan is immutable and contains the entire rowset, one canonical approved Action, and a Goal expecting all rows independently verified. Session header, per-SKU native count/ledger, balance revisions, one Domain event/outbox and parent receipt are one transaction. Any stale row, bound violation or duplicate origin aborts every row; no partial application. Derived child keys identify native lines only, not separate Actions. Native readback and run-linked evidence attest header and every exact approved row/ledger. No Sales/OMS ownership or external channel writes. Schema 0.14.0, 50 capabilities. Browser CI exercises real authenticated catalog creation, warehouse receipt, reserve/release, price tiers and history, session proposal and unchanged balances before approval, plus desktop/mobile screenshots. Full worker admission and outcome tested in separate native MySQL Goal E2E. Browser acceptance status is determined by CI, not this documentation.
+
+## Product Attributes & Variants (schema 0.15.0)
+
+Tenant-owned immutable attribute definitions support text, exact signed decimal (six fractional digits, optional unit), boolean and closed enum choices. Category bindings are additive with required/axis flags; effective Product set is the union of directly assigned categories. Missing required values are diagnostics, not a global publication gate. Product attribute patches are atomic, optimistic-revision checked, idempotent and preserve explicit false/zero; null removes optional values. Exact normalized filtering is tenant-scoped. Matrix preview expands up to four enum axes and 50 combinations in canonical order, yields deterministic SKU prefix + hash and checks all existing combinations including archived and SKU conflicts. Creation is all-or-nothing, revalidates Product revision and ownership and preserves original SKU/stock/prices/media. Managed combinations are immutable; no implicit migration of legacy options or default SKU. Readback via canonical query and existing Product projection. Workspace supports dictionary creation, category binding, filtering, JSON patch and preview/confirm matrix. No Shopify or Sales writes. Atomic multi-product patch is supported for up to 20 explicitly selected Products and 10 values, with a separate optimistic revision per Product; all rows share the native receipt transaction. Rich type-specific forms, definition/binding lifecycle and migration of legacy free-form options remain separate improvements; Runtime and browser acceptance are not yet verified.
+
+## Product Analytics & Dashboard
+
+Read-only query contracts: analytics.summary.get, analytics.stock.search, analytics.movement.search, analytics.quality.search and analytics.reconciliation.get. Native assortment counts, SKU availability and reservations, currency-specific base-price stock estimate (not cost/accounting valuation; unpriced stock explicitly marks incomplete), warehouse-position threshold drilldowns, ledger opening/closing/receipts/issues/adjustments/transfers, endpoint-average physical turnover (not COGS or sales), required-attribute/media/category/price quality diagnostics and bounded read-only reconciliation. No quantities summed across incompatible units. Explicit location includes uninitialized tracked positions; all-location drilldown only recorded active positions. UTC half-open movement interval limited to 366 days. Reports independently read-consistent, not a global transaction; threshold risk is operator-defined, not replenishment forecasting. Workspace /product-management/dashboard, desktop/mobile CI journey; exact-result MySQL fixture includes tenant isolation, transfers excluded from nontransfer issues, missing price, audit drift and completeness. Schema remains 0.15.0 (no analytics migration). 65 contracts. Revenue, margin, actual demand forecasting and accounting valuation require authoritative Sales/Finance/Procurement data and are not fabricated. No production acceptance claimed.
+
+## AI Management / governed Product business operations
+
+Eight explicitly allowlisted action-bound contracts under product_management.governed.* support product.create, variant.matrix.create, attribute.product.bulk_set, price.base.set (revision mandatory), stock.receive, stock.issue, stock.reserve and stock.release. Existing CSV apply and stock count Actions are unchanged. Direct command: writes remain human-only. Worker admits only a RUNNING canonical wf-key Action with independent approval, tenant module, pinned contract and strict schema. Existing native service transactions and idempotency receipts are reused. The current canonical Workflow classifies independently approved Actions as external, even though Product effects remain local. No new executor, synthetic actor or unrestricted dispatch.
+
+Proposal-only endpoint POST /api/v1/product-management/governed/plans/propose accepts authenticated tenant manager session + CSRF; payload {key,description,operations:[{id,capability_id,parameters}]}, 1..20 ordered operations, 64 KB overall, 16 KB per capability. Server assigns target IDs, derives immutable Goal/Plan IDs, resolves live capabilities and sets criterion product_management.governed_operations_verified equals number of operations. Same tenant/key/payload resolves same proposed plan; conflicts rejected. No side effect or approval at proposal. Existing /workspace/goals is the approval/Run/evaluation interface. A model can produce structured proposal input; signed AI/CRON machine transport now uses POST /api/v1/capability-intents/product-business with existing HMAC headers, tenant rollout and canonical pending-review nonce storage; a manager adopts the exact digest from /workspace/capabilities/intents. Live LLM planning acceptance remains unimplemented. No service identity or approval bypass is claimed.
+
+Business scenario: prepare existing SKU at warehouse, receive 10, price USD 125.5, reserve 3, issue 2, create a separate assortment Product, generate two variants for existing Product, patch a category attribute, release an existing reservation. The fixture expects 8 approved Actions and independent native effects, ending 8 physical / 3 reserved / 5 available, price 125.5000, new SKU and attributes, released reservation. Multi-step workflow is sequential, not globally atomic; each Action is atomic and a failed predecessor blocks dependents. IDs for later operations must be known before Plan approval; no dynamic substitution of previous Action outputs. Product Goal provider checks canonical approval/first-attempt evidence and native receipt scoped to time and Run, Product and Variant IDs, exact price/revision, ledger, reservation, matrix and normalized attribute values. Current mutable price/attributes are checked at evaluation and drift fails closed. Tampering must not be counted as satisfied. No production test or live agent claimed. 94 Capability Contracts, unchanged schema 0.15.0. MySQL scenario uses a real Plan approval and Action approval services/worker (new acceptance pending). Final CI and browser acceptance pending.
+
+Machine envelope is {kind:"product_management.governed_plan.v1",description,operations:[{id,capability_id,parameters}]}; no actor/tenant or approval fields are accepted. Shared intake table uses typed JSON object for Product and legacy list for Property; no new migration. Deterministic Plan identity is derived from tenant and adopted intent ID, and the adopted state is written in the same DBAL transaction as Goal/Plan creation. The eight-step CI fixture exercises actual signed intake, nonce conflict, digest review, human adoption, real Plan approval coordinator and handler, eight real Action approvals and native Goal evidence. Product Workspace routes are now included in the authenticated Symfony firewall; the public machine endpoint requires the existing HMAC verifier before any intake. Live agent/LLM, Plan approval UI, final browser acceptance and the new real approval MySQL scenario still require verification.
+
+## Domain Release Acceptance (2026-11-24)
+
+Release gates are independent: (1) DAS-001 and 94 typed contracts with exact local schemas and ownership; (2) six Process Registry definitions, 38 mapped business steps, no process exemption; (3) runtime Capability Library lists 31 query, 30 direct-human command and 33 approved Action capabilities for an enabled manager, no unavailable binding, and rejects direct governed writes; (4) native MySQL suites and real signed intake / independent Plan+Action approval / canonical worker / outcome verification; (5) authenticated desktop/mobile Workspace business acceptance; (6) live AI adapter/model test with separately authorized disposable tenant, plus human sign-off. All gates must be recorded against exact candidate SHA. A successful older run or source verification is not release acceptance. Production remains tenant-disabled by default. Shopify is not a dependency of the native acceptance scenario. Optional Shopify connector has separate live canary requirements.
+
+Confirmed earlier evidence: Runtime Federation MySQL job at https://github.com/Murakhovsky/TerraNova2026/actions/runs/45478415403 on commit 47b1a7756ecf23fcc4f440f77b972c50a64e7775 passed typed attributes, native analytics and signed eight-step governed business E2E (Plan receipt fixture). New test uses actual FederationPlanApprovalCoordinator, FederationPlanApproveHandler, ApprovalService, active independent tenant managers, no SQL approval fixture; exact latest CI pending. Live model output, actual browser approvals, and additional human-only writes without governed equivalents are remaining acceptance/coverage gaps. No new actor impersonation, no implicit retry, no auto activation/deployment. Readiness UNKNOWN until accepted evidence is available.
+
+### Governed transfer and explicit list pricing
+
+Two additional approved operations reuse native stock transfer and price list entry mutation. The run-scoped verifier attests both immutable transfer ledger legs (scope, actor, source, exact signed quantity and deterministic keys), and list price current revision plus immutable history. The signed intent E2E now covers ten independently approved operations and rejects tampered history or transfer evidence. Existing eight-step Process Registry model remains a supported subset. No new executor, schema migration, automatic retry or production readiness promotion. Final-head CI pending.
+
+### Governed lifecycle
+
+Four approved operations reuse native product/variant update and archive, retaining revision checks, ownership and stock guards. Run-scoped evidence checks exact current revision, status and normalized requested fields; archive checks zero stock and reserves. The 14-step fixture uses distinct lifecycle targets because later writes to the same target can invalidate exact current-state readback. No claim of support for arbitrary sequential lifecycle mutations to one target. Final-head CI and live acceptance pending.
+
+### Governed catalog and warehouse setup
+
+Five additional approved operations create/assign categories, upsert product translations, create individual variants and warehouse locations. Native receipts are matched to tenant-scoped identities and exact normalized fields. The signed-intent acceptance fixture now covers nineteen operations, including a translation tampering rejection. Dynamic output substitution is not implemented; referenced IDs must already be known. Final-head CI pending.
+
+### Governed price list lifecycle and quantity tiers
+
+Five new approved operations cover list creation, rename, archive, entry removal and quantity tier set/removal. Native evidence checks exact tenant-scoped revisions, normalized fields, price tombstones and corresponding history rows. Dedicated pricing fixture executes six actions in a separate signed and independently approved Plan, preserving the 20-operation plan limit; catalog fixture remains nineteen operations. CI previously passed catalog and browser at b20f594, not this new revision. Sequential edits of the same mutable entity remain restricted by current-state evidence.
+
+### Governed media and typed attributes
+
+Five additional approved contracts cover verified Documents image attach/detach, typed attribute definition, category binding and revision-pinned product attribute changes. Attachment evidence independently verifies tenant ownership, source bytes and checksum. The three independent acceptance suites cover catalog (19), pricing (6) and media/attributes (5) operations; the plan limit remains 20. Final-head CI and independent D3–D5 sign-off remain pending. Generated reference files must be regenerated from the actual manifest via Documentation CI rather than hand-sorted.

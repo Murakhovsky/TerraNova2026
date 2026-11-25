@@ -30,10 +30,10 @@ final readonly class SalesOperationService
         string $actorType = 'SYSTEM',
         string $actorId = 'system',
     ): OperationResult {
-        $sent = $this->gateway->send($command);
-        if (!$sent->successful) return $sent;
-
-        return $this->transactions->transactional(function () use ($command, $metadata, $actorType, $actorId, $sent): OperationResult {
+        return $this->transactions->transactional(function () use ($command, $metadata, $actorType, $actorId): OperationResult {
+            $sent = $this->gateway->send($command);
+            if (!$sent->successful) return $sent;
+            $local=($sent->data['delivery_state']??null)==='local_recorded';
             $externalId = $sent->externalId ?? $command->idempotencyKey;
             $communicationId = $this->operations->recordOutboundCommunication(
                 $command->organizationId,
@@ -42,15 +42,15 @@ final readonly class SalesOperationService
                 $command->body,
                 $externalId,
                 $command->idempotencyKey,
-                $metadata,
+                [...$metadata,'delivery_state'=>$local?'local_recorded':($sent->data['delivery_state']??'unverified')],
             );
-            if ($communicationId === null) return OperationResult::success($externalId, ['duplicate' => true]);
+            if ($communicationId === null) return OperationResult::success($externalId, [...$sent->data,'duplicate' => true]);
 
             $correlationId = substr(hash('sha256', $command->idempotencyKey), 0, 32);
             $this->events->publish(new DomainEvent(
                 bin2hex(random_bytes(16)),
                 $command->organizationId,
-                SalesEventType::MESSAGE_SENT,
+                $local?SalesEventType::MESSAGE_RECORDED:SalesEventType::MESSAGE_SENT,
                 'deal',
                 $command->dealReference,
                 [
@@ -62,7 +62,7 @@ final readonly class SalesOperationService
                 new EventMetadata($correlationId, null, $actorType, $actorId),
                 new DateTimeImmutable(),
             ));
-            return OperationResult::success($externalId, ['communication_id' => $communicationId]);
+            return OperationResult::success($externalId, [...$sent->data,'communication_id' => $communicationId]);
         });
     }
 
@@ -86,8 +86,9 @@ final readonly class SalesOperationService
         int $activityId,
         ?int $userId,
         string $actorType = 'USER',
+        ?string $correlationId = null,
     ): OperationResult {
-        return $this->transactions->transactional(function () use ($organizationId, $dealId, $activityId, $userId, $actorType): OperationResult {
+        return $this->transactions->transactional(function () use ($organizationId, $dealId, $activityId, $userId, $actorType,$correlationId): OperationResult {
             $activity = $this->operations->completeActivity($organizationId, $dealId, $activityId, $userId);
             if ($activity === null) return OperationResult::failure('Activity was not found, already completed, or belongs to another deal.');
 
@@ -95,10 +96,10 @@ final readonly class SalesOperationService
                 'followup' => SalesEventType::FOLLOWUP_COMPLETED,
                 'task' => SalesEventType::TASK_COMPLETED,
                 'meeting' => SalesEventType::MEETING_COMPLETED,
-                default => null,
+                default => 'sales.activity.completed',
             };
             if ($eventType !== null) {
-                $correlationId = bin2hex(random_bytes(16));
+                $correlationId = $correlationId ?: bin2hex(random_bytes(16));
                 $this->events->publish(new DomainEvent(
                     bin2hex(random_bytes(16)),
                     $organizationId,

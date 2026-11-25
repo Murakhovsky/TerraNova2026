@@ -1,0 +1,67 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+{% block title %}CSV-імпорт | Terra Nova COS{% endblock %}
+{% block workspace_content %}
+<div class="cos-page__stack">
+    <header class="cos-page__section-head"><div>
+        <small>Product Management · Import Preview</small>
+        <h1>CSV-імпорт товарів</h1>
+        <p>Підготовка пакета без створення товарів. Застосування лише через незалежний Goal/Plan Approval і Platform Workflow.</p>
+    </div></header>
+    <nav class="cos-toolbar" aria-label="Product Management">
+        <a class="btn btn-outline-secondary" href="/product-management">Каталог</a>
+        <a class="btn btn-outline-secondary" href="/product-management/stock">Склади</a>
+        <a class="btn btn-outline-secondary" href="/product-management/import">CSV-імпорт</a>
+        <a class="btn btn-outline-secondary" href="/workspace/goals">Goal/Plan</a>
+    </nav>
+    {% if section == 'preview' %}
+        <section class="cos-panel">
+            <h2>Підготувати Preview</h2>
+            <p>Точний заголовок CSV: <code>sku,name,type,uom,track_inventory</code>. До 12 000 символів через Gateway. Без формул, дублікатів і неправильних SKU.</p>
+            <form method="post" action="/product-management/import/preview" class="cos-page__stack">
+                <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                <input type="hidden" name="idempotency_key" value="{{ mutationKey }}">
+                <label for="pm-import-csv">CSV-дані</label>
+                <textarea id="pm-import-csv" name="csv" class="form-control" rows="12" required maxlength="12000" spellcheck="false" placeholder="sku,name,type,uom,track_inventory&#10;EXAMPLE-1,Test product,stock,pcs,1"></textarea>
+                <button class="btn btn-primary" type="submit">Перевірити CSV без запису товарів</button>
+            </form>
+        </section>
+    {% elseif section == 'batch' %}
+        {% if notice == 'proposed' %}<p class="alert alert-success" role="status">Goal/Plan запропоновано. Потрібні незалежні схвалення Plan та Action.</p>{% endif %}
+        <section class="cos-panel">
+            <h2>Пакет {{ batch.batch_id }}</h2>
+            <p>Статус: <strong>{{ batch.state }}</strong></p>
+            <p>SHA-256 джерела: <code>{{ batch.digest }}</code></p>
+            <p>SHA-256 рядків: <code>{{ batch.rows_digest }}</code></p>
+            <p>Рядки: готові {{ batch.counts.ready|default(0) }}, дублі {{ batch.counts.duplicate|default(0) }}, помилки {{ batch.counts.invalid|default(0) }}.</p>
+            {% if batch.goal_id is not empty %}
+                <p>Goal: <code>{{ batch.goal_id }}</code> · Plan: <code>{{ batch.plan_id }}</code></p>
+                <a class="btn btn-outline-primary" href="/workspace/goals">Перейти до незалежного Goal/Plan Approval</a>
+            {% endif %}
+        </section>
+        <section class="cos-panel">
+            <h2>Результати Preview</h2>
+            <p>Показані перші 100 рядків, повні результати доступні через <code>product_management.import.batch.get</code>.</p>
+            <div class="table-responsive"><table class="table">
+                <thead><tr><th>№</th><th>SKU</th><th>Статус</th><th>Причина</th><th>Product ID</th></tr></thead>
+                <tbody>{% for row in batch.rows|slice(0,100) %}
+                    <tr><td>{{ row.row_no }}</td><td>{{ row.sku }}</td><td>{{ row.status }}</td>
+                    <td>{{ row.error_code|default('—') }}</td><td>{{ row.product_id|default('—') }}</td></tr>
+                {% else %}<tr><td colspan="5">Рядків немає.</td></tr>{% endfor %}</tbody>
+            </table></div>
+        </section>
+        {% if batch.state == 'staged' and batch.plan_id is empty
+            and (batch.counts.ready|default(0)) == (batch.rows|length) and (batch.rows|length) > 0 %}
+            <section class="cos-panel">
+                <h2>Запропонувати канонічний Goal/Plan</h2>
+                <p>Це лише пропозиція. Запуск, Approval та застосування товарів відбудуться окремо в Goal Workspace.</p>
+                <form method="post" action="/product-management/import/{{ batch.batch_id }}/propose" class="cos-page__stack">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <input type="hidden" name="digest" value="{{ batch.digest }}">
+                    <input type="hidden" name="rows_digest" value="{{ batch.rows_digest }}">
+                    <button class="btn btn-primary" type="submit">Запропонувати Plan для незалежного схвалення</button>
+                </form>
+            </section>
+        {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

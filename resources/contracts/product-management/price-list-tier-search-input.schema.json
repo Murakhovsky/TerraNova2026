@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Product Management price-list-tier-search input V1",
+  "type": "object",
+  "required": [
+    "list_id",
+    "variant_id"
+  ],
+  "properties": {
+    "list_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "variant_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100
+    },
+    "offset": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000000
+    },
+    "min_quantity": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,13})(\\.[0-9]{1,6})?$"
+    }
+  },
+  "additionalProperties": false
+}

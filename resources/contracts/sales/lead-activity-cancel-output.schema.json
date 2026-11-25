@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "target_type": {
+      "type": "string",
+      "enum": [
+        "lead",
+        "deal"
+      ]
+    },
+    "target_id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "activity_id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "completed",
+        "cancelled"
+      ]
+    },
+    "replayed": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "target_type",
+    "target_id",
+    "activity_id",
+    "status",
+    "replayed"
+  ],
+  "additionalProperties": false
+}

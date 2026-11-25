@@ -40,8 +40,8 @@ if ($property->steps[0]->capability !== 'property.intake' || $property->steps[0]
 }
 
 $sales = $registry->get('sales.lead-to-managed-case');
-if (!$sales instanceof ProcessDefinition || $sales->steps[0]->capability !== null || $sales->steps[0]->capabilityGap !== 'missing-domain-capability') {
-    throw new RuntimeException('Explicit capability gap was not preserved by Kernel hydration.');
+if (!$sales instanceof ProcessDefinition || $sales->steps[0]->capability !== 'sales.lead.intake' || $sales->steps[0]->capabilityGap !== null) {
+    throw new RuntimeException('Resolved Sales intake capability was not preserved by Kernel hydration.');
 }
 
 $crossDomain = $registry->get('sales.request-to-property-match');

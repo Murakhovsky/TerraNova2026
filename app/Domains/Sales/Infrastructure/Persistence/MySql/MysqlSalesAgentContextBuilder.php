@@ -30,7 +30,7 @@ final readonly class MysqlSalesAgentContextBuilder implements AgentContextBuilde
             . 'WHERE c.id=:id AND c.organization_id=:organization_id LIMIT 1', ['id'=>$invocation->subjectId,'organization_id'=>$invocation->organizationId]);
         if ($deal === null) throw new RuntimeException('Sales agent subject was not found.');
         $scope=['id'=>$invocation->subjectId,'organization_id'=>$invocation->organizationId];
-        $activities=$this->all('SELECT activity_type,title,LEFT(body,2000) body,due_at,completed_at,created_at FROM tn_client_case_activities '
+        $activities=$this->all('SELECT activity_type,title,LEFT(body,2000) body,due_at,completed_at,cancelled_at,created_at FROM tn_client_case_activities '
             . 'WHERE client_case_id=:id AND organization_id=:organization_id AND created_at>=NOW()-INTERVAL 180 DAY ORDER BY created_at DESC LIMIT 30',$scope);
         $communications=$this->all('SELECT channel,direction,LEFT(body,2000) body,occurred_at FROM sales_communications '
             . 'WHERE deal_id=:id AND organization_id=:organization_id AND occurred_at>=NOW()-INTERVAL 90 DAY ORDER BY occurred_at DESC LIMIT 20',$scope);

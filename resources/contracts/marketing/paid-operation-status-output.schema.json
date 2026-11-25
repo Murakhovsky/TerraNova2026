@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "plan_id": {
+      "type": "string",
+      "pattern": "^mkpl-[a-f0-9]{24}$"
+    },
+    "plan_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "configuration_hash": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "profile_configured": {
+      "type": "boolean"
+    },
+    "activation_configured": {
+      "type": "boolean"
+    },
+    "provider_cap_verified": {
+      "type": "boolean",
+      "const": false
+    },
+    "operations": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": [
+              "DEPLOY_PAUSED",
+              "ACTIVATE",
+              "PAUSE",
+              "CREATE_CAMPAIGN",
+              "CREATE_ADSET",
+              "CREATE_AD",
+              "ACTIVATE_AD",
+              "ACTIVATE_ADSET",
+              "ACTIVATE_CAMPAIGN",
+              "PAUSE_CAMPAIGN"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "STARTED",
+              "CONFIRMED",
+              "UNCERTAIN"
+            ]
+          },
+          "provider_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]{1,30}$"
+          },
+          "action_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          }
+        },
+        "required": [
+          "operation",
+          "state",
+          "provider_id",
+          "action_id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "manual_reconciliation_required": {
+      "type": "boolean"
+    },
+    "live_verified": {
+      "type": "boolean",
+      "const": false
+    },
+    "finance_settled": {
+      "type": "boolean",
+      "const": false
+    },
+    "special_ad_categories": {
+      "type": "array",
+      "maxItems": 4,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "HOUSING",
+          "EMPLOYMENT",
+          "CREDIT",
+          "FINANCIAL_PRODUCTS_SERVICES"
+        ]
+      }
+    },
+    "special_ad_category_country": {
+      "type": "array",
+      "maxItems": 20,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Z]{2}$"
+      }
+    }
+  },
+  "required": [
+    "plan_id",
+    "plan_hash",
+    "configuration_hash",
+    "profile_configured",
+    "activation_configured",
+    "provider_cap_verified",
+    "operations",
+    "manual_reconciliation_required",
+    "live_verified",
+    "finance_settled",
+    "special_ad_categories",
+    "special_ad_category_country"
+  ],
+  "additionalProperties": false
+}

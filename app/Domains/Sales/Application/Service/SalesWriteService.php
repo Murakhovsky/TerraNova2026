@@ -43,16 +43,17 @@ final readonly class SalesWriteService implements SalesWriteServiceInterface
     ) {
     }
 
-    public function receivePublicLead(array $input,string $sourcePage): ClientCaseCommandResult
+    public function receivePublicLead(array $input,string $sourcePage,?int $actorId=null,?string $correlationId=null): ClientCaseCommandResult
     {
-        $result=$this->publicLeads->execute($input,$sourcePage);
+        $result=$this->publicLeads->execute($input,$sourcePage,$actorId,$correlationId);
         return $result->ok
-            ? ClientCaseCommandResult::success($result->code,['lead_id'=>$result->leadId])
+            ? ClientCaseCommandResult::success($result->code,['lead_id'=>$result->leadId,...($actorId===null?[]:['replayed'=>$result->replayed])])
             : ClientCaseCommandResult::failure($result->code);
     }
     public function createOpportunity(array $input,int $actorId): ClientCaseCommandResult { return $this->cases->create($input,['id'=>$actorId]); }
     public function updateOpportunity(int $opportunityId,array $input,int $actorId): ClientCaseCommandResult { return $this->cases->update($opportunityId,$input,['id'=>$actorId]); }
     public function attachInboundRequest(int $opportunityId,int $leadId,int $actorId): ClientCaseCommandResult { return $this->inbound->attachRequest($opportunityId,$leadId,['id'=>$actorId]); }
+    public function addOpportunityPropertyMatch(int $caseId,int $propertyId,array $input,int $actorId):ClientCaseCommandResult { return $this->cases->addPropertyMatch($caseId,$propertyId,$input,['id'=>$actorId]); }
     public function updateOpportunityPropertyMatch(int $matchId,array $input,int $actorId): ClientCaseCommandResult { return $this->cases->updatePropertyMatch($matchId,$input,['id'=>$actorId]); }
 
     public function createLead(array $input, int $actorId, string $correlationId, string $idempotencyKey): ClientCaseCommandResult
@@ -60,13 +61,6 @@ final readonly class SalesWriteService implements SalesWriteServiceInterface
         $idempotencyKey = trim($idempotencyKey);
         if ($idempotencyKey === '' || mb_strlen($idempotencyKey) > 191) {
             return ClientCaseCommandResult::failure('idempotency_key_required');
-        }
-
-        $existingMutation = $this->receipts->find($this->organizationId, self::CREATE_LEAD_OPERATION, $idempotencyKey);
-        if ($existingMutation !== null) {
-            return ctype_digit($existingMutation)
-                ? ClientCaseCommandResult::success('duplicate', ['lead_id' => (int) $existingMutation])
-                : ClientCaseCommandResult::failure('idempotency_conflict');
         }
 
         $name = trim((string) ($input['full_name'] ?? $input['name'] ?? ''));
@@ -90,18 +84,35 @@ final readonly class SalesWriteService implements SalesWriteServiceInterface
             return ClientCaseCommandResult::failure('invalid_owner');
         }
 
+        $propertyId = $this->positiveInt($input['property_id'] ?? null);
+        if ($propertyId !== null && $this->commands->property($propertyId) === null) {
+            return ClientCaseCommandResult::failure('invalid_property');
+        }
+
+        $lead = [
+            'person_id' => null,
+            'client_case_id' => null,
+            'property_id' => $propertyId,
+            'full_name' => mb_substr($name, 0, 160),
+            'phone' => $phone !== '' ? mb_substr($phone, 0, 50) : null,
+            'email' => $email !== '' ? mb_substr($email, 0, 160) : null,
+            'role' => $this->role((string) ($input['role'] ?? 'buyer')),
+            'deal_type' => $this->dealType((string) ($input['deal_type'] ?? 'consultation')),
+            'message' => ($message = trim((string) ($input['message'] ?? ''))) !== '' ? mb_substr($message, 0, 4000) : null,
+            'source_page' => mb_substr(trim((string) ($input['source'] ?? 'manager-api')), 0, 255),
+            'request_intent' => $this->requestIntent((string) ($input['request_intent'] ?? 'general_contact')),
+            'manager_note' => ($note = trim((string) ($input['manager_note'] ?? ''))) !== '' ? mb_substr($note, 0, 4000) : null,
+            'assigned_user_id' => $ownerId,
+            'next_contact_at' => $this->dateTimeOrNull($input['next_contact_at'] ?? null),
+        ];
+
+        // Store a digest rather than a second copy of contact data. The existing
+        // operation namespace is preserved so legacy keys cannot create a new lead.
+        $fingerprint = hash('sha256', json_encode(['actor_id' => $actorId, 'lead' => $lead], JSON_THROW_ON_ERROR));
         $pendingMutationId = 'pending:' . bin2hex(random_bytes(16));
 
         return $this->transactions->transactional(function () use (
-            $input,
-            $actorId,
-            $correlationId,
-            $idempotencyKey,
-            $name,
-            $phone,
-            $email,
-            $ownerId,
-            $pendingMutationId,
+            $actorId, $correlationId, $idempotencyKey, $lead, $fingerprint, $pendingMutationId,
         ): ClientCaseCommandResult {
             if (!$this->receipts->claim(
                 $this->organizationId,
@@ -110,34 +121,17 @@ final readonly class SalesWriteService implements SalesWriteServiceInterface
                 $pendingMutationId,
             )) {
                 $existing = $this->receipts->find($this->organizationId, self::CREATE_LEAD_OPERATION, $idempotencyKey);
-                return $existing !== null && ctype_digit($existing)
-                    ? ClientCaseCommandResult::success('duplicate', ['lead_id' => (int) $existing])
-                    : ClientCaseCommandResult::failure('idempotency_conflict');
+                return $this->replayCreatedLead($existing, $fingerprint);
             }
 
-            $leadId = $this->leads->create($this->organizationId, [
-                'person_id' => null,
-                'client_case_id' => null,
-                'property_id' => $this->positiveInt($input['property_id'] ?? null),
-                'full_name' => mb_substr($name, 0, 160),
-                'phone' => $phone !== '' ? mb_substr($phone, 0, 50) : null,
-                'email' => $email !== '' ? mb_substr($email, 0, 160) : null,
-                'role' => $this->role((string) ($input['role'] ?? 'buyer')),
-                'deal_type' => $this->dealType((string) ($input['deal_type'] ?? 'consultation')),
-                'message' => ($message = trim((string) ($input['message'] ?? ''))) !== '' ? mb_substr($message, 0, 4000) : null,
-                'source_page' => mb_substr(trim((string) ($input['source'] ?? 'manager-api')), 0, 255),
-                'request_intent' => $this->requestIntent((string) ($input['request_intent'] ?? 'general_contact')),
-                'manager_note' => ($note = trim((string) ($input['manager_note'] ?? ''))) !== '' ? mb_substr($note, 0, 4000) : null,
-                'assigned_user_id' => $ownerId,
-                'next_contact_at' => $this->dateTimeOrNull($input['next_contact_at'] ?? null),
-            ]);
+            $leadId = $this->leads->create($this->organizationId, $lead);
 
             if (!$this->receipts->complete(
                 $this->organizationId,
                 self::CREATE_LEAD_OPERATION,
                 $idempotencyKey,
                 $pendingMutationId,
-                (string) $leadId,
+                $fingerprint . ':' . $leadId,
             )) {
                 throw new RuntimeException('Lead mutation receipt could not be completed.');
             }
@@ -149,15 +143,33 @@ final readonly class SalesWriteService implements SalesWriteServiceInterface
                 (string) $leadId,
                 [
                     'client_case_id' => null,
-                    'source_page' => (string) ($input['source'] ?? 'manager-api'),
+                    'source_page' => $lead['source_page'],
                     'status' => LeadStatus::New->value,
-                    'assigned_user_id' => $ownerId,
+                    'assigned_user_id' => $lead['assigned_user_id'],
                 ],
                 new EventMetadata($correlationId !== '' ? $correlationId : $eventId, null, 'USER', (string) $actorId),
             ));
 
             return ClientCaseCommandResult::success('created', ['lead_id' => $leadId]);
         });
+    }
+
+    private function replayCreatedLead(?string $receipt, string $fingerprint): ClientCaseCommandResult
+    {
+        // Historical numeric receipts cannot prove payload identity. Fail closed
+        // rather than acknowledging a different request or creating a duplicate.
+        if ($receipt === null || preg_match('/^([a-f0-9]{64}):([1-9][0-9]*)$/D', $receipt, $matches) !== 1
+            || !hash_equals($matches[1], $fingerprint)
+            || (string)(int)$matches[2] !== $matches[2]) {
+            return ClientCaseCommandResult::failure('idempotency_conflict');
+        }
+        $leadId = (int)$matches[2];
+        $row = $this->commands->lockInboundRequest($this->organizationId, $leadId);
+        if ($row === null || ($row['organization_id'] ?? null) !== $this->organizationId
+            || !in_array($row['id'] ?? null, [$leadId, (string)$leadId], true)) {
+            return ClientCaseCommandResult::failure('idempotency_conflict');
+        }
+        return ClientCaseCommandResult::success('duplicate', ['lead_id' => $leadId]);
     }
 
     public function updateLead(int $leadId, array $input, int $actorId, string $correlationId): ClientCaseCommandResult
@@ -191,6 +203,10 @@ final readonly class SalesWriteService implements SalesWriteServiceInterface
         }
         if ($changes === []) return ClientCaseCommandResult::failure('no_changes');
 
+        if (array_key_exists('expected_status',$input)) {
+            if (array_diff(array_keys($input),['expected_status','status'])!==[] || !is_string($input['expected_status']) || !isset($changes['status'])) return ClientCaseCommandResult::failure('invalid_qualification_transition');
+            $changes['expected_status']=$input['expected_status'];
+        }
         $changes['activity_type'] = SalesActivityType::StatusChange->value;
         $changes['activity_title'] = 'Lead updated from Symfony API';
         $changes['activity_body'] = mb_substr(trim((string) ($input['note'] ?? '')), 0, 4000);

@@ -82,7 +82,7 @@ final readonly class PublicPropertyDetailController
             $result = $this->commands->dispatch(new ReceivePublicLeadCommand(
                 OrganizationId::fromString($this->organizationId),
                 $request->request->all(),
-                $request->getRequestUri(),
+                $request->getPathInfo(),
             ));
 
             if (!$result instanceof SalesMutationResult) {
@@ -137,14 +137,13 @@ final readonly class PublicPropertyDetailController
                     $state,
                 ),
                 'detail' => $detail,
+                'leadSubmissionId' => bin2hex(random_bytes(16)),
                 'error' => $error,
             ]),
             $status,
             [
                 'Content-Type' => 'text/html; charset=UTF-8',
-                'Cache-Control' => $request->isMethod('GET')
-                    ? 'public, max-age=60'
-                    : 'no-store, private',
+                'Cache-Control' => 'no-store, private',
             ],
         );
     }

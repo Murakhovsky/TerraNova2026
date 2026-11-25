@@ -58,8 +58,21 @@ final readonly class MysqlClientCaseCommandRepository implements ClientCaseComma
 
     public function inboundRequest(string $organizationId, int $requestId): ?array
     {
+        return $this->readInboundRequest($organizationId, $requestId, false);
+    }
+
+    public function lockInboundRequest(string $organizationId, int $requestId): ?array
+    {
+        if (!$this->connection->inTransaction()) {
+            throw new \LogicException('Inbound request lock requires an active transaction.');
+        }
+        return $this->readInboundRequest($organizationId, $requestId, true);
+    }
+
+    private function readInboundRequest(string $organizationId, int $requestId, bool $lock): ?array
+    {
         $request = $this->one('SELECT l.* FROM tn_leads l
-            WHERE l.id = :id AND l.organization_id = :organization_id LIMIT 1',
+            WHERE l.id = :id AND l.organization_id = :organization_id LIMIT 1' . ($lock ? ' FOR UPDATE' : ''),
             ['id' => $requestId, 'organization_id' => $organizationId]);
         if ($request === null) return null;
         $property = $this->properties->property((int) ($request['property_id'] ?? 0));
@@ -73,12 +86,12 @@ final readonly class MysqlClientCaseCommandRepository implements ClientCaseComma
     public function findPerson(string $organizationId, ?string $email, ?string $phone): ?array
     {
         if ($email !== null && $email !== '') {
-            $person = $this->one('SELECT id FROM tn_people WHERE email = :email AND organization_id = :organization_id LIMIT 1',
+            $person = $this->one('SELECT id FROM tn_people WHERE email = :email AND organization_id = :organization_id ORDER BY id LIMIT 1'.($this->connection->inTransaction()?' FOR UPDATE':''),
                 ['email' => $email, 'organization_id' => $organizationId]);
             if ($person) return $person;
         }
         if ($phone !== null && $phone !== '') {
-            return $this->one('SELECT id FROM tn_people WHERE phone = :phone AND organization_id = :organization_id LIMIT 1',
+            return $this->one('SELECT id FROM tn_people WHERE phone = :phone AND organization_id = :organization_id ORDER BY id LIMIT 1'.($this->connection->inTransaction()?' FOR UPDATE':''),
                 ['phone' => $phone, 'organization_id' => $organizationId]);
         }
         return null;
@@ -114,6 +127,7 @@ final readonly class MysqlClientCaseCommandRepository implements ClientCaseComma
 
     public function createCase(string $organizationId, int $personId, array $case): int
     {
+        if (($case['status']??null)!=='active' || ($case['closed_at']??null)!==null) throw new \DomainException('New deals must begin in the active initial stage.');
         $initial = $this->initialStage($organizationId);
         $statement = $this->connection->prepare('INSERT INTO tn_client_cases
             (organization_id,public_id,person_id,type,title,status,stage,pipeline_id,stage_id,probability,priority,assigned_user_id,source,
@@ -140,10 +154,10 @@ final readonly class MysqlClientCaseCommandRepository implements ClientCaseComma
         $statement = $this->connection->prepare('UPDATE tn_client_cases SET
             title=:title,type=:type,priority=:priority,
             source=:source,property_type_id=:property_type_id,location_id=:location_id,budget_min=:budget_min,
-            budget_max=:budget_max,currency=:currency,area_min=:area_min,area_max=:area_max,description=:description,
+            budget_max=:budget_max,area_min=:area_min,area_max=:area_max,description=:description,
             parameters_json=:parameters_json,next_contact_at=:next_contact_at,updated_at=NOW()
             WHERE id=:id AND organization_id=:organization_id');
-        $statement->execute(['id' => $caseId, 'organization_id' => $organizationId] + array_diff_key($case, array_flip(['stage','stage_id','pipeline_id','status','closed_at','assigned_user_id'])));
+        $statement->execute(['id' => $caseId, 'organization_id' => $organizationId] + array_diff_key($case, array_flip(['stage','stage_id','pipeline_id','status','closed_at','assigned_user_id','currency'])));
         return $this->exists('tn_client_cases', $organizationId, $caseId);
     }
 

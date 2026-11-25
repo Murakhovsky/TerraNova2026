@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Sales\Query;
 
 use Domains\Sales\Application\Contract\SalesTeamAdministrationInterface;
+use App\Security\SalesRequestScope;
 use Domains\Sales\Application\Contract\SalesWorkspaceOperationalReadModelInterface;
 use Kernel\Application\Query\QueryHandlerInterface;
 use Kernel\Operations\Contract\OperationsReadModelInterface;
@@ -16,6 +17,7 @@ final readonly class GetSalesDealWorkspaceQueryHandler implements QueryHandlerIn
         private SalesWorkspaceOperationalReadModelInterface $sales,
         private SalesTeamAdministrationInterface $teams,
         private OperationsReadModelInterface $operations,
+        private SalesRequestScope $scope,
     ) {
     }
 
@@ -23,6 +25,7 @@ final readonly class GetSalesDealWorkspaceQueryHandler implements QueryHandlerIn
     public function __invoke(GetSalesDealWorkspaceQuery $query): ?array
     {
         $organizationId = $query->organizationId->value();
+        if (!$this->scope->entity($organizationId,'deal',$query->dealId)) return null;
         $deal = $this->sales->deal($organizationId, $query->dealId);
 
         if ($deal === null) {
@@ -36,14 +39,16 @@ final readonly class GetSalesDealWorkspaceQueryHandler implements QueryHandlerIn
             // Intelligence is an optional read projection; the Deal Workspace remains usable without it.
         }
 
-        return [
+        $owner=$this->scope->searchOwner($organizationId);
+        $result=[
             'deal' => $deal,
             'timeline' => $this->sales->timeline($organizationId, $query->dealId, 100),
             'communications' => $this->sales->communications($organizationId, $query->dealId, 50),
-            'approvals' => $this->sales->approvals($organizationId, $query->dealId, null, 50),
-            'pipelines' => $this->sales->pipelines($organizationId),
-            'owners' => $this->teams->users($organizationId),
+            'approvals' => $owner===null?$this->sales->approvals($organizationId, $query->dealId, null, 50):[],
+            'pipelines' => $this->sales->pipelines($organizationId,$owner),
+            'owners' => $this->scope->ownerOptions($organizationId,$this->teams->users($organizationId)),
             'intelligence' => is_array($intelligence) ? $intelligence : [],
         ];
+        return $this->scope->entity($organizationId,'deal',$query->dealId)?$result:null;
     }
 }

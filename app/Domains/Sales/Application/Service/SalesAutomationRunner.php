@@ -11,6 +11,7 @@ final readonly class SalesAutomationRunner
     public function __construct(
         private SalesAttentionRepositoryInterface $attention,
         private SalesMonitoringService $monitoring,
+        private ?SalesActivityReminderService $reminders=null,
     ) {
     }
 
@@ -33,6 +34,7 @@ final readonly class SalesAutomationRunner
 
         foreach ($organizations as $organization) {
             $result['organizations'][$organization] = [
+                'activity_reminders_announced' => $this->reminders?->scan($organization,$now,$limit)??0,
                 'no_activity_detected' => $this->monitoring->detectNoActivity(
                     $organization,
                     $now,

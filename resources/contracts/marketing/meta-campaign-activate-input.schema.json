@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "target_type": {
+      "const": "marketing_paid_launch_plan",
+      "type": "string"
+    },
+    "target_id": {
+      "type": "string",
+      "pattern": "^mkpl-[a-f0-9]{24}$"
+    },
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "plan_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "configuration_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "envelope_id": {
+          "type": "string",
+          "pattern": "^finb-[a-f0-9]{24}$"
+        },
+        "reservation_id": {
+          "type": "string",
+          "pattern": "^finr-[a-f0-9]{24}$"
+        },
+        "finance_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2000000000
+        }
+      },
+      "required": [
+        "plan_hash",
+        "configuration_hash",
+        "envelope_id",
+        "reservation_id",
+        "finance_revision"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "target_type",
+    "target_id",
+    "parameters"
+  ],
+  "additionalProperties": false
+}

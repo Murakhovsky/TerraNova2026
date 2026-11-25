@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "owner_id": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "owner_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "next_action_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pipeline_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "stage_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "deal_value": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "currency": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "owner_id",
+          "status",
+          "created_at",
+          "next_action_at",
+          "pipeline_id",
+          "stage_id",
+          "deal_value",
+          "currency"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "offset": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "has_more": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "owner_id",
+    "items",
+    "limit",
+    "offset",
+    "has_more"
+  ],
+  "additionalProperties": false
+}

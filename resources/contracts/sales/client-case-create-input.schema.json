@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SalesClientCaseCreateInputV1",
+  "type": "object",
+  "required": [
+    "lead_id"
+  ],
+  "properties": {
+    "lead_id": {
+      "type": "integer",
+      "minimum": 1
+    }
+  },
+  "additionalProperties": false
+}

@@ -283,6 +283,36 @@ final readonly class ShopifyObservationStore
         return true;
     }
 
+    /** Bounded redacted delivery pointers, never customer payload. */
+    public function pendingOrderDeliveries(string $org,string $conn):array
+    {
+        $this->connection($org,$conn);
+        return $this->query("SELECT delivery_id,resource_gid AS external_order_id,topic FROM pm_webhook_inbox WHERE organization_id=? AND connection_id=? AND state='pending_reconciliation' AND resource_gid IS NOT NULL AND topic LIKE 'orders/%' ORDER BY received_at,delivery_id LIMIT 25",[$org,$conn])->fetchAll(PDO::FETCH_ASSOC);
+    }
+    /** Keyset scan of verified pointers; pending deliveries before cursor remain eligible in the next run. */
+    public function pendingOrderDeliveryPage(string $org,string $conn,?string $cursor):array
+    {
+        $this->connection($org,$conn);
+        if($cursor!==null&&($cursor===''||strlen($cursor)>190))throw new DomainException('Invalid delivery cursor.');
+        $rows=$this->query("SELECT delivery_id,resource_gid AS external_order_id,topic FROM pm_webhook_inbox WHERE organization_id=? AND connection_id=? AND state='pending_reconciliation' AND resource_gid IS NOT NULL AND topic LIKE 'orders/%'".($cursor===null?'':' AND delivery_id>?')." ORDER BY delivery_id LIMIT 26",$cursor===null?[$org,$conn]:[$org,$conn,$cursor])->fetchAll(PDO::FETCH_ASSOC);
+        $more=count($rows)>25;$rows=array_slice($rows,0,25);
+        return ['deliveries'=>$rows,'next_cursor'=>$more?$rows[24]['delivery_id']:null];
+    }
+    public function assertOrderDelivery(string $org,string $conn,string $delivery,string $externalId):void
+    {
+        if($delivery===''||strlen($delivery)>190||!preg_match('#^gid://shopify/Order/[1-9][0-9]{0,18}$#D',$externalId))throw new DomainException('Invalid order delivery identity.');
+        $row=$this->query("SELECT state,resource_gid FROM pm_webhook_inbox WHERE organization_id=? AND connection_id=? AND delivery_id=? AND topic LIKE 'orders/%'",[$org,$conn,$delivery])->fetch(PDO::FETCH_ASSOC);
+        if($row===false||$row['resource_gid']!==$externalId||!in_array($row['state'],['pending_reconciliation','sales_order_observed'],true))throw new DomainException('Verified order delivery unavailable.');
+    }
+    /** Only acknowledges Sales observation, not payment, inventory, or lifecycle completion. */
+    public function acknowledgeOrderDelivery(string $org,string $conn,string $delivery,string $externalId):void
+    {
+        if(!$this->connection->inTransaction())throw new DomainException('Order delivery acknowledgement requires native transaction.');
+        $this->assertOrderDelivery($org,$conn,$delivery,$externalId);
+        $this->query("UPDATE pm_webhook_inbox SET state='sales_order_observed' WHERE organization_id=? AND connection_id=? AND delivery_id=? AND resource_gid=? AND state='pending_reconciliation'",[$org,$conn,$delivery,$externalId]);
+        $this->assertOrderDelivery($org,$conn,$delivery,$externalId);
+    }
+
     /** @param list<mixed> $params */
     private function query(string $sql,array $params): \PDOStatement
     {

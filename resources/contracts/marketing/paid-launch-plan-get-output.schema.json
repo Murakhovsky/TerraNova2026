@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "campaign_id": {
+      "type": "string",
+      "pattern": "^mkt-[a-f0-9]{24}$"
+    },
+    "campaign_revision": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2000000000
+    },
+    "adset_id": {
+      "type": "string",
+      "pattern": "^mkas-[a-f0-9]{24}$"
+    },
+    "adset_revision": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2000000000
+    },
+    "account_id": {
+      "type": "string",
+      "pattern": "^mads-[a-f0-9]{24}$"
+    },
+    "account_revision": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2000000000
+    },
+    "period_start": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "period_end": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^mkpl-[a-f0-9]{24}$"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 190
+    },
+    "plan_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "adset_content_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "currency": {
+      "type": "string",
+      "enum": [
+        "USD",
+        "EUR",
+        "UAH",
+        "PLN"
+      ]
+    },
+    "account_timezone": {
+      "type": "string"
+    },
+    "days": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 31
+    },
+    "daily_minor": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000000000000
+    },
+    "lifetime_minor": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000000000000
+    },
+    "finance_operation_key": {
+      "type": "string",
+      "pattern": "^mkt-paid:mkpl-[a-f0-9]{24}:activate$"
+    },
+    "state": {
+      "type": "string",
+      "const": "FUNDING_CANDIDATE"
+    },
+    "provider_write_authorized": {
+      "type": "boolean",
+      "const": false
+    },
+    "paid_activation_approved": {
+      "type": "boolean",
+      "const": false
+    }
+  },
+  "required": [
+    "campaign_id",
+    "campaign_revision",
+    "adset_id",
+    "adset_revision",
+    "account_id",
+    "account_revision",
+    "period_start",
+    "period_end",
+    "id",
+    "actor_id",
+    "plan_hash",
+    "adset_content_hash",
+    "created_at",
+    "currency",
+    "account_timezone",
+    "days",
+    "daily_minor",
+    "lifetime_minor",
+    "finance_operation_key",
+    "state",
+    "provider_write_authorized",
+    "paid_activation_approved"
+  ],
+  "additionalProperties": false
+}

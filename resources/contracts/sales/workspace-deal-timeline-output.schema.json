@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "found": {
+      "type": "boolean"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "item_type": {
+            "type": "string",
+            "enum": [
+              "ACTIVITY",
+              "COMMUNICATION",
+              "EVENT",
+              "ACTION"
+            ]
+          },
+          "subtype": {
+            "type": "string"
+          },
+          "occurred_at": {
+            "type": "string"
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "item_type",
+          "subtype",
+          "occurred_at",
+          "status"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "found",
+    "items"
+  ],
+  "additionalProperties": false
+}

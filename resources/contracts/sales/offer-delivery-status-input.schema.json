@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "offer_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "terms_version": {
+      "type": "integer",
+      "minimum": 1
+    }
+  },
+  "required": [
+    "offer_id",
+    "terms_version"
+  ],
+  "additionalProperties": false
+}

@@ -32,13 +32,14 @@ final readonly class ProcessCrmInbox
     ) {
     }
 
-    public function execute(string $organizationId, string $inboxId, string $workerId): void
+    public function execute(string $organizationId, string $inboxId, string $workerId, ?string $expectedRevision = null): bool
     {
-        $item = $this->inbox->claim($organizationId, $inboxId, $workerId);
-        if ($item === null) return;
+        $item = $this->inbox->claim($organizationId, $inboxId, $workerId, $expectedRevision);
+        if ($item === null) return false;
 
         try {
-            $this->transactions->transactional(function () use ($item): void {
+            return $this->transactions->transactional(function () use ($item): bool {
+                if (!$this->inbox->lockClaim($item)) return false;
                 $applied = $this->applier->apply($item);
                 $eventType = trim((string) ($applied['event_type'] ?? ''));
                 $aggregateType = trim((string) ($applied['aggregate_type'] ?? ''));
@@ -112,7 +113,7 @@ final readonly class ProcessCrmInbox
                     $stageHandled = $eventType === 'sales.deal.stage_changed';
                 }
 
-                if (!$stageHandled && !$messageHandled) {
+                if (!$stageHandled && !$messageHandled && ($applied['no_change'] ?? false) !== true) {
                     $this->events->publish(new DomainEvent(
                         bin2hex(random_bytes(16)),
                         $item->organizationId,
@@ -125,6 +126,7 @@ final readonly class ProcessCrmInbox
                     ));
                 }
                 $this->inbox->complete($item);
+                return true;
             });
         } catch (Throwable $error) {
             try {

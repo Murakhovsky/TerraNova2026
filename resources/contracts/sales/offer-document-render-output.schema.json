@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "offer_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "terms_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "terms_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "document_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "subject": {
+      "type": "string"
+    },
+    "text": {
+      "type": "string"
+    },
+    "html": {
+      "type": "string"
+    },
+    "recipient_hash": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "offer_id",
+    "revision",
+    "terms_version",
+    "terms_hash",
+    "document_hash",
+    "subject",
+    "text",
+    "html",
+    "recipient_hash"
+  ],
+  "additionalProperties": false
+}

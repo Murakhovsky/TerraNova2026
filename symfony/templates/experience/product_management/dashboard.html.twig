@@ -1,0 +1,57 @@
+<section id="pm-dashboard" class="cos-panel">
+    <h2>Стан товарного бізнесу</h2>
+    <p>Поточний нативний каталог і склад COS. Дані без Shopify. Окремі звіти мають власний момент читання.</p>
+    <div class="cos-kpi-strip">
+        <div><small>Товари</small><strong>{{ summary.metrics.products_total }}</strong><small>Активні: {{ summary.metrics.products_active }} · Чернетки: {{ summary.metrics.products_draft }} · Архів: {{ summary.metrics.products_archived }}</small></div>
+        <div><small>SKU (неархівні)</small><strong>{{ summary.metrics.active_skus }}</strong><small>Складські: {{ summary.metrics.tracked_skus }}</small></div>
+        <div><small>Недоступні SKU</small><strong>{{ summary.metrics.unavailable_skus }}</strong><small>З резервами: {{ summary.metrics.reserved_skus }}</small></div>
+        <div><small>Активні склади</small><strong>{{ summary.metrics.active_locations }}</strong><small>Облікові позиції: {{ summary.metrics.stock_positions }}</small></div>
+    </div>
+    <div class="cos-kpi-strip">
+        <div><small>Без базової ціни {{ summary.currency }}</small><strong>{{ summary.metrics.unpriced_skus }}</strong></div>
+        <div><small>Не заповнені обов'язкові атрибути</small><strong>{{ summary.metrics.products_missing_required }}</strong></div>
+        <div><small>Товари без медіа</small><strong>{{ summary.metrics.products_without_media }}</strong></div>
+        <div><small>Запас за поточною базовою ціною</small><strong>{{ summary.priced_stock_at_base }} {{ summary.currency }}</strong><small>{{ summary.value_complete ? 'Усі ненульові запаси мають ціну' : 'Неповна оцінка: SKU без ціни ' ~ summary.metrics.unpriced_stock_skus }}</small></div>
+    </div>
+    <p>Цінова оцінка запасів не є собівартістю або бухгалтерською вартістю. Немає автоматичного FX. Кількості різних SKU не сумуються між одиницями вимірювання.</p>
+</section>
+<section class="cos-panel" id="pm-report">
+    <h2>Аналітичні звіти</h2>
+    <form method="get" action="/product-management/dashboard#pm-report" class="cos-toolbar">
+        <label>Звіт <select name="tab" class="form-select">
+          {% for key,label in {'stock':'Запаси та ризики','movement':'Рух та фізична оборотність','quality':'Якість каталогу','audit':'Звірка ledger'} %}<option value="{{ key }}" {% if filters.tab == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select></label>
+        <label>Валюта <input name="currency" class="form-control" maxlength="3" pattern="[A-Za-z]{3}" value="{{ filters.currency }}"></label>
+        <label>Склад <select name="location" class="form-select"><option value="">Усі облікові позиції</option>{% for l in locations %}{% if l.status == 'active' %}<option value="{{ l.location_id }}" {% if filters.location == l.location_id %}selected{% endif %}>{{ l.code }} · {{ l.name }}</option>{% endif %}{% endfor %}</select></label>
+        <label>Ризик <select name="risk" class="form-select">{% for key,label in {'all':'Усі','unavailable':'Немає доступного','low':'Малий залишок','high':'Великий залишок','reserved':'Зарезервовано'} %}<option value="{{ key }}" {% if filters.risk == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+        <label>Нижня межа <input name="low" class="form-control" inputmode="decimal" value="{{ filters.low }}"></label>
+        <label>Верхня межа <input name="high" class="form-control" inputmode="decimal" value="{{ filters.high }}"></label>
+        <label>Від UTC <input type="date" name="from" class="form-control" value="{{ filters.from }}"></label>
+        <label>До (не включно) UTC <input type="date" name="to" class="form-control" value="{{ filters.to }}"></label>
+        <label>Якість <select name="kind" class="form-select">{% for key,label in {'missing_required':'Обов’язкові атрибути','no_media':'Без медіа','no_price':'Без ціни','no_category':'Без категорії'} %}<option value="{{ key }}" {% if filters.kind == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+        <button type="submit" class="btn btn-primary">Показати</button>
+    </form>
+    {% if filters.tab == 'stock' %}
+        <p>Межі в одиницях конкретного SKU, задані оператором, не прогноз попиту. Без вибраного складу тільки наявні облікові позиції; з вибраним складом також неініціалізовані залишки (0).</p>
+        <div class="table-responsive"><table class="table"><thead><tr><th>SKU</th><th>Склад</th><th>Облік</th><th>Резерв</th><th>Доступно</th><th>Од.</th><th>Облік створено</th></tr></thead><tbody>
+        {% for r in report.items %}<tr><td><a href="/product-management/products/{{ r.product_id }}">{{ r.sku }}</a><small> {{ r.name }}</small></td><td><a href="/product-management/stock?variant={{ r.variant_id }}&amp;location={{ r.location_id }}">{{ r.location_code }}</a></td><td>{{ r.on_hand }}</td><td>{{ r.reserved }}</td><td>{{ r.available }}</td><td>{{ r.uom }}</td><td>{{ r.balance_present ? 'Так' : 'Ні' }}</td></tr>{% else %}<tr><td colspan="7">Позицій за фільтром немає.</td></tr>{% endfor %}
+        </tbody></table></div>
+    {% elseif filters.tab == 'movement' %}
+        <p>Фізична оборотність = витрата без міжскладських трансферів / середнє залишків на початок і кінець інтервалу. Це наближення, не коефіцієнт COGS. Рухи не дорівнюють продажам.</p>
+        <div class="table-responsive"><table class="table"><thead><tr><th>SKU / од.</th><th>Початок</th><th>Кінець</th><th>Прихід</th><th>Витрата</th><th>Коригування</th><th>Трансфери</th><th>Рухи</th><th>Оборотність</th></tr></thead><tbody>
+        {% for r in report.items %}<tr><td><a href="/product-management/products/{{ r.product_id }}">{{ r.sku }}</a> · {{ r.uom }}</td><td>{{ r.opening_qty }}</td><td>{{ r.closing_qty }}</td><td>{{ r.receipts }}</td><td>{{ r.issues }}</td><td>{{ r.adjustments }}</td><td>{{ r.transferred }}</td><td>{{ r.movement_count }}</td><td>{{ r.physical_turnover ?? 'Невизначено' }}</td></tr>{% else %}<tr><td colspan="9">Рухів немає.</td></tr>{% endfor %}
+        </tbody></table></div>
+    {% elseif filters.tab == 'quality' %}
+        <div class="table-responsive"><table class="table"><thead><tr><th>Товар</th><th>Не заповнені атрибути</th><th>Медіа</th><th>Категорія</th><th>SKU без ціни</th></tr></thead><tbody>
+        {% for r in report.items %}<tr><td><a href="/product-management/products/{{ r.product_id }}">{{ r.name }}</a></td><td><a href="/product-management/products/{{ r.product_id }}/attributes">{{ r.missing_required }}</a></td><td>{{ r.has_media ? 'Так' : 'Ні' }}</td><td>{{ r.has_category ? 'Так' : 'Ні' }}</td><td>{{ r.unpriced_skus }}</td></tr>{% else %}<tr><td colspan="5">Проблем цього типу не знайдено.</td></tr>{% endfor %}
+        </tbody></table></div>
+    {% else %}
+        <p role="status"><strong>{{ report.status }}</strong> · Перевірено позицій: {{ report.checked_pairs }} · Розбіжностей: {{ report.mismatch_count }}</p>
+        {% if not report.complete %}<p>INCOMPLETE: понад 500 позицій, результат не підтверджує повну звірку.</p>{% endif %}
+        <p>Автоматичне виправлення не дозволене. Розбіжності потребують контрольованої інвентаризації.</p>
+        <div class="table-responsive"><table class="table"><thead><tr><th>SKU / склад</th><th>Облік</th><th>Ledger</th><th>Резерв</th><th>Активні резерви</th></tr></thead><tbody>
+        {% for r in report.mismatches %}<tr><td><a href="/product-management/stock?variant={{ r.variant_id }}&amp;location={{ r.location_id }}">{{ r.variant_id }} / {{ r.location_id }}</a></td><td>{{ r.on_hand }}</td><td>{{ r.ledger_on_hand }}</td><td>{{ r.reserved }}</td><td>{{ r.active_reserved }}</td></tr>{% else %}<tr><td colspan="5">У перевірених позиціях розбіжностей немає.</td></tr>{% endfor %}
+        </tbody></table></div>
+    {% endif %}
+    {% if filters.tab != 'audit' %}<nav class="cos-toolbar">{% if page > 1 %}<a href="?{{ prevQuery }}#pm-report">Попередня</a>{% endif %}<span>Сторінка {{ page }}</span>{% if report.items|length == 30 and page < 333334 %}<a href="?{{ nextQuery }}#pm-report">Наступна</a>{% endif %}</nav>{% endif %}
+</section>

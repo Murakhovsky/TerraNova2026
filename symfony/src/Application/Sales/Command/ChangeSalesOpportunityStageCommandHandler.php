@@ -25,6 +25,7 @@ final readonly class ChangeSalesOpportunityStageCommandHandler implements Comman
 
         if (!$result->successful) {
             $reason = $result->reason ?? 'stage_change_failed';
+            if ($reason === 'sales_access_denied') return SalesMutationResult::failure($reason,'Sales access denied.');
             if ($reason === 'concurrent_stage_change') {
                 return SalesMutationResult::failure(
                     'concurrent_stage_change',

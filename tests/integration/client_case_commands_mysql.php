@@ -132,6 +132,25 @@ try {
         'deal_type' => 'sale', 'message' => 'integration', 'source_page' => '/integration',
     ]);
     assertCommand($commands->inboundRequest($organizationId, $leadId) !== null, 'Inbound request lookup failed.');
+    assertCommand($commands->lockInboundRequest($organizationId, $leadId) !== null, 'Tenant lead lock failed.');
+    assertCommand($commands->lockInboundRequest('missing-tenant-' . $token, $leadId) === null, 'Cross-tenant lead lock exposed state.');
+    $inbound = new \Domains\Sales\Application\Service\SalesInboundService($readModel, $commands, $eventBus, $transactions, $organizationId, $pipelines, $changeStage);
+    $conversionLeadId = $leads->create($organizationId, [
+        'person_id' => null, 'client_case_id' => null, 'property_id' => null,
+        'full_name' => 'Conversion ' . $token, 'phone' => null, 'email' => $token . '@convert.test',
+        'role' => 'buyer', 'deal_type' => 'sale', 'message' => 'integration', 'source_page' => '/integration',
+    ]);
+    $converted = $inbound->createCaseFromRequest($conversionLeadId, [], null, 'conversion-' . $token);
+    $convertedId = (int) ($converted->data['case_id'] ?? 0);
+    assertCommand($converted->ok && $converted->code === 'created' && $convertedId > 0, 'Lead conversion failed.');
+    $replayed = $inbound->createCaseFromRequest($conversionLeadId, [], null, 'replay-' . $token);
+    assertCommand($replayed->ok && $replayed->code === 'already_attached' && ($replayed->data['case_id'] ?? null) === $convertedId, 'Conversion replay created or returned a different case.');
+    assertCommand((int) ($commands->inboundRequest($organizationId, $conversionLeadId)['client_case_id'] ?? 0) === $convertedId, 'Native lead readback disagrees with conversion.');
+    $conversionEvents = $connection->prepare('SELECT COUNT(*) FROM cos_events WHERE organization_id=:org AND aggregate_id=:id AND type=:event_type');
+    $conversionEvents->execute(['org' => $organizationId, 'id' => (string) $convertedId, 'event_type' => 'sales.client_case.created']);
+    assertCommand((int) $conversionEvents->fetchColumn() === 1, 'Conversion replay duplicated case-created event.');
+    assertCommand(!$inbound->attachRequest($caseId, $conversionLeadId)->ok, 'Existing conversion was silently relinked.');
+    assertCommand($inbound->attachRequest($convertedId, $conversionLeadId)->code === 'already_attached', 'Same-case attachment must be a no-op.');
     assertCommand($commands->updateInboundRequest($organizationId, $leadId, [
         'status' => 'contacted', 'assigned_user_id' => null, 'manager_note' => 'contacted',
         'last_contacted_at' => date('Y-m-d H:i:s'), 'next_contact_at' => null,

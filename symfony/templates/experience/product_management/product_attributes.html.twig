@@ -1,0 +1,50 @@
+<section class="cos-panel">
+    <h2>{{ product.name }} · характеристики</h2>
+    <a href="/product-management/products/{{ product.product_id }}">Повернутися до картки товару</a>
+    <p>Набір об'єднує атрибути безпосередньо призначених категорій. Ревізія {{ attributes.revision }}.</p>
+    <div class="table-responsive"><table class="table"><thead><tr><th>Характеристика</th><th>Тип</th><th>Значення</th><th>Якість</th></tr></thead><tbody>
+    {% for d in attributes.items %}<tr><td>{{ d.name }} ({{ d.code }})</td><td>{{ d.value_type }} {{ d.unit }} {% if d.choices %}({{ d.choices|join(', ') }}){% endif %}</td><td>{{ d.value is null ? '—' : d.value|json_encode }}</td><td>{{ d.missing_required ? 'Не заповнено обов’язкове' : '—' }}</td></tr>
+    {% else %}<tr><td colspan="4">Призначте категорію з набором атрибутів.</td></tr>{% endfor %}
+    </tbody></table></div>
+    {% if product.status != 'archived' and attributes.items %}
+      <form method="post" action="/product-management/products/{{ product.product_id }}/attributes" class="cos-page__stack">
+        <input type="hidden" name="csrf_token" value="{{ csrfToken }}"><input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000001"><input type="hidden" name="action" value="set"><input type="hidden" name="expected_revision" value="{{ attributes.revision }}">
+        <label>Пакет значень (JSON; decimal як рядок, boolean true/false, null видаляє необов'язкове)
+          <textarea name="values" class="form-control" rows="5" required>[{% for d in attributes.items %}{"code":{{ d.code|json_encode }},"value":{{ d.value|json_encode }}}{% if not loop.last %},{% endif %}{% endfor %}]</textarea>
+        </label>
+        <p>Залиште в пакеті тільки ті характеристики, які треба змінити.</p>
+        <button type="submit" class="btn btn-primary">Зберегти пакет</button>
+      </form>
+    {% endif %}
+</section>
+<section class="cos-panel" id="variant-matrix">
+    <h2>Матриця варіацій</h2>
+    <p>До чотирьох enum-вісей і 50 комбінацій. Існуючі SKU не змінюються. Спочатку перегляньте комбінації.</p>
+    {% if product.status != 'archived' %}
+      <form method="post" action="/product-management/products/{{ product.product_id }}/attributes" class="cos-page__stack" data-turbo="false">
+        <input type="hidden" name="csrf_token" value="{{ csrfToken }}"><input type="hidden" name="action" value="preview">
+        <label>Префікс SKU <input name="sku_prefix" class="form-control" required maxlength="60" value="{{ matrixInput.sku_prefix ?? '' }}"></label>
+        <label>Вісі та вибрані значення (JSON)
+          <textarea name="axes" class="form-control" rows="5" required>{% if matrixInput %}{{ matrixInput.axes|json_encode }}{% else %}[{% set first = true %}{% for d in attributes.items %}{% if d.is_axis %}{% if not first %},{% endif %}{"code":{{ d.code|json_encode }},"choices":{{ d.choices|json_encode }}}{% set first = false %}{% endif %}{% endfor %}]{% endif %}</textarea>
+        </label>
+        <button type="submit" class="btn btn-outline-primary">Попередній перегляд</button>
+      </form>
+      {% if preview %}
+        <div class="table-responsive" id="matrix-preview"><table class="table"><thead><tr><th>SKU</th><th>Комбінація</th><th>Статус</th></tr></thead><tbody>
+          {% set blocked = false %}{% for r in preview.items %}<tr><td>{{ r.sku }}</td><td>{{ r.options|json_encode }}</td><td>{{ r.status }}</td></tr>{% if r.status != 'ready' %}{% set blocked = true %}{% endif %}{% endfor %}
+        </tbody></table></div>
+        {% if not blocked %}
+        <form method="post" action="/product-management/products/{{ product.product_id }}/attributes" class="cos-toolbar">
+          <input type="hidden" name="csrf_token" value="{{ csrfToken }}"><input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000002"><input type="hidden" name="action" value="matrix">
+          <input type="hidden" name="axes" value="{{ matrixInput.axes|json_encode }}"><input type="hidden" name="sku_prefix" value="{{ matrixInput.sku_prefix }}"><input type="hidden" name="expected_revision" value="{{ preview.revision }}">
+          <label>Одиниця обліку <input name="uom" class="form-control" required value="pcs"></label>
+          <label><input type="checkbox" name="track_inventory" value="1" {% if product.product_type in ['stock','material'] %}checked{% endif %}> Складський облік</label>
+          <label><input type="checkbox" name="confirm_matrix" value="yes" required> Підтверджую створення</label>
+          <button type="submit" class="btn btn-primary">Створити {{ preview.items|length }} SKU</button>
+        </form>
+        {% else %}<p>Є конфлікти: змініть набір комбінацій перед створенням.</p>{% endif %}
+      {% endif %}
+    {% endif %}
+    <h3>Наявні варіанти</h3>
+    <table class="table" id="matrix-existing-variants"><thead><tr><th>SKU</th><th>Опції</th><th>Статус</th></tr></thead><tbody>{% for v in product.variants %}<tr><td>{{ v.sku }}</td><td>{{ v.options_json ?? '—' }}</td><td>{{ v.status }}</td></tr>{% endfor %}</tbody></table>
+</section>

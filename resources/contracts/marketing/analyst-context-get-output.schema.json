@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "context": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "type": "string",
+          "const": "1.0.0"
+        },
+        "purpose": {
+          "type": "string",
+          "const": "MARKETING_PLANNING_ADVICE"
+        },
+        "sources": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 6,
+          "items": {
+            "type": "object",
+            "properties": {
+              "alias": {
+                "type": "string",
+                "enum": [
+                  "campaign",
+                  "creative",
+                  "adset",
+                  "audience",
+                  "product",
+                  "variant"
+                ]
+              },
+              "record_id": {
+                "type": "string"
+              },
+              "revision": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "content_hash": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              }
+            },
+            "required": [
+              "alias",
+              "record_id",
+              "revision"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "facts": {
+          "type": "object",
+          "properties": {
+            "campaign": {
+              "type": "object"
+            },
+            "creative": {
+              "type": "object"
+            },
+            "adset": {
+              "type": "object"
+            },
+            "audience": {
+              "type": "object"
+            },
+            "product": {
+              "type": "object"
+            },
+            "performance": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "const": "NO_VERIFIED_CAMPAIGN_BINDING"
+                }
+              },
+              "required": [
+                "status"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "campaign",
+            "creative",
+            "product",
+            "performance"
+          ],
+          "additionalProperties": false
+        },
+        "constraints": {
+          "type": "object",
+          "properties": {
+            "proposal_only": {
+              "type": "boolean",
+              "const": true
+            },
+            "launch_eligible": {
+              "type": "boolean",
+              "const": false
+            },
+            "provider_evidence_verified": {
+              "type": "boolean",
+              "const": false
+            },
+            "finance_reservation_confirmed": {
+              "type": "boolean",
+              "const": false
+            }
+          },
+          "required": [
+            "proposal_only",
+            "launch_eligible",
+            "provider_evidence_verified",
+            "finance_reservation_confirmed"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "schema_version",
+        "purpose",
+        "sources",
+        "facts",
+        "constraints"
+      ],
+      "additionalProperties": false
+    },
+    "context_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "delegated": {
+      "type": "boolean",
+      "const": false
+    }
+  },
+  "required": [
+    "context",
+    "context_hash",
+    "delegated"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "from": {
+      "type": "string"
+    },
+    "to_exclusive": {
+      "type": "string"
+    },
+    "owner_id": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "pipeline_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "basis": {
+      "type": "string",
+      "enum": [
+        "current_open_pipeline"
+      ]
+    },
+    "buckets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "bucket": {
+            "type": "string",
+            "enum": [
+              "before_period",
+              "in_period",
+              "after_period",
+              "unscheduled"
+            ]
+          },
+          "deal_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "unknown_value_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "money_by_currency": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "currency": {
+                  "type": "string",
+                  "enum": [
+                    "USD",
+                    "EUR",
+                    "UAH"
+                  ]
+                },
+                "deal_count": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "pipeline_value": {
+                  "type": "string",
+                  "pattern": "^[0-9]+\\.[0-9]{2}$"
+                },
+                "weighted_count": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "weighted_value": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "pattern": "^[0-9]+\\.[0-9]{2}$"
+                }
+              },
+              "required": [
+                "currency",
+                "deal_count",
+                "pipeline_value",
+                "weighted_count",
+                "weighted_value"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "bucket",
+          "deal_count",
+          "unknown_value_count",
+          "money_by_currency"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "from",
+    "to_exclusive",
+    "owner_id",
+    "pipeline_id",
+    "basis",
+    "buckets"
+  ],
+  "additionalProperties": false
+}

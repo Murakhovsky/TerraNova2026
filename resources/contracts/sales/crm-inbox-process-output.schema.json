@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SalesCrmInboxProcessOutputV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "inbox_id",
+    "status",
+    "replayed"
+  ],
+  "properties": {
+    "inbox_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "status": {
+      "type": "string",
+      "const": "COMPLETED"
+    },
+    "replayed": {
+      "type": "boolean"
+    }
+  }
+}

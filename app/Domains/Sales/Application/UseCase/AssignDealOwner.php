@@ -32,7 +32,9 @@ final readonly class AssignDealOwner
         string $actorId,
     ): OperationResult {
         return $this->transactions->transactional(function () use ($organizationId, $dealId, $ownerId, $correlationId, $actorType, $actorId): OperationResult {
-            $this->authority?->assertCanAssign($organizationId, $actorType, $actorId, $ownerId);
+            if ($this->deals instanceof \Domains\Sales\Application\Contract\DealStageRepositoryInterface
+                && $this->deals->getForStageChange($organizationId,$dealId)===null) return OperationResult::failure('Deal not found.');
+            $this->authority?->assertCanAssign($organizationId, $actorType, $actorId, $ownerId,$dealId);
 
             $result = $this->deals->assignOwner($organizationId, $dealId, $ownerId);
             if (!$result->successful || ($result->data['changed'] ?? false) !== true) {

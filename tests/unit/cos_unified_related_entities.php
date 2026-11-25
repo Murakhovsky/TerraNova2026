@@ -51,7 +51,11 @@ final class Ux03FakeProperty implements PropertyReferencePort {
     }
     public function searchPropertyReferences(string $organizationId,string $query,int $limit=100): array {return [];}
 }
-$read=new SalesPropertyRelatedEntityRead(new Ux03FakeCaseFactory(),new Ux03FakeProperty());
+$authorization=new class implements \App\Security\SalesRequestEntityAuthorizationInterface {
+    public bool $allow=true;
+    public function entity(string $org,string $kind,int $id):bool{return $this->allow&&$org==='org-a'&&$kind==='deal'&&$id===11;}
+};
+$read=new SalesPropertyRelatedEntityRead(new Ux03FakeCaseFactory(),new Ux03FakeProperty(),$authorization);
 $related=$read->related('org-a','sales.deal','11',10);
 if(count($related)!==1 || $related[0]->type!=='property.asset'
     || $related[0]->id!=='PROP-AAAAAAAAAAAAAAAAAAAA'
@@ -64,4 +68,6 @@ if($read->related('org-b','sales.deal','11')!==[]
     || $read->related('org-a','sales.deal','invalid')!==[]) {
     throw new RuntimeException('Related entity read leaked foreign or unverified relation.');
 }
+$authorization->allow=false;
+if($read->related('org-a','sales.deal','11')!==[])throw new RuntimeException('Same-tenant owner scope bypass.');
 echo "UX03 Sales/Property related entities verified tenant boundary PASS.\n";

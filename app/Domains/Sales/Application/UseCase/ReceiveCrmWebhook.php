@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Domains\Sales\Application\UseCase;
 
 use Domains\Sales\Application\Contract\CrmInboxRepositoryInterface;
+use Domains\Sales\Application\Support\CrmSignedEnvelope;
 use Domains\Sales\Application\Contract\CrmWebhookSecretResolverInterface;
 use InvalidArgumentException;
 use Kernel\Queue\Contract\JobQueueInterface;
@@ -54,6 +55,7 @@ final readonly class ReceiveCrmWebhook
         if ($secret === '' || !hash_equals($expected, strtolower(trim($provided)))) {
             throw new InvalidArgumentException('Invalid CRM webhook signature.');
         }
+        CrmSignedEnvelope::assertMatches($canonical, $payload, $externalEventId, $eventType);
         return $this->transactions->transactional(function () use (
             $organizationId, $provider, $externalEventId, $eventType, $payload
         ): string {
@@ -71,7 +73,7 @@ final readonly class ReceiveCrmWebhook
                 self::JOB_TYPE,
                 ['inbox_id' => $id],
                 $correlationId,
-                'crm-inbox:' . $organizationId . ':' . $provider . ':' . $externalEventId,
+                'crm-inbox:' . hash('sha256', json_encode([$organizationId,$provider,$externalEventId], JSON_THROW_ON_ERROR)),
                 10,
                 120,
             );

@@ -41,10 +41,10 @@ final readonly class MysqlSalesAttentionRepository implements SalesAttentionRepo
     public function missedFollowups(string $organizationId, DateTimeImmutable $now, int $limit): array
     {
         $statement = $this->connection->prepare(
-            'SELECT id,client_case_id,due_at FROM tn_client_case_activities '
-            . 'WHERE organization_id=:org AND activity_type="followup" '
-            . 'AND completed_at IS NULL AND due_at<:now '
-            . 'ORDER BY due_at LIMIT ' . max(1, min(500, $limit))
+            'SELECT a.id,a.client_case_id,a.due_at FROM tn_client_case_activities a JOIN tn_client_cases d ON d.id=a.client_case_id AND d.organization_id=a.organization_id '
+            . 'WHERE a.organization_id=:org AND a.activity_type="followup" AND d.status NOT IN ("closed","lost") '
+            . 'AND a.completed_at IS NULL AND a.cancelled_at IS NULL AND a.due_at<:now '
+            . 'ORDER BY a.due_at LIMIT ' . max(1, min(500, $limit))
         );
         $statement->execute(['org' => $organizationId, 'now' => $now->format('Y-m-d H:i:s')]);
 

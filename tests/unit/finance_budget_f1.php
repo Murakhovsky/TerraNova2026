@@ -53,7 +53,7 @@ $manifest=require $root.'/app/Domains/Finance/module.php';
 $module=ModuleDefinition::fromArray($manifest);
 $assert($module->manifest->id==='finance'&&!$module->manifest->enabledByDefault,'Finance F1 must be disabled by default');
 $assert($module->contributions->runtimeModuleService==='financeDomainModule','Finance F1 missing runtime owner');
-$assert(count($module->contributions->capabilityContracts)===8,'Expected seven budget and one evidence-read Finance capabilities');
+$assert(count($module->contributions->capabilityContracts)===16,'Expected seven budget, two source-evidence, four order collection and three settlement Finance capabilities');
 $typed=[];
 foreach($module->contributions->capabilityContracts as $c){
     $typed[$c->id]=$c;
@@ -64,6 +64,7 @@ foreach($module->contributions->capabilityContracts as $c){
             &&$c->idempotency==='required','Financial capability must require approval and idempotency');
     }
 }
+$assert($typed['finance.sales.commercial_evidence.read']->executionBinding==='query:finance.sales.commercial_evidence.read' && $typed['finance.sales.commercial_evidence.read']->sideEffectLevel==='none','Sales evidence must remain read-only');
 $validator=new CapabilityJsonInputValidator();
 $validator->validate($typed['finance.budget.envelope.draft.create'],$valid);
 $validator->validate($typed['finance.budget.reservation.reserve'],[
@@ -78,5 +79,21 @@ try{
 }catch(DomainException){$schemaBlocked=true;}
 $assert($schemaBlocked??false,'Finance schema must reject floats');
 $assert(in_array('finance.budget.reservation.release',$manifest['contributions']['capabilities'],true),'Finance release unavailable');
+$settlement=$typed['finance.ad_spend.settlement.commit'];
+$assert($settlement->sideEffectLevel==='financial'&&$settlement->approvalPolicy==='required'&&$settlement->idempotency==='required','Settlement must preserve governed financial class.');
+$settlementInput=['target_type'=>'finance_reservation','target_id'=>'finr-'.str_repeat('a',24),'parameters'=>[
+    'candidate_hash'=>str_repeat('b',64),'document_ref'=>'DOC-'.str_repeat('c',24),'expected_revision'=>4,'snapshot_ref'=>'mis-'.str_repeat('d',24)]];
+$validator->validate($settlement,$settlementInput);
+$blocked=false;try{$validator->validate($settlement,[...$settlementInput,'parameters'=>[...$settlementInput['parameters'],'settlement_minor'=>1000]]);}catch(DomainException){$blocked=true;}
+$assert($blocked,'Settlement Action must not accept caller-supplied amounts.');
+$review=$typed['finance.ad_spend.settlement.review'];$status=$typed['finance.ad_spend.settlement.status'];
+$assert($review->sideEffectLevel==='internal'&&$review->idempotency==='required'&&$status->kind==='query'&&$status->sideEffectLevel==='none',
+    'Review is human evidence, status is read only.');
+$reviewInput=['reservation_id'=>'finr-'.str_repeat('a',24),'document_ref'=>'DOC-'.str_repeat('c',24),'snapshot_ref'=>'mis-'.str_repeat('d',24),
+    'document_hash'=>str_repeat('e',64),'source_hash'=>str_repeat('f',64),'source_revision'=>1,'provider_document_id'=>'fixture-doc',
+    'settlement_minor'=>1000,'confirm_review'=>true];
+$validator->validate($review,$reviewInput);
+$blocked=false;try{$validator->validate($review,[...$reviewInput,'confirm_review'=>false]);}catch(DomainException){$blocked=true;}
+$assert($blocked,'Review requires explicit human confirmation.');
 echo "Finance F1 bounded amounts, approval schemas and capability contracts PASS\n";
 

@@ -5,7 +5,7 @@
   "domain": "sales",
   "state": "as-is",
   "workflow": "02-workflows/sales-lead-to-managed-case.md",
-  "trigger": "Inbound public lead or external CRM webhook",
+  "trigger": "Inbound public or operator-entered form, or signed external CRM webhook (provider admission is an authenticated ingress boundary)",
   "outcomes": [
     "Canonical Sales state exists",
     "Owner and pipeline state are managed",
@@ -21,16 +21,22 @@
   "steps": [
     {
       "id": "intake",
-      "label": "Lead intake",
+      "label": "Accept inbound form through Sales intake",
       "kind": "operation",
       "owner": "Sales automation",
       "domain": "sales",
-      "capability": null,
-      "capability_gap": "missing-domain-capability",
+      "capability": "sales.lead.intake",
       "critical": true,
       "runtime": [
-        { "type": "use_case", "ref": "ReceivePublicLead" },
-        { "type": "use_case", "ref": "ReceiveCrmWebhook" }
+        {
+          "type": "use_case",
+          "ref": "ReceivePublicLead"
+        },
+        {
+          "type": "source",
+          "path": "symfony/src/Infrastructure/Capability/SalesLeadIntakeAdapter.php",
+          "symbol": "ReceivePublicLeadCommand"
+        }
       ]
     },
     {
@@ -39,24 +45,29 @@
       "kind": "operation",
       "owner": "Sales automation",
       "domain": "sales",
-      "capability": null,
-      "capability_gap": "missing-domain-capability",
+      "capability": "sales.crm.inbox.process",
       "critical": false,
       "runtime": [
-        { "type": "use_case", "ref": "ProcessCrmInbox" }
+        {
+          "type": "use_case",
+          "ref": "ProcessCrmInbox"
+        }
       ]
     },
     {
       "id": "canonical-state",
-      "label": "Create or update canonical Sales state",
+      "label": "Manage canonical Lead lifecycle",
       "kind": "state",
       "owner": "Sales automation",
       "domain": "sales",
-      "capability": null,
-      "capability_gap": "missing-domain-capability",
+      "capability": "sales.lead.state.manage",
       "critical": true,
       "runtime": [
-        { "type": "source", "path": "app/Domains/Sales/Automation/Event/LeadCreated.php", "symbol": "sales.lead.created" }
+        {
+          "type": "source",
+          "path": "app/Domains/Sales/Application/Service/SalesInboundService.php",
+          "symbol": "updateRequest("
+        }
       ]
     },
     {
@@ -65,12 +76,17 @@
       "kind": "operation",
       "owner": "manager",
       "domain": "sales",
-      "capability": null,
-      "capability_gap": "missing-domain-capability",
+      "capability": "sales.deal.owner.assign",
       "critical": true,
       "runtime": [
-        { "type": "use_case", "ref": "AssignDealOwner" },
-        { "type": "event", "ref": "sales.deal.owner_assigned" }
+        {
+          "type": "use_case",
+          "ref": "AssignDealOwner"
+        },
+        {
+          "type": "event",
+          "ref": "sales.deal.owner_assigned"
+        }
       ]
     },
     {
@@ -79,12 +95,18 @@
       "kind": "operation",
       "owner": "salesperson",
       "domain": "sales",
-      "capability": null,
-      "capability_gap": "missing-domain-capability",
+      "capability": "sales.pipeline.stage.manage",
       "critical": true,
       "runtime": [
-        { "type": "use_case", "ref": "ChangeDealStage" },
-        { "type": "source", "path": "app/Domains/Sales/Automation/Event/DealStageChanged.php", "symbol": "sales.deal.stage_changed" }
+        {
+          "type": "use_case",
+          "ref": "ChangeDealStage"
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/Sales/Automation/Event/DealStageChanged.php",
+          "symbol": "sales.deal.stage_changed"
+        }
       ]
     },
     {
@@ -93,12 +115,18 @@
       "kind": "operation",
       "owner": "salesperson",
       "domain": "sales",
-      "capability": null,
-      "capability_gap": "missing-domain-capability",
+      "capability": "sales.activity.record",
       "critical": false,
       "runtime": [
-        { "type": "use_case", "ref": "CompleteSalesCall" },
-        { "type": "source", "path": "app/Domains/Sales/Automation/Event/CallCompleted.php", "symbol": "sales.call.completed" }
+        {
+          "type": "use_case",
+          "ref": "CompleteSalesCall"
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/Sales/Automation/Event/CallCompleted.php",
+          "symbol": "sales.call.completed"
+        }
       ]
     },
     {
@@ -107,12 +135,17 @@
       "kind": "operation",
       "owner": "salesperson",
       "domain": "sales",
-      "capability": null,
-      "capability_gap": "missing-domain-capability",
+      "capability": "sales.followup.schedule",
       "critical": true,
       "runtime": [
-        { "type": "use_case", "ref": "ScheduleDealFollowup" },
-        { "type": "event", "ref": "sales.followup.created" }
+        {
+          "type": "use_case",
+          "ref": "ScheduleDealFollowup"
+        },
+        {
+          "type": "event",
+          "ref": "sales.followup.created"
+        }
       ]
     },
     {
@@ -121,24 +154,55 @@
       "kind": "outcome",
       "owner": "salesperson",
       "domain": "sales",
-      "capability": null,
-      "capability_gap": "missing-domain-capability",
+      "capability": "sales.deal.outcome.record",
       "critical": true,
       "runtime": [
-        { "type": "event", "ref": "sales.deal.won" },
-        { "type": "event", "ref": "sales.deal.lost" }
+        {
+          "type": "event",
+          "ref": "sales.deal.won"
+        },
+        {
+          "type": "event",
+          "ref": "sales.deal.lost"
+        }
       ]
     }
   ],
   "edges": [
-    { "from": "intake", "to": "crm-inbox", "label": "CRM path" },
-    { "from": "intake", "to": "canonical-state", "label": "Public path" },
-    { "from": "crm-inbox", "to": "canonical-state" },
-    { "from": "canonical-state", "to": "assign-owner" },
-    { "from": "assign-owner", "to": "pipeline" },
-    { "from": "pipeline", "to": "activity" },
-    { "from": "activity", "to": "followup" },
-    { "from": "followup", "to": "pipeline", "label": "continue" },
-    { "from": "pipeline", "to": "outcome", "label": "terminal outcome" }
+    {
+      "from": "intake",
+      "to": "canonical-state",
+      "label": "Public path"
+    },
+    {
+      "from": "crm-inbox",
+      "to": "canonical-state"
+    },
+    {
+      "from": "canonical-state",
+      "to": "assign-owner"
+    },
+    {
+      "from": "assign-owner",
+      "to": "pipeline"
+    },
+    {
+      "from": "pipeline",
+      "to": "activity"
+    },
+    {
+      "from": "activity",
+      "to": "followup"
+    },
+    {
+      "from": "followup",
+      "to": "pipeline",
+      "label": "continue"
+    },
+    {
+      "from": "pipeline",
+      "to": "outcome",
+      "label": "terminal outcome"
+    }
   ]
 }

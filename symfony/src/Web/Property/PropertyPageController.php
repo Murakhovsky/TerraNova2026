@@ -134,7 +134,7 @@ final readonly class PropertyPageController
             $result = $this->commands->dispatch(new ReceivePublicLeadCommand(
                 OrganizationId::fromString($this->organizationId),
                 $request->request->all(),
-                $request->getRequestUri(),
+                $request->getPathInfo(),
             ));
 
             if (!$result instanceof SalesMutationResult) {
@@ -199,6 +199,7 @@ final readonly class PropertyPageController
                     $state,
                 ),
                 'detail' => $detail,
+                'leadSubmissionId' => bin2hex(random_bytes(16)),
                 'group' => $group,
                 'error' => $error,
                 'notice' => $notice,

@@ -29,7 +29,7 @@ generated: true
 | `product_management` | 0 |
 | `property` | 2 |
 | `real_estate` | 0 |
-| `sales` | 8 |
+| `sales` | 9 |
 | `service` | 0 |
 
 ## Capital Markets (`capital_markets`)
@@ -112,6 +112,7 @@ generated: true
 | `ReceivePublicLead` | `app/Domains/Sales/Application/UseCase/ReceivePublicLead.php` |
 | `ScheduleDealFollowup` | `app/Domains/Sales/Application/UseCase/ScheduleDealFollowup.php` |
 | `ScheduleLeadFollowup` | `app/Domains/Sales/Application/UseCase/ScheduleLeadFollowup.php` |
+| `SetDealCommercialTerms` | `app/Domains/Sales/Application/UseCase/SetDealCommercialTerms.php` |
 
 ## Service (`service`)
 

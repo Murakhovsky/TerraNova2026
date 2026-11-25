@@ -15,7 +15,7 @@ on:
       - 'composer.lock'
       - '.github/workflows/ci.yml'
   pull_request:
-    branches: [main]
+    branches: [main, feat/sales-domain-completion]
   workflow_dispatch:
 
 permissions:
@@ -74,6 +74,8 @@ jobs:
         run: php tests/architecture/cos_canonical_capability_library_contract.php
       - name: Sales inbound request typed read capability
         run: php tests/unit/sales_inbound_request_capability.php
+      - name: Finance order exact money policy
+        run: php tests/unit/finance_order_money.php
       - name: DAS-001 direct Capability binding source coverage
         run: php tests/architecture/das_001_direct_binding_coverage.php
       - name: DAS-001 Domain ownership and cross-domain boundaries

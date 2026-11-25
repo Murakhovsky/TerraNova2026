@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Product Management stock-count-get-input V1",
+  "type": "object",
+  "required": [
+    "count_id"
+  ],
+  "properties": {
+    "count_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    }
+  },
+  "additionalProperties": false
+}

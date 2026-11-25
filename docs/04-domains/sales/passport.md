@@ -19,25 +19,119 @@ domain_id: sales
     {
       "id": "leads",
       "capability_ids": [
-        "sales.inbound.request.read"
+        "sales.inbound.request.read",
+        "sales.lead.create",
+        "sales.lead.qualify",
+        "sales.lead.state.manage",
+        "sales.lead.intake"
+      ]
+    },
+    {
+      "id": "crm_inbox",
+      "capability_ids": [
+        "sales.crm.inbox.status",
+        "sales.crm.inbox.recover",
+        "sales.crm.inbox.process",
+        "sales.crm.reconciliation.read"
       ]
     },
     {
       "id": "deals",
       "capability_ids": [
-        "sales.deal.won.observation"
+        "sales.deal.won.observation",
+        "sales.client_case.create",
+        "sales.deal.state.read",
+        "sales.deal.owner.assign",
+        "sales.deal.commercial.set",
+        "sales.pipeline.stage.manage",
+        "sales.deal.outcome.record"
+      ]
+    },
+    {
+      "id": "teams",
+      "capability_ids": [
+        "sales.team.read",
+        "sales.team.manage"
       ]
     },
     {
       "id": "activities",
       "capability_ids": [
-        "sales.create_task"
+        "sales.create_task",
+        "sales.activity.record",
+        "sales.activity.complete",
+        "sales.activity.reschedule",
+        "sales.followup.schedule",
+        "sales.property_match.record",
+        "sales.lead.followup.schedule",
+        "sales.lead.activity.complete",
+        "sales.lead.activity.reschedule",
+        "sales.lead.activity.cancel",
+        "sales.activity.cancel",
+        "sales.activity.overdue.read",
+        "sales.activity.reminder.queue"
+      ]
+    },
+    {
+      "id": "offers",
+      "capability_ids": [
+        "sales.offer.create",
+        "sales.offer.revise",
+        "sales.offer.transition",
+        "sales.negotiation.record",
+        "sales.offer.read",
+        "sales.offer.list",
+        "sales.offer.document.render",
+        "sales.offer.delivery.status",
+        "sales.offer.delivery.queue"
+      ]
+    },
+    {
+      "id": "orders",
+      "capability_ids": [
+        "sales.governed.order.create",
+        "sales.governed.order.lifecycle.confirm",
+        "sales.governed.order.lifecycle.allocate",
+        "sales.governed.order.lifecycle.release",
+        "sales.governed.order.lifecycle.fulfill",
+        "sales.governed.order.lifecycle.cancel",
+        "sales.governed.order.lifecycle.return",
+        "sales.order.create",
+        "sales.order.read",
+        "sales.order.source.reconcile",
+        "sales.order.source.page.read",
+        "sales.order.source.pending.read",
+        "sales.order.source.sync.start",
+        "sales.order.source.sync.status.read",
+        "sales.order.lifecycle.confirm",
+        "sales.order.lifecycle.allocate",
+        "sales.order.lifecycle.release",
+        "sales.order.lifecycle.fulfill",
+        "sales.order.lifecycle.cancel",
+        "sales.order.lifecycle.return",
+        "sales.order.lifecycle.read"
+      ]
+    },
+    {
+      "id": "workspace",
+      "capability_ids": [
+        "sales.reports.data.read",
+        "sales.analytics.conversion.read",
+        "sales.analytics.forecast.read",
+        "sales.analytics.outcomes.read",
+        "sales.analytics.stages.read",
+        "sales.workspace.summary.read",
+        "sales.workspace.team.summary.read",
+        "sales.workspace.leads.list",
+        "sales.workspace.deals.list",
+        "sales.workspace.deal.timeline.read"
       ]
     }
   ],
   "process_ids": [
     "sales.lead-to-managed-case",
-    "sales.request-to-property-match"
+    "sales.request-to-property-match",
+    "sales.order-to-fulfillment"
   ],
   "readiness": {
     "level": "UNKNOWN",
@@ -56,7 +150,7 @@ COS-DOMAIN-PASSPORT-DATA -->
 
 ## 2. Межі відповідальності
 
-**Власний предмет відповідальності:** Sales Leads, Client Cases/Deals, pipeline, activities та Sales outcome.
+**Власний предмет відповідальності:** Sales Leads, Client Cases/Deals, pipeline, activities, native commerce orders та Sales outcome.
 **Не володіє:** Не володіє Property Inventory чи Growth OpportunityCandidate.
 Актуальні invariants визначаються Domain Model/Application, а не текстом паспорта.
 
@@ -64,8 +158,13 @@ COS-DOMAIN-PASSPORT-DATA -->
 
 | component_id | Призначення | Рівень доказів |
 | --- | --- | --- |
+| `crm_inbox` | Durable CRM intake, processing observation and operator recovery | UNKNOWN |
 | `leads` | Функціональний розділ `sales`; деталізація capabilities потребує owner review | UNKNOWN |
 | `deals` | Функціональний розділ `sales`; деталізація capabilities потребує owner review | UNKNOWN |
+| `teams` | Sales team configuration and membership | UNKNOWN |
+| `offers` | Immutable quoted terms, negotiations and accepted commercial evidence | UNKNOWN |
+| `orders` | Native order snapshots, lifecycle, allocation references, source reconciliation and fulfillment evidence | UNKNOWN |
+| `workspace` | Scoped operational workspace and currency-separated pipeline summary | UNKNOWN |
 | `activities` | Функціональний розділ `sales`; деталізація capabilities потребує owner review | UNKNOWN |
 
 Компоненти не можуть незалежно активуватися без окремо підтвердженого ModuleLifecycle contract.
@@ -89,7 +188,7 @@ Human UI/API, AI/Hermes та CRON можуть отримувати доступ
 
 ## 8. Процеси та результати
 
-Process Registry: `sales.lead-to-managed-case`, `sales.request-to-property-match`.
+Process Registry: `sales.lead-to-managed-case`, `sales.request-to-property-match`, `sales.order-to-fulfillment`.
 Покриття означає **описану процесну модель**, не успішний користувацький сценарій.
 
 ## 9. Tenant, Policy та Security

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SalesCrmInboxStatusOutputV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "found",
+    "item"
+  ],
+  "properties": {
+    "found": {
+      "type": "boolean"
+    },
+    "item": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "inbox_id",
+        "status",
+        "attempts",
+        "signature_verified",
+        "revision",
+        "provider",
+        "event_type"
+      ],
+      "properties": {
+        "inbox_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "RECEIVED",
+            "PROCESSING",
+            "COMPLETED",
+            "FAILED",
+            "DEAD",
+            "IGNORED"
+          ]
+        },
+        "attempts": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "signature_verified": {
+          "type": "boolean"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "event_type": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

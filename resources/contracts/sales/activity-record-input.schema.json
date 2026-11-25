@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "sales.activity.record input v1",
+  "type": "object",
+  "properties": {
+    "deal_id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "activity_type": {
+      "type": "string",
+      "enum": [
+        "note",
+        "call",
+        "meeting",
+        "viewing",
+        "task"
+      ]
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 180
+    },
+    "body": {
+      "type": "string",
+      "minLength": 0,
+      "maxLength": 4000
+    },
+    "completed": {
+      "type": "boolean"
+    },
+    "due_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "call_result": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "duration_seconds": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 86400
+    }
+  },
+  "required": [
+    "deal_id",
+    "activity_type",
+    "title",
+    "completed"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "sales.deal.outcome.record output v1",
+  "type": "object",
+  "properties": {
+    "state": {
+      "type": "object",
+      "properties": {
+        "deal_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "pipeline_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,64}$"
+        },
+        "stage_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,64}$"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "paused",
+            "closed",
+            "lost"
+          ]
+        },
+        "owner_id": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "deal_value": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "currency": {
+          "type": "string",
+          "enum": [
+            "USD",
+            "EUR",
+            "UAH"
+          ]
+        },
+        "lost_reason_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "deal_id",
+        "pipeline_id",
+        "stage_id",
+        "status",
+        "owner_id",
+        "deal_value",
+        "currency",
+        "lost_reason_id",
+        "revision"
+      ],
+      "additionalProperties": false
+    },
+    "changed": {
+      "type": "boolean"
+    },
+    "replayed": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "state",
+    "changed",
+    "replayed"
+  ],
+  "additionalProperties": false
+}

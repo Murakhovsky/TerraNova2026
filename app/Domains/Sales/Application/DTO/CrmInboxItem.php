@@ -14,6 +14,7 @@ final readonly class CrmInboxItem
         public array $payload,
         public int $attempts,
         public string $correlationId,
+        public string $claimToken = '',
     ) {
     }
 }

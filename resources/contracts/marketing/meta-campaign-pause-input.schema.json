@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "target_type": {
+      "const": "marketing_paid_launch_plan",
+      "type": "string"
+    },
+    "target_id": {
+      "type": "string",
+      "pattern": "^mkpl-[a-f0-9]{24}$"
+    },
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "plan_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "configuration_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "plan_hash",
+        "configuration_hash"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "target_type",
+    "target_id",
+    "parameters"
+  ],
+  "additionalProperties": false
+}

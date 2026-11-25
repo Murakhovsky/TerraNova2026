@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "sales.property_match.record output v1",
+  "type": "object",
+  "properties": {
+    "deal_id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "record_id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "kind": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string"
+    },
+    "replayed": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "deal_id",
+    "record_id",
+    "kind",
+    "status",
+    "replayed"
+  ],
+  "additionalProperties": false
+}

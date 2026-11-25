@@ -14,7 +14,7 @@ on:
       - 'tests/browser/**'
       - '.github/workflows/frontend.yml'
   pull_request:
-    branches: [main]
+    branches: [main, feat/sales-domain-completion]
   workflow_dispatch:
 
 permissions:

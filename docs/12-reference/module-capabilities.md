@@ -28,9 +28,9 @@ generated: true
 | `finance` | Finance | `0.2.2` | `0.2.2` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Finance/module.php` |
 | `growth` | Growth | `0.50.0` | `0.50.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Growth/module.php` |
 | `hr` | HR | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/HR/module.php` |
-| `marketing` | Marketing | `0.1.2` | `0.1.2` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Marketing/module.php` |
+| `marketing` | Marketing | `0.2.3` | `0.2.3` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Marketing/module.php` |
 | `procurement` | Procurement | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Procurement/module.php` |
-| `product_management` | Product Management | `0.1.0` | `0.8.1` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/ProductManagement/module.php` |
+| `product_management` | Product Management | `0.1.0` | `0.15.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/ProductManagement/module.php` |
 | `property` | Property | `1.0.0` | `1.0.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Property/module.php` |
 | `real_estate` | Real Estate | `1.0.0` | `0.2.0` | `>=0.11.0 <0.12.0` | так | property, sales | `app/Domains/RealEstate/module.php` |
 | `sales` | Sales | `1.0.0` | `0.8.6` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Sales/module.php` |
@@ -157,17 +157,20 @@ Manifest capabilities не задекларовані.
 
 ## Finance (`finance`)
 
-**Опис із manifest:** Finance F1 budget envelopes, approved reservations and unverified provider spend evidence; no settlement, payments or Meta writes.
+**Опис із manifest:** Finance F1 budget envelopes, approved reservations, reviewed paid budget settlement, source evidence and documentary order payment reconciliation; no provider writes or accounting settlement.
 
 - runtime service модуля: `financeDomainModule`;
 - обробники jobs: —;
 - внески API routes: —;
 - постачальники конфігурації: —;
-- міграції: `app/migrations/20261119_000153_finance_budget_f1.sql`, `app/migrations/20261119_000155_finance_spend_observations.sql`.
+- міграції: `app/migrations/20261119_000153_finance_budget_f1.sql`, `app/migrations/20261119_000155_finance_spend_observations.sql`, `app/migrations/20261124_000166_finance_paid_exposure_claims.sql`, `app/migrations/20261124_000190_finance_paid_settlements.sql`, `app/migrations/20261124_000191_finance_paid_document_reviews.sql`, `app/migrations/20261125_009010_finance_order_payments.sql`.
 
 ### Задекларовані capabilities
 
 - `finance.ad_spend.reconciliation.status`;
+- `finance.ad_spend.settlement.commit`;
+- `finance.ad_spend.settlement.review`;
+- `finance.ad_spend.settlement.status`;
 - `finance.budget.envelope.activate`;
 - `finance.budget.envelope.draft.create`;
 - `finance.budget.envelope.freeze`;
@@ -175,6 +178,11 @@ Manifest capabilities не задекларовані.
 - `finance.budget.reservation.list`;
 - `finance.budget.reservation.release`;
 - `finance.budget.reservation.reserve`;
+- `finance.order.financial_evidence.read`;
+- `finance.order.payment.operations.read`;
+- `finance.order.payment.reconcile`;
+- `finance.order.payment.register`;
+- `finance.sales.commercial_evidence.read`;
 
 ## Growth (`growth`)
 
@@ -297,30 +305,62 @@ Manifest capabilities не задекларовані.
 
 ## Marketing (`marketing`)
 
-**Опис із manifest:** Marketing planning and Meta Paid Media read-only; financial and external mutations are deliberately blocked.
+**Опис із manifest:** Marketing M2 creative drafts/analyst review and Meta read-only evidence; Finance owns budgets and paid mutations remain blocked.
 
-- runtime service модуля: —;
+- runtime service модуля: `marketingDomainModule`;
 - обробники jobs: —;
 - внески API routes: —;
 - постачальники конфігурації: —;
-- міграції: `app/migrations/20261119_000152_marketing_foundation.sql`.
+- міграції: `app/migrations/20261119_000152_marketing_foundation.sql`, `app/migrations/20261119_000154_marketing_planning_m2.sql`, `app/migrations/20261124_000162_marketing_audience_adsets.sql`, `app/migrations/20261124_000163_marketing_analyst_execution.sql`, `app/migrations/20261124_000164_marketing_analyst_decisions.sql`, `app/migrations/20261124_000165_marketing_paid_launch_plans.sql`, `app/migrations/20261124_000167_marketing_paid_operation_journal.sql`, `app/migrations/20261124_000192_marketing_m4_attribution_intents.sql`, `app/migrations/20261124_000193_marketing_media_analytics.sql`.
 
 ### Задекларовані capabilities
 
+- `marketing.adset.list`;
+- `marketing.adset.save`;
+- `marketing.analyst.context.get`;
+- `marketing.analyst.proposal.list`;
+- `marketing.analyst.proposal.review`;
+- `marketing.analyst.proposal.submit`;
+- `marketing.analyst.run.list`;
+- `marketing.analyst.run.recover`;
+- `marketing.analyst.run.request`;
+- `marketing.analyst.run.review`;
+- `marketing.analyst.runtime.status`;
+- `marketing.analytics.commerce.report`;
+- `marketing.analytics.media.report`;
+- `marketing.analytics.media.sync`;
+- `marketing.analytics.report.get`;
+- `marketing.attribution.capture`;
+- `marketing.attribution.commerce.capture`;
+- `marketing.attribution.commerce.inspect`;
+- `marketing.attribution.discover`;
+- `marketing.attribution.tracking.get`;
+- `marketing.audience.list`;
+- `marketing.audience.save`;
 - `marketing.campaign.archive`;
 - `marketing.campaign.create`;
 - `marketing.campaign.get`;
 - `marketing.campaign.search`;
 - `marketing.campaign.update`;
+- `marketing.creative.create`;
+- `marketing.creative.list`;
+- `marketing.creative.revise`;
 - `marketing.paid.account.list`;
 - `marketing.paid.change.request`;
+- `marketing.paid.funding.check`;
 - `marketing.paid.insights.query`;
+- `marketing.paid.launch_plan.create`;
+- `marketing.paid.launch_plan.get`;
 - `marketing.paid.meta.campaign.activate`;
 - `marketing.paid.meta.campaign.create_paused`;
 - `marketing.paid.meta.campaign.pause`;
+- `marketing.paid.operation.status`;
+- `marketing.paid.spend.compare`;
 - `marketing.paid.spend.evidence.get`;
 - `marketing.paid.sync.history`;
 - `marketing.paid.sync.request`;
+- `marketing.product.draft_check.get`;
+- `marketing.product.selector.search`;
 
 ## Procurement (`procurement`)
 
@@ -344,22 +384,78 @@ Manifest capabilities не задекларовані.
 - обробники jobs: —;
 - внески API routes: —;
 - постачальники конфігурації: —;
-- міграції: `app/migrations/20261118_000152_product_management_catalog.sql`, `app/migrations/20261118_000153_product_management_inventory.sql`, `app/migrations/20261118_000154_product_management_prices_import.sql`, `app/migrations/20261118_000155_product_management_shopify_read.sql`, `app/migrations/20261119_000156_product_management_approved_import.sql`, `app/migrations/20261119_000157_product_management_media_links.sql`, `app/migrations/20261119_000158_product_management_import_plan_binding.sql`, `app/migrations/20261119_000159_product_management_shopify_import_preview.sql`, `app/migrations/20261119_000160_product_management_shopify_approved_apply.sql`, `app/migrations/20261120_000161_product_management_shopify_identity_claim.sql`, `app/migrations/20261124_000162_product_management_shopify_order_pointer.sql`.
+- міграції: `app/migrations/20261118_000152_product_management_catalog.sql`, `app/migrations/20261118_000153_product_management_inventory.sql`, `app/migrations/20261118_000154_product_management_prices_import.sql`, `app/migrations/20261118_000155_product_management_shopify_read.sql`, `app/migrations/20261119_000156_product_management_approved_import.sql`, `app/migrations/20261119_000157_product_management_media_links.sql`, `app/migrations/20261119_000158_product_management_import_plan_binding.sql`, `app/migrations/20261119_000159_product_management_shopify_import_preview.sql`, `app/migrations/20261119_000160_product_management_shopify_approved_apply.sql`, `app/migrations/20261120_000161_product_management_shopify_identity_claim.sql`, `app/migrations/20261124_000162_product_management_reservations.sql`, `app/migrations/20261124_000162_product_management_shopify_order_pointer.sql`, `app/migrations/20261124_000190_product_management_price_lists.sql`, `app/migrations/20261124_000191_product_management_price_list_lifecycle.sql`, `app/migrations/20261124_000192_product_management_price_tiers.sql`, `app/migrations/20261124_000193_product_management_stock_counts.sql`, `app/migrations/20261124_000194_product_management_count_sessions.sql`, `app/migrations/20261124_000195_product_management_attributes.sql`, `app/migrations/20261125_009007_product_order_reservation_evidence.sql`.
 
 ### Задекларовані capabilities
 
+- `product_management.analytics.movement.search`;
+- `product_management.analytics.quality.search`;
+- `product_management.analytics.reconciliation.get`;
+- `product_management.analytics.stock.search`;
+- `product_management.analytics.summary.get`;
+- `product_management.attribute.category.bind`;
+- `product_management.attribute.category.get`;
+- `product_management.attribute.define`;
+- `product_management.attribute.product.bulk_set`;
+- `product_management.attribute.product.filter`;
+- `product_management.attribute.product.get`;
+- `product_management.attribute.product.set`;
+- `product_management.attribute.search`;
 - `product_management.category.assign`;
 - `product_management.category.create`;
 - `product_management.category.search`;
+- `product_management.governed.attribute.category.bind`;
+- `product_management.governed.attribute.define`;
+- `product_management.governed.attribute.product.bulk_set`;
+- `product_management.governed.attribute.product.set`;
+- `product_management.governed.category.assign`;
+- `product_management.governed.category.create`;
+- `product_management.governed.location.create`;
+- `product_management.governed.media.attach`;
+- `product_management.governed.media.detach`;
+- `product_management.governed.price.base.set`;
+- `product_management.governed.price.list.archive`;
+- `product_management.governed.price.list.create`;
+- `product_management.governed.price.list.entry.remove`;
+- `product_management.governed.price.list.entry.set`;
+- `product_management.governed.price.list.tier.set`;
+- `product_management.governed.price.list.update`;
+- `product_management.governed.product.archive`;
+- `product_management.governed.product.create`;
+- `product_management.governed.product.update`;
+- `product_management.governed.stock.issue`;
+- `product_management.governed.stock.receive`;
+- `product_management.governed.stock.release`;
+- `product_management.governed.stock.reserve`;
+- `product_management.governed.stock.transfer`;
+- `product_management.governed.translation.upsert`;
+- `product_management.governed.variant.archive`;
+- `product_management.governed.variant.create`;
+- `product_management.governed.variant.matrix.create`;
+- `product_management.governed.variant.update`;
 - `product_management.import.apply`;
 - `product_management.import.batch.get`;
 - `product_management.import.preview`;
 - `product_management.location.create`;
+- `product_management.location.search`;
 - `product_management.media.attach`;
 - `product_management.media.detach`;
 - `product_management.media.search`;
 - `product_management.price.base.get`;
 - `product_management.price.base.set`;
+- `product_management.price.history.search`;
+- `product_management.price.list.archive`;
+- `product_management.price.list.create`;
+- `product_management.price.list.entry.get`;
+- `product_management.price.list.entry.remove`;
+- `product_management.price.list.entry.set`;
+- `product_management.price.list.history.search`;
+- `product_management.price.list.search`;
+- `product_management.price.list.tier.history.search`;
+- `product_management.price.list.tier.search`;
+- `product_management.price.list.tier.set`;
+- `product_management.price.list.update`;
+- `product_management.price.resolve`;
 - `product_management.product.archive`;
 - `product_management.product.create`;
 - `product_management.product.get`;
@@ -367,14 +463,24 @@ Manifest capabilities не задекларовані.
 - `product_management.product.update`;
 - `product_management.shopify.import.apply`;
 - `product_management.stock.balance.get`;
+- `product_management.stock.count.apply`;
+- `product_management.stock.count.get`;
+- `product_management.stock.count.session.apply`;
+- `product_management.stock.count.session.candidates`;
+- `product_management.stock.count.session.get`;
 - `product_management.stock.issue`;
 - `product_management.stock.movement.search`;
 - `product_management.stock.receive`;
+- `product_management.stock.release`;
+- `product_management.stock.reservation.search`;
+- `product_management.stock.reserve`;
 - `product_management.stock.transfer`;
 - `product_management.sync.status.get`;
 - `product_management.translation.upsert`;
 - `product_management.variant.archive`;
 - `product_management.variant.create`;
+- `product_management.variant.matrix.create`;
+- `product_management.variant.matrix.preview`;
 - `product_management.variant.update`;
 
 ## Property (`property`)
@@ -439,13 +545,19 @@ Manifest capabilities не задекларовані.
 **Опис із manifest:** Sales operations, CRM workflow, intelligence and automation.
 
 - runtime service модуля: `salesDomainModule`;
-- обробники jobs: `salesCrmInboxJobHandler`;
+- обробники jobs: `salesCrmInboxJobHandler`, `salesOrderSyncJobHandler`;
 - внески API routes: —;
 - постачальники конфігурації: `salesModuleConfigurationProvisioner`;
-- міграції: `app/migrations/20260910_000030_sales_v071_configuration_ownership.sql`, `app/migrations/20260913_000044_sales_v081_historical_stage_history.sql`, `app/migrations/20260913_000045_sales_v082_funnel_metrics.sql`, `app/migrations/20260913_000046_sales_v083_operational_performance.sql`, `app/migrations/20260913_000047_sales_v086_hardening.sql`, `app/migrations/20260928_000118_sales_v100_release.sql`, `app/migrations/20261003_000121_sales_lead_qualification_transition.sql`, `app/migrations/20261003_000122_sales_followup_activity_type.sql`, `app/migrations/20261003_000123_sales_lead_qualification_governance_repair.sql`.
+- міграції: `app/migrations/20260910_000030_sales_v071_configuration_ownership.sql`, `app/migrations/20260913_000044_sales_v081_historical_stage_history.sql`, `app/migrations/20260913_000045_sales_v082_funnel_metrics.sql`, `app/migrations/20260913_000046_sales_v083_operational_performance.sql`, `app/migrations/20260913_000047_sales_v086_hardening.sql`, `app/migrations/20260928_000118_sales_v100_release.sql`, `app/migrations/20261003_000121_sales_lead_qualification_transition.sql`, `app/migrations/20261003_000122_sales_followup_activity_type.sql`, `app/migrations/20261003_000123_sales_lead_qualification_governance_repair.sql`, `app/migrations/20261124_009001_sales_offer_lifecycle.sql`, `app/migrations/20261124_009002_sales_activity_cancellation.sql`, `app/migrations/20261124_009003_sales_offer_delivery.sql`, `app/migrations/20261124_009004_sales_native_orders.sql`, `app/migrations/20261125_009005_sales_order_source_reconciliation.sql`, `app/migrations/20261125_009006_sales_order_sync_runs.sql`, `app/migrations/20261125_009008_sales_order_lifecycle.sql`, `app/migrations/20261125_009009_sales_order_journey_evidence.sql`.
 
 ### Задекларовані capabilities
 
+- `sales.activity.cancel`;
+- `sales.activity.complete`;
+- `sales.activity.overdue.read`;
+- `sales.activity.record`;
+- `sales.activity.reminder.queue`;
+- `sales.activity.reschedule`;
 - `sales.admin.agents.manage`;
 - `sales.admin.audit.view`;
 - `sales.admin.integrations.manage`;
@@ -454,10 +566,72 @@ Manifest capabilities не задекларовані.
 - `sales.admin.rules.manage`;
 - `sales.admin.teams.manage`;
 - `sales.admin.view`;
+- `sales.analytics.conversion.read`;
+- `sales.analytics.forecast.read`;
+- `sales.analytics.outcomes.read`;
+- `sales.analytics.stages.read`;
+- `sales.client_case.create`;
 - `sales.create_task`;
+- `sales.crm.inbox.process`;
+- `sales.crm.inbox.recover`;
+- `sales.crm.inbox.status`;
+- `sales.crm.reconciliation.read`;
+- `sales.deal.commercial.set`;
+- `sales.deal.outcome.record`;
+- `sales.deal.owner.assign`;
+- `sales.deal.state.read`;
 - `sales.deal.won.observation`;
 - `sales.director.view`;
+- `sales.followup.schedule`;
+- `sales.governed.order.create`;
+- `sales.governed.order.lifecycle.allocate`;
+- `sales.governed.order.lifecycle.cancel`;
+- `sales.governed.order.lifecycle.confirm`;
+- `sales.governed.order.lifecycle.fulfill`;
+- `sales.governed.order.lifecycle.release`;
+- `sales.governed.order.lifecycle.return`;
 - `sales.inbound.request.read`;
+- `sales.lead.activity.cancel`;
+- `sales.lead.activity.complete`;
+- `sales.lead.activity.reschedule`;
+- `sales.lead.create`;
+- `sales.lead.followup.schedule`;
+- `sales.lead.intake`;
+- `sales.lead.qualify`;
+- `sales.lead.state.manage`;
+- `sales.negotiation.record`;
+- `sales.offer.create`;
+- `sales.offer.delivery.queue`;
+- `sales.offer.delivery.status`;
+- `sales.offer.document.render`;
+- `sales.offer.list`;
+- `sales.offer.read`;
+- `sales.offer.revise`;
+- `sales.offer.transition`;
+- `sales.order.create`;
+- `sales.order.lifecycle.allocate`;
+- `sales.order.lifecycle.cancel`;
+- `sales.order.lifecycle.confirm`;
+- `sales.order.lifecycle.fulfill`;
+- `sales.order.lifecycle.read`;
+- `sales.order.lifecycle.release`;
+- `sales.order.lifecycle.return`;
+- `sales.order.read`;
+- `sales.order.source.page.read`;
+- `sales.order.source.pending.read`;
+- `sales.order.source.reconcile`;
+- `sales.order.source.sync.start`;
+- `sales.order.source.sync.status.read`;
+- `sales.pipeline.stage.manage`;
+- `sales.property_match.record`;
+- `sales.reports.data.read`;
+- `sales.team.manage`;
+- `sales.team.read`;
+- `sales.workspace.deal.timeline.read`;
+- `sales.workspace.deals.list`;
+- `sales.workspace.leads.list`;
+- `sales.workspace.summary.read`;
+- `sales.workspace.team.summary.read`;
 - `sales.workspace.use`;
 
 ## Service (`service`)
