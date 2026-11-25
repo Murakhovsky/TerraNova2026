@@ -34,7 +34,7 @@ foreach($manifest['contributions']['capability_contracts'] as $raw) {
     $assert(is_file($root.'/'.$contract->outputSchema),'Output schema missing: '.$contract->id);
 }
 $validator->validate(CapabilityContract::fromArray($manifest['contributions']['capability_contracts'][2]),['name'=>'Test launch','business_objective'=>'Leads']);
-$assert(count($found)===44,'Expected 44 typed Marketing contracts including Commerce Attribution');
+$assert(count($found)===46,'Expected 46 typed Marketing contracts including Commerce Attribution');
 echo "Marketing M0 foundation PASS\n";
 
 
@@ -64,3 +64,16 @@ foreach([[...$rows,$rows[0]],[[...$rows[0],'account_id'=>'124']],[[...$rows[0],'
 $sum=$mp::summarize([['reported_spend_decimal'=>'1.234567','impressions'=>100,'clicks'=>2],['reported_spend_decimal'=>'2.000001','impressions'=>null,'clicks'=>1]]);
 $assert($sum['reported_spend_decimal']==='3.234568'&&$sum['impressions']===null&&$sum['clicks']===3&&$sum['reach']===null,'Unknown metric or exact aggregate unsafe.');
 echo "Marketing M4 complete media batch validation and exact aggregate PASS\n";
+
+$economicPlan=['id'=>'mkpl-'.str_repeat('a',24),'campaign_id'=>'mkt-'.str_repeat('b',24),'period_start'=>'2026-01-01','period_end'=>'2026-01-07','currency'=>'EUR','lifetime_minor'=>10000];
+$scope=['plan_id'=>$economicPlan['id'],'campaign_id'=>$economicPlan['campaign_id'],'window_start'=>$economicPlan['period_start'],'window_end'=>$economicPlan['period_end']];
+$lead=[...$scope,'leads'=>10,'qualified_leads'=>5,'won_deals'=>2,'missing_source_count'=>0,'source_drift_count'=>0];
+$order=[...$scope,'placed_orders'=>2,'unresolved_captured_orders'=>0,'financial_evidence_status'=>'COMPLETE_CAPTURED_COHORT','financial_evidence_count'=>2,'financial_evidence_invalid_count'=>0,'net_cash_received'=>[['currency'=>'EUR','minor'=>8000]]];
+$settlement=['state'=>'SETTLED','finance_settled'=>true,'currency'=>'EUR','reservation_id'=>'finr-'.str_repeat('c',24),'committed_minor'=>2000,'released_minor'=>8000,'reserved_minor'=>10000];
+$econ=\Domains\Marketing\Domain\MarketingEconomicsPolicy::project($economicPlan,$lead,$order,$settlement);
+$assert($econ['cost_per_captured_lead']===2.0&&$econ['cost_per_captured_placed_order']===10.0&&$econ['net_collected_to_settled_media_spend']===4.0&&$econ['roas']===null&&$econ['cac']===null,'Cohort economics fabricated or lost confirmed amounts.');
+$econ=\Domains\Marketing\Domain\MarketingEconomicsPolicy::project($economicPlan,[...$lead,'source_drift_count'=>1],[...$order,'financial_evidence_status'=>'PARTIAL'],$settlement);
+$assert($econ['cost_per_captured_lead']===null&&$econ['confirmed_collection_minor']===null&&$econ['net_collected_to_settled_media_spend']===null,'Partial cohort promoted to complete economics.');
+$econ=\Domains\Marketing\Domain\MarketingEconomicsPolicy::project($economicPlan,$lead,$order,null);
+$assert($econ['settled_media_minor']===null&&$econ['cost_per_captured_lead']===null,'Missing settlement represented as zero spend.');
+echo "Marketing M4 exact scoped cohort economics and unknown financial metrics PASS\n";

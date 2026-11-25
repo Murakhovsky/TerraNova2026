@@ -98,7 +98,13 @@ try{
                         'variant'=>['id'=>'gid://shopify/ProductVariant/42'],'originalUnitPriceSet'=>$money('60.00')]],'pageInfo'=>['hasNextPage'=>false,'endCursor'=>null]]];
             }else{
                 $data['order']=['id'=>$request['variables']['id'],'createdAt'=>'2026-11-24T09:00:00Z','updatedAt'=>$this->updated,'cancelledAt'=>null,'test'=>false,
-                    'customerJourneySummary'=>['ready'=>$this->journeyReady,'lastVisit'=>['occurredAt'=>'2026-11-24T08:00:00Z','utmParameters'=>['source'=>'meta','medium'=>'paid_social','campaign'=>$this->journeyCampaign]]],
+                    'customerJourneySummary'=>['ready'=>$this->journeyReady,
+                        'firstVisit'=>['id'=>'gid://shopify/CustomerVisit/301','occurredAt'=>'2026-11-23T08:00:00Z','utmParameters'=>null],
+                        'lastVisit'=>['id'=>'gid://shopify/CustomerVisit/302','occurredAt'=>'2026-11-24T08:00:00Z','utmParameters'=>['source'=>'meta','medium'=>'paid_social','campaign'=>$this->journeyCampaign]],
+                        'momentsCount'=>['count'=>2,'precision'=>'EXACT'],'moments'=>['nodes'=>[
+                            ['id'=>'gid://shopify/CustomerVisit/301','occurredAt'=>'2026-11-23T08:00:00Z','utmParameters'=>null],
+                            ['id'=>'gid://shopify/CustomerVisit/302','occurredAt'=>'2026-11-24T08:00:00Z','utmParameters'=>['source'=>'meta','medium'=>'paid_social','campaign'=>$this->journeyCampaign]]],
+                            'pageInfo'=>['hasNextPage'=>false,'hasPreviousPage'=>false]]],
                     'edited'=>$this->edited,'taxesIncluded'=>true,'displayFinancialStatus'=>$this->financial,'displayFulfillmentStatus'=>'UNFULFILLED',
                     'originalTotalPriceSet'=>$money('120.00'),'totalPriceSet'=>$money('120.00'),'currentTotalPriceSet'=>$money($this->current),
                     'totalDiscountsSet'=>$money('0.00'),'totalTaxSet'=>$money('20.00'),'totalShippingPriceSet'=>$money('0.00'),
@@ -420,11 +426,15 @@ try{
     $j=$orderRepo->journey($org,$externalOrderId);
     $check($late['outcome']==='unchanged'&&$j['state']==='observed'&&$j['utm_campaign']===$http->journeyCampaign
         &&$orderRepo->journey('foreign-'.$token,$externalOrderId)===null,'Delayed ready journey or tenant fence failed.');
+    $history=$orderRepo->touchHistory($org,$externalOrderId);
+    $check($history['state']==='observed'&&count($history['touches'])===2&&$history['touches'][0]['tags']===null&&$history['touches'][1]['tags']['utm_campaign']===$http->journeyCampaign,'Complete Shopify moments not recorded or unknown contact lost.');
     $runSource($sourceInput,'journey-repeat-'.$token);
+    $check($orderRepo->touchHistory($org,$externalOrderId)===$history,'History replay changed evidence.');
     $check($orderRepo->journey($org,$externalOrderId)===$j,'Journey duplicate changed evidence.');
     $http->journeyCampaign='mkpl-bbbbbbbbbbbbbbbbbbbbbbbb';
     $runSource($sourceInput,'journey-conflict-'.$token);
     $check($orderRepo->journey($org,$externalOrderId)===['state'=>'conflict'],'Conflicting journey silently reassigned.');
+    $check($orderRepo->touchHistory($org,$externalOrderId)===['state'=>'conflict'],'Conflicting complete history silently reassigned.');
     $http->journeyReady=false;
     $check($orderRepo->placement($org,$externalOrderId)['realized_revenue']===null,'Journey implied financial revenue.');
     echo "Sales O5 Shopify delayed journey, independent order revision, tenant, replay and conflict PASS.\n";

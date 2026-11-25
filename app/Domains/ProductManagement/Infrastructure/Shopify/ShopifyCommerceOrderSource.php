@@ -214,7 +214,7 @@ GQL;
         if(!is_array($nodes)||!array_is_list($nodes)||count($nodes)<1||count($nodes)>100
             ||($page['pageInfo']['hasNextPage']??null)!==false||($page['pageInfo']['hasPreviousPage']??null)!==false
             ||($count['precision']??null)!=='EXACT'||($count['count']??null)!==count($nodes))return null;
-        $touches=[];$seen=[];
+        $touches=[];$seen=[];$earliest=(new DateTimeImmutable($placed))->modify('-30 days');
         try{
             $pin=static function(mixed $id)use($order):string{
                 if(!is_string($id)||!preg_match('#^gid://shopify/CustomerVisit/[A-Za-z0-9_.:-]{1,120}$#D',$id))
@@ -224,21 +224,22 @@ GQL;
             foreach($nodes as $v){
                 $id=$pin($v['id']??null);if(isset($seen[$id]))return null;$seen[$id]=true;
                 $at=self::time($v['occurredAt']??null);
-                if($at>$placed)return null;
+                if($at>$placed||new DateTimeImmutable($at)<$earliest)return null;
                 $u=$v['utmParameters']??null;$tags=null;
                 if(is_array($u)&&is_string($u['source']??null)&&is_string($u['medium']??null)&&is_string($u['campaign']??null)
                     &&preg_match('/^[a-z0-9][a-z0-9_.-]{0,63}$/D',$u['source'])
                     &&preg_match('/^[a-z0-9][a-z0-9_.-]{0,63}$/D',$u['medium'])
                     &&preg_match('/^(?:mkt|mkpl)-[a-f0-9]{24}$/D',$u['campaign']))
                     $tags=['utm_source'=>$u['source'],'utm_medium'=>$u['medium'],'utm_campaign'=>$u['campaign']];
-                $touches[]=['touch_id'=>$id,'visit_at'=>$at,'tags'=>$tags];
+                $touches[]=['touch_id'=>$id,'visit_at'=>$at,'tags'=>$tags];$seen[$id]=$at;
             }
             $first=$pin($summary['firstVisit']['id']??null);$last=$pin($summary['lastVisit']['id']??null);
-            if(!isset($seen[$first],$seen[$last]))return null;
+            if(!isset($seen[$first],$seen[$last])||(count($touches)>1&&$first===$last))return null;
             // Canonical order independent of provider pagination order.
             usort($touches,static fn(array $a,array $b):int=>[$a['visit_at'],$a['touch_id']]<=>[$b['visit_at'],$b['touch_id']]);
-            if($touches[0]['visit_at']!==self::time($summary['firstVisit']['occurredAt']??null)
-                ||$touches[count($touches)-1]['visit_at']!==self::time($summary['lastVisit']['occurredAt']??null))return null;
+            if($seen[$first]!==$touches[0]['visit_at']||$seen[$last]!==$touches[count($touches)-1]['visit_at']
+                ||$seen[$first]!==self::time($summary['firstVisit']['occurredAt']??null)
+                ||$seen[$last]!==self::time($summary['lastVisit']['occurredAt']??null))return null;
             return ['model'=>'shopify-journey-moments-v1','first_touch'=>$first,'last_touch'=>$last,'touches'=>$touches];
         }catch(DomainException){return null;}
     }

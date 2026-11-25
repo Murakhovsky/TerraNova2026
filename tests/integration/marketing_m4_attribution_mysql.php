@@ -298,3 +298,16 @@ $changed=$history;$changed['touches'][1]['tags']=['utm_campaign'=>$c2,'utm_sourc
 $db->beginTransaction();$nativeRepo->recordJourney($org,$nativeId,$placement['store_reference'],$placement['external_order_id'],$changed);$db->commit();
 $assert($historyService->report($actor,$nativeId,'linear')['status']==='CONFLICT'&&$nativeRepo->journey($org,$nativeId)===$beforeJourney,'History conflict silently reallocated or poisoned last touch.');
 echo "Marketing M4.11 native history independent of last touch, first/last/linear exact allocation and conflict PASS\n";
+
+$monCurrent=$mediaStore->commit($org,'42','m5-monitor-now',hash('sha256','m5-now'),$account,'campaign','2026-02-08','2026-02-14',[
+    [...$base,'date_start'=>'2026-02-08','date_stop'=>'2026-02-14','spend'=>'150.00','impressions'=>'2000','clicks'=>'40'],
+    [...$base,'campaign_id'=>'90003','date_start'=>'2026-02-08','date_stop'=>'2026-02-14','spend'=>'3.00','impressions'=>'20','clicks'=>'1']]);
+$monBaseline=$mediaStore->commit($org,'42','m5-monitor-base',hash('sha256','m5-base'),$account,'campaign','2026-02-01','2026-02-07',[
+    [...$base,'date_start'=>'2026-02-01','date_stop'=>'2026-02-07','spend'=>'100.00','impressions'=>'2000','clicks'=>'100'],
+    [...$base,'campaign_id'=>'90004','date_start'=>'2026-02-01','date_stop'=>'2026-02-07','spend'=>'10.00','impressions'=>'1000','clicks'=>'40']]);
+$monitor=new \Domains\Marketing\Application\Service\MarketingOptimizationMonitor(new \Domains\Marketing\Application\Service\MarketingMediaAnalyticsService($accounts,$provider,$mediaStore,$modules));
+$mon=$monitor->report($actor,$account['id'],'campaign','2026-02-08','2026-02-14','2026-02-01','2026-02-07');
+$states=array_column($mon['items'],'state','external_id');
+$assert($mon['alert_count']===1&&$mon['insufficient_count']===2&&$states['90001']==='REVIEW_REQUIRED'&&$states['90003']==='NO_BASELINE'&&$states['90004']==='NO_CURRENT_OBSERVATION'
+    &&count($mon['items'][0]['flags'])===4&&!$mon['provider_mutation'],'M5 source comparison missed anomalies or inferred missing delivery.');
+echo "Marketing M5 native media batch monitoring, matched anomalies and unavailable scopes PASS\n";
