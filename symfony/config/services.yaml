@@ -348,7 +348,7 @@ services:
       $plans: '@App\Persistence\Workflow\FederationWorkflowPlanApprovalEvidence'
       $policies: '@Kernel\Policy\Contract\PolicyRepositoryInterface'
       $policyEngine: '@Kernel\Policy\Service\PolicyEngine'
-      $contexts: '@Kernel\Policy\Service\PolicyContextBuilder'
+      $contexts: !closure '@Kernel\Policy\Service\PolicyContextBuilder'
       $identities: '@Kernel\Identity\Contract\IdentityResolverInterface'
       $tenants: '@Kernel\Tenant\Service\TenantContextFactory'
   App\Persistence\Workflow\FailClosedWorkflowActionWorkerAdmission:

@@ -50,7 +50,7 @@ final readonly class DoctrineWorkflowActionWorkerAdmission implements WorkflowAc
         private WorkflowPredecessorReceiptVerifier $predecessors,
         private ?PolicyRepositoryInterface $policies=null,
         private ?PolicyEngine $policyEngine=null,
-        private ?PolicyContextBuilder $contexts=null,
+        private PolicyContextBuilder|\Closure|null $contexts=null,
         private ?IdentityResolverInterface $identities=null,
         private ?TenantContextFactory $tenants=null,
     ) {}
@@ -237,8 +237,13 @@ final readonly class DoctrineWorkflowActionWorkerAdmission implements WorkflowAc
         $proposal=new ActionProposal($action->type,$action->targetType,$action->targetId,$action->parameters,
             $action->sourceType,$action->sourceId,$action->executionMode,$action->riskLevel,
             (string)$action->idempotencyKey,['federation'=>['run_id'=>$row['run_id'],'step_id'=>$row['step_id']]]);
+        // Resolve the existing PolicyContextBuilder at invocation time. Domain handlers
+        // themselves depend on this admission, so eager DI would form a cycle.
+        $contexts=$this->contexts instanceof \Closure ? ($this->contexts)() : $this->contexts;
+        if(!$contexts instanceof PolicyContextBuilder)
+            throw new DomainException('Canonical Policy context service unavailable.');
         $evaluation=$this->policyEngine->evaluate($action->type,
-            $this->contexts->build($action->organizationId,$proposal),
+            $contexts->build($action->organizationId,$proposal),
             $this->policies->activeFor($action->organizationId,$action->type));
         $originalPolicy=$this->db->fetchOne('SELECT policy_id FROM cos_policy_evaluations
             WHERE organization_id=:org AND action_id=:id ORDER BY evaluated_at DESC,id DESC LIMIT 1',
