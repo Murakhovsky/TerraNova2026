@@ -131,7 +131,13 @@ try{
     $sync=new \Domains\Sales\Application\Service\SalesOrderSyncService($syncRepo,$source,$reconcile,$guard,$syncQueue,
         new \Infrastructure\Platform\ReadModel\MySql\MysqlAsyncOperationReadModel($db),$active);
     $syncHandler=new \Domains\Sales\Automation\Job\SalesOrderSyncJobHandler($sync);
-    $lifecycle=new \Domains\Sales\Application\Service\SalesOrderLifecycleService($orderRepo,$orderRepo,$receipts,$guard,$authority,$entityScope,$productStore,$active,new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderSourceRepository($db));
+    // Contract-level Finance test double; real Finance writes/approval are covered in finance_order_payments_mysql.php.
+    $financeEvidence=new class implements \Domains\Finance\Application\Contract\CommerceOrderFinancialEvidenceReadPort{
+        public array $facts=[];
+        public function financialEvidence(string $organizationId,string $orderId):?array
+        {return $this->facts[$orderId]??null;}
+    };
+    $lifecycle=new \Domains\Sales\Application\Service\SalesOrderLifecycleService($orderRepo,$orderRepo,$receipts,$guard,$authority,$entityScope,$productStore,$active,new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderSourceRepository($db),$financeEvidence);
     $gateway=new CanonicalCapabilityGateway($catalog,$active,new FederationCapabilityBindingResolver($catalog,new DomainModuleRegistry([]),$active),[
         new SalesWorkspaceSummaryAdapter($scope,$read),
         new \App\Infrastructure\Capability\SalesWorkspaceLeadsListAdapter($scoped),
@@ -562,12 +568,28 @@ try{
     $life('return',$one,8,'return-no-stock',['items'=>[['allocation_id'=>$allocA['allocation_id'],'quantity'=>1,'disposition'=>'no_restock']]]);
     $check($balance($locA)['on_hand']==='9.000000','No-restock return incorrectly received stock.');
     $atomicReject(fn()=>$life('return',$one,9,'excess-return',['items'=>[['allocation_id'=>$allocA['allocation_id'],'quantity'=>1,'disposition'=>'restock']]]));
+    $review=$lifeRead($one)['financial_review'];
+    $check($review['collection_state']==='unverified'&&$review['net_collected_amount']===null&&$review['review_required']&&$review['review_reasons']===['cancelled_order','returned_items'],'Cancelled/returned order must not infer payment or settlement.');
+    $financeEvidence->facts[$one]=['schema_version'=>'1.0.0','organization_id'=>$org,'order_id'=>$one,'currency'=>'EUR',
+        'evidence_reference'=>str_repeat('a',32),'revision'=>4,'captured_amount'=>'90.00','refunded_amount'=>'20.00',
+        'chargeback_amount'=>'10.00','net_collected_amount'=>'60.00','outstanding_amount'=>'30.00'];
+    $review=$lifeRead($one)['financial_review'];
+    $check($review['collection_state']==='partial'&&$review['net_collected_amount']==='60.00'&&$review['finance_revision']===4&&$review['review_reasons']===['cancelled_order','returned_items','chargeback'],'Finance readback lost confirmed collection or review reasons.');
+    $financeEvidence->facts[$one]['currency']='USD';
+    $atomicReject(fn()=>$lifeRead($one));
+    $financeEvidence->facts[$one]['currency']='EUR';
+    $financeEvidence->facts[$one]['net_collected_amount']='100.00';
+    $review=$lifeRead($one)['financial_review'];
+    $check($review['collection_state']==='above_placed'&&in_array('excess_collection',$review['review_reasons'],true),'Excess collection not flagged.');
+    unset($financeEvidence->facts[$one]);
     $twoAlloc=$life('allocate',$two,2,'atomic-multi',['items'=>[
         ['line_no'=>1,'location_id'=>$locA,'quantity'=>4],['line_no'=>1,'location_id'=>$locB,'quantity'=>2]]]);
     $twoFulfilled=$life('fulfill',$two,3,'dispatch-two',['items'=>array_map(fn($a)=>['allocation_id'=>$a['allocation_id'],'quantity'=>$a['quantity']],$twoAlloc['allocations'])]);
     $check($twoFulfilled['status']==='completed'&&$twoFulfilled['fulfillment_state']==='fulfilled'&&$balance($locA)['on_hand']==='5.000000'&&$balance($locB)['on_hand']==='1.000000','Complete fulfillment balances mismatch.');
     $externalLifecycle=$life('confirm',$externalOrderId,1,'external-confirm');
     $check($externalLifecycle['inventory_authority']==='external_review'&&$externalLifecycle['fulfillment_state']==='external_review'&&$externalLifecycle['external_observation']['provider_fulfillment_status']==='UNFULFILLED'&&$externalLifecycle['external_observation']['provider_financial_status']==='PAID','External order ownership not explicit.');
+    $review=$lifeRead($externalOrderId)['financial_review'];
+    $check($review['collection_state']==='unverified'&&$review['net_collected_amount']===null&&$review['review_reasons']===['external_order'],'Shopify PAID observation was treated as confirmed collection.');
     $atomicReject(fn()=>$life('allocate',$externalOrderId,2,'external-double-reserve',['items'=>[['line_no'=>1,'location_id'=>$locA,'quantity'=>1]]]));
     $atomicReject(fn()=>$gateway->invoke($actor($org,$other),'sales.order.lifecycle.cancel',['order_id'=>$one,'expected_revision'=>9,'reference'=>'foreign'],'human_api','foreign-o3-'.$token,'o3'));
     $atomicReject(fn()=>$gateway->invoke($actor('foreign-'.$token,$owner),'sales.order.lifecycle.read',['order_id'=>$one],'trusted_read','','o3'));
