@@ -496,7 +496,7 @@ jobs:
           docker compose exec -T \
             -e COS_CM_POOL_APPROVAL_TEST=1 \
             -e COS_TEST_AUTOLOAD=/var/www/html/symfony/vendor/autoload.php \
-            php php /tmp/cm-pool-approval.php
+            php php -d memory_limit=512M /tmp/cm-pool-approval.php
       - name: P1 Provider expansion and read-only raw replay provenance MySQL
         run: |
           docker compose cp tests/integration/capital_markets_raw_replay_provenance_mysql.php php:/tmp/cm-replay-provenance.php
