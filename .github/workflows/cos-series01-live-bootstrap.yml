@@ -82,6 +82,13 @@ jobs:
         run: |
           set -Eeuo pipefail
           printf -v remote '%q ' sudo -n bash /opt/cos/bin/series01-live-bootstrap.sh "$EXPECTED_SHA"
+          # The deploy artifact excludes /resources/pilots; stream the exact
+          # source-controlled 9-SKU fixture over the trusted SSH channel.
+          # Neither the remote host nor PHP container stores an extra CSV copy.
+          fixture=resources/pilots/series01/approved-import-candidate.csv
+          [[ "$(sha256sum "$fixture" | cut -d' ' -f1)" == "f8122e58f81f61d112be1bd0db0e5ae8f20fda5d6dcce57eab4fa69a0e2a058c" ]] || {
+            echo "::error::SERIES01_CSV_DIGEST_MISMATCH"; exit 2;
+          }
           ssh -T -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes \
             -i "$HOME/.ssh/key" -p "$DEV_PORT" \
-            "$DEV_USER@$DEV_HOST" "$remote"
+            "$DEV_USER@$DEV_HOST" "$remote" < "$fixture"

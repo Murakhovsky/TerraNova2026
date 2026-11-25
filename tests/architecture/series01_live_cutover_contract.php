@@ -15,6 +15,22 @@ foreach([
     'series01-preview-',"'counts'",'READY','PREVIEW_STAGED_AWAITING_INDEPENDENT_APPROVAL',
     'canonical_products_written',
 ] as $item) $assert(str_contains($cmd,$item),'cutover command is not guarded by '.$item);
+// Docker runtime excludes fixture files. The workflow must attest the exact
+// checked-out CSV bytes before streaming into the CLI over SSH/stdin.
+$csv=(string)file_get_contents($root.'/resources/pilots/series01/approved-import-candidate.csv');
+$fixtureHash=hash('sha256',$csv);
+$assert($fixtureHash==='f8122e58f81f61d112be1bd0db0e5ae8f20fda5d6dcce57eab4fa69a0e2a058c',
+    'SERIES01 fixture content unexpectedly changed');
+$assert(str_contains($cmd,'stream_get_contents(STDIN,12001)')
+    &&str_contains($cmd,$fixtureHash)
+    &&!str_contains($cmd,'file_get_contents($path)'),
+    'PHP preview must consume exact pinned input bytes, not runtime fixture path');
+$assert(str_contains($script,'docker exec -i -e COS_PRODUCT_SERIES01_OPERATOR_ENABLED=1'),
+    'Bootstrap must pass CSV through docker exec stdin');
+$assert(str_contains($workflow,'"$remote" < "$fixture"')
+    &&str_contains($workflow,'sha256sum "$fixture"'),
+    'Workflow must pipe pinned source-controlled CSV over SSH');
+
 $assert(!str_contains($cmd,'applyApproved(')
     &&!str_contains($cmd,'ProductImportApplyHandler')
     &&!str_contains($cmd,'createProduct('),
