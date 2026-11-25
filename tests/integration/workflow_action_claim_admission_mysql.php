@@ -50,10 +50,26 @@ $db=DriverManager::getConnection([
     'user'=>(string)(getenv('DB_USERNAME') ?: 'cos'),
     'password'=>(string)(getenv('DB_PASSWORD') ?: ''), 'charset'=>'utf8mb4',
 ]);
-$effect=getenv('COS_TEST_FINANCIAL_WORKFLOW')==='1'?'financial':'external';
 $token=bin2hex(random_bytes(6));
 $org='wf-gate-'.$token;
+$effect=getenv('COS_TEST_WORKFLOW_EFFECT')?:'external';
+if(!in_array($effect,['internal','external','financial','irreversible'],true))throw new RuntimeException('Invalid effect fixture.');
+$high=in_array($effect,['financial','irreversible'],true);
 $actorId='gate-manager-'.$token;
+$approvedBy='gate-approver-'.$token;
+$policyId=null;$users=[];
+if($high){
+    $db->executeStatement('INSERT INTO cos_organizations (id,name,status) VALUES (?,?,"ACTIVE")',[$org,'Workflow governance fixture']);
+    foreach(['owner','reviewer'] as $label){
+        $db->executeStatement('INSERT INTO tn_users (organization_id,email,password_hash,full_name,role,status) VALUES (?,?,?,?, "manager","active")',[$org,$label.'-'.$token.'@example.invalid','test-only',$label]);
+        $uid=(string)$db->getNativeConnection()->lastInsertId();
+        $db->executeStatement('INSERT INTO cos_organization_memberships (organization_id,user_id,role,status) VALUES (?,?,"manager","ACTIVE")',[$org,(int)$uid]);
+        $users[]=$uid;
+    }
+    [$actorId,$approvedBy]=$users;
+    $policyId=bin2hex(random_bytes(16));
+    $db->executeStatement('INSERT INTO cos_policies (id,organization_id,code,name,action_type,conditions,decision,priority,version,status) VALUES (?,?,?,?,?,?,"APPROVAL_REQUIRED",1,1,"ACTIVE")',[$policyId,$org,'high-risk','Explicit action policy','test.publish','[]']);
+}
 $actor=new TenantContext(
     UserId::fromString($actorId), OrganizationId::fromString($org),
     OrganizationRole::fromString('manager'),
@@ -88,7 +104,7 @@ $capability=new CapabilityContract(
     inputSchema:'resources/contracts/tests/claim.schema.json',
     outputSchema:'resources/contracts/tests/claim-output.schema.json',
     executionBinding:'action:test.publish',sideEffectLevel:$effect,
-    permission:'test.publish',approvalPolicy:'required',idempotency:'required',
+    permission:$high?TenantPermissions::MANAGE:'test.publish',approvalPolicy:'required',idempotency:'required',
     timeoutPolicy:['seconds'=>60],retryPolicy:['max_attempts'=>1],
     failureContract:'manual_reconciliation',
 );
@@ -152,11 +168,10 @@ try {
     );
     $db->executeStatement(
         'INSERT INTO cos_policy_evaluations
-         (id,organization_id,action_id,decision,correlation_id,evaluated_at)
-         VALUES (:id,:org,:action,"APPROVAL_REQUIRED",:correlation,NOW(6))',
-        ['id'=>bin2hex(random_bytes(16)),...$keys,'correlation'=>$draft->correlationId],
+         (id,organization_id,action_id,policy_id,decision,correlation_id,evaluated_at)
+         VALUES (:id,:org,:action,:policy,"APPROVAL_REQUIRED",:correlation,NOW(6))',
+        ['id'=>bin2hex(random_bytes(16)),...$keys,'policy'=>$policyId,'correlation'=>$draft->correlationId],
     );
-    $approvedBy='gate-approver-'.$token;
     $db->executeStatement(
         'INSERT INTO cos_approvals
          (id,organization_id,action_id,status,approver_type,approver_id,
@@ -264,8 +279,14 @@ try {
         new DoctrineWorkflowActionReceiptVerifier($db,$knownPlan),
         new FailClosedWorkflowNonActionReceiptEvidence(),
     );
+    $pdo=$db->getNativeConnection();
     $worker=new DoctrineWorkflowActionWorkerAdmission(
         $db,$knownPlan,new CanonicalCapabilityCatalog($catalog),$modules,$predecessors,
+        new \Infrastructure\Platform\Persistence\MySql\Policy\MysqlPolicyRepository($pdo),
+        new \Kernel\Policy\Service\PolicyEngine(new \Kernel\Rule\Service\ConditionEvaluator()),
+        new \Kernel\Policy\Service\PolicyContextBuilder(new \Kernel\Module\DomainModuleRegistry([])),
+        new \App\Infrastructure\Persistence\MySql\MysqlIdentityRepository($pdo),
+        new \Kernel\Tenant\Service\TenantContextFactory(new \App\Security\RoleTenantPermissionResolver()),
     );
     $untrustedWorker=new DoctrineWorkflowActionWorkerAdmission(
         $db,new FailClosedWorkflowPlanApprovalEvidence(),new CanonicalCapabilityCatalog($catalog),$modules,$predecessors,
@@ -276,6 +297,17 @@ try {
         'wf:'.$step->idempotencyKey,new DateTimeImmutable(),ActionStatus::Running,$draft->correlationId,
     );
     $worker->assertAuthorized($action);
+    if($high){
+        $db->executeStatement('UPDATE cos_policies SET decision="DENIED" WHERE id=? AND organization_id=?',[$policyId,$org]);
+        $reject(static fn()=> $worker->assertAuthorized($action),'live high-risk policy denied after approval');
+        $db->executeStatement('UPDATE cos_policies SET decision="APPROVAL_REQUIRED",action_type="*" WHERE id=? AND organization_id=?',[$policyId,$org]);
+        $reject(static fn()=> $worker->assertAuthorized($action),'wildcard high-risk policy');
+        $db->executeStatement('UPDATE cos_policies SET action_type="test.publish" WHERE id=? AND organization_id=?',[$policyId,$org]);
+        $db->executeStatement('UPDATE cos_organization_memberships SET role="member" WHERE organization_id=? AND user_id=?',[$org,(int)$approvedBy]);
+        $reject(static fn()=> $worker->assertAuthorized($action),'high-risk approver demoted after approval');
+        $db->executeStatement('UPDATE cos_organization_memberships SET role="manager" WHERE organization_id=? AND user_id=?',[$org,(int)$approvedBy]);
+        $worker->assertAuthorized($action);
+    }
     $reject(static fn()=> $untrustedWorker->assertAuthorized($action),'worker untrusted Plan proof');
     $permissionState->setEnabled($org,'sales',false);
     $reject(static fn()=> $worker->assertAuthorized($action),'worker disabled module after Action claim');
@@ -365,7 +397,7 @@ try {
         throw new RuntimeException('Stale recovery replay protection or normal retry behavior regressed.');
     }
 
-    echo "Workflow Action claim + worker gate MySQL passed: preclaim, live Policy/Approval, no second attempts, expired lease and protected stale requeue.\n";
+    echo "Workflow $effect Action claim + worker gate MySQL passed: preclaim, live Policy/Approval, no second attempts, expired lease and protected stale requeue.\n";
 } finally {
     $db->executeStatement('DELETE FROM cos_approvals WHERE organization_id=:org',['org'=>$org]);
     $db->executeStatement('DELETE FROM cos_policy_evaluations WHERE organization_id=:org',['org'=>$org]);
@@ -373,4 +405,10 @@ try {
     $db->executeStatement('DELETE FROM cos_actions WHERE organization_id=:org',['org'=>$org]);
     $db->executeStatement('DELETE FROM cos_workflow_steps WHERE organization_id=:org',['org'=>$org]);
     $db->executeStatement('DELETE FROM cos_workflow_runs WHERE organization_id=:org',['org'=>$org]);
+    if($high){
+        $db->executeStatement('DELETE FROM cos_policies WHERE organization_id=?',[$org]);
+        $db->executeStatement('DELETE FROM cos_organization_memberships WHERE organization_id=?',[$org]);
+        $db->executeStatement('DELETE FROM tn_users WHERE organization_id=?',[$org]);
+        $db->executeStatement('DELETE FROM cos_organizations WHERE id=?',[$org]);
+    }
 }

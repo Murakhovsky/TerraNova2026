@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Persistence\Federation;
 
+use Platform\Workflow\Service\DurableWorkflowTransitionPolicy;
+
 use App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier;
 use Doctrine\DBAL\Connection;
 use DomainException;
@@ -147,7 +149,8 @@ final readonly class FederationVerifiedRunReadModel
         if ($source===null || $source['run_state']!=='completed'
             || $source['step_state']!=='completed'
             || $source['plan_state']!=='approved'
-            || !in_array($source['side_effect_level'],['external','financial'],true)
+            || !DurableWorkflowTransitionPolicy::isActionEffect($source['side_effect_level'])
+            || ($source['authority']!=='canonical' && $source['side_effect_level']!=='external')
             || !is_string($source['result_reference']??null)
             || !preg_match('/^action:([a-f0-9]{32})$/D',$source['result_reference'],$match)) {
             throw new DomainException('Completed Action has no trustworthy tenant-owned Step receipt.');

@@ -87,6 +87,16 @@ putenv('COS_FEDERATION_CANONICAL_ORGANIZATION='.$org);
 try {
     $pdo->prepare('INSERT INTO cos_organizations (id,name,status) VALUES (:id,:name,"ACTIVE")')
         ->execute(['id'=>$org,'name'=>'Marketing approved full canonical E2E']);
+    $users=[];
+    foreach(['owner','reviewer'] as $label){
+        $pdo->prepare('INSERT INTO tn_users (organization_id,email,password_hash,full_name,role,status) VALUES (?,?,?,?, "manager","active")')->execute([$org,$label.'-'.$token.'@example.invalid','test-only',$label]);
+        $uid=(string)$pdo->lastInsertId();
+        $pdo->prepare('INSERT INTO cos_organization_memberships (organization_id,user_id,role,status) VALUES (?,?,"manager","ACTIVE")')->execute([$org,(int)$uid]);
+        $users[]=$uid;
+    }
+    [$owner,$reviewer]=$users;
+    $actor=new TenantContext(UserId::fromString($owner),OrganizationId::fromString($org),
+        OrganizationRole::fromString('manager'),[Permission::fromString(TenantPermissions::ACCESS),Permission::fromString(TenantPermissions::MANAGE)]);
     $transactions=new class($pdo) implements TransactionManagerInterface {
         public function __construct(private PDO $pdo){}
         public function transactional(callable $op):mixed{
@@ -401,12 +411,17 @@ try {
     $assert($statusService->status($actor,$reservation['id'],$docId,$snapshotId)['state']==='MATCHED_NOT_SETTLED','Review status overclaims settlement.');
     $facts=$reviews->read($actor,$reservation['id'],$docId,$snapshotId);
     $assert($facts['candidate']['proposed_commit_minor']===1250&&!$facts['candidate']['finance_settled'],'Review must not mutate budget.');
+    $financialWorker=new DoctrineWorkflowActionWorkerAdmission($db,$planEvidence,$capabilities,$modules,
+        new WorkflowPredecessorReceiptVerifier($receipts,new FailClosedWorkflowNonActionReceiptEvidence()),
+        $policies,$engine,$policyContexts,
+        new \App\Infrastructure\Persistence\MySql\MysqlIdentityRepository($pdo),
+        new \Kernel\Tenant\Service\TenantContextFactory(new \App\Security\RoleTenantPermissionResolver()));
     $settlementHandler=new \Domains\Finance\Automation\Action\FinancePaidSettlementHandler(
-        new \Domains\Finance\Application\Service\ApprovedFinancePaidSettlementService($settlements,$reviews,$worker,$modules),$identityResolver,$tenantFactory);
+        new \Domains\Finance\Application\Service\ApprovedFinancePaidSettlementService($settlements,$reviews,$financialWorker,$modules),$identityResolver,$tenantFactory);
     $domains=new DomainModuleRegistry([new \Domains\Marketing\Bootstrap\MarketingDomainModule($handler,$paidHandler),
         new \Domains\Finance\Bootstrap\FinanceDomainModule(new \Domains\Finance\Automation\Action\FinanceBudgetActionHandler($financeOps),$settlementHandler)]);
     $bindings=new FederationCapabilityBindingResolver($capabilities,$domains,$modules);
-    $gate=new ModuleActionExecutionGate($domains,$modules,null,$worker);
+    $gate=new ModuleActionExecutionGate($domains,$modules,null,$financialWorker);
     $actionService=new ActionService(new MysqlActionRepository($pdo),new ActionExecutor([$handler,$paidHandler,$settlementHandler],$gate));
     $policyContexts=new PolicyContextBuilder($domains);
     $policyService=new ActionPolicyService($actionService,$policies,new MysqlPolicyEvaluationRepository($pdo),$approvalRepo,$engine,

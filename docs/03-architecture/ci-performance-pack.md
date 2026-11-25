@@ -19,10 +19,14 @@ Runtime workflow runs for a PR, `main`, or an explicit `workflow_dispatch`.
 | `runtime` | Production PHP/Nginx image, dependent services, all existing MySQL/health/routes/browser/vertical-slice acceptance | BuildKit and Docker Compose |
 
 These jobs do **not** depend on each other: one failed Federation assertion no
-longer prevents the other independent packs from running. The deployment job has
-`needs: [runtime, federation-mysql, capital-markets-unit]` and is still
-restricted to successful `main` pushes. A manual workflow dispatch never
-deploys or modifies live production.
+longer prevents the other independent packs from running. The GHCR publish job requires successful `runtime`, `federation-mysql`, and
+`capital-markets-unit` jobs. AWS **dev** deployment additionally requires
+`publish-runtime-images` to succeed. On a successful `push` to `main` these
+jobs automatically publish commit-SHA-pinned images and deploy that same
+revision to AWS dev. `pull_request` runs cannot deploy. An explicit manual
+`workflow_dispatch` from `main` may also deploy to **dev** only when
+`deploy_dev=true`; the default is false. Production deployment remains a
+separate approval-controlled operation.
 
 ## Кешування Docker
 

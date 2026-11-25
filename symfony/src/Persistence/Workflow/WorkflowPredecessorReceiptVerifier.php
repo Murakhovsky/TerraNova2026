@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Persistence\Workflow;
 
+use Platform\Workflow\Service\DurableWorkflowTransitionPolicy;
+
 use DomainException;
 use Kernel\Action\Action;
 use Platform\Workflow\Contract\WorkflowNonActionReceiptEvidenceInterface;
@@ -74,13 +76,13 @@ final readonly class WorkflowPredecessorReceiptVerifier
                 || ($row['side_effect_level'] ?? null) !== ($pinned['side_effect_level'] ?? null)
                 || ($row['idempotency_key'] ?? null) !== $expectedKey
                 || (int) ($row['attempts'] ?? 0) < 1
-                || in_array($row['side_effect_level']??null,['external','financial'],true)
+                || DurableWorkflowTransitionPolicy::isActionEffect($row['side_effect_level'] ?? null)
                     && (int) ($row['attempts'] ?? 0) !== 1
                 || (int) ($row['revision'] ?? 0) < 2
                 || !is_string($receipt) || $receipt === '') {
                 throw new DomainException('Completed Workflow Step has no pinned, versioned, one-attempt receipt.');
             }
-            if (in_array($row['side_effect_level'],['external','financial'],true)) {
+            if (DurableWorkflowTransitionPolicy::isActionEffect($row['side_effect_level'])) {
                 if (!preg_match('/^action:[a-f0-9]{32}$/', $receipt)
                     || !is_string($pinned['execution_binding'] ?? null)
                     || !str_starts_with($pinned['execution_binding'], 'action:')) {

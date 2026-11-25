@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Persistence\Federation;
 
+use Platform\Workflow\Service\DurableWorkflowTransitionPolicy;
+
 use App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier;
 use App\Persistence\Workflow\FederationWorkflowPlanApprovalEvidence;
 use Doctrine\DBAL\Connection;
@@ -129,7 +131,7 @@ final readonly class FederationPostCutoverIntegrity
                 }
                 try{
                     $identity=new WorkflowRunIdentity($org,$runId);
-                    if(in_array($step['side_effect_level'],['external','financial'],true)){
+                    if(DurableWorkflowTransitionPolicy::isActionEffect($step['side_effect_level'])){
                         $proof=$this->actions->attestForAudit(
                             $identity,$sid,$reference,(string)$run['input_digest']);
                         if(!$proof->verified||$proof->evidenceReference!==$reference){

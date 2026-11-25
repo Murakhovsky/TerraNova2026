@@ -130,3 +130,41 @@ try {
 } catch (DomainException) {
 }
 echo "Shared Workflow DAG contract parity passed: canonical DTOs, Federation compatibility, ambiguity and negative fixtures.\n";
+
+/* Classifier and mixed canonical DAG: selection is not authority to dispatch. */
+$effects=DurableWorkflowTransitionPolicy::SUPPORTED_EFFECTS;
+$assert($effects===['none','internal','external','financial','irreversible'],'Missing side-effect class.');
+$mixed=[];$pending=[];
+foreach($effects as $i=>$effect){
+    $id='step'.$i;
+    $mixed[]=['id'=>$id,'capability_id'=>'test.operation','capability_version'=>'1.0.0','side_effect_level'=>$effect,'depends_on'=>$i===0?[]:['step'.($i-1)]];
+    $pending[]=['step_id'=>$id,'capability_id'=>'test.operation','capability_version'=>'1.0.0','side_effect_level'=>$effect,'state'=>'pending'];
+    if($effect!=='none'){
+        $assert(DurableWorkflowTransitionPolicy::isActionEffect($effect),'Mutation misclassified.');
+        $assert(!DurableWorkflowTransitionPolicy::canAutoRetry($effect,'waiting'),'Mutation auto-retry permitted.');
+        $contract=new \Kernel\Module\CapabilityContract(
+            id:'test.operation',version:'1.0.0',ownerDomain:'test',kind:'command',
+            inputSchema:'fixture',outputSchema:'fixture',executionBinding:'action:test.operation',
+            sideEffectLevel:$effect,permission:'cos.tenant.manage',approvalPolicy:'required',
+            idempotency:'required',timeoutPolicy:['seconds'=>30],retryPolicy:['max_attempts'=>1],
+            failureContract:'manual reconciliation');
+        $assert(DurableWorkflowTransitionPolicy::acceptsActionContract($contract),'Approved Action contract rejected.');
+        $conditional=new \Kernel\Module\CapabilityContract(
+            id:'test.operation',version:'1.0.0',ownerDomain:'test',kind:'command',
+            inputSchema:'fixture',outputSchema:'fixture',executionBinding:'action:test.operation',
+            sideEffectLevel:$effect,permission:'cos.tenant.manage',approvalPolicy:'conditional',
+            idempotency:'required',timeoutPolicy:['seconds'=>30],retryPolicy:['max_attempts'=>1],
+            failureContract:'manual reconciliation');
+        $assert(!DurableWorkflowTransitionPolicy::acceptsActionContract($conditional),'Mutation admitted without required approval.');
+    }
+}
+$definitionMixed=new WorkflowDefinitionSnapshot('test.mixed','1.0.0',$mixed);
+foreach($pending as $i=>$row){
+    $selected=$shared->select($definitionMixed,$copy($pending),$effects);
+    $assert($selected->stepId===$row['step_id'],'Mixed graph bypassed dependency.');
+    $pending[$i]['state']='completed';
+}
+$assert($shared->select($definitionMixed,$copy($pending),$effects)->state===WorkflowStepSelectionState::COMPLETE,'Mixed graph did not complete.');
+$assert(!DurableWorkflowTransitionPolicy::isActionEffect('none')&&!DurableWorkflowTransitionPolicy::isActionEffect('unknown'),'Unknown effect admitted.');
+$assert(DurableWorkflowTransitionPolicy::requiresExplicitPolicy('financial')&&DurableWorkflowTransitionPolicy::requiresExplicitPolicy('irreversible'),'High-risk effect missing explicit policy.');
+echo "Canonical Workflow mixed five-class DAG and governance unit PASS.\n";

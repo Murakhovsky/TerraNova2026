@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Persistence\Federation;
 
+use Platform\Workflow\Service\DurableWorkflowTransitionPolicy;
+
 use DomainException;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Module\CanonicalCapabilityCatalog;
@@ -80,6 +82,7 @@ final readonly class FederationCapabilityBindingResolver
             // against the pinned Plan at claim and checkpoint.
             return $contract->kind==='query' || $contract->kind==='command';
         }
+        if (!DurableWorkflowTransitionPolicy::acceptsActionContract($contract)) return false;
         $actionType = substr($contract->executionBinding, 7);
         $handlers = $this->domains->actionHandlerMap();
         if ($actionType === '' || $this->domains->ownerOfAction($actionType) !== $contract->ownerDomain

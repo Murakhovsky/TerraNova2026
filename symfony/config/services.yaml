@@ -2,6 +2,7 @@ parameters:
   env(COS_MARKETING_HERMES_PROFILES_JSON): '{}'
   env(COS_MARKETING_META_EXECUTION_PROFILES_JSON): '{}'
   env(COS_MARKETING_META_ACTIVATION_ENABLED): '0'
+  env(COS_WORKFLOW_ACTION_WORKER_ORGANIZATION): ''
   env(COS_AI_CAPABILITY_INTENT_SECRET): ''
   env(COS_CRON_CAPABILITY_INTENT_SECRET): ''
   env(COS_AUTOMATION_TENANT_ORGANIZATION): ''
@@ -348,6 +349,15 @@ services:
   App\Persistence\Workflow\DoctrineWorkflowActionWorkerAdmission:
     arguments:
       $plans: '@App\Persistence\Workflow\FederationWorkflowPlanApprovalEvidence'
+      $policies: '@Kernel\Policy\Contract\PolicyRepositoryInterface'
+      $policyEngine: '@Kernel\Policy\Service\PolicyEngine'
+      $contexts: '@Kernel\Policy\Service\PolicyContextBuilder'
+      $identities: '@Kernel\Identity\Contract\IdentityResolverInterface'
+      $tenants: '@Kernel\Tenant\Service\TenantContextFactory'
+  App\Persistence\Workflow\FailClosedWorkflowActionWorkerAdmission:
+    arguments:
+      $candidate: '@App\Persistence\Workflow\DoctrineWorkflowActionWorkerAdmission'
+      $enabledOrganization: '%env(COS_WORKFLOW_ACTION_WORKER_ORGANIZATION)%'
   App\Persistence\Workflow\FederationNonActionClaimAdmission:
     arguments:
       $plans: '@App\Persistence\Workflow\FederationWorkflowPlanApprovalEvidence'
@@ -2993,6 +3003,7 @@ services:
       $connection: '@cos.database.pdo'
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyNestedConnectionReader: ~
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyCatalogPullService: ~
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyOrderReadbackService: ~
 
   # Product Management E0: domain stays tenant-disabled until explicit activation.
   Domains\ProductManagement\Automation\Action\ProductImportApplyHandler: ~

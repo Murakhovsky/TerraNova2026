@@ -6,7 +6,7 @@ namespace App\Http\Api\V1\Controller;
 use DomainException;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyObservationStore;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyReadClient;
-use Domains\ProductManagement\Infrastructure\Shopify\ShopifyWebhookVerifier;
+use Domains\ProductManagement\Infrastructure\Shopify\ShopifyOrderWebhookEvidence;
 use Kernel\Module\ActiveModuleResolver;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -41,13 +41,13 @@ final readonly class ShopifyWebhookController
             $secret=$this->credentials->webhookSecret(
                 $shop,$connection['secret_ref'],$connection['organization_id'],$connection['connection_id']
             );
-            ShopifyWebhookVerifier::verify($raw,$signature,$secret);
+            $orderGid=ShopifyOrderWebhookEvidence::extractVerified($raw,$signature,$secret,$topic);
             if (!$this->modules->isEnabled($connection['organization_id'],'product_management')) {
                 throw new DomainException('Product Management is inactive for the target tenant.');
             }
             $new=$this->observations->recordVerifiedDelivery(
                 $connection['organization_id'],$connection['connection_id'],
-                $delivery,$topic,$raw
+                $delivery,$topic,$raw,$orderGid
             );
             return $this->reply($new?'accepted_for_reconciliation':'already_received',$new?202:200);
         } catch (DomainException $e) {

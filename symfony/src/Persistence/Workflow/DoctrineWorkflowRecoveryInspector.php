@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Persistence\Workflow;
 
+use Platform\Workflow\Service\DurableWorkflowTransitionPolicy;
+
 use Doctrine\DBAL\Connection;
 use DomainException;
 use Kernel\Tenant\Model\TenantPermissions;
@@ -133,11 +135,11 @@ final readonly class DoctrineWorkflowRecoveryInspector implements WorkflowRecove
             $state = (string) $step['state'];
             $effect = (string) $step['side_effect_level'];
             if ($state === 'ambiguous' || $state === 'failed') {
-                return $assessment(WorkflowRecoveryDisposition::MANUAL_REQUIRED, 'step_requires_manual_reconciliation', in_array($effect,['external','financial'],true));
+                return $assessment(WorkflowRecoveryDisposition::MANUAL_REQUIRED, 'step_requires_manual_reconciliation', DurableWorkflowTransitionPolicy::isActionEffect($effect));
             }
             if ($state === 'claimed') {
                 $expired = (int) $step['lease_expired'] === 1;
-                if (in_array($effect,['external','financial'],true)) {
+                if (DurableWorkflowTransitionPolicy::isActionEffect($effect)) {
                     return $assessment(
                         $expired ? WorkflowRecoveryDisposition::MANUAL_REQUIRED : WorkflowRecoveryDisposition::RECONCILE_ONLY,
                         $expired ? 'external_claim_lease_expired' : 'external_claim_outcome_pending',

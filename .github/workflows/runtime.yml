@@ -24,7 +24,7 @@ on:
   workflow_dispatch:
     inputs:
       deploy_dev:
-        description: 'Explicitly authorize GHCR publish and AWS dev deployment'
+        description: 'Manually authorize AWS dev deployment (pushes to main deploy automatically after required CI)'
         type: boolean
         required: true
         default: false
@@ -232,11 +232,15 @@ jobs:
         run: |
           set -euo pipefail
           php tests/integration/workflow_federation_plan_evidence_mysql.php
-          php tests/integration/workflow_action_claim_admission_mysql.php
-          COS_TEST_FINANCIAL_WORKFLOW=1 php tests/integration/workflow_action_claim_admission_mysql.php
-          php tests/integration/workflow_action_receipt_mysql.php
-          COS_TEST_FINANCIAL_WORKFLOW=1 php tests/integration/workflow_action_receipt_mysql.php
-          php tests/integration/federation_canonical_goal_e2e_mysql.php
+          for effect in internal external financial irreversible; do
+            COS_TEST_WORKFLOW_EFFECT="$effect" php tests/integration/workflow_action_claim_admission_mysql.php
+          done
+          for effect in internal external financial irreversible; do
+            COS_TEST_WORKFLOW_EFFECT="$effect" php tests/integration/workflow_action_receipt_mysql.php
+          done
+          for effect in internal external financial irreversible; do
+            COS_TEST_WORKFLOW_EFFECT="$effect" php tests/integration/federation_canonical_goal_e2e_mysql.php
+          done
       - name: Federation historical cutover and non-Action MySQL
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
@@ -1161,7 +1165,7 @@ jobs:
   publish-runtime-images:
     name: Publish immutable COS images to GHCR
     needs: [runtime, federation-mysql, capital-markets-unit]
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.deploy_dev == true
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy_dev == true))
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -1213,7 +1217,7 @@ jobs:
   deploy-dev:
     name: Deploy main to AWS dev
     needs: [runtime, federation-mysql, capital-markets-unit, publish-runtime-images]
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.deploy_dev == true
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy_dev == true))
     runs-on: ubuntu-24.04
     environment: AWS TN2026
     permissions:

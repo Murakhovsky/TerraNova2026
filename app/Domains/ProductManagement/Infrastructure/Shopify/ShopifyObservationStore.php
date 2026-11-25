@@ -41,10 +41,31 @@ final readonly class ShopifyObservationStore
         ShopifyReadClient::assertShopDomain($shopDomain);
         if ($org===''||strlen($org)>190) throw new DomainException('Unsupported connection provisioning.');
         ShopifyClientCredentials::assertSecretReference($secretRef);
-        $id=bin2hex(random_bytes(16));
-        $this->query('INSERT INTO pm_external_connections (organization_id,connection_id,provider,shop_domain,secret_ref,status) VALUES (?,?,?,?,?,?)',
-            [$org,$id,'shopify',$shopDomain,$secretRef,'ready']);
-        return $id;
+        // Shopify webhook routing requires exactly one active connection per shop.
+        // Serialize provisioning across all tenants to avoid duplicate ready
+        // connections when an operator retries a timed-out cutover job.
+        $lock='pm-shop:'.substr(hash('sha256',$shopDomain),0,48);
+        $held=(int)$this->query('SELECT GET_LOCK(?,0)',[$lock])->fetchColumn();
+        if($held!==1) throw new DomainException('Shopify provisioning is already in progress.');
+        try {
+            $ready=$this->query('SELECT organization_id,connection_id,secret_ref FROM pm_external_connections
+                WHERE provider=? AND shop_domain=? AND status=? LIMIT 2',
+                ['shopify',$shopDomain,'ready'])->fetchAll(PDO::FETCH_ASSOC);
+            if(count($ready)>1) throw new DomainException('Shopify shop has ambiguous existing ready connections.');
+            if(count($ready)===1) {
+                if((string)$ready[0]['organization_id']!==$org
+                    ||(string)$ready[0]['secret_ref']!==$secretRef) {
+                    throw new DomainException('Shopify shop already belongs to another owner or credential reference.');
+                }
+                return (string)$ready[0]['connection_id'];
+            }
+            $id=bin2hex(random_bytes(16));
+            $this->query('INSERT INTO pm_external_connections (organization_id,connection_id,provider,shop_domain,secret_ref,status) VALUES (?,?,?,?,?,?)',
+                [$org,$id,'shopify',$shopDomain,$secretRef,'ready']);
+            return $id;
+        } finally {
+            $this->query('SELECT RELEASE_LOCK(?)',[$lock]);
+        }
     }
 
     /** @return array<string,mixed>|null */
@@ -231,16 +252,32 @@ final readonly class ShopifyObservationStore
     }
 
     /** Entry point only after ShopifyWebhookVerifier::verify on raw input. */
-    public function recordVerifiedDelivery(string $org,string $conn,string $deliveryId,string $topic,string $rawBody): bool
+    public function recordVerifiedDelivery(string $org,string $conn,string $deliveryId,string $topic,string $rawBody,?string $resourceGid=null): bool
     {
         if ($deliveryId===''||strlen($deliveryId)>190||!preg_match('/^[a-z_]+\/[a-z_]+$/D',$topic)
-            ||strlen($topic)>120||strlen($rawBody)>1048576) throw new DomainException('Invalid webhook metadata.');
+            ||strlen($topic)>120||strlen($rawBody)>1048576
+            ||($resourceGid!==null&&!preg_match('#^gid://shopify/Order/[1-9][0-9]{0,18}$#D',$resourceGid))
+            ||(str_starts_with($topic,'orders/') !== ($resourceGid!==null))) {
+            throw new DomainException('Invalid verified webhook metadata or order pointer.');
+        }
         $digest=hash('sha256',$rawBody);
-        $stmt=$this->query('INSERT IGNORE INTO pm_webhook_inbox (organization_id,connection_id,delivery_id,topic,payload_sha256) VALUES (?,?,?,?,?)',
-            [$org,$conn,$deliveryId,$topic,$digest]);
+        $stmt=$this->query('INSERT IGNORE INTO pm_webhook_inbox (organization_id,connection_id,delivery_id,topic,payload_sha256,resource_gid) VALUES (?,?,?,?,?,?)',
+            [$org,$conn,$deliveryId,$topic,$digest,$resourceGid]);
         if ($stmt->rowCount()===0) {
-            $record=$this->query('SELECT payload_sha256 FROM pm_webhook_inbox WHERE organization_id=? AND connection_id=? AND delivery_id=?',[$org,$conn,$deliveryId])->fetch(PDO::FETCH_ASSOC);
-            if ($record===false||!hash_equals((string)$record['payload_sha256'],$digest)) throw new DomainException('Webhook delivery ID reused with different payload.');
+            $record=$this->query('SELECT payload_sha256,resource_gid,topic FROM pm_webhook_inbox WHERE organization_id=? AND connection_id=? AND delivery_id=?',[$org,$conn,$deliveryId])->fetch(PDO::FETCH_ASSOC);
+            if ($record===false||!hash_equals((string)$record['payload_sha256'],$digest)
+                ||$record['topic']!==$topic) {
+                throw new DomainException('Webhook delivery ID reused with different payload or topic.');
+            }
+            // Existing, previously verified receipts may predate the nullable pointer migration.
+            // Only the exact authenticated redelivery can enrich its immutable source identity.
+            if ($record['resource_gid']===null && $resourceGid!==null) {
+                $this->query('UPDATE pm_webhook_inbox SET resource_gid=? WHERE organization_id=? AND connection_id=? AND delivery_id=? AND payload_sha256=? AND topic=? AND resource_gid IS NULL',
+                    [$resourceGid,$org,$conn,$deliveryId,$digest,$topic]);
+                $record=$this->query('SELECT resource_gid FROM pm_webhook_inbox WHERE organization_id=? AND connection_id=? AND delivery_id=?',
+                    [$org,$conn,$deliveryId])->fetch(PDO::FETCH_ASSOC);
+            }
+            if ($record===false||$record['resource_gid']!==$resourceGid) throw new DomainException('Webhook resource identity conflict.');
             return false;
         }
         return true;

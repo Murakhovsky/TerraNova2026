@@ -158,6 +158,16 @@ $pull=new ShopifyCatalogPullService(
 $assert=static function(bool $value,string $message):void {
     if (!$value)throw new RuntimeException('Shopify mock MySQL: '.$message);
 };
+$sameConnection=$observations->provision($org,$shop,'shopify_env_primary');
+$assert($sameConnection===$id,'Retry provisioning must return the same tenant-owned connection.');
+$crossProvisionDenied=false;
+try { $observations->provision($org.'-other',$shop,'shopify_env_primary'); }
+catch (DomainException) { $crossProvisionDenied=true; }
+$assert($crossProvisionDenied,'Same Shopify shop must not be claimed by another tenant.');
+$otherSecretDenied=false;
+try { $observations->provision($org,$shop,'env://COS_SHOPIFY_DIFFERENT'); }
+catch (DomainException) { $otherSecretDenied=true; }
+$assert($otherSecretDenied,'Existing shop credential reference may not change on silent retry.');
 $denied=false;
 try { $pull->pull($org,$id,1); }
 catch (DomainException) { $denied=true; }
@@ -221,4 +231,27 @@ $assert($second['products_observed']===1 && $http->readCalls===6 && $http->oauth
 $assert($observations->status($org,$id)['open_conflicts']===1,
     'Repeated remote observations cannot multiply identical open conflicts');
 $assert($products->searchProducts($org,$sku)===[],'Second sync cannot silently create canonical state');
-echo "Shopify E4 read-only GraphQL → MySQL snapshots/conflicts acceptance passed.\n";
+// S5: one HMAC-verified pointer receipt, no raw body, no sales or stock writes.
+$secret='fixture-local-secret';
+$body=json_encode(['id'=>12345,'admin_graphql_api_id'=>'gid://shopify/Order/12345','email'=>'never-persist@example.test'],JSON_THROW_ON_ERROR);
+$signature=base64_encode(hash_hmac('sha256',$body,$secret,true));
+$gid=\Domains\ProductManagement\Infrastructure\Shopify\ShopifyOrderWebhookEvidence::extractVerified($body,$signature,$secret,'orders/paid');
+$delivery='order-'.$token;
+$assert($observations->recordVerifiedDelivery($org,$id,$delivery,'orders/paid',$body,$gid),'Verified order pointer was not persisted');
+$assert(!$observations->recordVerifiedDelivery($org,$id,$delivery,'orders/paid',$body,$gid),'Order webhook replay duplicated receipt');
+$q=$pdo->prepare('SELECT resource_gid,topic,payload_sha256,state FROM pm_webhook_inbox WHERE organization_id=? AND connection_id=? AND delivery_id=?');
+$q->execute([$org,$id,$delivery]);$receipt=$q->fetch(PDO::FETCH_ASSOC);
+$assert($receipt['resource_gid']===$gid&&$receipt['topic']==='orders/paid'&&$receipt['payload_sha256']===hash('sha256',$body)&&$receipt['state']==='pending_reconciliation','Incorrect durable order evidence');
+$reject=static function(callable $operation)use($assert):void{
+    try{$operation();}catch(DomainException){return;}
+    $assert(false,'Invalid or inconsistent order pointer accepted');
+};
+$reject(fn()=>$observations->recordVerifiedDelivery($org,$id,$delivery,'orders/create',$body,$gid));
+$reject(fn()=>$observations->recordVerifiedDelivery($org,$id,$delivery,'orders/paid',$body.' ',$gid));
+$reject(fn()=>$observations->recordVerifiedDelivery($org,$id,'missing-'.$token,'orders/paid',$body));
+$reject(fn()=>$observations->recordVerifiedDelivery($org,$id,'wrong-topic-'.$token,'products/update',$body,$gid));
+$legacy='legacy-order-'.$token;
+$pdo->prepare('INSERT INTO pm_webhook_inbox(organization_id,connection_id,delivery_id,topic,payload_sha256) VALUES(?,?,?,?,?)')->execute([$org,$id,$legacy,'orders/paid',hash('sha256',$body)]);
+$assert(!$observations->recordVerifiedDelivery($org,$id,$legacy,'orders/paid',$body,$gid),'Legacy authenticated replay must not duplicate receipt');
+$q->execute([$org,$id,$legacy]);$assert($q->fetch(PDO::FETCH_ASSOC)['resource_gid']===$gid,'Legacy receipt pointer not reconciled');
+echo "Shopify E4/S5 read-only GraphQL and verified order pointer MySQL acceptance passed.\n";

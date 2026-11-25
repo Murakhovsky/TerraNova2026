@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Persistence\Workflow;
 
+use Platform\Workflow\Service\DurableWorkflowTransitionPolicy;
+
 use Doctrine\DBAL\Connection;
 use DomainException;
 use Kernel\Tenant\Model\TenantPermissions;
@@ -184,7 +186,7 @@ final readonly class DoctrineWorkflowRecoveryManager implements WorkflowRecovery
                     $identity,WorkflowRecoveryDisposition::NO_ACTION,'recovery_request_already_applied',
                     in_array($resolution,[WorkflowRecoveryResolution::QUARANTINE,
                         WorkflowRecoveryResolution::CANCEL_UNCERTAIN],true)
-                        && in_array($step['side_effect_level'],['external','financial'],true),
+                        && DurableWorkflowTransitionPolicy::isActionEffect($step['side_effect_level']),
                 );
             }
             if ($request['status']!=='APPROVED'
@@ -274,7 +276,7 @@ final readonly class DoctrineWorkflowRecoveryManager implements WorkflowRecovery
                 $command->actor->userId()->value(),(int)$run['revision']+1,
                 (int)$step['revision']+1,['run_state'=>$nextRun,'step_state'=>$nextStep,
                     'outcome_unknown'=>$resolution!==WorkflowRecoveryResolution::VERIFIED_COMPLETE
-                        && in_array($step['side_effect_level'],['external','financial'],true)]);
+                        && DurableWorkflowTransitionPolicy::isActionEffect($step['side_effect_level'])]);
 
             return new WorkflowRecoveryAssessment($identity,
                 match($resolution){
@@ -284,7 +286,7 @@ final readonly class DoctrineWorkflowRecoveryManager implements WorkflowRecovery
                     WorkflowRecoveryResolution::CANCEL_UNCERTAIN=>WorkflowRecoveryDisposition::NO_ACTION,
                 },
                 'approved_'. $resolution->value,
-                in_array($step['side_effect_level'],['external','financial'],true)
+                DurableWorkflowTransitionPolicy::isActionEffect($step['side_effect_level'])
                     && $resolution!==WorkflowRecoveryResolution::VERIFIED_COMPLETE);
         });
     }
@@ -402,7 +404,7 @@ final readonly class DoctrineWorkflowRecoveryManager implements WorkflowRecovery
         WorkflowRunCommand $command,array $run,array $step,array $graph,string $reference,
     ): void {
         $identity=$command->identity;
-        if(in_array($step['side_effect_level'],['external','financial'],true)) {
+        if(DurableWorkflowTransitionPolicy::isActionEffect($step['side_effect_level'])) {
             if((int)$step['attempts']!==1) {
                 throw new DomainException('Recovered external Step must have exactly one durable claim attempt.');
             }
