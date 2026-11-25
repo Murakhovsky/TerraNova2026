@@ -29,6 +29,7 @@ use App\Persistence\Capability\CanonicalAutomationIntentStore;
 use App\Application\Capability\AutomationIntentSignatureVerifier;
 use Domains\ProductManagement\Application\Service\PricingService;
 use Domains\ProductManagement\Application\Service\ProductMediaService;
+use Domains\ProductManagement\Application\Service\ProductAssemblyService;
 use Domains\ProductManagement\Infrastructure\Media\ExistingDocumentsImageReference;
 use Infrastructure\Storage\LocalFileStorage;
 use App\Persistence\ProductManagement\ProductGovernedRunOutcomeProvider;
@@ -147,7 +148,8 @@ try {
     $storage=new LocalFileStorage(sys_get_temp_dir().'/cos-governed-media-'.$token);
     $fileReference=new ExistingDocumentsImageReference($pdo,$storage);
     $media=new ProductMediaService(new MySqlProductManagementStore($pdo,new MysqlEventStore($pdo)),$fileReference);
-    $handler=new ProductGovernedOperationHandler($products,$prices,$modules,$capabilities,$media);
+    $assembly=new ProductAssemblyService(new MySqlProductManagementStore($pdo,new MysqlEventStore($pdo)),$products,$prices,$media);
+    $handler=new ProductGovernedOperationHandler($products,$prices,$modules,$capabilities,$media,$assembly);
     $planReader=new FederationPlanApprovalEvidenceReader($db);
     $planHandler=new FederationPlanApproveHandler($db,$planReader);
     $domains=new DomainModuleRegistry([new ProductManagementDomainModule(governedHandler:$handler),new FederationDomainModule($planHandler)]);
@@ -248,7 +250,13 @@ try {
         $uploaded=$storage->put($fileKey,$png,'image/png');
         $pdo->prepare('INSERT INTO cos_document_files (organization_id,file_id,storage_key,mime_type,size_bytes,sha256,created_by) VALUES (?,?,?,?,?,?,?)')->execute([$org,$fileId,$uploaded->key,'image/png',$uploaded->size,$uploaded->sha256,$owner]);
         $detachId=$media->attach($org,$second['product_id'],$fileId,null,'gallery',0,'seed-media-detach',$owner,'governed-e2e')['media_id'];
+        // Fail after the first variant/price and verify rollback of all child effects.
+        $rollbackSku='ROLLBACK'.strtoupper($token);
+        $deny(fn()=>$assembly->assemble($org,['name'=>'Rollback fixture','variants'=>[['sku'=>$rollbackSku,'price'=>['currency'=>'USD','amount'=>'1']],['sku'=>$variant]],'category_ids'=>[str_repeat('f',32)]],'qa-rollback-'.$token,$owner,'governed-e2e'),'Invalid assembly rolled back');
+        $assert($products->searchProducts($org,$rollbackSku)===[],'Assembly left a partial product');
+        $assert((int)$db->fetchOne('SELECT COUNT(*) FROM pm_operation_receipts WHERE organization_id=? AND idempotency_key IN (?,?)',[$org,'qa-rollback-'.$token,ProductAssemblyService::childKey('qa-rollback-'.$token,'product')])===0,'Assembly left a partial receipt');
         $mediaOperations=[
+            ['assemble','product.assemble',['name'=>'Approved assembly','type'=>'stock','variants'=>[['sku'=>'ASM-A'.strtoupper($token),'price'=>['currency'=>'USD','amount'=>'14.50']],['sku'=>'ASM-B'.strtoupper($token),'price'=>['currency'=>'EUR','amount'=>'20']]],'category_ids'=>[$category],'attributes'=>[['code'=>'notes','value'=>'Assembled notes']],'media'=>[['file_id'=>$fileId,'sku'=>'ASM-B'.strtoupper($token),'role'=>'cover','sort_order'=>2]]]],
             ['define','attribute.define',['code'=>'qa_new','name'=>'Approved attribute','value_type'=>'enum','choices'=>['red','blue']]],
             ['bind','attribute.category.bind',['category_id'=>$category,'code'=>'qa_bind','is_required'=>false,'is_axis'=>false]],
             ['set','attribute.product.set',['product_id'=>$catalogSeed['product_id'],'expected_revision'=>$attributeRevision,'values'=>[['code'=>'notes','value'=>'Approved notes']]]],
@@ -345,6 +353,11 @@ try {
         $assert(count($media->search($org,$catalogSeed['product_id']))===1&&$media->search($org,$second['product_id'])===[]&&$storage->exists($fileKey),'Media link and unlink without deleting bytes');
         $attrs=array_column($products->productAttributes($org,$catalogSeed['product_id'])['items'],'value','code');
         $assert($attrs['notes']==='Approved notes','Native typed attribute update');
+        $assembled=$products->searchProducts($org,'ASM-A'.strtoupper($token));
+        $assert(count($assembled)===1,'Assembled product exists');
+        $assembledProduct=$products->getProduct($org,$assembled[0]['product_id']);
+        $assert(count($assembledProduct['variants'])===2&&count($assembledProduct['media'])===1&&count($assembledProduct['categories'])===1,'Complete assembled draft readback');
+        $assert($prices->get($org,$assembled[0]['variant_id'],'USD')['price']==='14.5000','Assembled price readback');
     }elseif(!$pricingOnly){
     $balance=$products->balance($org,$variant,$loc);
     $assert($balance['on_hand']==='6.000000'&&$balance['reserved']==='3.000000'&&$balance['available']==='3.000000','Business stock result');

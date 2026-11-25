@@ -10,9 +10,10 @@ foreach($raw['contributions']['capability_contracts'] as $definition) {
     $cap=CapabilityContract::fromArray($definition);
     $contracts[$cap->id]=$cap;
 }
-if(count($contracts)!==94)throw new RuntimeException('Missing typed PM contracts.');
+if(count($contracts)!==95)throw new RuntimeException('Missing typed PM contracts.');
 $validator=new CapabilityJsonInputValidator();
 $good=[
+ 'product_management.governed.product.assemble'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['name'=>'QA','variants'=>[['sku'=>'QA','price'=>['currency'=>'USD','amount'=>'12.5']]]]],
  'product_management.governed.media.attach'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['product_id'=>str_repeat('a',32),'file_id'=>'FILE-QA']],
  'product_management.governed.media.detach'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['media_id'=>str_repeat('a',32)]],
  'product_management.governed.attribute.define'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['code'=>'notes','name'=>'Notes','value_type'=>'text']],

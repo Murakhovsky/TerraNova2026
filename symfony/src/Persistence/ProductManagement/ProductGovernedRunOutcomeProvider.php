@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use Doctrine\DBAL\Connection;
 use DomainException;
+use Domains\ProductManagement\Application\Service\ProductAssemblyService;
 use Domains\ProductManagement\Application\Contract\ProductMediaFileReferenceInterface;
 use Domains\ProductManagement\Automation\Action\ProductGovernedOperationHandler;
 use Domains\ProductManagement\Domain\AttributeRules;
@@ -41,6 +42,47 @@ final readonly class ProductGovernedRunOutcomeProvider implements RunScopedGoalO
     {
         $ids=[];
         switch($op){
+            case 'product.assemble':
+                $pid=$r['product_id']??'';$fresh=$this->products->getProduct($org,$pid);
+                $type=$p['type']??'stock';$track=in_array($type,['stock','material'],true);
+                $this->require($fresh!==null&&$fresh['status']==='draft'&&$fresh['name']===ProductRules::name($p['name'])
+                    &&$fresh['product_type']===$type&&count($fresh['variants'])===count($p['variants'])
+                    &&count($r['variants']??[])===count($p['variants'])&&($r['status']??null)==='draft','assembled draft product');
+                $native=array_column($fresh['variants'],null,'sku');$reported=array_column($r['variants'],'variant_id','sku');
+                $ids=['product_management:product:'.$pid];
+                $verifyChild=function(string $label,string $nativeOp,string $op,array $params)use($org,$key,$actor):array{
+                    $childKey=ProductAssemblyService::childKey($key,$label);
+                    $receipt=$this->db->fetchAssociative('SELECT operation,result_json FROM pm_operation_receipts WHERE organization_id=? AND idempotency_key=?',[$org,$childKey]);
+                    $this->require($receipt!==false&&$receipt['operation']===$nativeOp&&is_string($receipt['result_json']),'assembly child receipt '.$label);
+                    $result=json_decode($receipt['result_json'],true,64,JSON_THROW_ON_ERROR);
+                    return $this->verifyNative($org,$op,$params,$childKey,$actor,$result);
+                };
+                foreach($p['variants'] as $i=>$v){
+                    $sku=ProductRules::sku($v['sku']);$vid=$reported[$sku]??null;
+                    $this->require(isset($native[$sku])&&$vid===$native[$sku]['variant_id'],'assembled variant identity');
+                    $params=['product_id'=>$pid,'sku'=>$sku,'uom'=>$v['uom']??'pcs','track_inventory'=>$v['track_inventory']??$track];
+                    if($i===0){
+                        $this->require($vid===($r['variant_id']??null)&&$sku===($r['sku']??null),'assembly primary variant');
+                        $found=$verifyChild('product','product.create','product.create',$params+['name'=>$p['name'],'type'=>$type]);
+                    }else $found=$verifyChild('variant:'.$i,'variant.create','variant.create',$params);
+                    $this->require(in_array('product_management:variant:'.$vid,$found,true),'assembly child variant scope');
+                    array_push($ids,...$found);
+                    if(isset($v['price']))array_push($ids,...$verifyChild('price:'.$i,'price.set','price.base.set',['variant_id'=>$vid,'currency'=>$v['price']['currency'],'amount'=>$v['price']['amount'],'expected_revision'=>0]));
+                }
+                foreach($p['category_ids']??[] as $i=>$cid)array_push($ids,...$verifyChild('category:'.$i,'category.assign','category.assign',['product_id'=>$pid,'category_id'=>$cid]));
+                if(!empty($p['attributes'])){
+                    // New product, category assignment does not advance the Product revision.
+                    array_push($ids,...$verifyChild('attributes','attribute.product.set','attribute.product.set',['product_id'=>$pid,'values'=>$p['attributes'],'expected_revision'=>1]));
+                }
+                $this->require(count($r['media_ids']??[])===count($p['media']??[]),'assembly media count');
+                foreach($p['media']??[] as $i=>$image){
+                    $params=['product_id'=>$pid,'file_id'=>$image['file_id'],'role'=>$image['role']??'gallery','sort_order'=>$image['sort_order']??0];
+                    if(isset($image['sku']))$params['variant_id']=$reported[ProductRules::sku($image['sku'])]??'';
+                    $found=$verifyChild('media:'.$i,'media.attach','media.attach',$params);
+                    $this->require(in_array('product_management:media:'.$r['media_ids'][$i],$found,true),'assembly child media identity');
+                    array_push($ids,...$found);
+                }
+                break;
             case 'product.create':
                 $product=$this->products->getProduct($org,(string)($r['product_id']??''));
                 $this->require($product!==null&&$product['name']===ProductRules::name($p['name'])

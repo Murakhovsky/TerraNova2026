@@ -14,9 +14,15 @@ use PDOException;
 use Throwable;
 
 /** All mutation+DomainEvent+existing Kernel Outbox writes share one PDO transaction. */
-final readonly class MySqlProductManagementStore implements ProductManagementStoreInterface, \Domains\ProductManagement\Application\Contract\OrderInventoryPort
+final readonly class MySqlProductManagementStore implements ProductManagementStoreInterface, \Domains\ProductManagement\Application\Contract\OrderInventoryPort, \Domains\ProductManagement\Application\Contract\ProductAssemblyTransactionPort
 {
     public function __construct(private PDO $connection, private EventStoreInterface $events) {}
+
+    public function assemble(string $org,array $input,string $key,string $actor,string $trace,callable $apply):array
+    {
+        return $this->mutate($org,'product.assemble',$key,[$input],$actor,$trace,$apply,
+            'product_management.product.assembled','Product');
+    }
 
     public function createProduct(string $organizationId, array $data, string $key, string $actor, string $correlation): array
     {

@@ -3060,6 +3060,9 @@ services:
   Domains\ProductManagement\Application\Contract\ProductManagementStoreInterface:
     alias: Domains\ProductManagement\Infrastructure\Persistence\MySqlProductManagementStore
   Domains\ProductManagement\Application\Service\ProductManagementService: ~
+  Domains\ProductManagement\Application\Contract\ProductAssemblyTransactionPort:
+    alias: Domains\ProductManagement\Infrastructure\Persistence\MySqlProductManagementStore
+  Domains\ProductManagement\Application\Service\ProductAssemblyService: ~
   Domains\ProductManagement\Infrastructure\Media\ExistingDocumentsImageReference:
     arguments:
       $connection: '@cos.database.pdo'
