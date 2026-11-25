@@ -360,10 +360,11 @@ final readonly class SalesBusinessRunOutcomeProvider implements RunScopedGoalOut
         if(($fact['channel']??null)!==$p['channel']||($fact['store_reference']??null)!==$p['connection_id']
             ||($fact['external_order_id']??null)!==$p['external_order_id'])throw new DomainException('Native provider observation mismatch.');
         if(($p['include_fulfillment_evidence']??false)===true){
-            $e=$this->db->fetchAssociative('SELECT evidence_id,evidence_json FROM sales_order_external_fulfillment_evidence WHERE organization_id=? AND BINARY organization_id=BINARY ? AND source_id=? AND request_key=?',[$org,$org,$id,$key]);
+            $e=$this->db->fetchAssociative('SELECT evidence_id,evidence_json,evidence_hash,order_id FROM sales_order_external_fulfillment_evidence WHERE organization_id=? AND BINARY organization_id=BINARY ? AND source_id=? AND request_key=?',[$org,$org,$id,$key]);
             if(!$e)throw new FederationOutcomeSourceNotReady('Requested fulfillment observation unavailable.');
             $fact=json_decode($e['evidence_json'],true,64,JSON_THROW_ON_ERROR);
-            if(($fact['organization_id']??null)!==$org||($fact['connection_id']??null)!==$p['connection_id']||($fact['external_order_id']??null)!==$p['external_order_id']
+            if(!is_array($fact)||$e['order_id']!==$row['order_id']||!hash_equals($e['evidence_hash'],\Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderSourceRepository::digest($fact))
+                ||($fact['organization_id']??null)!==$org||($fact['connection_id']??null)!==$p['connection_id']||($fact['external_order_id']??null)!==$p['external_order_id']
                 ||($fact['inventory_authority']??null)!=='external_review'||($fact['local_stock_write_allowed']??null)!==false)
                 throw new DomainException('Fulfillment observation identity mismatch.');
             if(($p['include_lifecycle_evidence']??false)===true&&!is_array($fact['lifecycle']??null))throw new DomainException('Requested lifecycle evidence missing.');

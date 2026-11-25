@@ -94,7 +94,7 @@ final readonly class MysqlSalesOrderSourceRepository implements SalesOrderSource
         $q=$this->connection->prepare('INSERT INTO sales_order_external_fulfillment_evidence(organization_id,evidence_id,source_id,order_id,request_key,provider_updated_at,provider_hash,evidence_hash,evidence_json) VALUES(?,?,?,?,?,?,?,?,?)');
         $q->execute([$org,bin2hex(random_bytes(16)),$sourceId,$orderId,$key,$s['latest_updated_at'],$evidence['provider_hash'],$hash,json_encode($evidence,JSON_THROW_ON_ERROR)]);
     }
-    private static function digest(array $evidence):string
+    public static function digest(array $evidence):string
     {
         $canonical=static function(array $a)use(&$canonical):array {
             if(!array_is_list($a))ksort($a,SORT_STRING);

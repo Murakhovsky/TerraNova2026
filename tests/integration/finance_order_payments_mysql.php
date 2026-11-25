@@ -662,7 +662,8 @@ $businessBus=new \App\Infrastructure\Messenger\SymfonyCommandBus(new \Symfony\Co
 ]));
 // Use a bounded provider-port fixture, with real native reconciliation and JobQueue.
 $connectionId=bin2hex(random_bytes(16));$externalId='gid://shopify/Order/987654321';
-$commerceSource=new class($org,$connectionId,$externalId,$product) implements \Domains\ProductManagement\Application\Contract\CommerceOrderSourcePort{
+$commerceSource=new class($org,$connectionId,$externalId,$product) implements \Domains\ProductManagement\Application\Contract\CommerceOrderSourcePort,\Domains\ProductManagement\Application\Contract\CommerceOrderFulfillmentEvidencePort{
+    public bool $fulfilled=false;public bool $wrongLine=false;
     public function __construct(private string $org,private string $connection,private string $external,private array $product){}
     private function assertSource(string $org,string $channel,string $connection):void{
         if($org!==$this->org||$channel!=='shopify'||$connection!==$this->connection)throw new DomainException('Unverified commerce fixture identity.');
@@ -671,12 +672,30 @@ $commerceSource=new class($org,$connectionId,$externalId,$product) implements \D
         $this->assertSource($org,$channel,$connection);
         if($externalId!==$this->external)throw new DomainException('Unknown provider order.');
         return ['channel'=>$channel,'store_reference'=>$connection,'external_order_id'=>$externalId,
-            'created_at'=>'2026-11-25T00:00:00.000000Z','updated_at'=>'2026-11-25T00:00:01.000000Z',
-            'provider_hash'=>hash('sha256',$externalId),'financial_status'=>'PAID','fulfillment_status'=>'UNFULFILLED',
+            'created_at'=>'2026-11-25T00:00:00.000000Z','updated_at'=>$this->fulfilled?'2026-11-25T00:00:02.000000Z':'2026-11-25T00:00:01.000000Z',
+            'provider_hash'=>hash('sha256',$externalId.($this->fulfilled?':fulfilled':'')),'financial_status'=>'PAID','fulfillment_status'=>$this->fulfilled?'FULFILLED':'UNFULFILLED',
+            'line_identities'=>['gid://shopify/LineItem/123'=>1],
             'cancelled_at'=>null,'test'=>false,'edited'=>false,'tax_included'=>false,'currency'=>'EUR',
             'original_total'=>'10.00','current_total'=>'10.00','terms'=>['currency'=>'EUR','total'=>'10.00',
                 'lines'=>[['sku'=>$this->product['sku'],'title'=>'Source fixture','product_id'=>$this->product['product_id'],
                     'variant_id'=>$this->product['variant_id'],'quantity'=>1,'unit_price'=>'10.00']]]];
+    }
+    public function fulfillmentEvidence(string $org,string $channel,string $connection,string $externalId,bool $includeLifecycle=false):array{
+        $this->assertSource($org,$channel,$connection);
+        if($externalId!==$this->external||!$includeLifecycle||!$this->fulfilled)throw new DomainException('Incomplete fixture lifecycle.');
+        $line='gid://shopify/LineItem/'.($this->wrongLine?'124':'123');
+        $page=static fn(array $nodes):array=>['nodes'=>$nodes,'pageInfo'=>['hasNextPage'=>false]];
+        $provider=['order'=>['id'=>$externalId,'updatedAt'=>'2026-11-25T00:00:02Z','cancelledAt'=>null,'test'=>false,'edited'=>false,'displayFulfillmentStatus'=>'FULFILLED',
+            'lineItems'=>$page([['id'=>$line,'quantity'=>1]]),
+            'fulfillmentOrders'=>$page([]),'fulfillmentsCount'=>['count'=>1,'precision'=>'EXACT'],
+            'fulfillments'=>[['id'=>'gid://shopify/Fulfillment/125','status'=>'SUCCESS','location'=>['id'=>'gid://shopify/Location/126'],
+                'fulfillmentLineItems'=>$page([['id'=>'gid://shopify/FulfillmentLineItem/127','quantity'=>1,'lineItem'=>['id'=>$line]]])]],
+            'returns'=>$page([['id'=>'gid://shopify/Return/128','status'=>'CLOSED','returnLineItems'=>$page([
+                ['__typename'=>'ReturnLineItem','id'=>'gid://shopify/ReturnLineItem/129','quantity'=>1,'processedQuantity'=>1,'fulfillmentLineItem'=>['id'=>'gid://shopify/FulfillmentLineItem/127']]])]])]];
+        $fact=\Domains\ProductManagement\Infrastructure\Shopify\ShopifyFulfillmentEvidenceNormalizer::normalize($provider,$externalId,true);
+        return ['organization_id'=>$org,'channel'=>$channel,'connection_id'=>$connection,'configured_inventory_mode'=>'shopify_authoritative',
+            ...$fact,'canonical_line_mappings'=>[$line=>['product_id'=>$this->product['product_id'],'variant_id'=>$this->product['variant_id']]],
+            'unmapped_locations'=>[],'inventory_authority'=>'external_review','local_stock_write_allowed'=>false,'physical_commitment_verified'=>false];
     }
     public function page(string $org,string $channel,string $connection,?string $cursor,?string $cutoff=null):array{
         $this->assertSource($org,$channel,$connection);
@@ -781,6 +800,23 @@ $check($imported['outcome']==='imported'&&is_string($imported['order_id'])&&$sal
     'Governed provider observation did not produce native placement.');
 $check($realStore->financialEvidence($org,$imported['order_id'])===null&&$productStore->stockBalance($org,$product['variant_id'],$location)['on_hand']==='8.000000',
     'Provider observation created false Finance or inventory effect.');
+$commerceSource->fulfilled=true;
+$r3params=['channel'=>'shopify','connection_id'=>$connectionId,'external_order_id'=>$externalId,'include_fulfillment_evidence'=>true,'include_lifecycle_evidence'=>true];
+$commerceSource->wrongLine=true;
+$runBusiness('order.source.reconcile',$r3params,'sales_order_connection',$connectionId,['expect_denied'=>true]);
+$commerceSource->wrongLine=false;
+$q=$db->prepare('SELECT COUNT(*) FROM sales_order_external_fulfillment_evidence WHERE organization_id=? AND order_id=?');$q->execute([$org,$imported['order_id']]);
+$check((int)$q->fetchColumn()===0,'Rejected lifecycle left durable evidence.');
+$beforeExternal=$sales->get($org,$imported['order_id']);
+$r3=$runBusiness('order.source.reconcile',$r3params,'sales_order_connection',$connectionId);
+$check($r3['order_id']===$imported['order_id'],'Governed external lifecycle changed canonical order identity.');
+$e=(new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderSourceRepository($db))->latestForOrder($org,$imported['order_id'])['fulfillment_evidence'];
+$check($e['current_order_revision']&&$e['provider_lifecycle']['provider_fulfilled_quantity']===1&&$e['provider_lifecycle']['return_processed_quantity']===1
+    &&!$e['local_stock_write_allowed']&&$sales->get($org,$imported['order_id'])===$beforeExternal
+    &&$productStore->stockBalance($org,$product['variant_id'],$location)['on_hand']==='8.000000'
+    &&$realStore->financialEvidence($org,$imported['order_id'])===null,
+    'Governed R3 observation created an unauthorized stock/finance/commercial effect.');
+echo "Sales R3.5 canonical Goal, independent Approval, external lifecycle readback, mismatch rollback and Product/Finance independence PASS (fixture provider).\n";
 $syncStarted=$runBusiness('order.source.sync.start',['channel'=>'shopify','connection_id'=>$connectionId,'mode'=>'backfill'],
     'sales_order_connection',$connectionId);
 $syncStatus=$businessSync->status($org,(int)$requester,$syncStarted['run_id'],null);
