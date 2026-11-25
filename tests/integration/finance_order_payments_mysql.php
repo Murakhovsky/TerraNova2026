@@ -274,7 +274,15 @@ $executeWorkflow=static function(string $type,array $p,string $initiator,string 
         if(isset($config['after_approval']))($config['after_approval'])();
         $out=$actions->executeOutcome($org,$actionId,'order-workflow-worker');
         if(($config['expect_denied']??false)===true){
-            $check($out!==null&&!$out->result->successful,'Revoked Sales order approval still executed.');
+            $check($out!==null&&!$out->result->successful&&$out->action()->status===\Kernel\Action\ActionStatus::Failed,'Rejected Workflow Action unexpectedly executed.');
+            $check($actions->executeOutcome($org,$actionId,'denied-replay-worker')===null,'Failed Workflow Action executed again.');
+            for($retry=0;$retry<2;$retry++){
+                $blocked=$bridge->advance($actor,$run,$planAction);
+                $check($blocked['state']==='manual_reconciliation_required'&&($blocked['action_id']??null)===$actionId,'Failed Workflow lost its original Action or attempted automatic replay.');
+            }
+            $check((int)$wfDb->fetchOne('SELECT COUNT(*) FROM cos_action_attempts WHERE organization_id=? AND action_id=?',[$org,$actionId])===1,'Rejected Workflow created another worker attempt.');
+            $checkpoint=$wfDb->fetchAssociative('SELECT state,result_reference FROM cos_workflow_steps WHERE organization_id=? AND run_id=? AND step_id=?',[$org,$run,$step['id']]);
+            $check(is_array($checkpoint)&&$checkpoint['state']==='claimed'&&$checkpoint['result_reference']===null,'Rejected Action produced a successful Workflow checkpoint.');
             return [];
         }
         $check($out!==null&&$out->result->successful&&$out->action()->status===\Kernel\Action\ActionStatus::Completed,'Approved Workflow Action failed.');
@@ -477,3 +485,30 @@ $check($mixed['payment']['status']==='confirmed'&&$mixed['register-payment']['st
     $sales->get($org,$mixedOrder)['revision']===2&&$realStore->financialEvidence($org,$mixedOrder)===null,
     'Mixed-domain Goal did not preserve independent Sales state and unconfirmed Finance registration.');
 echo "I4 mixed Sales and Finance canonical Goal, independent Plan and Actions, native outcomes PASS\n";
+
+
+// O7 negative acceptance on a real approved Goal: stale commercial revision and
+// revoked current financial Policy must not fabricate receipts or permit replay.
+$mixedBefore=$sales->get($org,$mixedOrder);
+$mixedJournal=$sales->lifecycleEvidence($org,$mixedOrder);
+$executeWorkflow($prefix.'lifecycle.cancel',['order_id'=>$mixedOrder,'expected_revision'=>1,'reference'=>'o7-stale-cancel'],
+    $requester,$reviewer,[...$config,'target'=>$mixedOrder,'expect_denied'=>true]);
+$check($sales->get($org,$mixedOrder)===$mixedBefore&&$sales->lifecycleEvidence($org,$mixedOrder)===$mixedJournal,
+    'Stale approved Sales command changed order revision or evidence.');
+$opsBefore=$realStore->operations($org,$mixedOrder,0,100);
+$paymentPolicyId=(string)$wfDb->fetchOne('SELECT id FROM cos_policies WHERE organization_id=? AND action_type=? AND status="ACTIVE"',
+    [$org,'finance.order.payment.register']);
+$check($paymentPolicyId!=='','Explicit Finance register Policy missing.');
+try{
+    $executeWorkflow('finance.order.payment.register',[...$mixedPay,'source_reference'=>'o7-policy-revoked-'.$nonce],
+        $requester,$reviewer,['target'=>$mixedOrder,'expect_denied'=>true,'after_approval'=>static function()use($wfDb,$org,$paymentPolicyId):void{
+            $wfDb->executeStatement('UPDATE cos_policies SET decision="DENIED" WHERE organization_id=? AND id=?',[$org,$paymentPolicyId]);
+        }]);
+}finally{
+    $wfDb->executeStatement('UPDATE cos_policies SET decision="APPROVAL_REQUIRED" WHERE organization_id=? AND id=?',[$org,$paymentPolicyId]);
+}
+$check($realStore->operations($org,$mixedOrder,0,100)===$opsBefore&&$realStore->financialEvidence($org,$mixedOrder)===null,
+    'Revoked financial Policy created a registration or confirmed money.');
+$check($sales->get($org,$mixedOrder)===$mixedBefore&&$sales->lifecycleEvidence($org,$mixedOrder)===$mixedJournal,
+    'Rejected Finance Action modified Sales.');
+echo "O7 approved stale Sales revision and revoked Finance Policy, manual reconciliation and no automatic replay PASS\n";
