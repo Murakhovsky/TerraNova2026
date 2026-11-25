@@ -75,3 +75,63 @@ $states->enabled=false;$check($repo->financialEvidence($org,$id)===null,'Inactiv
 $states->enabled=true;
 $check($sales->placement($org,$id)['realized_revenue']===null&&$sales->get($org,$id)['revision']===1,'Finance rewrote Sales terms or lifecycle.');
 echo "Finance native order ledger MySQL partial capture, refund, chargeback, replay, tenant and source fencing PASS; approval authority substituted only in this store-level test.\n";
+
+/* Real persisted Kernel approval path. No replacement authority or payment provider. */
+$org='fin-auth-'.bin2hex(random_bytes(5));$id=bin2hex(random_bytes(16));
+$db->prepare('INSERT INTO cos_organizations (id,name,status) VALUES (?,?,"ACTIVE")')->execute([$org,'O4 approval fixture']);
+$manager=static function(string $label)use($db,$org):string{
+    $db->prepare('INSERT INTO tn_users (organization_id,email,password_hash,full_name,role,status) VALUES (?,?,?,?, "manager","active")')->execute([$org,$label.'-'.$org.'@example.invalid','test-only',$label]);
+    $u=(string)$db->lastInsertId();
+    $db->prepare('INSERT INTO cos_organization_memberships (organization_id,user_id,role,status) VALUES (?,?,"manager","ACTIVE")')->execute([$org,$u]);return $u;
+};
+$requester=$manager('requester');$reviewer=$manager('reviewer');
+$db->beginTransaction();
+$sales->create($org,['order_id'=>$id,'owner_id'=>(int)$requester,'deal_id'=>null,'customer_id'=>null,'channel'=>'native','store_reference'=>'manual','external_order_id'=>$id,'currency'=>'EUR','subtotal'=>'100.00','discount'=>'0.00','tax'=>'0.00','tax_included'=>false,'shipping'=>'0.00','total'=>'100.00','attribution'=>[],'placed_at'=>'2026-11-25 00:00:00','created_by'=>(int)$requester],[$line],[...$placed,'event_id'=>bin2hex(random_bytes(16)),'organization_id'=>$org,'order_id'=>$id,'external_order_id'=>$id]);
+$db->commit();
+$realAuthority=new \Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceOrderApprovalAuthority($db);
+$realStore=new MysqlCommerceOrderPaymentStore($db,$sales,$active,$realAuthority);
+$handler=new \Domains\Finance\Automation\Action\FinanceOrderPaymentActionHandler($realStore);
+$domain=new class($handler) implements \Kernel\Module\DomainModuleInterface,\Kernel\Module\Contract\ActionOwningModuleInterface{
+    public function __construct(private \Domains\Finance\Automation\Action\FinanceOrderPaymentActionHandler $handler){}
+    public function name():string{return 'finance';}
+    public function actionTypes():array{return ['finance.order.payment.register','finance.order.payment.reconcile'];}
+    public function actionHandlers():array{return [$this->handler];}
+};
+$domains=new \Kernel\Module\DomainModuleRegistry([$domain]);
+$actions=new \Kernel\Action\Service\ActionService(new \Infrastructure\Platform\Persistence\MySql\Action\MysqlActionRepository($db),
+    new \Kernel\Action\Service\ActionExecutor([$handler],new \Kernel\Action\Service\ModuleActionExecutionGate($domains,$active)));
+$approvals=new \Infrastructure\Platform\Persistence\MySql\Approval\MysqlApprovalRepository($db);
+$tx=new class($db) implements \Kernel\Transaction\Contract\TransactionManagerInterface{
+    public function __construct(private PDO $db){}
+    public function transactional(callable $operation):mixed{
+        if($this->db->inTransaction())return $operation();
+        $this->db->beginTransaction();
+        try{$out=$operation();$this->db->commit();return $out;}catch(Throwable $e){if($this->db->inTransaction())$this->db->rollBack();throw $e;}
+    }
+    public function isActive():bool{return $this->db->inTransaction();}
+    public function afterCommit(callable $callback):void{if($this->db->inTransaction())throw new LogicException('Deferred callbacks unsupported in fixture');$callback();}
+};
+foreach($domain->actionTypes() as $type){
+    $db->prepare('INSERT INTO cos_policies (id,organization_id,code,name,action_type,conditions,decision,priority,version,status) VALUES (?,?,?,?,?,?,"APPROVAL_REQUIRED",1,1,"ACTIVE")')->execute([bin2hex(random_bytes(16)),$org,$type,$type,$type,'[]']);
+}
+$policy=new \Kernel\Policy\Service\ActionPolicyService($actions,new \Infrastructure\Platform\Persistence\MySql\Policy\MysqlPolicyRepository($db),new \Infrastructure\Platform\Persistence\MySql\Policy\MysqlPolicyEvaluationRepository($db),$approvals,new \Kernel\Policy\Service\PolicyEngine(new \Kernel\Rule\Service\ConditionEvaluator()),$tx,null,$domains,$active);
+$approvalService=new \Kernel\Approval\Service\ApprovalService($approvals,$actions,$tx,null,null,$realAuthority);
+$payload=['order_id'=>$id,'kind'=>'capture','amount'=>'40.00','currency'=>'EUR','source_account'=>'test-bank','source_reference'=>'approved-capture'];
+$deny(fn()=>$realStore->register($org,$id,$payload,$requester,'missing','missing','missing'));
+$submit=static function(string $type,array $p,string $actor,string $other,string $key)use($org,$id,$policy,$approvalService,$actions,$db,$check,$deny){
+    $a=$policy->submit($org,new \Kernel\Action\ActionProposal($type,'sales_order',$id,$p,'USER',$actor,'APPROVAL_REQUIRED','HIGH',$key),'trace-'.$key);
+    $check($a->status===\Kernel\Action\ActionStatus::PendingApproval,'Finance Action not pending approval.');
+    $q=$db->prepare('SELECT id FROM cos_approvals WHERE organization_id=? AND action_id=?');$q->execute([$org,$a->id]);$approval=(string)$q->fetchColumn();
+    $check($approval!=='','Approval receipt missing.');
+    $deny(fn()=>$approvalService->approve($org,$approval,$actor));
+    $check($actions->executeOutcome($org,$a->id,'o4-worker')===null,'Unapproved Action claimed.');
+    $approvalService->approve($org,$approval,$other);
+    $out=$actions->executeOutcome($org,$a->id,'o4-worker');
+    $check($out!==null&&$out->result->successful&&$out->action()->status===\Kernel\Action\ActionStatus::Completed,'Approved native Finance Action failed.');
+    return $out->result->data;
+};
+$registered=$submit('finance.order.payment.register',$payload,$requester,$reviewer,'real-register');
+$check($realStore->financialEvidence($org,$id)===null,'Unreconciled approved registration is not cash.');
+$submit('finance.order.payment.reconcile',[...$payload,'operation_id'=>$registered['finance_reference'],'statement_reference'=>'bank-statement-line','expected_revision'=>0],$reviewer,$requester,'real-reconcile');
+$check($realStore->financialEvidence($org,$id)['net_collected_amount']==='40.00','Reconciled Action missing collection.');
+echo "Finance persisted Kernel Policy/Approval/Action + Sales order MySQL acceptance PASS (native Action path, not Platform Workflow admission).\n";
