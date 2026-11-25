@@ -12,7 +12,7 @@ $check=static function(bool $ok,string $msg):void{if(!$ok)throw new RuntimeExcep
 $deny=static function(callable $fn):void{try{$fn();}catch(DomainException){return;}throw new RuntimeException('Invalid Finance order operation accepted.');};
 $db=new PDO(sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',getenv('DB_HOST')?:'127.0.0.1',(int)(getenv('DB_PORT')?:3306),getenv('DB_DATABASE')?:'cos'),getenv('DB_USERNAME')?:'cos',getenv('DB_PASSWORD')?:'',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
 $org='fin-order-'.bin2hex(random_bytes(5));$id=bin2hex(random_bytes(16));
-$catalog=new ModuleCatalog([ModuleDefinition::fromArray(require $root.'/app/Domains/Sales/module.php'),ModuleDefinition::fromArray(require $root.'/app/Domains/Finance/module.php'),ModuleDefinition::fromArray(require $root.'/app/Domains/ProductManagement/module.php'),ModuleDefinition::fromArray((static fn()=>require $root.'/app/Domains/Marketing/module.php')())]);
+$catalog=new ModuleCatalog([ModuleDefinition::fromArray(require $root.'/app/Domains/Sales/module.php'),ModuleDefinition::fromArray(require $root.'/app/Domains/Finance/module.php'),ModuleDefinition::fromArray(require $root.'/app/Domains/ProductManagement/module.php'),ModuleDefinition::fromArray((static fn()=>require $root.'/app/Domains/Marketing/module.php')()),ModuleDefinition::fromArray((static fn()=>require $root.'/app/Domains/Federation/module.php')())]);
 $states=new class implements ModuleStateRepositoryInterface{
     public bool $enabled=true;
     public function enabledOverride(string $organizationId,string $moduleId):?bool{return $this->enabled;}
@@ -176,17 +176,18 @@ $check($realStore->financialEvidence($org,$id)['net_collected_amount']==='40.00'
 echo "Finance persisted Kernel Policy/Approval/Action + Sales order MySQL acceptance PASS (native Action path, not Platform Workflow admission).\n";
 
 
-/* Canonical Workflow integration candidate. Plan trust is a pinned fixture,
- * not a production Plan approval. Real claim, worker gate, Finance Action,
- * independent Approval, receipt verification and checkpoint use MySQL. */
+/* Canonical Federation/Workflow integration: real Goal, Plan, independent Plan and Action
+ * approvals, worker gate, native business readback and persisted evaluation. */
 $wfDb=\Doctrine\DBAL\DriverManager::getConnection([
     'driver'=>'pdo_mysql','host'=>getenv('DB_HOST')?:'127.0.0.1','port'=>(int)(getenv('DB_PORT')?:3306),
     'dbname'=>getenv('DB_DATABASE')?:'cos','user'=>getenv('DB_USERNAME')?:'cos',
     'password'=>getenv('DB_PASSWORD')?:'','charset'=>'utf8mb4',
 ]);
 $capabilities=new \Kernel\Module\CanonicalCapabilityCatalog($catalog);
+$db->prepare('INSERT INTO cos_policies (id,organization_id,code,name,action_type,conditions,decision,priority,version,status) VALUES (?,?,?,?,?,?,"APPROVAL_REQUIRED",1,1,"ACTIVE")')
+    ->execute([bin2hex(random_bytes(16)),$org,'order-plan-approval','Independent Plan approval','cos.federation.plan.approval','[]']);
 $executeWorkflow=static function(string $type,array $p,string $initiator,string $approver,?array $config=null)use(
-    $wfDb,$db,$org,$id,$catalog,$capabilities,$active,$domains,$handler,$approvals,$tx,$realAuthority,$check,$deny
+    $wfDb,$db,$org,$id,$catalog,$capabilities,$active,$domains,$handler,$approvals,$tx,$realAuthority,$check,$deny,$sales,$realStore
 ):array{
     $ownerDomain=$config['owner']??'finance';$effect=$config['effect']??'financial';
     $targetType=$config['target_type']??'sales_order';$targetId=$config['target']??$id;
@@ -197,65 +198,92 @@ $executeWorkflow=static function(string $type,array $p,string $initiator,string 
         \Kernel\Shared\Domain\OrganizationId::fromString($org),\Kernel\Identity\Model\OrganizationRole::fromString('manager'),
         [\Kernel\Tenant\Model\Permission::fromString(\Kernel\Tenant\Model\TenantPermissions::ACCESS),
          \Kernel\Tenant\Model\Permission::fromString(\Kernel\Tenant\Model\TenantPermissions::MANAGE)]);
-    $identity=new \Platform\Workflow\Model\WorkflowRunIdentity($org,'fin-wf-'.$token);
-    $plan='fin-plan-'.$token;$approval='fin-plan-approval-'.$token;$digest=hash('sha256',$plan);
-    $definition=new \Platform\Workflow\Model\WorkflowDefinitionSnapshot('test.'.$ownerDomain.'.order','1.0.0',[[
-        'id'=>'payment','capability_id'=>$type,'capability_version'=>'1.0.0','owner_domain'=>$ownerDomain,
-        'execution_binding'=>'action:'.$type,'side_effect_level'=>$effect,'depends_on'=>[],
-        'input'=>['target_type'=>$targetType,'target_id'=>$targetId,'parameters'=>$p],
-    ]]);
-    $draft=new \Platform\Workflow\Model\WorkflowRunDraft($identity,$definition->id,$definition->version,
-        hash('sha256',json_encode($p,JSON_THROW_ON_ERROR)),$initiator,'fin-corr-'.$token,$plan,$approval,$digest,$definition);
-    $planEvidence=new class($identity,$plan,$digest,$approval) implements \Platform\Workflow\Contract\WorkflowPlanApprovalEvidenceInterface{
-        public function __construct(private \Platform\Workflow\Model\WorkflowRunIdentity $run,private string $plan,private string $digest,private string $approval){}
-        public function assertTrusted(\Platform\Workflow\Model\WorkflowRunIdentity $identity,string $planId,string $planDigest,string $approvalReference):void
-        {if($identity!=$this->run||$planId!==$this->plan||$planDigest!==$this->digest||$approvalReference!==$this->approval)throw new DomainException('Pinned test Plan proof mismatch.');}
+    $planReader=new \App\Persistence\Federation\FederationPlanApprovalEvidenceReader($wfDb);
+    $planHandler=new \App\Persistence\Federation\FederationPlanApproveHandler($wfDb,$planReader);
+    $businessModule=new class($ownerDomain,$handlers,$type) implements \Kernel\Module\DomainModuleInterface,\Kernel\Module\Contract\ActionOwningModuleInterface{
+        public function __construct(private string $owner,private array $handlers,private string $type){}
+        public function name():string{return $this->owner;}
+        public function actionTypes():array{return [$this->type];}
+        public function actionHandlers():array{return $this->handlers;}
     };
+    $registry=new \Kernel\Module\DomainModuleRegistry([$businessModule,new \Domains\Federation\Bootstrap\FederationDomainModule($planHandler)]);
+    $planEvidence=new \App\Persistence\Workflow\FederationWorkflowPlanApprovalEvidence($wfDb,$planReader);
     $receipt=new \App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier($wfDb,$planEvidence);
     $claimGate=new \App\Persistence\Workflow\DoctrineWorkflowActionClaimAdmission($wfDb,$planEvidence,$capabilities,$active);
     $store=new \App\Persistence\Workflow\DoctrineWorkflowExecutionStore($wfDb,$receipt,$claimGate);
+    $policies=new \Infrastructure\Platform\Persistence\MySql\Policy\MysqlPolicyRepository($db);
+    $engine=new \Kernel\Policy\Service\PolicyEngine(new \Kernel\Rule\Service\ConditionEvaluator());
+    $contexts=new \Kernel\Policy\Service\PolicyContextBuilder($registry);
+    $nonActions=new \App\Persistence\Workflow\FailClosedWorkflowNonActionReceiptEvidence();
     $worker=new \App\Persistence\Workflow\DoctrineWorkflowActionWorkerAdmission($wfDb,$planEvidence,$capabilities,$active,
-        new \App\Persistence\Workflow\WorkflowPredecessorReceiptVerifier($receipt,new \App\Persistence\Workflow\FailClosedWorkflowNonActionReceiptEvidence()),
-        new \Infrastructure\Platform\Persistence\MySql\Policy\MysqlPolicyRepository($db),
-        new \Kernel\Policy\Service\PolicyEngine(new \Kernel\Rule\Service\ConditionEvaluator()),
-        new \Kernel\Policy\Service\PolicyContextBuilder($registry),
+        new \App\Persistence\Workflow\WorkflowPredecessorReceiptVerifier($receipt,$nonActions),$policies,$engine,$contexts,
         new \App\Infrastructure\Persistence\MySql\MysqlIdentityRepository($db),
         new \Kernel\Tenant\Service\TenantContextFactory(new \App\Security\RoleTenantPermissionResolver()));
     $actions=new \Kernel\Action\Service\ActionService(new \Infrastructure\Platform\Persistence\MySql\Action\MysqlActionRepository($db),
-        new \Kernel\Action\Service\ActionExecutor($handlers,new \Kernel\Action\Service\ModuleActionExecutionGate($registry,$active,null,$worker)));
-    $policy=new \Kernel\Policy\Service\ActionPolicyService($actions,new \Infrastructure\Platform\Persistence\MySql\Policy\MysqlPolicyRepository($db),
-        new \Infrastructure\Platform\Persistence\MySql\Policy\MysqlPolicyEvaluationRepository($db),$approvals,
-        new \Kernel\Policy\Service\PolicyEngine(new \Kernel\Rule\Service\ConditionEvaluator()),$tx,null,$registry,$active);
-    $approvalService=new \Kernel\Approval\Service\ApprovalService($approvals,$actions,$tx,null,null,$approvalAuthority);
-    $store->create($draft,$actor);
-    $store->compareAndTransition(new \Platform\Workflow\Model\WorkflowRunTransition(
-        new \Platform\Workflow\Model\WorkflowRunCommand($identity,$actor,1,$draft->correlationId),
-        \Kernel\Workflow\Model\WorkflowStatus::CREATED,\Kernel\Workflow\Model\WorkflowStatus::RUNNING,'Finance candidate fixture'));
-    $step=$store->steps($identity)[0];
-    $action=$policy->submit($org,new \Kernel\Action\ActionProposal($type,$targetType,$targetId,$p,'USER',
-        $initiator,'APPROVAL_REQUIRED','HIGH','wf:'.$step->idempotencyKey),$draft->correlationId);
-    $check($action->status===\Kernel\Action\ActionStatus::PendingApproval,'Workflow Finance Action must await human approval.');
-    $claim=$store->claim(new \Platform\Workflow\Model\WorkflowStepClaim(
-        new \Platform\Workflow\Model\WorkflowRunCommand($identity,$actor,2,$draft->correlationId),'payment','finance-workflow-fixture',120));
-    $check($claim->state==='claimed'&&$claim->claimToken!==null,'Financial Workflow claim missing.');
-    $q=$db->prepare('SELECT id FROM cos_approvals WHERE organization_id=? AND action_id=?');$q->execute([$org,$action->id]);$approvalId=(string)$q->fetchColumn();$q->closeCursor();
-    $check($approvalId!=='','Workflow Action approval missing.');
-    $deny(fn()=>$approvalService->approve($org,$approvalId,$initiator));
-    $check($actions->executeOutcome($org,$action->id,'unapproved-worker')===null,'Unapproved Workflow Action executed.');
-    $approvalService->approve($org,$approvalId,$approver);
-    if(isset($config['after_approval']))($config['after_approval'])();
-    $out=$actions->executeOutcome($org,$action->id,'finance-workflow-worker');
-    if(($config['expect_denied']??false)===true){
-        $check($out!==null&&!$out->result->successful,'Revoked Sales order approval still executed.');
-        return [];
+        new \Kernel\Action\Service\ActionExecutor([...$handlers,$planHandler],new \Kernel\Action\Service\ModuleActionExecutionGate($registry,$active,null,$worker)));
+    $policy=new \Kernel\Policy\Service\ActionPolicyService($actions,$policies,
+        new \Infrastructure\Platform\Persistence\MySql\Policy\MysqlPolicyEvaluationRepository($db),$approvals,$engine,$tx,null,$registry,$active,$contexts);
+    $approvalService=new \Kernel\Approval\Service\ApprovalService($approvals,$actions,$tx,null,null,
+        new \App\Infrastructure\Automation\CompositeActionApprovalAuthority(
+            new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesApprovalAuthority($db),
+            new \App\Infrastructure\Automation\FederationPlanApprovalAuthority($db),$realAuthority));
+    $outcomes=new \App\Persistence\Federation\FederationTrustedOutcomeEvidenceResolver($active,[
+        new \App\Persistence\Sales\SalesOrderRunOutcomeProvider($wfDb,$sales,$sales,new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesMutationReceiptRepository($db),$receipt),
+        new \App\Persistence\Finance\FinanceOrderRunOutcomeProvider($wfDb,$realStore,$receipt)]);
+    $goals=new \App\Persistence\Federation\FederationGoalStore($wfDb,
+        new \App\Persistence\Federation\FederationCapabilityBindingResolver($capabilities,$registry,$active),
+        new \Platform\Orchestration\Goal\GoalPlanValidator($capabilities),new \Platform\Orchestration\Goal\GoalOutcomeEvaluator(),$outcomes,$planReader);
+    $scheduler=new \Platform\Workflow\Service\WorkflowStepScheduler();
+    $bridge=new \App\Persistence\Federation\FederationCanonicalWorkflowBridge($wfDb,$store,$scheduler,$goals,
+        $planEvidence,$receipt,$nonActions,$planReader,$capabilities,$registry,$active,$policies,$engine,$contexts,$policy,
+        new \App\Persistence\Workflow\DoctrineWorkflowExecutionCoordinator($wfDb,$store,$scheduler,$planEvidence,$receipt));
+    $goal='goal-'.$token;$plan='plan-'.$token;$run='fin-wf-'.$token;
+    $criterion=$ownerDomain==='sales'?\App\Persistence\Sales\SalesOrderRunOutcomeProvider::CRITERION:\App\Persistence\Finance\FinanceOrderRunOutcomeProvider::CRITERION;
+    $goals->createGoal($actor,new \Platform\Orchestration\Goal\GoalSpecification($goal,$org,$initiator,'Verify native order operation '.$type,
+        [['id'=>$criterion,'operator'=>'at_least','expected'=>1]],[$type],1,null,null,'',[],['independent_plan','independent_action'],'always'));
+    $goals->proposePlan($actor,$plan,$goal,[['id'=>'payment','capability_id'=>$type,'capability_version'=>'1.0.0',
+        'input'=>['target_type'=>$targetType,'target_id'=>$targetId,'parameters'=>$p]]]);
+    $coordinator=new \App\Persistence\Federation\FederationPlanApprovalCoordinator($wfDb,$goals,$registry,$active,
+        new \Platform\Orchestration\Goal\GoalPlanApprovalRequestFactory(),$policy,$policies,$contexts,$engine);
+    $oldRollout=getenv('COS_FEDERATION_CANONICAL_ORGANIZATION');
+    putenv('COS_FEDERATION_CANONICAL_ORGANIZATION='.$org);
+    try{
+        $request=$coordinator->requestApproval($actor,$plan,'plan-'.$token);
+        $planAction=$request['action_id'];
+        $check($request['status']==='PENDING_APPROVAL','Plan approval request not pending.');
+        $planDecision=(string)$wfDb->fetchOne('SELECT id FROM cos_approvals WHERE organization_id=? AND action_id=?',[$org,$planAction]);
+        $check($planDecision!=='','Independent Plan approval missing.');
+        $deny(fn()=>$approvalService->approve($org,$planDecision,$initiator));
+        $deny(fn()=>$bridge->start($actor,$run,$plan,$planAction));
+        $approvalService->approve($org,$planDecision,$approver);
+        $check($actions->execute($org,$planAction,'order-plan-worker')?->status===\Kernel\Action\ActionStatus::Completed,'Plan approval worker failed.');
+        $check($bridge->start($actor,$run,$plan,$planAction)['execution_authority']==='platform_workflow','Canonical Plan did not start.');
+        $deny(fn()=>$bridge->start($actor,'duplicate-'.$token,$plan,$planAction));
+        $check($bridge->advance($actor,$run,$planAction)['state']==='running','Canonical Run did not start running.');
+        $pending=$bridge->advance($actor,$run,$planAction);
+        $check($pending['state']==='awaiting_human_approval','Canonical Action approval missing.');
+        $actionId=$pending['action_id'];
+        $approvalId=(string)$wfDb->fetchOne('SELECT id FROM cos_approvals WHERE organization_id=? AND action_id=?',[$org,$actionId]);
+        $check($approvalId!=='','Workflow Action approval missing.');
+        $deny(fn()=>$approvalService->approve($org,$approvalId,$initiator));
+        $check($actions->executeOutcome($org,$actionId,'unapproved-worker')===null,'Unapproved Workflow Action executed.');
+        $approvalService->approve($org,$approvalId,$approver);
+        if(isset($config['after_approval']))($config['after_approval'])();
+        $out=$actions->executeOutcome($org,$actionId,'order-workflow-worker');
+        if(($config['expect_denied']??false)===true){
+            $check($out!==null&&!$out->result->successful,'Revoked Sales order approval still executed.');
+            return [];
+        }
+        $check($out!==null&&$out->result->successful&&$out->action()->status===\Kernel\Action\ActionStatus::Completed,'Approved Workflow Action failed.');
+        $check($actions->executeOutcome($org,$actionId,'replay-worker')===null,'Completed Action replayed.');
+        $check($bridge->advance($actor,$run,$planAction)['state']==='step_completed','Native Action receipt was not checkpointed.');
+        $check($bridge->advance($actor,$run,$planAction)['state']==='completed','Canonical Workflow did not complete.');
+        $eval=$goals->recordEvaluation($actor,'eval-'.$token,$run);
+        $check($eval['result']==='satisfied'&&($eval['criteria'][0]['observed']??null)===1,'Native Goal outcome was not verified.');
+        return $out->result->data;
+    }finally{
+        if($oldRollout===false)putenv('COS_FEDERATION_CANONICAL_ORGANIZATION');else putenv('COS_FEDERATION_CANONICAL_ORGANIZATION='.$oldRollout);
     }
-    $check($out!==null&&$out->result->successful&&$out->action()->status===\Kernel\Action\ActionStatus::Completed,'Financial Workflow worker Action failed.');
-    $check($actions->executeOutcome($org,$action->id,'replay-worker')===null,'Completed financial Action replayed.');
-    $store->checkpoint(new \Platform\Workflow\Model\WorkflowStepCheckpoint(
-        new \Platform\Workflow\Model\WorkflowRunCommand($identity,$actor,3,$draft->correlationId),'payment',$claim->claimToken,
-        \Kernel\Workflow\Model\StepStatus::COMPLETED,'action:'.$action->id));
-    $check($store->steps($identity)[0]->state==='completed','Financial Action receipt was not checkpointed.');
-    return $out->result->data;
 };
 $wfPayload=[...$payload,'amount'=>'60.00','source_reference'=>'workflow-capture'];
 $wfRegistered=$executeWorkflow('finance.order.payment.register',$wfPayload,$requester,$reviewer);
@@ -263,7 +291,7 @@ $check($realStore->financialEvidence($org,$id)['net_collected_amount']==='40.00'
 $executeWorkflow('finance.order.payment.reconcile',[...$wfPayload,'operation_id'=>$wfRegistered['finance_reference'],
     'statement_reference'=>'workflow-statement-line','expected_revision'=>1],$reviewer,$requester);
 $check($realStore->financialEvidence($org,$id)['net_collected_amount']==='100.00','Financial Workflow reconciliation did not settle captured evidence.');
-echo "Finance actual Action + canonical financial Workflow claim, worker, receipt and checkpoint candidate PASS (pinned Plan fixture; no production cutover).\n";
+echo "Finance actual Action + canonical financial Workflow claim, worker, receipt and checkpoint PASS (real independent Plan Approval and native Goal evaluation; no production cutover).\n";
 
 // O5 source-side acceptance: durable, tenant-scoped lifecycle pagination and independent Finance.
 $placementId=$sales->placement($org,$id)['event_id'];
@@ -397,7 +425,7 @@ $check($sales->get($org,$governedId)['revision']===7&&$productStore->stockBalanc
     'Revoked approver produced a native order or stock effect.');
 $check($realStore->financialEvidence($org,$governedId)===null,'Governed lifecycle fabricated Finance evidence.');
 $check(count($sales->lifecycleEvidence($org,$governedId)['events'])===6,'Governed lifecycle journal incomplete.');
-echo "Sales O6 governed native create/confirm/allocate/release/fulfill/cancel/return + independent Approval, revoked approver and Product readback candidate PASS (pinned Plan fixture).\n";
+echo "Sales O6 governed native create/confirm/allocate/release/fulfill/cancel/return + independent Approval, revoked approver and Product readback PASS (real independent Plan Approval and native Goal evaluation).\n";
 
 $r=$mktReport();
 $check($r['placed_orders']===1&&$r['lifecycle']['coverage']==='COMPLETE_CAPTURED_COHORT'&&
@@ -423,4 +451,4 @@ $check($r['placed_orders']===1&&$r['placed_order_value']===[['currency'=>'EUR','
 $check($nativeOrders->read($org,(int)$requester,$governedId)['financial_evidence']['net_collected_amount']==='25.00','Sales and Marketing Finance readbacks diverged.');
 $check($productStore->stockBalance($org,$product['variant_id'],$location)['on_hand']==='8.000000','Finance or Marketing modified Product inventory.');
 $check($sales->placement('foreign-'.$org,$governedId)===null&&$realStore->financialEvidence('foreign-'.$org,$governedId)===null,'Foreign tenant source leaked.');
-echo "O7 unified native Marketing campaign -> governed Sales order -> Product allocation/partial fulfillment/cancel/return -> independently approved Finance capture/refund/chargeback -> Marketing native report PASS (pinned Plan fixture, not provider settlement).\n";
+echo "O7 unified native Marketing campaign -> governed Sales order -> Product allocation/partial fulfillment/cancel/return -> independently approved Finance capture/refund/chargeback -> Marketing native report PASS (real independent Plan Approval and native Goal evaluation, not provider settlement).\n";
