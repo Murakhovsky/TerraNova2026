@@ -52,11 +52,18 @@ final readonly class SalesOrderRunOutcomeProvider implements RunScopedGoalOutcom
             if(!is_string($native)||!preg_match('/^([a-f0-9]{64}):([a-f0-9]{32})$/D',$native,$m)||!hash_equals($hash,$m[1]))
                 throw new DomainException('Native Order creation receipt differs from approved terms.');
             $order=$this->orders->get($org,$m[2]);$fact=$this->placements->placement($org,$m[2]);
-            if($order===null||$fact===null||$fact['organization_id']!==$org||$fact['order_id']!==$m[2]||
-                $fact['correlation_id']!==$r['correlation_id']||$fact['deal_id']!==$deal||$order['owner_id']!==$owner||
-                $fact['order_total']!==$terms['total']||$fact['currency']!==$terms['currency']||
-                (array)$fact['attribution_observations']!==$terms['attribution']||$order['lines']!=$terms['lines'])
-                throw new DomainException('Native Order placement differs from approved terms.');
+            if($order===null||$fact===null)throw new DomainException('Native Order placement missing.');
+            // MySQL JSON does not preserve object key order. Compare the canonical
+            // associative observations exactly after sorting, not serialized order.
+            $observations=(array)$fact['attribution_observations'];ksort($observations,SORT_STRING);
+            if($fact['organization_id']!==$org||$fact['order_id']!==$m[2]||$fact['correlation_id']!==$r['correlation_id'])
+                throw new DomainException('Native Order placement identity or correlation differs.');
+            if($fact['deal_id']!==$deal||$order['owner_id']!==$owner||$order['deal_id']!==$deal)
+                throw new DomainException('Native Order relationship differs from approved terms.');
+            if($fact['order_total']!==$terms['total']||$fact['currency']!==$terms['currency']||$order['total']!==$terms['total']||$order['currency']!==$terms['currency'])
+                throw new DomainException('Native Order money differs from approved terms.');
+            if($observations!==$terms['attribution']||$order['lines']!=$terms['lines'])
+                throw new DomainException('Native Order lines or attribution differ from approved terms.');
             $evidence='sales:order:'.$m[2].':'.$fact['event_id'];
         }else{
             $op=substr($type,strlen(SalesGovernedOrderHandler::PREFIX.'lifecycle.'));
