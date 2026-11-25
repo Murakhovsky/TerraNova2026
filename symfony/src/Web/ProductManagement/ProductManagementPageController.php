@@ -190,11 +190,24 @@ final readonly class ProductManagementPageController
             $categories=$this->read($actor,'category.search',['limit'=>100])['items'];
             $bindings=$category===''?[]:$this->read($actor,'attribute.category.get',['category_id'=>$category])['items'];
             $filterCode=trim((string)$request->query->get('filter_code',''));$filterValue=(string)$request->query->get('filter_value','');$matches=[];
+            $filterDefinition=null;$filterApplied=false;
             if($filterCode!==''){
-                $value=json_decode($filterValue,true,8,JSON_THROW_ON_ERROR);
-                $matches=$this->read($actor,'attribute.product.filter',['code'=>$filterCode,'value'=>$value,'limit'=>100,'offset'=>($page-1)*100])['items'];
+                // Resolve the selected definition independently of the result page.
+                for($offset=0;$offset<10000;$offset+=100){
+                    $rows=$this->read($actor,'attribute.search',['limit'=>100,'offset'=>$offset])['items'];
+                    foreach($rows as $row)if($row['code']===$filterCode){$filterDefinition=$row;break 2;}
+                    if(count($rows)<100)break;
+                }
+                if($filterDefinition===null)throw new DomainException('Unknown attribute.');
+                if($request->query->has('filter_value')){
+                    $value=$this->typedAttributeValue($filterDefinition,$filterValue);
+                    $matches=$this->read($actor,'attribute.product.filter',['code'=>$filterCode,'value'=>$value,'limit'=>100,'offset'=>($page-1)*100])['items'];
+                    $filterApplied=true;
+                }
             }
-            return $this->render($request,$actor,'attributes',compact('defs','categories','category','bindings','page','filterCode','filterValue','matches'));
+            $bulkDefinitions=array_column($defs,null,'code');
+            if($filterDefinition!==null)$bulkDefinitions[$filterCode]=$filterDefinition;
+            return $this->render($request,$actor,'attributes',compact('defs','categories','category','bindings','page','filterCode','filterValue','filterDefinition','filterApplied','matches','bulkDefinitions'));
         }catch(DomainException|\JsonException|\InvalidArgumentException){return new Response('Invalid attribute query.',422);}
         catch(Throwable){return new Response('Attribute Workspace unavailable.',503);}
     }
@@ -233,7 +246,18 @@ final readonly class ProductManagementPageController
                     if($rev===false||$rev<1)throw new DomainException('Invalid product revision.');
                     $targets[]=['product_id'=>$id,'expected_revision'=>$rev];
                 }
-                $values=json_decode((string)$request->request->get('values',''),true,32,JSON_THROW_ON_ERROR);
+                if(count($targets)<1||count($targets)>20)throw new DomainException('Select 1–20 products.');
+                $common=null;
+                foreach($targets as $target){
+                    $state=$this->read($actor,'attribute.product.get',['product_id'=>$target['product_id']]);
+                    if(!$state['found']||$state['revision']!==$target['expected_revision'])throw new DomainException('Stale or unavailable product.');
+                    $defs=array_column($state['items'],null,'code');
+                    if($common===null){$common=$defs;continue;}
+                    $common=array_intersect_key($common,$defs);
+                    foreach($common as $code=>&$def)$def['is_required']=$def['is_required']||$defs[$code]['is_required'];
+                    unset($def);
+                }
+                $values=$this->typedAttributePatch($request,$common??[],10);
                 $receipt=$this->write($actor,'attribute.product.bulk_set',['products'=>$targets,'values'=>$values],$request);
                 if(count($receipt['items']??[])!==count($targets))return new Response('Bulk receipt incomplete.',503);
                 $expected=array_column($targets,'expected_revision','product_id');
@@ -253,6 +277,39 @@ final readonly class ProductManagementPageController
         }catch(DomainException|\InvalidArgumentException){return new Response('Attribute mutation rejected.',422);}
         catch(Throwable){return new Response('Attribute outcome uncertain. Reload before retrying.',503);}
     }
+    private function typedAttributeValue(array $definition,mixed $raw):mixed
+    {
+        if(!is_string($raw))throw new DomainException('Invalid attribute value.');
+        $value=match($definition['value_type']){
+            'boolean'=>match($raw){'true'=>true,'false'=>false,default=>throw new DomainException('Invalid boolean.')},
+            'text','decimal','enum'=>$raw,
+            default=>throw new DomainException('Unsupported attribute type.')
+        };
+        return \Domains\ProductManagement\Domain\AttributeRules::value($definition,$value);
+    }
+
+    private function typedAttributePatch(Request $request,array $byCode,int $limit):array
+    {
+        $modes=$request->request->all('attribute_mode');
+        $submitted=$request->request->all('attribute_value');
+        $values=[];
+        foreach($modes as $code=>$mode){
+            if(!is_string($mode)||!in_array($mode,['keep','set','clear'],true))throw new DomainException('Invalid attribute selection.');
+            if($mode==='keep')continue;
+            if(!isset($byCode[$code]))throw new DomainException('Attribute not applicable to all selected products.');
+            $definition=$byCode[$code];
+            if($mode==='clear'){
+                if($definition['is_required'])throw new DomainException('Required attribute cannot be cleared.');
+                $value=null;
+            }else{
+                $value=$this->typedAttributeValue($definition,$submitted[$code]??null);
+            }
+            $values[]=['code'=>$code,'value'=>$value];
+        }
+        if($values===[]||count($values)>$limit)throw new DomainException('Invalid attribute patch size.');
+        return $values;
+    }
+
     public function productAttributes(Request $request,string $id):Response
     {
         $actor=$this->manager();if($actor instanceof Response)return $actor;
@@ -270,31 +327,7 @@ final readonly class ProductManagementPageController
             $action=(string)$request->request->get('action','');
             if($action==='set'){
                 $definitions=$this->read($actor,'attribute.product.get',['product_id'=>$id]);
-                $byCode=array_column($definitions['items'],null,'code');
-                $modes=$request->request->all('attribute_mode');
-                $submitted=$request->request->all('attribute_value');
-                $values=[];
-                foreach($modes as $code=>$mode){
-                    if(!isset($byCode[$code])||!is_string($mode)||!in_array($mode,['keep','set','clear'],true))
-                        throw new DomainException('Invalid attribute selection.');
-                    if($mode==='keep')continue;
-                    $definition=$byCode[$code];
-                    if($mode==='clear'){
-                        if($definition['is_required'])throw new DomainException('Required attribute cannot be cleared.');
-                        $value=null;
-                    }else{
-                        $raw=$submitted[$code]??null;
-                        if(!is_string($raw))throw new DomainException('Invalid attribute value.');
-                        $value=match($definition['value_type']){
-                            'boolean'=>match($raw){'true'=>true,'false'=>false,default=>throw new DomainException('Invalid boolean.')},
-                            'enum'=>in_array($raw,$definition['choices'],true)?$raw:throw new DomainException('Invalid enum choice.'),
-                            'text','decimal'=>$raw,
-                            default=>throw new DomainException('Unsupported attribute type.')
-                        };
-                    }
-                    $values[]=['code'=>$code,'value'=>$value];
-                }
-                if($values===[]||count($values)>50)throw new DomainException('Select 1–50 attribute changes.');
+                $values=$this->typedAttributePatch($request,array_column($definitions['items'],null,'code'),50);
                 $receipt=$this->write($actor,'attribute.product.set',['product_id'=>$id,'values'=>$values,'expected_revision'=>(int)$request->request->get('expected_revision',0)],$request);
                 if($receipt!=$this->read($actor,'attribute.product.get',['product_id'=>$id]))return new Response('Attribute readback uncertain.',503);
             }elseif(in_array($action,['preview','matrix'],true)){
