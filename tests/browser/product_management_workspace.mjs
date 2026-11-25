@@ -132,7 +132,9 @@ try {
   const attrPath=productPath+'/attributes';
   await go(attrPath);
   const patch=page.locator('form[action="'+attrPath+'"]').filter({has:page.locator('[name=action][value=set]')});
-  await patch.locator('[name=values]').fill(JSON.stringify([{code:attrCode,value:'oak'}]));
+  check(await patch.locator('textarea[name=values]').count()===0,'Raw JSON editor must not be exposed for product attributes');
+  await patch.locator('[name="attribute_mode['+attrCode+']"]').selectOption('set');
+  await patch.locator('[name="attribute_value['+attrCode+']"]').selectOption('oak');
   await submit(patch,attrPath);
   await page.waitForURL(u=>u.searchParams.get('notice')==='updated');
   const matrix=page.locator('form[action="'+attrPath+'"]').filter({has:page.locator('[name=action][value=preview]')});
