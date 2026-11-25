@@ -46,7 +46,7 @@ final readonly class MarketingAttributionScheduleService
                 $approval=$this->goals->planApprovalAction($actor,$pid);
                 if($run===false){
                     if($approval===null){
-                        $this->approvals->requestApproval($actor,$pid,'marketing-schedule-'.$pid);
+                        $this->approvals->requestApproval($actor,$pid,'mks-'.substr(hash('sha256',$org.':'.$pid),0,24));
                         return 'PLAN_APPROVAL_REQUESTED';
                     }
                     if($approval['status']!=='COMPLETED')return 'WAIT_PLAN_APPROVAL';
