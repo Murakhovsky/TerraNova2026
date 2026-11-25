@@ -5,8 +5,8 @@
     {% for d in defs %}<tr><td>{{ d.code }}</td><td>{{ d.name }}</td><td>{{ d.value_type }}</td><td>{{ d.unit ?? '—' }}</td><td>{{ d.choices|join(', ') }}</td></tr>{% else %}<tr><td colspan="5">Довідник порожній.</td></tr>{% endfor %}
     </tbody></table></div>
     <nav class="cos-toolbar">
-      {% if page > 1 %}<a href="?page={{ page-1 }}&amp;category={{ category|url_encode }}&amp;filter_code={{ filterCode|url_encode }}&amp;filter_value={{ filterValue|url_encode }}">Попередня</a>{% endif %}
-      {% if defs|length == 100 or matches|length == 100 %}<a href="?page={{ page+1 }}&amp;category={{ category|url_encode }}&amp;filter_code={{ filterCode|url_encode }}&amp;filter_value={{ filterValue|url_encode }}">Наступна</a>{% endif %}
+      {% if page > 1 %}<a href="?page={{ page-1 }}&amp;category={{ category|url_encode }}&amp;filter_code={{ filterCode|url_encode }}{% if filterApplied %}&amp;filter_value={{ filterValue|url_encode }}{% endif %}">Попередня</a>{% endif %}
+      {% if defs|length == 100 or matches|length == 100 %}<a href="?page={{ page+1 }}&amp;category={{ category|url_encode }}&amp;filter_code={{ filterCode|url_encode }}{% if filterApplied %}&amp;filter_value={{ filterValue|url_encode }}{% endif %}">Наступна</a>{% endif %}
     </nav>
     <form method="post" action="/product-management/attributes" class="cos-page__stack">
       <input type="hidden" name="csrf_token" value="{{ csrfToken }}"><input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000001"><input type="hidden" name="action" value="define">
@@ -35,11 +35,29 @@
 <section class="cos-panel">
     <h2>Фільтр за характеристикою</h2>
     <form method="get" action="/product-management/attributes" class="cos-toolbar">
-        <label>Код <input name="filter_code" class="form-control" required value="{{ filterCode }}"></label>
-        <label>Значення JSON <input name="filter_value" class="form-control" required value="{{ filterValue }}" placeholder='"oak" або true'></label>
-        <button type="submit" class="btn btn-outline-primary">Знайти товари</button>
+      <label>Атрибут <select name="filter_code" class="form-select" required>
+        <option value="">Оберіть</option>
+        {% if filterDefinition and filterDefinition.code not in defs|map(d => d.code) %}<option value="{{ filterDefinition.code }}" selected>{{ filterDefinition.name }}</option>{% endif %}
+        {% for d in defs %}<option value="{{ d.code }}" {% if filterCode == d.code %}selected{% endif %}>{{ d.name }} ({{ d.code }})</option>{% endfor %}
+      </select></label>
+      <button type="submit" class="btn btn-outline-secondary">Обрати атрибут</button>
     </form>
-    {% if filterCode %}
+    {% if filterDefinition %}
+      <form method="get" action="/product-management/attributes" class="cos-toolbar">
+        <input type="hidden" name="filter_code" value="{{ filterCode }}">
+        <label>Значення
+          {% if filterDefinition.value_type == 'enum' %}
+            <select name="filter_value" class="form-select" required><option value="">Оберіть</option>{% for choice in filterDefinition.choices %}<option value="{{ choice }}" {% if filterValue == choice %}selected{% endif %}>{{ choice }}</option>{% endfor %}</select>
+          {% elseif filterDefinition.value_type == 'boolean' %}
+            <select name="filter_value" class="form-select" required><option value="">Оберіть</option><option value="true" {% if filterValue == 'true' %}selected{% endif %}>Так</option><option value="false" {% if filterValue == 'false' %}selected{% endif %}>Ні</option></select>
+          {% else %}
+            <input name="filter_value" class="form-control" required value="{{ filterValue }}" {% if filterDefinition.value_type == 'decimal' %}inputmode="decimal"{% endif %}>
+          {% endif %}
+        </label>
+        <button type="submit" class="btn btn-outline-primary">Знайти товари</button>
+      </form>
+    {% endif %}
+    {% if filterApplied %}
       {% if matches %}
       <form method="post" action="/product-management/attributes" class="cos-page__stack">
         <input type="hidden" name="csrf_token" value="{{ csrfToken }}"><input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000003"><input type="hidden" name="action" value="bulk">
@@ -48,7 +66,22 @@
         <table class="table"><thead><tr><th>Вибір</th><th>Товар</th><th>Ревізія</th></tr></thead><tbody>
         {% for p in matches %}<tr><td><input type="checkbox" name="selected[]" value="{{ p.product_id }}" aria-label="Вибрати {{ p.name }}"><input type="hidden" name="revisions[{{ p.product_id }}]" value="{{ p.revision }}"></td><td><a href="/product-management/products/{{ p.product_id }}/attributes">{{ p.name }}</a> · {{ p.status }}</td><td>{{ p.revision }}</td></tr>{% endfor %}
         </tbody></table>
-        <label>Зміни JSON <textarea name="values" class="form-control" required rows="4" placeholder='[{"code":"material","value":"oak"}]'></textarea></label>
+        <p>Змінюйте лише характеристики, спільні для всіх вибраних товарів. Сервер перевіряє кожен товар перед атомарним записом.</p>
+        {% for d in bulkDefinitions %}
+          <fieldset class="border rounded p-2">
+            <legend class="fs-6">{{ d.name }} ({{ d.code }})</legend>
+            <label>Дія <select name="attribute_mode[{{ d.code }}]" class="form-select"><option value="keep">Не змінювати</option><option value="set">Встановити</option><option value="clear">Очистити (якщо необов'язкова)</option></select></label>
+            <label>Значення
+              {% if d.value_type == 'enum' %}
+                <select name="attribute_value[{{ d.code }}]" class="form-select"><option value="">Оберіть</option>{% for choice in d.choices %}<option value="{{ choice }}">{{ choice }}</option>{% endfor %}</select>
+              {% elseif d.value_type == 'boolean' %}
+                <select name="attribute_value[{{ d.code }}]" class="form-select"><option value="">Оберіть</option><option value="true">Так</option><option value="false">Ні</option></select>
+              {% else %}
+                <input name="attribute_value[{{ d.code }}]" class="form-control" {% if d.value_type == 'decimal' %}inputmode="decimal"{% endif %}>
+              {% endif %}
+            </label>
+          </fieldset>
+        {% endfor %}
         <label><input type="checkbox" name="confirm_bulk" value="yes" required> Підтверджую пакет</label><button type="submit" class="btn btn-primary">Застосувати пакет</button>
       </form>
       {% else %}<p>Збігів немає.</p>{% endif %}
