@@ -518,8 +518,18 @@ $businessScheduled=new \Domains\Sales\Application\Service\SalesScheduledActivity
 $businessOfferService=new \Domains\Sales\Application\Service\SalesOfferService($businessOffers,
     new \App\Application\Sales\SalesOfferReferenceResolver($productReferences,new \Domains\Property\Infrastructure\ReadModel\MySql\MysqlPropertyReferencePort($db),$active),
     $businessDeals,$businessCommercial,$orderReceipts,$businessEvents,$tx);
+$activityOps=new \Domains\Sales\Application\Service\SalesOperationService(
+    new class implements \Domains\Sales\Application\Contract\MessageGatewayInterface{
+        public function send(\Domains\Sales\Application\DTO\SendMessageCommand $command):\Domains\Sales\Application\DTO\OperationResult{throw new RuntimeException('Unexpected external delivery.');}
+    },new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOperationRepository($db),$businessEvents,$tx);
+$businessActivity=new \App\Application\Sales\Command\ManageSalesActivityCommandHandler($businessFactory,$activityOps,$businessDeals,
+    new \Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesActivityEvidenceReadModel($db),$orderReceipts,
+    new \Domains\Property\Infrastructure\ReadModel\MySql\MysqlPropertyReferencePort($db),$tx);
 $businessBus=new \App\Infrastructure\Messenger\SymfonyCommandBus(new \Symfony\Component\Messenger\MessageBus([
     new \Symfony\Component\Messenger\Middleware\HandleMessageMiddleware(new \Symfony\Component\Messenger\Handler\HandlersLocator([
+        \App\Application\Sales\Command\ReceivePublicLeadCommand::class=>[new \App\Application\Sales\Command\ReceivePublicLeadCommandHandler($businessFactory)],
+        \App\Application\Sales\Command\ManageSalesLeadStateCommand::class=>[new \App\Application\Sales\Command\ManageSalesLeadStateCommandHandler($businessFactory,$businessRead,$orderReceipts,$tx)],
+        \App\Application\Sales\Command\ManageSalesActivityCommand::class=>[$businessActivity],
         \App\Application\Sales\Command\CreateSalesLeadCommand::class=>[$leadCreate],
         \App\Application\Sales\Command\UpdateSalesLeadCommand::class=>[$leadUpdate],
         \App\Application\Sales\Command\ManageSalesTeamCommand::class=>[$teamManage],
@@ -532,6 +542,14 @@ $businessBus=new \App\Infrastructure\Messenger\SymfonyCommandBus(new \Symfony\Co
     ])),
 ]));
 $businessHandler=new \App\Infrastructure\Automation\SalesGovernedBusinessHandler([
+    new \App\Infrastructure\Capability\SalesLeadIntakeAdapter($businessBus,$businessRead),
+    new \App\Infrastructure\Capability\SalesLeadStateManageAdapter($businessBus),
+    new \App\Infrastructure\Capability\SalesActivityRecordAdapter($businessBus),
+    new \App\Infrastructure\Capability\SalesActivityCompleteAdapter($businessBus),
+    new \App\Infrastructure\Capability\SalesActivityRescheduleAdapter($businessBus),
+    new \App\Infrastructure\Capability\SalesActivityCancelAdapter($businessBus),
+    new \App\Infrastructure\Capability\SalesFollowupScheduleAdapter($businessBus),
+    new \App\Infrastructure\Capability\SalesPropertyMatchRecordAdapter($businessBus),
     new \App\Infrastructure\Capability\SalesLeadCreateAdapter($businessBus,$businessRead),
     new \App\Infrastructure\Capability\SalesLeadQualificationAdapter($businessBus,$businessRead),
     new \App\Infrastructure\Capability\SalesTeamManageAdapter($businessBus),
@@ -589,6 +607,10 @@ foreach([[$from,$to],[$to,$wonStage]] as [$f,$t]){
     $db->prepare('INSERT INTO sales_pipeline_transitions(id,organization_id,pipeline_id,from_stage_id,to_stage_id,requires_approval,conditions) VALUES (?,?,?,?,?,1,JSON_ARRAY())')->execute([bin2hex(random_bytes(16)),$org,$pid,$f,$t]);
 }
 $runBusiness=static fn(string $type,array $p,string $kind,string $target,array $extra=[])=>$executeWorkflow('sales.governed.'.$type,$p,$requester,$reviewer,[...$businessConfig,'target_type'=>$kind,'target'=>$target,...$extra]);
+$intake=$runBusiness('lead.intake',['full_name'=>'R1 operator intake','email'=>'r1-intake-'.$nonce.'@example.test'],'sales_intent',bin2hex(random_bytes(16)));
+$check((int)$businessRead->lead($org,$intake['lead_id'])['client_case_id']>0,'Governed intake lacks linked Deal.');
+$stateLead=$runBusiness('lead.create',['full_name'=>'R1 state lead','email'=>'r1-state-'.$nonce.'@example.test'],'sales_intent',bin2hex(random_bytes(16)));
+$runBusiness('lead.state.manage',['lead_id'=>$stateLead['lead_id'],'expected_status'=>'new','target_status'=>'spam'],'lead',(string)$stateLead['lead_id']);
 $conversion=$runBusiness('client_case.create',['lead_id'=>$leadId],'lead',(string)$leadId);
 $dealId=$conversion['case_id'];
 $dealSnapshot=static fn()=>\Domains\Sales\Application\Support\DealStateSnapshot::fromNative($businessDeals->getForStageChange($org,(string)$dealId),$org,$dealId);
@@ -607,6 +629,20 @@ $runBusiness('lead.activity.reschedule',['lead_id'=>$leadId,'activity_id'=>$act,
 $runBusiness('lead.activity.complete',['lead_id'=>$leadId,'activity_id'=>$act],'lead',(string)$leadId);
 $cancelActivity=$runBusiness('lead.followup.schedule',['lead_id'=>$leadId,'title'=>'R1 cancellation','due_at'=>$due],'lead',(string)$leadId);
 $runBusiness('lead.activity.cancel',['lead_id'=>$leadId,'activity_id'=>$cancelActivity['activity_id'],'reason'=>'No longer needed'],'lead',(string)$leadId);
+$record=$runBusiness('activity.record',['deal_id'=>$dealId,'activity_type'=>'note','title'=>'R1 native note','body'=>'Observed','completed'=>true],'deal',(string)$dealId);
+$follow=$runBusiness('followup.schedule',['deal_id'=>$dealId,'title'=>'R1 Deal follow-up','due_at'=>$due],'deal',(string)$dealId);
+$runBusiness('activity.reschedule',['deal_id'=>$dealId,'activity_id'=>$follow['record_id'],'due_at'=>$due2],'deal',(string)$dealId);
+$runBusiness('activity.complete',['deal_id'=>$dealId,'activity_id'=>$follow['record_id']],'deal',(string)$dealId);
+$cancelDeal=$runBusiness('followup.schedule',['deal_id'=>$dealId,'title'=>'R1 cancelled follow-up','due_at'=>$due],'deal',(string)$dealId);
+$runBusiness('activity.cancel',['deal_id'=>$dealId,'activity_id'=>$cancelDeal['record_id'],'reason'=>'No longer needed'],'deal',(string)$dealId);
+$propertyType=(int)$db->query('SELECT MIN(id) FROM tn_property_types')->fetchColumn();$propertyLocation=(int)$db->query('SELECT MIN(id) FROM tn_locations')->fetchColumn();
+$check($propertyType>0&&$propertyLocation>0,'R1 property vocabulary missing.');
+$db->prepare('INSERT INTO tn_properties(organization_id,public_id,slug,title,deal_type,type_id,status,location_id) VALUES (?,?,?,?,"sale",?,"draft",?)')->execute([$org,'R1-'.$nonce,'r1-'.$nonce,'R1 property',$propertyType,$propertyLocation]);
+$propertyId=(int)$db->lastInsertId();
+$db->prepare('INSERT INTO tn_property_assets(organization_id,asset_id,kind,type_code,lifecycle,legacy_property_id) VALUES (?,?,"unit","apartment","existing",?)')->execute([$org,'r1-asset-'.$nonce,$propertyId]);
+$db->prepare('INSERT INTO tn_property_inventory_items(organization_id,inventory_id,asset_id,transaction_type,status,price_amount,price_currency) VALUES (?,?,?,"sale","available",1000,"USD")')->execute([$org,'r1-inv-'.$nonce,'r1-asset-'.$nonce]);
+$runBusiness('property_match.record',['deal_id'=>$dealId,'property_id'=>$propertyId,'match_status'=>'suggested','score'=>90,'note'=>'R1 verified property'],'deal',(string)$dealId);
+echo "Sales R1 canonical operator intake, lead state, Deal activity and property matching PASS.\n";
 $quote=['title'=>'R1 service quote','currency'=>'EUR','valid_until'=>'2035-01-01T00:00:00Z','lines'=>[['kind'=>'service','title'=>'Service','quantity'=>1,'unit_price'=>'125.00']]];
 $offer=$runBusiness('offer.create',['deal_id'=>$dealId,...$quote],'deal',(string)$dealId)['offer'];
 $offerId=$offer['offer_id'];$identity=['deal_id'=>$dealId,'offer_id'=>$offerId];
