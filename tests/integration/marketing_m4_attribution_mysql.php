@@ -240,3 +240,25 @@ if(interface_exists(\Domains\Sales\Application\Contract\SalesOrderJourneyStore::
     $assert($missing,'Absent Sales commerce package did not fail closed.');
     echo "Marketing M4.10 combined native Sales repository acceptance DEFERRED: source branch not installed\n";
 }
+
+$candidateRead=new \Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesAttributionCandidateReadModel($db);
+$candidateAdapter=new \App\Infrastructure\Marketing\AttributionCandidateReadAdapter($candidateRead,$modules);
+$sweepCampaign=$campaigns->createDraft($org,'42',(new MarketingDraftPolicy())->validate(['name'=>'M4 sweep fixture','business_objective'=>'Native conversion collection']),'m4-sweep-campaign')['id'];
+$insertLead=$db->prepare("INSERT INTO tn_leads (organization_id,full_name,status,utm_source,utm_medium,utm_campaign,created_at) VALUES (?,'Private sweep fixture','new','google','organic',?,'2026-02-01 10:00:00')");
+for($i=0;$i<51;$i++)$insertLead->execute([$org,$sweepCampaign]);
+$insertLead->execute([$other,$sweepCampaign]);
+$sweepOrderRepo=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository($db);
+$sweepOrderSource=new \App\Infrastructure\Marketing\CommerceOrderReadAdapter($modules,$sweepOrderRepo,$sweepOrderRepo,$sweepOrderRepo);
+$sweep=new \Domains\Marketing\Application\Service\MarketingAttributionSweepService($campaignService,$plans,$candidateAdapter,$sales,$sweepOrderSource,$store,$commerceStore,$modules);
+$page1=$sweep->sweep($actor,$sweepCampaign,null,'lead','2026-02-01','2026-02-01',null,'m4-sweep-first');
+$assert($page1['scanned']===50&&$page1['recorded_or_already_present']===50&&!$page1['page_exhausted']&&!$page1['complete_coverage'],'Sweep first page or tenant fence invalid.');
+$page2=$sweep->sweep($actor,$sweepCampaign,null,'lead','2026-02-01','2026-02-01',$page1['next_after'],'m4-sweep-second');
+$assert($page2['scanned']===1&&$page2['recorded_or_already_present']===1&&$page2['page_exhausted']&&!$page2['complete_coverage'],'Sweep cursor skipped or duplicated rows.');
+$assert($sweep->sweep($actor,$sweepCampaign,null,'lead','2026-02-01','2026-02-01',null,'m4-sweep-first')===$page1,'Sweep receipt replay changed.');
+$deny=false;try{$sweep->sweep($actor,$sweepCampaign,null,'lead','2026-02-01','2026-02-01',$page1['next_after'],'m4-sweep-first');}catch(DomainException){$deny=true;}
+$assert($deny,'Sweep replay key accepted changed cursor.');
+$assert(count($store->list($org,$sweepCampaign,'2026-02-01','2026-02-01',501,0))===51,'Sweep native evidence coverage failed.');
+$scan=$sweep->sweep($actor,$c2,null,'order','2026-01-02','2026-01-02',null,'m4-sweep-native-orders');
+$assert($scan['scanned']>=1&&$scan['recorded_or_already_present']>=1&&!$scan['financial_mutation'],'Native order sweep failed.');
+$assert($candidateRead->page(strtoupper($org),'lead','2026-02-01','2026-02-01',null,50)['ids']===[],'Case-variant tenant leaked.');
+echo "Marketing M4 governed sweep service native keyset discovery, source capture, replay and tenant fence PASS\n";

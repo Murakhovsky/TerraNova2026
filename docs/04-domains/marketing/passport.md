@@ -79,7 +79,7 @@ domain_id: marketing
     },
     {
       "id": "attribution_analytics",
-      "capability_ids": ["marketing.attribution.capture", "marketing.attribution.discover","marketing.attribution.tracking.get","marketing.analytics.report.get", "marketing.analytics.media.report", "marketing.analytics.media.sync", "marketing.attribution.commerce.inspect", "marketing.attribution.commerce.capture", "marketing.analytics.commerce.report"]
+      "capability_ids": ["marketing.attribution.capture", "marketing.attribution.discover","marketing.attribution.tracking.get","marketing.analytics.report.get", "marketing.analytics.media.report", "marketing.analytics.media.sync", "marketing.attribution.commerce.inspect", "marketing.attribution.commerce.capture", "marketing.analytics.commerce.report", "marketing.attribution.sweep"]
     },
     {
       "id": "product_evidence",

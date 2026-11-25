@@ -334,6 +334,7 @@ Manifest capabilities не задекларовані.
 - `marketing.attribution.commerce.capture`;
 - `marketing.attribution.commerce.inspect`;
 - `marketing.attribution.discover`;
+- `marketing.attribution.sweep`;
 - `marketing.attribution.tracking.get`;
 - `marketing.audience.list`;
 - `marketing.audience.save`;

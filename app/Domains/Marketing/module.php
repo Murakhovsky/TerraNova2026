@@ -28,6 +28,11 @@ $manifest = [
         ],
         'cross_domain_contracts' => [
             [
+                'contract' => 'Domains\\Marketing\\Application\\Contract\\MarketingAttributionCandidateReadPort',
+                'role'=>'requires','counterpart'=>'sales','kind'=>'synchronous_port',
+                'purpose'=>'Bounded tenant-scoped native lead and order ID discovery; no customer data or Sales mutation.',
+            ],
+            [
                 'contract' => 'Domains\\Marketing\\Application\\Contract\\MarketingCommerceFinancialReadPort',
                 'role' => 'requires', 'counterpart' => 'finance', 'kind' => 'synchronous_port',
                 'purpose' => 'Read independently confirmed order collection evidence, without payment authority or revenue inference.',
@@ -113,6 +118,7 @@ $manifest = [
             'marketing.attribution.commerce.inspect',
             'marketing.attribution.commerce.capture',
             'marketing.analytics.commerce.report',
+            'marketing.attribution.sweep',
         ],
         'capability_contracts' => [],
     ],
@@ -262,5 +268,16 @@ foreach(['create_paused','activate','pause'] as $operation){
         'lifecycle'=>'experimental','tests'=>['tests/unit/marketing_m2_planning.php'],'documentation'=>'docs/04-domains/marketing/overview.md'
     ];
 }
+$contracts[]=[
+    'id'=>'marketing.attribution.sweep','version'=>'1.0.0','owner_domain'=>'marketing','kind'=>'command',
+    'input_schema'=>'resources/contracts/marketing/attribution-sweep-input.schema.json',
+    'output_schema'=>'resources/contracts/marketing/attribution-sweep-output.schema.json',
+    'execution_binding'=>'action:marketing.attribution.sweep','async'=>true,'side_effect_level'=>'internal',
+    'permission'=>'cos.tenant.manage','approval_policy'=>'required','idempotency'=>'required',
+    'timeout_policy'=>['seconds'=>120],'retry_policy'=>['max_attempts'=>1],
+    'failure_contract'=>'Inspect immutable native receipt; no blind retry. Page exhaustion is not a complete conversion census.',
+    'lifecycle'=>'experimental','tests'=>['tests/integration/marketing_m4_attribution_mysql.php'],
+    'documentation'=>'docs/04-domains/marketing/overview.md',
+];
 $manifest['contributions']['capability_contracts'] = $contracts;
 return $manifest;

@@ -2785,6 +2785,17 @@ services:
   Domains\Marketing\Bootstrap\MarketingDomainModule:
     arguments:
       $paid: '@Domains\Marketing\Automation\Action\MarketingPaidLifecycleHandler'
+      $sweep: '@Domains\Marketing\Automation\Action\MarketingAttributionSweepHandler'
+  Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesAttributionCandidateReadModel:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Sales\Application\Contract\SalesAttributionCandidateReadPort:
+    alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesAttributionCandidateReadModel
+  App\Infrastructure\Marketing\AttributionCandidateReadAdapter: ~
+  Domains\Marketing\Application\Contract\MarketingAttributionCandidateReadPort:
+    alias: App\Infrastructure\Marketing\AttributionCandidateReadAdapter
+  Domains\Marketing\Application\Service\MarketingAttributionSweepService: ~
+  Domains\Marketing\Automation\Action\MarketingAttributionSweepHandler: ~
   marketingDomainModule:
     alias: Domains\Marketing\Bootstrap\MarketingDomainModule
   Domains\Marketing\Infrastructure\Hermes\HermesAnalystConfigurationRegistry:
