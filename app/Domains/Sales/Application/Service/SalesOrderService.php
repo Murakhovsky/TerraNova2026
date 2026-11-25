@@ -10,12 +10,13 @@ use Domains\Sales\Application\Contract\SalesOrderRepositoryInterface;
 use Domains\Sales\Application\Contract\SalesMutationReceiptRepositoryInterface;
 use Domains\Sales\Application\Contract\SalesOfferReferencePort;
 use Domains\Sales\Domain\Policy\SalesOrderTerms;
+use Domains\Finance\Application\Contract\CommerceOrderFinancialEvidenceReadPort;
 
 /** Native human intake; channel adapters will use a separate authenticated source contract. */
 final readonly class SalesOrderService
 {
     public function __construct(private SalesOrderRepositoryInterface $orders,private SalesMutationReceiptRepositoryInterface $receipts,
-        private SalesMutationGuard $guard,private SalesEntityScopeService $scope,private SalesOfferReferencePort $references){}
+        private SalesMutationGuard $guard,private SalesEntityScopeService $scope,private SalesOfferReferencePort $references,private ?CommerceOrderFinancialEvidenceReadPort $finance=null){}
 
     public function create(string $org,int $actor,array $input,string $key,string $correlation):array
     {
@@ -62,7 +63,9 @@ final readonly class SalesOrderService
     {
         if (preg_match('/^[a-f0-9]{32}$/D',$id)!==1) throw new DomainException('Order unavailable.');
         $order=$this->orders->get($org,$id);$this->authorize($org,$actor,$order);
-        return ['order'=>$order];
+        $financial=$this->finance?->financialEvidence($org,$id);
+        $this->authorize($org,$actor,$order);
+        return ['order'=>$order,'financial_evidence'=>$financial];
     }
 
     private function authorize(string $org,int $actor,?array $order):void

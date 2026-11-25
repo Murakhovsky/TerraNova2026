@@ -19,7 +19,7 @@ generated: true
 | `diagnostic` | `1.0.0` | — | 10 |
 | `documents` | `0.1.0` | — | 3 |
 | `federation` | `1.0.0` | — | 1 |
-| `finance` | `0.2.2` | — | 9 |
+| `finance` | `0.2.2` | — | 13 |
 | `growth` | `0.50.0` | — | 92 |
 | `hr` | `0.1.0` | — | 0 |
 | `marketing` | `0.1.2` | — | 14 |
@@ -64,7 +64,7 @@ generated: true
 
 - manifest: `app/Domains/Finance/module.php`;
 - configuration provisioners: —;
-- capabilities: `finance.sales.commercial_evidence.read`, `finance.budget.envelope.draft.create`, `finance.budget.envelope.get`, `finance.budget.reservation.list`, `finance.budget.envelope.activate`, `finance.budget.reservation.reserve`, `finance.budget.reservation.release`, `finance.budget.envelope.freeze`, `finance.ad_spend.reconciliation.status`.
+- capabilities: `finance.order.payment.register`, `finance.order.payment.reconcile`, `finance.order.financial_evidence.read`, `finance.order.payment.operations.read`, `finance.sales.commercial_evidence.read`, `finance.budget.envelope.draft.create`, `finance.budget.envelope.get`, `finance.budget.reservation.list`, `finance.budget.envelope.activate`, `finance.budget.reservation.reserve`, `finance.budget.reservation.release`, `finance.budget.envelope.freeze`, `finance.ad_spend.reconciliation.status`.
 
 ## `growth`
 

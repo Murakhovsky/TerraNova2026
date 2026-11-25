@@ -43,6 +43,15 @@ domain_id: finance
       "capability_ids": [
         "finance.sales.commercial_evidence.read"
       ]
+    },
+    {
+      "id": "order_collections",
+      "capability_ids": [
+        "finance.order.payment.register",
+        "finance.order.payment.reconcile",
+        "finance.order.financial_evidence.read",
+        "finance.order.payment.operations.read"
+      ]
     }
   ],
   "process_ids": [],
@@ -70,6 +79,7 @@ Finance є єдиним authoritative writer для BudgetEnvelope, Reservation,
 | `budgets` | BudgetEnvelope, Reservations, ревізії, ідемпотентні фінансові події | 7 F1 типізованих контрактів |
 | `spend_observations` | Незмінні ревізійні спостереження джерела | 1 типізований статус звіряння |
 | `sales_commercial_evidence` | Read-only accepted Sales quote evidence, no settlement | 1 typed query |
+| `order_collections` | Незмінна реєстрація, незалежна звірка й фінансовий баланс замовлень | 2 governed Actions, 2 queries |
 
 Наведені компоненти не є незалежно installable Domain.
 
@@ -125,3 +135,5 @@ P0: прийняти typed Finance→Marketing bridge лише після indepe
 F1.2 — приватний readback порт між Marketing і Finance. Він навмисно не є public Capability до F1.3 canonical approved Action; D2 не підвищується автоматично.
 
 Sales accepted quote evidence is a read-only source observation via `SalesCommercialEvidencePort`; it does not establish collected revenue or an accounting posting. D2 remains limited to F1/F1.1.
+
+S5A/O4 adds documentary order collection evidence. The independent persisted Approval, actual RUNNING Action, pinned inputs and live tenant managers are rechecked inside the Finance write transaction. No bank/provider write or accounting recognition. Sales reads the Finance projection through the declared port. Workflow admission and D3+ remain unaccepted.

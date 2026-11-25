@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Automation;
 
 use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesApprovalAuthority;
+use Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceOrderApprovalAuthority;
 use Kernel\Action\Action;
 use Kernel\Approval\Approval;
 use Kernel\Approval\Contract\ApprovalAuthorityInterface;
@@ -17,6 +18,7 @@ final readonly class CompositeActionApprovalAuthority implements ApprovalAuthori
     public function __construct(
         private MysqlSalesApprovalAuthority $sales,
         private FederationPlanApprovalAuthority $federation,
+        private ?MysqlFinanceOrderApprovalAuthority $finance=null,
     ) {}
 
     public function assertCanDecide(
@@ -27,5 +29,6 @@ final readonly class CompositeActionApprovalAuthority implements ApprovalAuthori
     ): void {
         $this->sales->assertCanDecide($organizationId,$userId,$approval,$action);
         $this->federation->assertCanDecide($organizationId,$userId,$approval,$action);
+        $this->finance?->assertCanDecide($organizationId,$userId,$approval,$action);
     }
 }

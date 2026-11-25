@@ -24,11 +24,6 @@ return [
                 'purpose'=>'Read immutable placed order terms; no Sales mutation.',
             ],
             [
-                'contract'=>'Domains\\Finance\\Application\\Contract\\CommerceOrderFinancialEvidenceReadPort',
-                'role'=>'provides','counterpart'=>'sales','kind'=>'synchronous_port',
-                'purpose'=>'Read independently reconciled collection evidence, not accounting revenue.',
-            ],
-            [
                 'contract' => 'Domains\\Sales\\Application\\Contract\\SalesCommercialEvidencePort',
                 'role' => 'requires',
                 'counterpart' => 'sales',
@@ -44,8 +39,18 @@ return [
             ],
         ],
         'migration_files' => ['app/migrations/20261119_000153_finance_budget_f1.sql','app/migrations/20261119_000155_finance_spend_observations.sql','app/migrations/20261125_009010_finance_order_payments.sql'],
-        'capabilities' => ['finance.order.payment.register','finance.order.payment.reconcile','finance.order.financial_evidence.read','finance.sales.commercial_evidence.read','finance.budget.envelope.draft.create','finance.budget.envelope.get','finance.budget.reservation.list','finance.budget.envelope.activate','finance.budget.reservation.reserve','finance.budget.reservation.release','finance.budget.envelope.freeze','finance.ad_spend.reconciliation.status'],
+        'capabilities' => ['finance.order.payment.register','finance.order.payment.reconcile','finance.order.financial_evidence.read','finance.order.payment.operations.read','finance.sales.commercial_evidence.read','finance.budget.envelope.draft.create','finance.budget.envelope.get','finance.budget.reservation.list','finance.budget.envelope.activate','finance.budget.reservation.reserve','finance.budget.reservation.release','finance.budget.envelope.freeze','finance.ad_spend.reconciliation.status'],
         'capability_contracts' => [
+            [
+                'id'=>'finance.order.payment.operations.read','version'=>'1.0.0','owner_domain'=>'finance','kind'=>'query',
+                'input_schema'=>'resources/contracts/finance/order-payment-operations-read-input.schema.json',
+                'output_schema'=>'resources/contracts/finance/order-payment-operations-read-output.schema.json',
+                'execution_binding'=>'query:finance.order.payment.operations.read','async'=>false,
+                'side_effect_level'=>'none','permission'=>'cos.tenant.manage','approval_policy'=>'none','idempotency'=>'none',
+                'timeout_policy'=>[],'retry_policy'=>[],'failure_contract'=>'Pending registrations are not confirmed money.',
+                'lifecycle'=>'experimental','tests'=>['tests/unit/finance_order_money.php','tests/integration/finance_order_payments_mysql.php'],
+                'documentation'=>'docs/04-domains/finance/overview.md',
+            ],
             [
                 'id'=>'finance.order.payment.register','version'=>'1.0.0','owner_domain'=>'finance','kind'=>'command',
                 'input_schema'=>'resources/contracts/finance/order-payment-register-input.schema.json',

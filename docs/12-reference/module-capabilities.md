@@ -157,13 +157,13 @@ Manifest capabilities не задекларовані.
 
 ## Finance (`finance`)
 
-**Опис із manifest:** Finance F1 budget envelopes, approved reservations and unverified provider spend evidence; no settlement, payments or Meta writes.
+**Опис із manifest:** Finance F1 budget envelopes, approved reservations and unverified provider spend evidence; documentary order payment reconciliation; no provider writes or accounting settlement.
 
 - runtime service модуля: `financeDomainModule`;
 - обробники jobs: —;
 - внески API routes: —;
 - постачальники конфігурації: —;
-- міграції: `app/migrations/20261119_000153_finance_budget_f1.sql`, `app/migrations/20261119_000155_finance_spend_observations.sql`.
+- міграції: `app/migrations/20261119_000153_finance_budget_f1.sql`, `app/migrations/20261119_000155_finance_spend_observations.sql`, `app/migrations/20261125_009010_finance_order_payments.sql`.
 
 ### Задекларовані capabilities
 
@@ -176,6 +176,7 @@ Manifest capabilities не задекларовані.
 - `finance.budget.reservation.release`;
 - `finance.budget.reservation.reserve`;
 - `finance.order.financial_evidence.read`;
+- `finance.order.payment.operations.read`;
 - `finance.order.payment.reconcile`;
 - `finance.order.payment.register`;
 - `finance.sales.commercial_evidence.read`;

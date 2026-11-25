@@ -163,6 +163,10 @@ jobs:
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
         run: php tests/integration/marketing_meta_atomic_mysql.php
+      - name: Finance order capture, refunds, chargebacks and tenant reconciliation MySQL acceptance
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/integration/finance_order_payments_mysql.php
       - name: Finance F1 real MySQL source spend evidence and reconciliation
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php

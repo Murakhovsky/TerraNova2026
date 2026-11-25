@@ -20,7 +20,7 @@ generated: true
 | --- | ---: | --- |
 | `both` | 48 | Capability присутня і в runtime catalogue, і в manifest. |
 | `runtime-only` | 3 | Runtime може перевіряти capability, але manifest її не декларує. |
-| `manifest-only` | 260 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
+| `manifest-only` | 264 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
 
 ## Каталог
 
@@ -87,6 +87,10 @@ generated: true
 | `finance` | `finance.budget.reservation.list` | ні | так | `manifest-only` | — | `app/Domains/Finance/module.php` |
 | `finance` | `finance.budget.reservation.release` | ні | так | `manifest-only` | — | `app/Domains/Finance/module.php` |
 | `finance` | `finance.budget.reservation.reserve` | ні | так | `manifest-only` | — | `app/Domains/Finance/module.php` |
+| `finance` | `finance.order.financial_evidence.read` | ні | так | `manifest-only` | — | `app/Domains/Finance/module.php` |
+| `finance` | `finance.order.payment.operations.read` | ні | так | `manifest-only` | — | `app/Domains/Finance/module.php` |
+| `finance` | `finance.order.payment.reconcile` | ні | так | `manifest-only` | — | `app/Domains/Finance/module.php` |
+| `finance` | `finance.order.payment.register` | ні | так | `manifest-only` | — | `app/Domains/Finance/module.php` |
 | `finance` | `finance.sales.commercial_evidence.read` | ні | так | `manifest-only` | — | `app/Domains/Finance/module.php` |
 | `growth` | `growth.account.brief` | ні | так | `manifest-only` | — | `app/Domains/Growth/module.php` |
 | `growth` | `growth.account.discover` | ні | так | `manifest-only` | — | `app/Domains/Growth/module.php` |

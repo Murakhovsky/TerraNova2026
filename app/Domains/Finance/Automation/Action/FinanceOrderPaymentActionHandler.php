@@ -17,7 +17,7 @@ final readonly class FinanceOrderPaymentActionHandler implements IdempotentExter
     public function idempotencyKey(Action $action):string{return ExternalActionIdempotency::resolve($action);}
     public function execute(Action $action):ExecutionResult
     {
-        if(!$this->supports($action->type)||$action->targetType!=='sales_order'||!is_string($action->targetId)||!ctype_digit($action->sourceId)||(int)$action->sourceId<1)return ExecutionResult::failure('Typed order and numeric requesting actor required.');
+        if(!$this->supports($action->type)||$action->sourceType!=='USER'||$action->executionMode!=='APPROVAL_REQUIRED'||$action->targetType!=='sales_order'||!is_string($action->targetId)||!ctype_digit($action->sourceId)||(int)$action->sourceId<1)return ExecutionResult::failure('Typed order and numeric requesting actor required.');
         try{
             $p=$action->parameters;
             if(($p['order_id']??null)!==$action->targetId)throw new \DomainException('Order target mismatch.');

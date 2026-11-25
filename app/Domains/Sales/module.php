@@ -39,11 +39,6 @@ return [
                 'purpose'=>'Read independently reconciled collection evidence; no financial mutation.',
             ],
             [
-                'contract'=>'Domains\\Sales\\Application\\Contract\\SalesCommerceOrderEvidencePort',
-                'role'=>'provides','counterpart'=>'finance','kind'=>'synchronous_port',
-                'purpose'=>'Expose immutable placed commercial terms to Finance.',
-            ],
-            [
                 'contract' => 'Domains\\ProductManagement\\Application\\Contract\\OrderInventoryPort',
                 'role' => 'requires',
                 'counterpart' => 'product_management',

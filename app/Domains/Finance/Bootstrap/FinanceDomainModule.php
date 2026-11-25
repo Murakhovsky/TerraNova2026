@@ -38,7 +38,7 @@ final readonly class FinanceDomainModule implements DomainModuleInterface,
             $policies[]=new ActionPolicy(
                 $id,$organizationId,$type,[],PolicyDecision::ApprovalRequired,10,
                 'Independent Finance approval required',
-                'Finance Budget Control: operation must be independently approved before any budget mutation'
+                'Finance: operation must be independently approved before any financial mutation'
             );
         }
         return $policies;
