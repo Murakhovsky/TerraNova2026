@@ -38,6 +38,11 @@ final readonly class ProductGovernedRunOutcomeProvider implements RunScopedGoalO
         [$whole,$frac]=array_pad(explode('.',$value,2),2,'');
         return $whole.'.'.str_pad($frac,$scale,'0');
     }
+    /** Reuse the exact independent native checks for an approved extended CSV row. */
+    public function verifyAssembly(string $org,array $parameters,string $key,string $actor,array $receipt):array
+    {
+        return $this->verifyNative($org,'product.assemble',$parameters,$key,$actor,$receipt);
+    }
     private function verifyNative(string $org,string $op,array $p,string $key,string $actor,array $r):array
     {
         $ids=[];

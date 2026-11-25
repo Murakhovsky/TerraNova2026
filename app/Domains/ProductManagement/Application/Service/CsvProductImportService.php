@@ -4,6 +4,9 @@ declare(strict_types=1);
 namespace Domains\ProductManagement\Application\Service;
 
 use DomainException;
+use Domains\ProductManagement\Domain\ExtendedProductCsvRow;
+use Domains\ProductManagement\Domain\AttributeRules;
+use Domains\ProductManagement\Application\Contract\ProductMediaFileReferenceInterface;
 use Domains\ProductManagement\Domain\ProductRules;
 use PDO;
 use PDOException;
@@ -15,7 +18,8 @@ use Throwable;
  */
 final readonly class CsvProductImportService
 {
-    public function __construct(private PDO $connection,private ProductManagementService $products) {}
+    public function __construct(private PDO $connection,private ProductManagementService $products,
+        private ?ProductAssemblyService $assembly=null,private ?ProductMediaFileReferenceInterface $files=null) {}
 
     /** @return array<string,mixed> */
     public function preview(string $org, string $csv, string $actor, ?string $key = null): array
@@ -50,26 +54,36 @@ final readonly class CsvProductImportService
             $separator=substr_count($first,';')>substr_count($first,',')?';':',';
             rewind($input);
             $header=fgetcsv($input,0,$separator);
-            if ($header!==['sku','name','type','uom','track_inventory']) {
-                throw new DomainException('CSV header must be sku,name,type,uom,track_inventory.');
+            $extended=$header===ExtendedProductCsvRow::HEADER;
+            if (!$extended&&$header!==['sku','name','type','uom','track_inventory']) {
+                throw new DomainException('CSV header must match legacy or extended format.');
             }
+            if($extended&&($this->assembly===null||$this->files===null))throw new DomainException('Extended assembly import not available.');
             $rows=[];$seen=[];$no=0;
             while (($fields=fgetcsv($input,0,$separator))!==false) {
                 if ($fields===[null]) continue;
                 if (++$no>5000) throw new DomainException('CSV staging limited to 5000 items per batch.');
                 $status='ready';$error=null;$payload=[];
                 try {
-                    if (count($fields)!==5) throw new DomainException('Wrong column count');
+                    if (count($fields)!==($extended?11:5)) throw new DomainException('Wrong column count');
                     foreach ($fields as $v) if (preg_match('/^[=+@]/',$v)) throw new DomainException('Spreadsheet formula prefix forbidden.');
                     $sku=ProductRules::sku($fields[0]);
                     if (isset($seen[$sku])) throw new DomainException('Duplicate SKU in file');
-                    $seen[$sku]=true;
                     $type=ProductRules::productType($fields[2]?:'stock');
                     $track=filter_var($fields[4],FILTER_VALIDATE_BOOLEAN,FILTER_NULL_ON_FAILURE);
                     if ($track===null) throw new DomainException('Invalid track_inventory boolean');
                     $payload=['sku'=>$sku,'name'=>ProductRules::name($fields[1]),'type'=>$type,'uom'=>$fields[3]?:'pcs','track_inventory'=>$track];
-                    $match=$this->query('SELECT variant_id FROM pm_variants WHERE organization_id=? AND sku=?',[$org,$sku])->fetch(PDO::FETCH_ASSOC);
-                    if ($match!==false) {$status='duplicate';$error='SKU already exists in tenant';}
+                    if($extended){
+                        $payload['assembly']=ExtendedProductCsvRow::assembly($payload,$fields);
+                        $this->validateAssemblyReferences($org,$payload['assembly']);
+                    }
+                    $skus=$extended?array_column($payload['assembly']['variants'],'sku'):[$sku];
+                    foreach($skus as $candidate){
+                        if(isset($seen[$candidate]))throw new DomainException('Duplicate SKU in file');
+                        $seen[$candidate]=true;
+                        $match=$this->query('SELECT variant_id FROM pm_variants WHERE organization_id=? AND sku=?',[$org,$candidate])->fetch(PDO::FETCH_ASSOC);
+                        if($match!==false){$status='duplicate';$error='SKU already exists in tenant';}
+                    }
                 } catch (Throwable $e) {
                     $status='invalid';$error=mb_substr($e->getMessage(),0,128);
                     $payload=['raw'=>$fields];
@@ -116,6 +130,30 @@ final readonly class CsvProductImportService
             }
             return $this->report($org,$batchId);
         } finally { fclose($input); }
+    }
+
+    private function validateAssemblyReferences(string $org,array $assembly):void
+    {
+        $defs=[];
+        foreach($assembly['category_ids'] as $category){
+            if($this->query('SELECT category_id FROM pm_categories WHERE organization_id=? AND category_id=?',[$org,$category])->fetchColumn()===false)
+                throw new DomainException('Category missing in tenant.');
+            foreach($this->products->categoryAttributes($org,$category) as $def){
+                if(isset($defs[$def['code']]))$def['is_required']=$def['is_required']||$defs[$def['code']]['is_required'];
+                $defs[$def['code']]=$def;
+            }
+        }
+        if($assembly['attributes']!==[])foreach(AttributeRules::changes($assembly['attributes']) as $code=>$value){
+            if(!isset($defs[$code])||($value===null&&$defs[$code]['is_required']))throw new DomainException('Attribute not applicable or required.');
+            AttributeRules::value($defs[$code],$value);
+        }
+        $links=[];$covers=[];
+        foreach($assembly['media'] as $image){
+            $this->files->verifiedImage($org,$image['file_id']);
+            $scope=$image['sku']??'product';$link=$scope.':'.$image['file_id'];
+            if(isset($links[$link])||($image['role']==='cover'&&isset($covers[$scope])))throw new DomainException('Duplicate image link or cover.');
+            $links[$link]=true;if($image['role']==='cover')$covers[$scope]=true;
+        }
     }
 
     /** Canonical representation survives MySQL JSON object key normalization. */
@@ -258,7 +296,11 @@ final readonly class CsvProductImportService
                 if(!is_array($input)||array_is_list($input)||($input['sku']??null)!==$row['sku']) {
                     throw new DomainException('Invalid approved CSV row payload.');
                 }
-                $result=$this->products->createProduct($org,$input,$key,$actor,$correlation);
+                if(isset($input['assembly'])){
+                    if($this->assembly===null||$this->files===null)throw new DomainException('Extended import unavailable.');
+                    $result=$this->assembly->assemble($org,$input['assembly'],$key,$actor,$correlation);
+                    $this->assembly->assertReadback($org,$input['assembly'],$result);
+                }else $result=$this->products->createProduct($org,$input,$key,$actor,$correlation);
                 $native=$this->products->getProduct($org,(string)($result['product_id']??''));
                 $this->assertNative($native,$row['sku'],$input);
                 $this->connection->beginTransaction();
@@ -361,6 +403,13 @@ final readonly class CsvProductImportService
         }
         $input=json_decode((string)$row['payload_json'],true,flags:JSON_THROW_ON_ERROR);
         $this->assertNative($this->products->getProduct($org,$row['product_id']),$row['sku'],$input);
+        if(isset($input['assembly'])){
+            $native=$this->query('SELECT operation,result_json FROM pm_operation_receipts WHERE organization_id=? AND idempotency_key=?',[$org,$key])->fetch(PDO::FETCH_ASSOC);
+            if($this->assembly===null||$native===false||$native['operation']!=='product.assemble')throw new DomainException('Assembly receipt unavailable.');
+            $receipt=json_decode($native['result_json'],true,64,JSON_THROW_ON_ERROR);
+            if(($receipt['product_id']??null)!==$row['product_id'])throw new DomainException('Assembly receipt Product mismatch.');
+            $this->assembly->assertReadback($org,$input['assembly'],$receipt);
+        }
     }
 
     /** @param array<string,mixed>|null $product @param array<string,mixed> $input */
@@ -394,9 +443,14 @@ final readonly class CsvProductImportService
     {
         $batch=$this->batch($org,$batchId);
         if ($batch===null) throw new DomainException('Unknown batch.');
-        $rows=$this->query('SELECT row_no,sku,status,error_code,product_id FROM pm_import_rows WHERE organization_id=? AND batch_id=? ORDER BY row_no',[$org,$batchId])->fetchAll(PDO::FETCH_ASSOC);
+        $rows=$this->query('SELECT row_no,sku,status,error_code,product_id,payload_json FROM pm_import_rows WHERE organization_id=? AND batch_id=? ORDER BY row_no',[$org,$batchId])->fetchAll(PDO::FETCH_ASSOC);
         $counts=[];
-        foreach ($rows as $r) $counts[$r['status']]=($counts[$r['status']]??0)+1;
+        foreach($rows as &$r){
+            $counts[$r['status']]=($counts[$r['status']]??0)+1;
+            $payload=json_decode($r['payload_json'],true,64,JSON_THROW_ON_ERROR);
+            unset($r['payload_json']);
+            if(isset($payload['assembly']))$r['assembly']=$payload['assembly'];
+        }unset($r);
         return ['batch_id'=>$batchId,'state'=>$batch['state'],'digest'=>$batch['digest'],'rows_digest'=>$batch['rows_digest'],
             'goal_id'=>$batch['goal_id']??null,'plan_id'=>$batch['plan_id']??null,
             'counts'=>$counts,'rows'=>$rows];

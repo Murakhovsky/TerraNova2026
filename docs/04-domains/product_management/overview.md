@@ -123,3 +123,7 @@ CSRF, окремі idempotency keys і native readback.
 AI/CRON подає підписаний intent без execution authority. Незалежне review та Plan/Action Approval передують канонічному Workflow. Тридцять спеціальних governed operations і чотири інші approved Actions не покривають усіх 30 human commands. Динамічна підстановка вихідних даних між кроками не підтримана. Наявність контрактів не підтверджує live AI acceptance.
 
 Докази та обмеження: [паспорт](./passport.md), [DAS-001 acceptance](../../10-operations/das-001-domain-acceptance.md).
+
+## Extended CSV import
+
+Підтримано legacy header та розширений `sku,name,type,uom,track_inventory,price_currency,price_amount,category_ids_json,attributes_json,media_json,variants_json`. JSON-колонки є масивами даних, а не командами. Один рядок створює атомарний draft Product через ProductAssemblyService з усіма SKU, цінами, атрибутами та verified Documents media. Staging перевіряє tenant references, усі SKU та typed values; незмінний payload доступний для review. Apply зберігає наявний approved Action, digest і карантин при помилці. Native outcome перевіряє кожен assembly receipt та його дочірні результати. CI нової схеми ще не підтверджено.

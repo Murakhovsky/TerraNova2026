@@ -4,6 +4,7 @@ namespace Domains\ProductManagement\Application\Service;
 
 use Domains\ProductManagement\Application\Contract\ProductAssemblyTransactionPort;
 use Domains\ProductManagement\Domain\ProductRules;
+use Domains\ProductManagement\Domain\AttributeRules;
 use DomainException;
 
 /** Creates a complete draft assortment using only existing Product-owned mutations.
@@ -14,6 +15,46 @@ final readonly class ProductAssemblyService
 {
     public function __construct(private ProductAssemblyTransactionPort $transaction,private ProductManagementService $products,
         private PricingService $prices,private ProductMediaService $media){}
+    /** Read-only immediate native verification for extended CSV recovery. */
+    public function assertReadback(string $org,array $input,array $receipt):void
+    {
+        $pid=$receipt['product_id']??'';$native=$this->products->getProduct($org,$pid);
+        $type=$input['type']??'stock';$defaultTrack=in_array($type,['stock','material'],true);
+        if($native===null||$native['name']!==ProductRules::name($input['name'])||$native['product_type']!==$type
+            ||$native['status']!=='draft'||count($native['variants'])!==count($input['variants']))
+            throw new DomainException('Assembly Product readback mismatch.');
+        $variants=array_column($native['variants'],null,'sku');$reported=array_column($receipt['variants']??[],'variant_id','sku');
+        foreach($input['variants'] as $v){
+            $sku=ProductRules::sku($v['sku']);$fresh=$variants[$sku]??null;
+            if($fresh===null||$fresh['variant_id']!==($reported[$sku]??null)||$fresh['status']!=='active'
+                ||$fresh['uom']!==($v['uom']??'pcs')||(bool)$fresh['track_inventory']!==($v['track_inventory']??$defaultTrack))
+                throw new DomainException('Assembly variant readback mismatch.');
+            if(isset($v['price'])){
+                $p=$this->prices->get($org,$fresh['variant_id'],$v['price']['currency']);
+                [$whole,$frac]=array_pad(explode('.',ProductRules::money($v['price']['amount']),2),2,'');
+                if($p['price']!==$whole.'.'.str_pad($frac,4,'0')||$p['revision']!==1)throw new DomainException('Assembly price readback mismatch.');
+            }
+        }
+        $cats=array_column($native['categories'],'category_id');$expected=$input['category_ids']??[];sort($cats);sort($expected);
+        if($cats!==$expected)throw new DomainException('Assembly categories differ.');
+        if(!empty($input['attributes'])){
+            $defs=array_column($this->products->productAttributes($org,$pid)['items'],null,'code');
+            foreach(AttributeRules::changes($input['attributes']) as $code=>$value)
+                if(!isset($defs[$code])||$defs[$code]['value']!==AttributeRules::value($defs[$code],$value))
+                    throw new DomainException('Assembly attribute readback mismatch.');
+        }
+        $images=array_column($native['media'],null,'media_id');
+        if(count($images)!==count($input['media']??[])||count($receipt['media_ids']??[])!==count($images))
+            throw new DomainException('Assembly media cardinality mismatch.');
+        foreach($input['media']??[] as $i=>$image){
+            $actual=$images[$receipt['media_ids'][$i]]??null;
+            $vid=isset($image['sku'])?($reported[ProductRules::sku($image['sku'])]??'missing'):null;
+            if($actual===null||$actual['file_id']!==$image['file_id']||$actual['variant_id']!==$vid
+                ||$actual['role']!==($image['role']??'gallery')||(int)$actual['sort_order']!==($image['sort_order']??0))
+                throw new DomainException('Assembly media readback mismatch.');
+        }
+    }
+
     public static function childKey(string $key,string $label):string
     {
         return 'pm-assemble:'.hash('sha256',$key."\0".$label);
