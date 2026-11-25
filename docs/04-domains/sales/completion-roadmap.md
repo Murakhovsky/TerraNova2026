@@ -258,3 +258,32 @@ Product-owned `CommerceOrderFulfillmentEvidencePort` provides bounded, tenant-at
 ## R3.2 — Збереження зовнішніх складських спостережень
 
 `include_fulfillment_evidence=true` on the existing native/governed order source reconciliation contract explicitly requests an immutable assignment snapshot. Its provider order revision, cancellation and fulfillment status must agree with the independently read commercial snapshot. Test orders, stale/conflicting revisions and truncated or scope-limited reads cannot commit this evidence. The existing receipt namespace stays compatible for default false; new requests pin the expanded effect. Sales stores the redacted evidence and presents a bounded review summary with revision freshness, not physical fulfillment or inventory authority. No new execution engine, local stock mutation or automatic ownership transfer. Full return/dispatch and commitment reconciliation remain open.
+
+
+## S6/R1 — консолідовані нативні докази та AI/CRON
+
+CRM processing retains a separately committed inbox claim. Live Sales actor and independent canonical Action Approval are rechecked in the native apply transaction; completion and input/actor-bound process receipt commit atomically. A new Goal cannot claim a previously completed inbox as its own effect. The same human command retains native claim/recovery semantics. No provider write or new executor.
+
+Canonical Goal acceptance now includes Deal owner assignment, CRM recovery and processing, commerce source reconciliation and durable sync admission. Fixture-provider PAID status does not create Finance collection or local Product stock changes. On `f5d3b00c535aac2622978f2e671fdd2288be01fe`, [Federation MySQL job 139581641284](https://github.com/Murakhovsky/TerraNova2026/actions/runs/45721777474/job/139581641284) passed these cases, the earlier R1/R2 scenarios, and consolidated O7 negative tests from PR #509. This is CI MySQL evidence only; not target-environment release acceptance.
+
+Signed machine proposal API (existing tenant rollout and HMAC headers):
+- POST `/api/v1/capability-intents/sales-business`, envelope `kind=sales.governed_plan.v1`, description, 1–20 ordered operations with id, capability_id and parameters. Only 28 governed business and seven governed Order Actions allowed; target identity derived from native payload or deterministic intent ID. Unknown inputs, unsupported direct commands, bad signature, expired timestamp and conflicting nonce fail closed. No arbitrary dynamic output substitution.
+- GET `/api/v1/capability-intents/sales-business/review` and GET `/api/v1/capability-intents/sales-business/review/{intentId}` require live tenant manager, Sales automation administration and tenant-wide Sales scope. No cross-tenant review; data is private/no-store. Legacy Property/Product HTML review does not expose or adopt Sales intents.
+- POST `/api/v1/capability-intents/sales-business/review/{intentId}/adopt` requires authenticated session, CSRF and exact reviewed digest. Adoption creates canonical Goal/Plan only, not approval or execution. Same signed nonce replays the original intent, not a new business effect.
+- Tests exercise signed AI and CRON requests, unauthorized/CSRF/nonce/target denial, human adoption, actual independent Plan and Action Approval, native readback and equality outcome; the MySQL fixture asserts all 28 governed business operation IDs have successful canonical outcomes. Exact-head CI required. No live model or production scheduler claim.
+
+## S7 — Domain Release Acceptance gate (2026-11-26)
+
+| Gate | Required evidence / current status |
+| --- | --- |
+| Consolidation | Platform, Sales Core/Orders, Product and Marketing baseline merged; O7 negative tests included in #510. |
+| R1 native 28-operation Goal matrix | MySQL scenarios passed on f5d3b00; machine intent HTTP/Goal and coverage assertion require exact-head green. |
+| R2 business extensions | Weighted assignment, independent customer scope, approved Pipeline and periodic sync CI acceptance; live configuration remains opt-in. |
+| O7 native commerce and recovery | Unified Sales/Product/Finance/Marketing MySQL and rejected stale/revoked/replayed Actions passed on f5d3b00; no provider financial claim. |
+| R3 external inventory and fulfillment | Read-only assignment/location evidence accepted in mocked transport; actual provider dispatch/return, commitment and ownership cutover still open. Maintain external_review and no local stock mutation. |
+| O5 conversion deduplication and actual revenue | Marketing-owned cross-Lead/Deal/Order deduplication and verified financial metrics remain separately gated; placement and net collections are not recognized revenue. |
+| D3 | Target staging SHA, tenant activation, human and signed AI/CRON Goal through live worker, independent readback and reviewer evidence still required. |
+| D4 | Operator sign-off and existing Workspace acceptance in separate UI package. |
+| D5 | Explicitly authorized canary/monitoring/rollback; no automatic activation. |
+
+Follow the DAS-001 acceptance runbook in `docs/10-operations/das-001-domain-acceptance.md`. No Passport promotion, no synthetic provider settlement, no production deployment. CI success alone does not close issues #459/#488.

@@ -262,7 +262,15 @@ $executeWorkflow=static function(string $type,array $p,string $initiator,string 
         $before=$businessCounts();
         $goalCount=(int)$wfDb->fetchOne('SELECT COUNT(*) FROM cos_federation_goals WHERE organization_id=?',[$org]);
         $deny(fn()=>$intents->submitSales($origin,$stamp,$token,str_repeat('0',64),$raw));
-        $submitted=$intents->submitSales($origin,$stamp,$token,$sign($raw),$raw);
+        $machineController=new \App\Http\Api\V1\Controller\CanonicalAutomationIntentController($intents);
+        $signedRequest=\Symfony\Component\HttpFoundation\Request::create('/api/v1/capability-intents/sales-business','POST',[],[],[],[
+            'CONTENT_TYPE'=>'application/json','HTTP_X_COS_AUTOMATION_ORIGIN'=>$origin,'HTTP_X_COS_AUTOMATION_TIMESTAMP'=>$stamp,
+            'HTTP_X_COS_AUTOMATION_NONCE'=>$token,'HTTP_X_COS_AUTOMATION_SIGNATURE'=>$sign($raw)],$raw);
+        $unsignedRequest=clone $signedRequest;$unsignedRequest->headers->remove('X-COS-Automation-Signature');
+        $check($machineController->submitSales($unsignedRequest)->getStatusCode()===403,'Unsigned Sales HTTP ingress accepted.');
+        $machineResponse=$machineController->submitSales($signedRequest);
+        $check($machineResponse->getStatusCode()===202,'Signed Sales HTTP ingress refused.');
+        $submitted=json_decode((string)$machineResponse->getContent(),true,16,JSON_THROW_ON_ERROR);
         $check($submitted['state']==='pending_review'&&$submitted['execution_authority']==='none'&&$businessCounts()===$before
             &&(int)$wfDb->fetchOne('SELECT COUNT(*) FROM cos_federation_goals WHERE organization_id=?',[$org])===$goalCount,
             'Machine intent created Goal or executed native effect before review.');
@@ -284,7 +292,21 @@ $executeWorkflow=static function(string $type,array $p,string $initiator,string 
         $check($review['digest']===$submitted['digest']&&$review['origin']===$origin&&count($review['operations'])===count($steps),'Signed Sales intent readback mismatch.');
         $deny(fn()=>$intents->adoptSales($actor,$submitted['intent_id'],str_repeat('0',64)));
         $deny(fn()=>$intents->adopt($actor,$submitted['intent_id'],$review['digest']));
-        $adopted=$intents->adoptSales($actor,$submitted['intent_id'],$review['digest']);
+        $tenantProvider=new class($actor) implements \Kernel\Tenant\Contract\TenantContextProviderInterface{
+            public function __construct(private \Kernel\Tenant\Model\TenantContext $actor){}
+            public function current():?\Kernel\Tenant\Model\TenantContext{return $this->actor;}
+        };
+        $reviewController=new \App\Http\Api\V1\Controller\SalesAutomationIntentReviewController($intents,$tenantProvider,new \App\Security\SessionCsrfValidator());
+        $check($reviewController->index()->getStatusCode()===200&&$reviewController->inspect($submitted['intent_id'])->getStatusCode()===200,'Sales review HTTP projection unavailable.');
+        $reviewRequest=\Symfony\Component\HttpFoundation\Request::create('/api/v1/capability-intents/sales-business/review/'.$submitted['intent_id'].'/adopt','POST',[],[],[],['CONTENT_TYPE'=>'application/json'],
+            json_encode(['digest'=>$review['digest']],JSON_THROW_ON_ERROR));
+        $session=new \Symfony\Component\HttpFoundation\Session\Session(new \Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage());
+        $session->set('cos_csrf_token',$token);$reviewRequest->setSession($session);
+        $check($reviewController->adopt($reviewRequest,$submitted['intent_id'])->getStatusCode()===400,'Missing review CSRF accepted.');
+        $reviewRequest->headers->set('X-CSRF-Token',$token);
+        $reviewResponse=$reviewController->adopt($reviewRequest,$submitted['intent_id']);
+        $check($reviewResponse->getStatusCode()===201,'Reviewed Sales HTTP proposal refused.');
+        $adopted=json_decode((string)$reviewResponse->getContent(),true,16,JSON_THROW_ON_ERROR);
         $goal=$adopted['goal_id'];$plan=$adopted['plan_id'];
         $check($adopted['state']==='adopted'&&$adopted['approval_required']===true&&$adopted['execution_started']===false
             &&$businessCounts()===$before,'Human review improperly executed an Action.');
