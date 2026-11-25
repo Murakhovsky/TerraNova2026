@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "finance_reference": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "pending_registration",
+        "reconciled"
+      ]
+    }
+  },
+  "required": [
+    "finance_reference",
+    "state"
+  ],
+  "additionalProperties": false
+}

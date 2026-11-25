@@ -175,6 +175,9 @@ Manifest capabilities не задекларовані.
 - `finance.budget.reservation.list`;
 - `finance.budget.reservation.release`;
 - `finance.budget.reservation.reserve`;
+- `finance.order.financial_evidence.read`;
+- `finance.order.payment.reconcile`;
+- `finance.order.payment.register`;
 - `finance.sales.commercial_evidence.read`;
 
 ## Growth (`growth`)

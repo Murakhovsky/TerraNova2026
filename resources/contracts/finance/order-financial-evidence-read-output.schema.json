@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "evidence": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "schema_version": {
+          "type": "string",
+          "enum": [
+            "1.0.0"
+          ]
+        },
+        "organization_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "order_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        },
+        "currency": {
+          "type": "string",
+          "enum": [
+            "EUR",
+            "USD",
+            "UAH"
+          ]
+        },
+        "evidence_reference": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "captured_amount": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,11})\\.[0-9]{2}$"
+        },
+        "refunded_amount": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,11})\\.[0-9]{2}$"
+        },
+        "chargeback_amount": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,11})\\.[0-9]{2}$"
+        },
+        "net_collected_amount": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,11})\\.[0-9]{2}$"
+        },
+        "outstanding_amount": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,11})\\.[0-9]{2}$"
+        }
+      },
+      "required": [
+        "schema_version",
+        "organization_id",
+        "order_id",
+        "currency",
+        "evidence_reference",
+        "revision",
+        "captured_amount",
+        "refunded_amount",
+        "chargeback_amount",
+        "net_collected_amount",
+        "outstanding_amount"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "evidence"
+  ],
+  "additionalProperties": false
+}

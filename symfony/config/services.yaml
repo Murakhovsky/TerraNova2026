@@ -2837,6 +2837,12 @@ services:
       $sales: '@Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface'
 
 
+  Domains\Finance\Infrastructure\Persistence\MySql\MysqlCommerceOrderPaymentStore:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Finance\Application\Contract\CommerceOrderFinancialEvidenceReadPort:
+    alias: Domains\Finance\Infrastructure\Persistence\MySql\MysqlCommerceOrderPaymentStore
+  Domains\Finance\Automation\Action\FinanceOrderPaymentActionHandler: ~
   # Finance F1: the only budget writer, under Kernel Action + independent Policy approval.
   Domains\Finance\Domain\BudgetControlPolicy: ~
   Domains\Finance\Domain\FinanceSpendObservationPolicy: ~
