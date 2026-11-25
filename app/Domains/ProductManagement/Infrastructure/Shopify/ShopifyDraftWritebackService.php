@@ -39,6 +39,9 @@ final readonly class ShopifyDraftWritebackService
         $access=$this->access->inspect($shop['shop_domain'],$token);
         if(!$access['read_products']||!$access['write_products'])throw new DomainException('Shopify product scopes missing.');
         $plan=ShopifyOutboundPlanFactory::draftProduct($org,$conn,$native,$amount,$access['currency']);
+        // Create-only mutation: an unknown remote object must never be overwritten by handle upsert.
+        unset($plan['variables']['identifier']);
+        $plan['payload_hash']=hash('sha256',json_encode($plan['variables'],JSON_THROW_ON_ERROR));
         return $plan+['native_variant_id'=>$variant,'native_revision'=>(int)$native['revision'],'price_revision'=>$base['revision']];
     }
 
