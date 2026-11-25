@@ -186,8 +186,9 @@ $wfDb=\Doctrine\DBAL\DriverManager::getConnection([
 $capabilities=new \Kernel\Module\CanonicalCapabilityCatalog($catalog);
 $db->prepare('INSERT INTO cos_policies (id,organization_id,code,name,action_type,conditions,decision,priority,version,status) VALUES (?,?,?,?,?,?,"APPROVAL_REQUIRED",1,1,"ACTIVE")')
     ->execute([bin2hex(random_bytes(16)),$org,'order-plan-approval','Independent Plan approval','cos.federation.plan.approval','[]']);
+$verifiedR1=[];
 $executeWorkflow=static function(string $type,array $p,string $initiator,string $approver,?array $config=null)use(
-    $wfDb,$db,$org,$id,$catalog,$capabilities,$active,$domains,$handler,$approvals,$tx,$realAuthority,$check,$deny,$sales,$realStore
+    $wfDb,$db,$org,$id,$catalog,$capabilities,$active,$domains,$handler,$approvals,$tx,$realAuthority,$check,$deny,$sales,$realStore,&$verifiedR1
 ):array{
     $ownerDomain=$config['owner']??'finance';$effect=$config['effect']??'financial';
     $targetType=$config['target_type']??'sales_order';$targetId=$config['target']??$id;
@@ -244,9 +245,55 @@ $executeWorkflow=static function(string $type,array $p,string $initiator,string 
         $criteria[$criterion]=($criteria[$criterion]??0)+1;
     }
     $specCriteria=[];foreach($criteria as $criterion=>$count)$specCriteria[]=['id'=>$criterion,'operator'=>'at_least','expected'=>$count];
-    $goals->createGoal($actor,new \Platform\Orchestration\Goal\GoalSpecification($goal,$org,$initiator,'Verify native order operations',
-        $specCriteria,array_values(array_unique($allowed)),1,null,null,'',[],['independent_plan','independent_action'],'always'));
-    $goals->proposePlan($actor,$plan,$goal,$steps);
+    if(isset($config['intent_origin'])){
+        $origin=$config['intent_origin'];$secretAi=str_repeat('a',40);$secretCron=str_repeat('c',40);
+        $signatureVerifier=new \App\Application\Capability\AutomationIntentSignatureVerifier($secretAi,$secretCron,$org);
+        $access=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAccessControl($db);
+        $scope=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesWorkspaceScope($db,$access);
+        $planner=new \App\Persistence\Sales\SalesGovernedPlanProposalService($wfDb,$goals,
+            new \App\Persistence\Federation\FederationCapabilityBindingResolver($capabilities,$registry,$active),$capabilities,$access,$scope);
+        $intents=new \App\Persistence\Capability\CanonicalAutomationIntentStore($wfDb,$signatureVerifier,null,null,$capabilities,$planner);
+        $envelope=['kind'=>\App\Persistence\Sales\SalesGovernedPlanProposalService::KIND,'description'=>'Verify native order operations',
+            'operations'=>array_map(static fn(array $step):array=>['id'=>$step['id'],'capability_id'=>$step['capability_id'],'parameters'=>$step['input']['parameters']],$steps)];
+        $raw=json_encode($envelope,JSON_THROW_ON_ERROR);$stamp=(string)time();
+        $sign=static fn(string $body)=>hash_hmac('sha256',implode("\n",[$origin,$stamp,$token,$body]),$origin==='ai'?$secretAi:$secretCron);
+        $businessCounts=static fn()=>array_map(static fn(string $table)=>(int)$wfDb->fetchOne('SELECT COUNT(*) FROM '.$table.' WHERE organization_id=?',[$org]),
+            ['cos_actions','tn_leads','sales_orders','sales_order_sync_runs']);
+        $before=$businessCounts();
+        $goalCount=(int)$wfDb->fetchOne('SELECT COUNT(*) FROM cos_federation_goals WHERE organization_id=?',[$org]);
+        $deny(fn()=>$intents->submitSales($origin,$stamp,$token,str_repeat('0',64),$raw));
+        $submitted=$intents->submitSales($origin,$stamp,$token,$sign($raw),$raw);
+        $check($submitted['state']==='pending_review'&&$submitted['execution_authority']==='none'&&$businessCounts()===$before
+            &&(int)$wfDb->fetchOne('SELECT COUNT(*) FROM cos_federation_goals WHERE organization_id=?',[$org])===$goalCount,
+            'Machine intent created Goal or executed native effect before review.');
+        $replay=$intents->submitSales($origin,$stamp,$token,$sign($raw),$raw);
+        $check($replay['replayed']&&$replay['intent_id']===$submitted['intent_id'],'Signed intent replay duplicated.');
+        $changed=json_encode([...$envelope,'description'=>'Changed machine proposal'],JSON_THROW_ON_ERROR);
+        $deny(fn()=>$intents->submitSales($origin,$stamp,$token,$sign($changed),$changed));
+        $unsupported=json_encode([...$envelope,'operations'=>[['id'=>'unsafe','capability_id'=>'sales.lead.create','parameters'=>$p]]],JSON_THROW_ON_ERROR);
+        $deny(fn()=>$intents->submitSales($origin,$stamp,$token,$sign($unsupported),$unsupported));
+        $unprivileged=new \Kernel\Tenant\Model\TenantContext(\Kernel\Shared\Domain\UserId::fromString($approver),
+            \Kernel\Shared\Domain\OrganizationId::fromString($org),\Kernel\Identity\Model\OrganizationRole::fromString('manager'),
+            [\Kernel\Tenant\Model\Permission::fromString(\Kernel\Tenant\Model\TenantPermissions::ACCESS),
+             \Kernel\Tenant\Model\Permission::fromString(\Kernel\Tenant\Model\TenantPermissions::MANAGE)]);
+        $deny(fn()=>$intents->inspectSales($unprivileged,$submitted['intent_id']));
+        $deny(fn()=>$intents->adoptSales($unprivileged,$submitted['intent_id'],$submitted['digest']));
+        $check(in_array($submitted['intent_id'],array_column($intents->pendingSales($actor),'intent_id'),true)
+            &&!in_array($submitted['intent_id'],array_column($intents->pending($actor),'intent_id'),true),'Sales intent review was not isolated from legacy HTML.');
+        $review=$intents->inspectSales($actor,$submitted['intent_id']);
+        $check($review['digest']===$submitted['digest']&&$review['origin']===$origin&&count($review['operations'])===count($steps),'Signed Sales intent readback mismatch.');
+        $deny(fn()=>$intents->adoptSales($actor,$submitted['intent_id'],str_repeat('0',64)));
+        $deny(fn()=>$intents->adopt($actor,$submitted['intent_id'],$review['digest']));
+        $adopted=$intents->adoptSales($actor,$submitted['intent_id'],$review['digest']);
+        $goal=$adopted['goal_id'];$plan=$adopted['plan_id'];
+        $check($adopted['state']==='adopted'&&$adopted['approval_required']===true&&$adopted['execution_started']===false
+            &&$businessCounts()===$before,'Human review improperly executed an Action.');
+        $deny(fn()=>$intents->adoptSales($actor,$submitted['intent_id'],$review['digest']));
+    }else{
+        $goals->createGoal($actor,new \Platform\Orchestration\Goal\GoalSpecification($goal,$org,$initiator,'Verify native order operations',
+            $specCriteria,array_values(array_unique($allowed)),1,null,null,'',[],['independent_plan','independent_action'],'always'));
+        $goals->proposePlan($actor,$plan,$goal,$steps);
+    }
     $coordinator=new \App\Persistence\Federation\FederationPlanApprovalCoordinator($wfDb,$goals,$registry,$active,
         new \Platform\Orchestration\Goal\GoalPlanApprovalRequestFactory(),$policy,$policies,$contexts,$engine);
     $oldRollout=getenv('COS_FEDERATION_CANONICAL_ORGANIZATION');
@@ -298,6 +345,8 @@ $executeWorkflow=static function(string $type,array $p,string $initiator,string 
         $check($eval['result']==='satisfied'&&count($eval['criteria'])===count($criteria),'Native Goal outcome was not verified.');
         foreach($specCriteria as $i=>$expected)
             $check(($eval['criteria'][$i]['observed']??null)===$expected['expected'],'Native Goal evidence count differs.');
+        foreach($steps as $step)if(in_array($step['capability_id'],\Domains\Sales\Automation\Action\SalesGovernedBusinessOperations::types(),true))
+            $verifiedR1[$step['capability_id']]=true;
         return count($steps)===1?$results['payment']:$results;
     }finally{
         if($oldRollout===false)putenv('COS_FEDERATION_CANONICAL_ORGANIZATION');else putenv('COS_FEDERATION_CANONICAL_ORGANIZATION='.$oldRollout);
@@ -792,6 +841,19 @@ $assignState=\Domains\Sales\Application\Support\DealStateSnapshot::fromNative($b
 $assignment=$runBusiness('deal.owner.assign',['deal_id'=>$assignDeal,'expected_revision'=>$assignState['revision'],'owner_id'=>(int)$reviewer],'deal',(string)$assignDeal);
 $check($assignment['state']['owner_id']===(int)$reviewer&&(int)$businessRead->deal($org,$assignDeal)['assigned_user_id']===(int)$reviewer,'Governed owner assignment readback failed.');
 echo "Sales R1 canonical team member configuration and Deal assignment PASS.\n";
+// Both machine origins submit a signed proposal only; actual human review and separate
+// Plan/Action Approval run through the same canonical bridge and native outcome provider.
+$grant->execute([$org,(int)$requester,'sales.admin.agents.manage',$requester]);
+$grant->execute([$org,(int)$requester,'sales.director.view',$requester]);
+$aiLead=$runBusiness('lead.create',['full_name'=>'AI signed lead','email'=>'ai-signed-'.$nonce.'@example.test'],
+    'sales_intent',bin2hex(random_bytes(16)),['intent_origin'=>'ai']);
+$check((int)$businessRead->lead($org,$aiLead['lead_id'])['assigned_user_id']===(int)$requester,'AI reviewed lead native state mismatch.');
+$cronRun=$runBusiness('order.source.sync.start',['channel'=>'shopify','connection_id'=>$connectionId,'mode'=>'webhooks'],
+    'sales_order_connection',$connectionId,['intent_origin'=>'cron']);
+$check($businessSync->status($org,(int)$requester,$cronRun['run_id'],null)['counts']['discovery_pending']===1,'CRON reviewed sync not admitted.');
+$missingR1=array_values(array_diff(\Domains\Sales\Automation\Action\SalesGovernedBusinessOperations::types(),array_keys($verifiedR1)));
+$check($missingR1===[],'Missing canonical R1 native outcome cases: '.implode(', ',$missingR1));
+echo "Sales R1 all 28 governed commands + signed AI/CRON review and real independent Plan/Action/Outcome PASS\n";
 $executeWorkflow('sales.governed.team.manage',['operation'=>'create','code'=>'DENY_'.strtoupper($nonce),'name'=>'Revoked authority'],
     $requester,$reviewer,[...$businessConfig,'target_type'=>'sales_team_intent','target'=>bin2hex(random_bytes(16)),'expect_denied'=>true,
     'after_approval'=>static fn()=>$db->prepare('DELETE FROM sales_user_capabilities WHERE organization_id=? AND user_id=? AND capability="sales.approval.any_team"')->execute([$org,(int)$reviewer])]);
