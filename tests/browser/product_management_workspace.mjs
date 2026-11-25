@@ -139,7 +139,9 @@ try {
   await page.waitForURL(u=>u.searchParams.get('notice')==='updated');
   const matrix=page.locator('form[action="'+attrPath+'"]').filter({has:page.locator('[name=action][value=preview]')});
   await matrix.locator('[name=sku_prefix]').fill('QAM'+tag);
-  await matrix.locator('[name=axes]').fill(JSON.stringify([{code:attrCode,choices:['oak','walnut']}]));
+  check(await matrix.locator('textarea[name=axes]').count()===0,'Matrix preview must not require JSON');
+  await matrix.locator('[name="axis_choices['+attrCode+'][]"][value="oak"]').check();
+  await matrix.locator('[name="axis_choices['+attrCode+'][]"][value="walnut"]').check();
   const originalVariants=await page.locator('#matrix-existing-variants tbody tr').allTextContents();
   const [previewResponse]=await Promise.all([
     page.waitForResponse(r=>new URL(r.url()).pathname===attrPath && r.request().method()==='POST'),
