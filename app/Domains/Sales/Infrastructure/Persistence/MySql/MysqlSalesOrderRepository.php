@@ -6,7 +6,7 @@ use Domains\Sales\Application\Contract\SalesOrderRepositoryInterface;
 use PDO;
 use LogicException;
 
-final readonly class MysqlSalesOrderRepository implements SalesOrderRepositoryInterface, \Domains\Sales\Application\Contract\SalesOrderLifecycleRepositoryInterface, \Domains\Sales\Application\Contract\SalesCommerceOrderEvidencePort, \Domains\Sales\Application\Contract\SalesOrderJourneyStore
+final readonly class MysqlSalesOrderRepository implements SalesOrderRepositoryInterface, \Domains\Sales\Application\Contract\SalesOrderLifecycleRepositoryInterface, \Domains\Sales\Application\Contract\SalesCommerceOrderEvidencePort, \Domains\Sales\Application\Contract\SalesOrderJourneyStore, \Domains\Sales\Application\Contract\SalesCommerceOrderLifecycleEvidencePort
 {
     public function __construct(private PDO $connection){}
     public function create(string $org,array $order,array $lines,array $evidence):void
@@ -47,6 +47,54 @@ final readonly class MysqlSalesOrderRepository implements SalesOrderRepositoryIn
             throw new LogicException('Native placement evidence integrity failed.');
         $fact['attribution_observations']=(object)$fact['attribution_observations'];
         return $fact;
+    }
+    public function lifecycleEvidence(string $organizationId,string $orderId,int $afterRevision=1,int $limit=100):?array
+    {
+        if($organizationId===''||strlen($organizationId)>40||!preg_match('/^[a-f0-9]{32}$/D',$orderId)||
+            $afterRevision<1||$afterRevision>4294967295||$limit<1||$limit>100)
+            throw new \DomainException('Invalid lifecycle evidence query.');
+        // One statement gives a consistent order head and bounded event page, including an empty page.
+        $q=$this->connection->prepare('SELECT o.revision AS order_revision,e.event_id,e.revision,e.event_type,e.payload
+            FROM sales_orders o LEFT JOIN sales_order_evidence e
+                ON e.organization_id=o.organization_id AND e.order_id=o.order_id AND e.revision>?
+            WHERE o.organization_id=? AND BINARY o.organization_id=BINARY ? AND o.order_id=?
+            ORDER BY e.revision,e.event_id LIMIT '.($limit+1));
+        $q->execute([$afterRevision,$organizationId,$organizationId,$orderId]);$rows=$q->fetchAll(PDO::FETCH_ASSOC);
+        if($rows===[])return null;
+        $head=(int)$rows[0]['order_revision'];
+        if($afterRevision>$head)throw new \DomainException('Lifecycle evidence cursor exceeds order revision.');
+        $events=[];$cursor=$afterRevision;
+        foreach($rows as $row){
+            if($row['event_id']===null)continue;
+            $fact=json_decode($row['payload'],true,32,JSON_THROW_ON_ERROR);
+            $rev=(int)$row['revision'];$type=$row['event_type'];
+            if(!is_array($fact)||$rev!==$cursor+1||$rev>$head||($fact['revision']??null)!==$rev||
+                ($fact['organization_id']??null)!==$organizationId||($fact['order_id']??null)!==$orderId||
+                ($fact['schema_version']??null)!=='1.0.0'||($fact['event_id']??null)!==$row['event_id']||
+                !preg_match('/^[a-f0-9]{32}$/D',$row['event_id'])||($fact['event_type']??null)!==$type||
+                !in_array($type,['sales.commerce.order.confirm','sales.commerce.order.allocate','sales.commerce.order.release',
+                    'sales.commerce.order.fulfill','sales.commerce.order.cancel','sales.commerce.order.return'],true)||
+                !in_array($fact['previous_status']??null,['placed','confirmed','cancelled','completed'],true)||
+                !in_array($fact['status']??null,['placed','confirmed','cancelled','completed'],true)||
+                !is_string($fact['occurred_at']??null)||!preg_match('/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{6}Z$/D',$fact['occurred_at'])||
+                !is_array($fact['effects']??null)||!array_is_list($fact['effects'])||
+                !array_key_exists('realized_revenue',$fact)||$fact['realized_revenue']!==null||
+                !array_key_exists('financial_evidence_reference',$fact)||$fact['financial_evidence_reference']!==null)
+                throw new LogicException('Lifecycle evidence integrity failed.');
+            $quantity=0;
+            foreach($fact['effects'] as $effect){
+                if(!is_array($effect)||!is_int($effect['quantity']??null)||$effect['quantity']<1)
+                    throw new LogicException('Lifecycle evidence quantity invalid.');
+                $quantity+=$effect['quantity'];
+            }
+            if(count($events)===$limit)break;
+            $events[]=['schema_version'=>'1.0.0','organization_id'=>$organizationId,'order_id'=>$orderId,
+                'event_id'=>$row['event_id'],'event_type'=>$type,'revision'=>$rev,'occurred_at'=>$fact['occurred_at'],
+                'previous_status'=>$fact['previous_status'],'status'=>$fact['status'],'effect_quantity'=>$quantity];
+            $cursor=$rev;
+        }
+        if($cursor<$head&&count($rows)<=$limit)throw new LogicException('Lifecycle evidence revision gap.');
+        return ['order_revision'=>$head,'events'=>$events,'next_after_revision'=>$cursor,'has_more'=>$cursor<$head];
     }
     public function recordJourney(string $org,string $order,string $store,string $external,array $journey):void
     {
