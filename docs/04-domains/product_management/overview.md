@@ -30,7 +30,7 @@ id: product_management
 version: 0.1.0
 schema_version: 0.16.0
 runtime: tenant-disabled by default
-persistence: 17 registered migrations; production acceptance pending
+persistence: 20 registered migrations; production acceptance pending
 capabilities: 96 typed contracts (31 queries, 31 direct human commands, 34 approved Actions)
 Shopify: read-only; no outbound writes
 process model: six canonical Process Registry models; independent release acceptance pending
