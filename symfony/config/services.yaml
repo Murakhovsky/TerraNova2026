@@ -144,6 +144,10 @@ services:
       $cronSecret: '%env(COS_CRON_CAPABILITY_INTENT_SECRET)%'
       $organizationId: '%env(COS_AUTOMATION_TENANT_ORGANIZATION)%'
 
+  App\Infrastructure\Automation\SalesGovernedBusinessHandler:
+    arguments:
+      $adapters: !tagged_iterator cos.capability.invoker
+
   App\Application\Capability\CanonicalCapabilityGateway:
     arguments:
       $adapters: !tagged_iterator cos.capability.invoker
@@ -2099,6 +2103,7 @@ services:
       $offerDelivery: '@Domains\Sales\Automation\Action\QueueSalesOfferDeliveryHandler'
       $activityReminders: '@Domains\Sales\Automation\Action\QueueSalesActivityReminderHandler'
       $governedOrders: '@Domains\Sales\Automation\Action\SalesGovernedOrderHandler'
+      $governedBusiness: '@App\Infrastructure\Automation\SalesGovernedBusinessHandler'
 
   # Capital Markets CM-FOUNDATION runtime
   Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlInstrumentRepository:

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "target_type": {
+      "type": "string",
+      "const": "lead"
+    },
+    "target_id": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]{0,18}$"
+    },
+    "parameters": {
+      "title": "SalesLeadQualifyInputV1",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lead_id",
+        "expected_status",
+        "target_status"
+      ],
+      "properties": {
+        "lead_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "expected_status": {
+          "type": "string",
+          "enum": [
+            "new",
+            "contacted",
+            "qualified"
+          ]
+        },
+        "target_status": {
+          "type": "string",
+          "enum": [
+            "contacted",
+            "qualified",
+            "disqualified"
+          ]
+        }
+      }
+    }
+  },
+  "required": [
+    "target_type",
+    "target_id",
+    "parameters"
+  ]
+}

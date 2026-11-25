@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "target_type": {
+      "type": "string",
+      "const": "sales_crm_inbox"
+    },
+    "target_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "parameters": {
+      "title": "SalesCrmInboxRecoverInputV1",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "inbox_id",
+        "revision",
+        "reason"
+      ],
+      "properties": {
+        "inbox_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "mapping_repaired",
+            "configuration_repaired",
+            "transient_failure_resolved"
+          ]
+        }
+      }
+    }
+  },
+  "required": [
+    "target_type",
+    "target_id",
+    "parameters"
+  ]
+}

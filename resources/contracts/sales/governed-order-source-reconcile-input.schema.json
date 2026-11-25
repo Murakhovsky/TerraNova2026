@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "target_type": {
+      "type": "string",
+      "const": "sales_order_connection"
+    },
+    "target_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "channel": {
+          "type": "string",
+          "enum": [
+            "shopify"
+          ]
+        },
+        "connection_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        },
+        "external_order_id": {
+          "type": "string",
+          "pattern": "^gid://shopify/Order/[1-9][0-9]{0,18}$"
+        },
+        "delivery_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 190
+        }
+      },
+      "required": [
+        "channel",
+        "connection_id",
+        "external_order_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "target_type",
+    "target_id",
+    "parameters"
+  ]
+}

@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Domains\Sales\Infrastructure\Persistence\MySql;
 
 use DomainException;
+use Domains\Sales\Automation\Action\SalesGovernedBusinessOperations;
 use Domains\Sales\Model\SalesCapability;
 use Kernel\Action\Action;
 use Kernel\Approval\Approval;
@@ -17,6 +18,15 @@ final readonly class MysqlSalesApprovalAuthority implements ApprovalAuthorityInt
     public function assertCanDecide(string $organizationId, string $userId, Approval $approval, Action $action): void
     {
         if (!str_starts_with($action->type, 'sales.')) {
+            return;
+        }
+
+        if (in_array($action->type, SalesGovernedBusinessOperations::types(), true)) {
+            if ($approval->organizationId !== $organizationId || $approval->actionId !== $action->id
+                || $approval->approverType !== 'ROLE' || $approval->approverId !== 'manager') {
+                throw new DomainException('Canonical Sales business approval required.');
+            }
+            $this->assertGovernedBusinessDecision($organizationId, $userId, $action);
             return;
         }
 
@@ -78,8 +88,25 @@ final readonly class MysqlSalesApprovalAuthority implements ApprovalAuthorityInt
 
     public function assertApprovedOrderExecution(Action $action):void
     {
-        if(!$this->connection->inTransaction()||!in_array($action->type,\Domains\Sales\Automation\Action\SalesGovernedOrderHandler::types(),true))
-            throw new DomainException('Sales order approval requires its native transaction.');
+        if (!in_array($action->type, \Domains\Sales\Automation\Action\SalesGovernedOrderHandler::types(), true)) {
+            throw new DomainException('Unsupported governed order approval.');
+        }
+        $this->assertCanonicalExecution($action, false);
+    }
+
+    public function assertApprovedBusinessExecution(Action $action): void
+    {
+        if (!in_array($action->type, SalesGovernedBusinessOperations::types(), true)) {
+            throw new DomainException('Unsupported governed Sales business approval.');
+        }
+        $this->assertCanonicalExecution($action, true);
+    }
+
+    private function assertCanonicalExecution(Action $action, bool $business): void
+    {
+        if (!$this->connection->inTransaction()) {
+            throw new DomainException('Sales approval requires its native transaction.');
+        }
         $q=$this->connection->prepare('SELECT type,target_type,target_id,parameters,source_type,source_id,status,execution_mode,risk_level,idempotency_key,correlation_id
             FROM cos_actions WHERE organization_id=? AND id=? FOR UPDATE');
         $q->execute([$action->organizationId,$action->id]);$a=$q->fetch(PDO::FETCH_ASSOC);
@@ -101,7 +128,42 @@ final readonly class MysqlSalesApprovalAuthority implements ApprovalAuthorityInt
             $p['decided_by_type']!=='USER'||$p['decided_at']===null||
             ($p['expires_at']!==null&&strtotime($p['expires_at'].' UTC')<=time()))
             throw new DomainException('Independent unexpired Sales order Approval required.');
-        $this->assertGovernedOrderDecision($action->organizationId,(string)$p['decided_by_id'],$action);
+        if ($business) {
+            $this->assertGovernedBusinessDecision($action->organizationId, (string) $p['decided_by_id'], $action);
+        } else {
+            $this->assertGovernedOrderDecision($action->organizationId,(string)$p['decided_by_id'],$action);
+        }
+    }
+
+    /** First rollout deliberately requires an independent any-team approver.
+     * Native execution separately enforces the requesting actor's live entity scope.
+     */
+    private function assertGovernedBusinessDecision(string $org, string $userId, Action $action): void
+    {
+        if ($action->organizationId !== $org || $action->sourceType !== 'USER'
+            || $action->sourceId === $userId || $action->executionMode !== 'APPROVAL_REQUIRED'
+            || $action->riskLevel !== 'HIGH' || !is_string($action->idempotencyKey)
+            || preg_match('/^wf:[a-f0-9]{64}$/D', $action->idempotencyKey) !== 1) {
+            throw new DomainException('Independent canonical Sales business approval required.');
+        }
+        SalesGovernedBusinessOperations::assertTarget($action);
+        $users = [$action->sourceId, $userId];
+        sort($users, SORT_STRING);
+        foreach ($users as $uid) {
+            if (!ctype_digit($uid) || (int) $uid < 1 || (string) (int) $uid !== $uid) {
+                throw new DomainException('Invalid Sales manager identity.');
+            }
+            $query = $this->connection->prepare('SELECT 1 FROM cos_organization_memberships m
+                JOIN tn_users u ON u.id=m.user_id AND u.organization_id=m.organization_id
+                WHERE m.organization_id=? AND BINARY m.organization_id=BINARY ? AND m.user_id=?
+                AND m.status="ACTIVE" AND m.role IN ("manager","admin") AND u.status="active" LIMIT 1'.
+                ($this->connection->inTransaction() ? ' FOR UPDATE' : ''));
+            $query->execute([$org, $org, (int) $uid]);
+            if ($query->fetchColumn() === false) throw new DomainException('Sales manager inactive.');
+        }
+        if (!$this->hasCapability($org, (int) $userId, SalesCapability::ApprovalAnyTeam->value)) {
+            throw new DomainException('Governed Sales business requires an any-team approver.');
+        }
     }
 
     private function assertGovernedOrderDecision(string $org,string $userId,Action $action):void
