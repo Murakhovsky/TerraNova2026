@@ -117,7 +117,12 @@ domain_id: product_management
         "product_management.governed.price.list.update",
         "product_management.governed.price.list.archive",
         "product_management.governed.price.list.entry.remove",
-        "product_management.governed.price.list.tier.set"
+        "product_management.governed.price.list.tier.set",
+        "product_management.governed.media.attach",
+        "product_management.governed.media.detach",
+        "product_management.governed.attribute.define",
+        "product_management.governed.attribute.category.bind",
+        "product_management.governed.attribute.product.set"
       ]
     },
     {
@@ -218,7 +223,7 @@ Read-only E5 Stock audit звіряє on_hand з ledger і reserved з акти�
 
 ## 13. План розвитку, борги та рішення
 
-Native release: all CI at candidate SHA, actual browser and independent approval acceptance, live agent/LLM test, explicit operator sign-off. Remaining AI coverage: some human-only lifecycle, media, list-price and transfer mutations have no governed equivalent; no dynamic output substitution. Optional Shopify: independent live OAuth/scopes canary and recovery; write-back only after separate ownership decision.
+Native release: all CI at candidate SHA, actual browser and independent approval acceptance, live agent/LLM test, explicit operator sign-off. All 29 planned governed operation contracts are implemented; final integrated CI and actual agent acceptance remain required. Dynamic output substitution and historical verification of successive mutable writes are not implemented. Optional Shopify: independent live OAuth/scopes canary and recovery; write-back only after separate ownership decision.
 
 ## 14. Карта джерел
 
