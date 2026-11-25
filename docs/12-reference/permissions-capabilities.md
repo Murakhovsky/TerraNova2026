@@ -20,7 +20,7 @@ generated: true
 | --- | ---: | --- |
 | `both` | 48 | Capability присутня і в runtime catalogue, і в manifest. |
 | `runtime-only` | 3 | Runtime може перевіряти capability, але manifest її не декларує. |
-| `manifest-only` | 372 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
+| `manifest-only` | 373 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
 
 ## Каталог
 
@@ -266,6 +266,7 @@ generated: true
 | `product_management` | `product_management.governed.price.list.tier.set` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.governed.price.list.update` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.governed.product.archive` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
+| `product_management` | `product_management.governed.product.assemble` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.governed.product.create` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.governed.product.update` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.governed.stock.issue` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |

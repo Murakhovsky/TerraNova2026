@@ -421,6 +421,7 @@ Manifest capabilities не задекларовані.
 - `product_management.governed.price.list.tier.set`;
 - `product_management.governed.price.list.update`;
 - `product_management.governed.product.archive`;
+- `product_management.governed.product.assemble`;
 - `product_management.governed.product.create`;
 - `product_management.governed.product.update`;
 - `product_management.governed.stock.issue`;

@@ -28,7 +28,7 @@ generated: true
 | Meta Read Import → Media Analytics | `marketing` | `as-is` | `source-verified` | 2 | 0 | 2/2 | 2/2 | 2/2 | 2/2 | 0/2 | [Відкрити workflow](../02-workflows/marketing-media-import-to-report.md) |
 | Product Catalog → Variant Matrix | `product_management` | `as-is` | `source-verified` | 9 | 0 | 9/9 | 9/9 | 9/9 | 9/9 | 0/9 | [Відкрити workflow](../02-workflows/product-management-catalog-to-variants.md) |
 | Product CSV → Native Catalog | `product_management` | `as-is` | `source-verified` | 3 | 0 | 3/3 | 3/3 | 3/3 | 3/3 | 0/3 | [Відкрити workflow](../02-workflows/product-management-csv-to-native-catalog.md) |
-| Product Governed Business Cycle | `product_management` | `to-be` | `source-verified` | 8 | 0 | 8/8 | 8/8 | 8/8 | 8/8 | 0/8 | [Відкрити workflow](../02-workflows/product-management-governed-business-cycle.md) |
+| Product Governed Business Cycle | `product_management` | `to-be` | `source-verified` | 9 | 0 | 9/9 | 9/9 | 9/9 | 9/9 | 0/9 | [Відкрити workflow](../02-workflows/product-management-governed-business-cycle.md) |
 | Product Physical Count → Correction | `product_management` | `as-is` | `source-verified` | 4 | 0 | 4/4 | 4/4 | 4/4 | 4/4 | 0/4 | [Відкрити workflow](../02-workflows/product-management-physical-count-to-correction.md) |
 | Product Pricing → Verified Quote | `product_management` | `as-is` | `source-verified` | 6 | 0 | 6/6 | 6/6 | 6/6 | 6/6 | 0/6 | [Відкрити workflow](../02-workflows/product-management-pricing-to-quote.md) |
 | Product Stock → Reconciliation | `product_management` | `as-is` | `source-verified` | 8 | 0 | 8/8 | 8/8 | 8/8 | 8/8 | 0/8 | [Відкрити workflow](../02-workflows/product-management-stock-to-reconciliation.md) |
@@ -60,7 +60,7 @@ generated: true
 | Meta Read Import → Media Analytics | 2/2 | 2/2 | 0/2 | 0/2 | 2/2 | 2/2 | 0/2 | 2/2 | 0/2 |
 | Product Catalog → Variant Matrix | 9/9 | 9/9 | 0/9 | 0/9 | 9/9 | 9/9 | 0/9 | 9/9 | 0/9 |
 | Product CSV → Native Catalog | 3/3 | 3/3 | 0/3 | 0/3 | 3/3 | 3/3 | 0/3 | 3/3 | 0/3 |
-| Product Governed Business Cycle | 8/8 | 8/8 | 0/8 | 0/8 | 8/8 | 8/8 | 0/8 | 8/8 | 0/8 |
+| Product Governed Business Cycle | 9/9 | 9/9 | 0/9 | 0/9 | 9/9 | 9/9 | 0/9 | 9/9 | 0/9 |
 | Product Physical Count → Correction | 4/4 | 4/4 | 0/4 | 0/4 | 4/4 | 4/4 | 0/4 | 4/4 | 0/4 |
 | Product Pricing → Verified Quote | 6/6 | 6/6 | 0/6 | 0/6 | 6/6 | 6/6 | 0/6 | 6/6 | 0/6 |
 | Product Stock → Reconciliation | 8/8 | 8/8 | 0/8 | 0/8 | 8/8 | 8/8 | 0/8 | 8/8 | 0/8 |
@@ -368,15 +368,15 @@ generated: true
 - **Schema:** `v4`
 - **Domain:** `product_management`
 - **Бізнес-стан:** `to-be`
-- **Покриття capabilities:** 8/8 кроків
-- **Cross-domain кроки:** 0/8
+- **Покриття capabilities:** 9/9 кроків
+- **Cross-domain кроки:** 0/9
 - **Derived verification:** `source-verified`
 - **Тригер:** Signed AI or CRON intent is reviewed and adopted into an approved Plan
 - **Workflow:** [Product Governed Business Cycle](../02-workflows/product-management-governed-business-cycle.md)
 
 **Результати**
 
-- Eight approved native operations produce independently verified effects
+- Nine approved native operations produce independently verified effects, including atomic draft assembly
 - No unapproved Action or second executor
 - Ledger and current native results are verified
 
@@ -392,6 +392,7 @@ generated: true
 | Generate variants for known Product | Approved Product Action worker | `product_management` | `product_management.governed.variant.matrix.create` | `operation` | так | source `app/Domains/ProductManagement/Automation/Action/ProductGovernedOperationHandler.php` · `'variant.matrix.create'=>$this->products->createMatrix` [source] |
 | Patch known Product attributes | Approved Product Action worker | `product_management` | `product_management.governed.attribute.product.bulk_set` | `operation` | так | source `app/Domains/ProductManagement/Automation/Action/ProductGovernedOperationHandler.php` · `'attribute.product.bulk_set'=>$this->products->bulkSetAttributes` [source] |
 | Release existing reservation | Approved Product Action worker | `product_management` | `product_management.governed.stock.release` | `operation` | так | source `app/Domains/ProductManagement/Automation/Action/ProductGovernedOperationHandler.php` · `'stock.release'=>$this->products->releaseStock` [source] |
+| Assemble a complete draft Product | Approved Product Action worker | `product_management` | `product_management.governed.product.assemble` | `operation` | так | source `app/Domains/ProductManagement/Application/Service/ProductAssemblyService.php` · `public function assemble` [source] |
 
 ## Product Physical Count → Correction
 
