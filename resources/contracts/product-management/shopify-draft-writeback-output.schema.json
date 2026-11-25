@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Verified Shopify draft writeback",
+  "type": "object",
+  "required": [
+    "product_id",
+    "variant_id",
+    "connection_id",
+    "product_gid",
+    "variant_gid",
+    "payload_hash",
+    "state"
+  ],
+  "properties": {
+    "product_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "variant_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "connection_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "product_gid": {
+      "type": "string",
+      "pattern": "^gid://shopify/Product/[0-9]+$"
+    },
+    "variant_gid": {
+      "type": "string",
+      "pattern": "^gid://shopify/ProductVariant/[0-9]+$"
+    },
+    "payload_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "state": {
+      "type": "string",
+      "const": "verified"
+    }
+  },
+  "additionalProperties": false
+}
