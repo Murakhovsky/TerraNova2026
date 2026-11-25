@@ -3285,7 +3285,9 @@ services:
   Domains\Sales\Application\Service\SalesOrderService:
     arguments:
       $finance: '@Domains\Finance\Application\Contract\CommerceOrderFinancialEvidenceReadPort'
-  Domains\Sales\Application\Service\SalesOrderLifecycleService: ~
+  Domains\Sales\Application\Service\SalesOrderLifecycleService:
+    arguments:
+      $finance: '@Domains\Finance\Application\Contract\CommerceOrderFinancialEvidenceReadPort'
   Domains\Sales\Application\Contract\SalesOrderLifecycleRepositoryInterface:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository
   Domains\ProductManagement\Application\Contract\OrderInventoryPort:
