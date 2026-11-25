@@ -11,6 +11,7 @@ use Domains\Marketing\Application\Contract\MarketingAttributionReceiptReadPort;
 use Domains\Marketing\Application\Service\MarketingAttributionSweepService;
 use Domains\Marketing\Automation\Action\MarketingAttributionSweepHandler;
 use Kernel\Tenant\Model\TenantContext;
+use Kernel\Tenant\Model\TenantPermissions;
 use Platform\Orchestration\Goal\RunScopedGoalOutcomeEvidenceProviderInterface;
 use Platform\Workflow\Model\WorkflowRunIdentity;
 
@@ -34,6 +35,8 @@ final readonly class MarketingAttributionSweepOutcomeProvider implements RunScop
     /** Exact independently attested receipt for a completed canonical run. */
     public function verifiedReceipt(TenantContext $actor,string $runId):array
     {
+        if(!$actor->isManager()||!$actor->allows(TenantPermissions::ACCESS)||!$actor->allows(TenantPermissions::MANAGE))
+            throw new DomainException('Sweep receipt access denied.');
         $org=$actor->organizationId()->value();
         $rows=$this->db->fetchAllAssociative('SELECT w.input_digest,w.state,w.actor_id,s.step_id,s.state AS step_state,
             s.idempotency_key,s.result_reference,p.plan_json
@@ -68,6 +71,11 @@ final readonly class MarketingAttributionSweepOutcomeProvider implements RunScop
             ||$r['recorded_or_already_present']+$r['unresolved']!==$r['scanned']
             ||!array_key_exists('next_after',$r)||($r['page_exhausted']??null)!==($r['next_after']===null))
             throw new DomainException('Native sweep receipt arithmetic invalid.');
+        $next=$r['next_after'];
+        if($next!==null&&(!is_string($next)||!preg_match($p['source_kind']==='lead'?'/^[1-9][0-9]{0,17}$/D':'/^[a-f0-9]{32}$/D',$next)
+            ||$r['pages_processed']!==$max||$r['scanned']!==50*$max
+            ||($p['after']!==null&&($p['source_kind']==='lead'?(int)$next<=(int)$p['after']:strcmp($next,$p['after'])<=0))))
+            throw new DomainException('Native sweep continuation invalid.');
         return ['key'=>$key,'receipt'=>$r,'requested_by'=>(string)$row['actor_id']];
     }
 }

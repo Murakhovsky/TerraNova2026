@@ -104,7 +104,7 @@ try {
     $manifest=require $root.'/app/Domains/Marketing/module.php';
     $catalog=new ModuleCatalog([ModuleDefinition::fromArray($manifest),
         ModuleDefinition::fromArray((static fn(string $path):array=>require $path)($root.'/app/Domains/Sales/module.php')),
-        new ModuleDefinition(new ModuleManifest('federation','Federation','1.0.0'),new ModuleContributions())]);
+        ModuleDefinition::fromArray((static fn(string $path):array=>require $path)($root.'/app/Domains/Federation/module.php'))]);
     $states=new class implements ModuleStateRepositoryInterface {
         public function enabledOverride(string $org,string $moduleId):?bool{return true;}
         public function setEnabled(string $org,string $moduleId,bool $value):void{}
@@ -194,10 +194,11 @@ try {
         new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidReadRepository($pdo),$funding,$modules);
     $sweepService=new \Domains\Marketing\Application\Service\MarketingAttributionSweepService($campaignService,$sweepPlans,$candidateRead,$leadRead,$orderRead,$captureStore,$commerceStore,$modules);
     $sweepHandler=new \Domains\Marketing\Automation\Action\MarketingAttributionSweepHandler($sweepService,$worker,$identityResolver,$tenantFactory,$modules,$capabilities);
-    $domains=new DomainModuleRegistry([new \Domains\Marketing\Bootstrap\MarketingDomainModule($handler,null,$sweepHandler)]);
+    $planHandler=new \App\Persistence\Federation\FederationPlanApproveHandler($db,$planReader);
+    $domains=new DomainModuleRegistry([new \Domains\Marketing\Bootstrap\MarketingDomainModule($handler,null,$sweepHandler),new \Domains\Federation\Bootstrap\FederationDomainModule($planHandler)]);
     $bindings=new FederationCapabilityBindingResolver($capabilities,$domains,$modules);
     $gate=new ModuleActionExecutionGate($domains,$modules,null,$worker);
-    $actionService=new ActionService(new MysqlActionRepository($pdo),new ActionExecutor([$handler,$sweepHandler],$gate));
+    $actionService=new ActionService(new MysqlActionRepository($pdo),new ActionExecutor([$handler,$sweepHandler,$planHandler],$gate));
     $approvalRepo=new MysqlApprovalRepository($pdo);
     $policies=new MysqlPolicyRepository($pdo);
     $engine=new PolicyEngine(new ConditionEvaluator());
@@ -400,6 +401,56 @@ try {
         [str_repeat('0',64),$org,$sweepKey]);
     $deny(fn()=>$sweepOutcome->observeRun($actor,$sweepRun,$criterion,new DateTimeImmutable('-1 day'),new DateTimeImmutable('+1 day')),'Tampered sweep scope accepted as outcome.');
     echo "Marketing M4 canonical approved sweep Action, multipage native capture and independently read Goal receipt PASS (Plan evidence fixture).\n";
+    // Scheduler uses real Plan approval Action, then independent sweep Action approval.
+    $pdo->prepare('INSERT INTO cos_policies
+        (id,organization_id,code,name,action_type,conditions,decision,priority,version,status)
+        VALUES (?,?,"mkt-schedule-plan-e2e","Independent scheduled Plan approval",?,?,"APPROVAL_REQUIRED",1,1,"ACTIVE")')
+        ->execute([bin2hex(random_bytes(16)),$org,'cos.federation.plan.approval','[]']);
+    $coordinator=new \App\Persistence\Federation\FederationPlanApprovalCoordinator($db,$goals,$domains,$modules,
+        new \Platform\Orchestration\Goal\GoalPlanApprovalRequestFactory(),$policyService,$policies,$policyContexts,$engine);
+    $scheduler=new \App\Persistence\Marketing\MarketingAttributionScheduleService($db,$goals,$bridge,$coordinator,$sweepOutcome,$campaignService,$sweepPlans,$modules);
+    $date='2026-02-03';
+    for($i=0;$i<51;$i++)$insert->execute([$org,$campaignId,$date.' 12:00:00']);
+    $profile=['profile_id'=>'fixture-sweep','organization_id'=>$org,'actor_id'=>$owner,'campaign_id'=>$campaignId,
+        'plan_id'=>null,'source_kind'=>'lead','lookback_days'=>1,'max_pages'=>1];
+    $clock=new DateTimeImmutable('2026-02-04T00:00:00Z');
+    $tick=fn()=>$scheduler->tick($actor,$profile,$clock);
+    $scheduleRow=fn()=>$db->fetchAssociative('SELECT * FROM marketing_attribution_schedules WHERE organization_id=? AND profile_id=?',[$org,$profile['profile_id']]);
+    $approve=static function(string $action)use($db,$org,$approvalRepo,$reviewer,$actionService,$assert):void{
+        $id=(string)$db->fetchOne('SELECT id FROM cos_approvals WHERE organization_id=? AND action_id=?',[$org,$action]);
+        $assert($id!==''&&$approvalRepo->decide($org,$id,ApprovalStatus::Approved,$reviewer,'Independent CI approval'),'Scheduled approval missing.');
+        $actionService->queue($org,$action);
+    };
+    for($page=0;$page<2;$page++){
+        $assert($tick()==='PLAN_PROPOSED','Schedule did not propose its pinned Plan.');
+        $pid=$scheduleRow()['plan_id'];
+        $assert($tick()==='PLAN_APPROVAL_REQUESTED'&&$tick()==='WAIT_PLAN_APPROVAL','Schedule bypassed Plan approval.');
+        $planAction=$goals->planApprovalAction($actor,$pid)['id'];
+        $assert($actionService->execute($org,$planAction,'schedule-unapproved-plan')===null,'Unapproved scheduled Plan executed.');
+        $approve($planAction);
+        $planResult=$actionService->executeOutcome($org,$planAction,'schedule-plan');
+        $assert($planResult!==null&&$planResult->result->successful,'Scheduled Plan approval handler failed.');
+        $assert($tick()==='RUN_STARTED','Schedule did not start canonical run.');
+        $assert($tick()==='RUN_ADVANCED'&&$tick()==='RUN_ADVANCED','Schedule did not submit sweep Action.');
+        $key=(string)$db->fetchOne('SELECT s.idempotency_key FROM cos_workflow_steps s JOIN cos_workflow_runs w ON w.organization_id=s.organization_id AND w.run_id=s.run_id WHERE w.organization_id=? AND w.source_plan_id=?',[$org,$pid]);
+        $action=(string)$db->fetchOne('SELECT id FROM cos_actions WHERE organization_id=? AND idempotency_key=?',[$org,'wf:'.$key]);
+        $assert($action!==''&&$actionService->execute($org,$action,'schedule-unapproved-sweep')===null,'Scheduled sweep bypassed approval.');
+        $assert(count($captureStore->list($org,$campaignId,$date,$date,501,0))===($page===0?0:50),'Unapproved scheduled sweep changed capture.');
+        $approve($action);
+        $result=$actionService->executeOutcome($org,$action,'schedule-sweep');
+        $assert($result!==null&&$result->result->successful&&$result->result->data['scanned']===($page===0?50:1),'Scheduled page sweep failed.');
+        $assert($tick()==='RUN_ADVANCED'&&$tick()==='RUN_ADVANCED','Schedule did not attest and complete workflow.');
+        $assert($tick()===($page===0?'CONTINUATION_READY':'CYCLE_SCANNED'),'Schedule did not checkpoint verified native receipt.');
+        $row=$scheduleRow();
+        $assert($row['plan_id']===null&&$row['window_start']===$date&&$row['window_end']===$date
+            &&($page===0?$row['after_cursor']!==null:$row['after_cursor']===null),'Schedule cursor/window persistence failed.');
+    }
+    $assert(count($captureStore->list($org,$campaignId,$date,$date,501,0))===51&&$tick()==='CURRENT_CYCLE_SCANNED','Schedule did not exhaust exactly 51 candidates.');
+    $deny(fn()=>$scheduler->tick($actor,array_replace($profile,['max_pages'=>2]),$clock),'Changed schedule profile reused checkpoint.');
+    $assert($scheduler->tick($actor,$profile,new DateTimeImmutable('2026-02-05T00:00:00Z'))==='PLAN_PROPOSED'
+        &&$scheduleRow()['after_cursor']===null,'Next daily cycle did not restart from null cursor.');
+    echo "Marketing M4 scheduled two-page canonical Plan/Action approvals, durable continuation, rolling rescan PASS.\n";
+
 } finally {
     if($oldRollout===false)putenv('COS_FEDERATION_CANONICAL_ORGANIZATION');
     else putenv('COS_FEDERATION_CANONICAL_ORGANIZATION='.$oldRollout);
