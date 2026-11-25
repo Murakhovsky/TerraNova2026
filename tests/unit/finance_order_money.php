@@ -18,3 +18,24 @@ $reject(fn()=>Money::apply($b,'chargeback_reversal',1501,2000));
 foreach([1.2,'01.00','1.001','-1.00','0.00'] as $bad)$reject(fn()=>Money::amount($bad));
 $assert(Money::amount('999999999999.99')===99999999999999);
 echo "Finance order collection exact money policy PASS\n";
+
+/* Pinned Workflow Action input uses the same envelope as other governed commands. */
+require_once dirname(__DIR__,2).'/vendor/autoload.php';
+$contracts=(require dirname(__DIR__,2).'/app/Domains/Finance/module.php')['contributions']['capability_contracts'];
+$id=str_repeat('a',32);
+$payload=['order_id'=>$id,'kind'=>'capture','amount'=>'40.00','currency'=>'EUR','source_account'=>'bank','source_reference'=>'source'];
+$validator=new \Platform\Orchestration\Goal\CapabilityJsonInputValidator();
+foreach($contracts as $definition){
+    if(!in_array($definition['id'],['finance.order.payment.register','finance.order.payment.reconcile'],true))continue;
+    $contract=\Kernel\Module\CapabilityContract::fromArray($definition);
+    $parameters=$payload;
+    if($contract->id==='finance.order.payment.reconcile')$parameters+=[
+        'operation_id'=>str_repeat('b',32),'statement_reference'=>'statement','expected_revision'=>0];
+    $input=['target_type'=>'sales_order','target_id'=>$id,'parameters'=>$parameters];
+    $validator->validate($contract,$input);
+    foreach([$parameters,[...$input,'target_type'=>'deal'],[...$input,'parameters'=>[...$parameters,'amount'=>1.1]]] as $bad){
+        try{$validator->validate($contract,$bad);}catch(DomainException){continue;}
+        throw new RuntimeException('Invalid canonical Finance Action envelope accepted.');
+    }
+}
+echo "Finance O4 canonical Action input schemas PASS.\n";
