@@ -577,12 +577,13 @@ $teamResult=$executeWorkflow('sales.governed.team.manage',['operation'=>'create'
     $requester,$reviewer,[...$businessConfig,'target_type'=>'sales_team_intent','target'=>bin2hex(random_bytes(16))]);
 $check($businessTeams->team($org,$teamResult['team']['team_id'])['assignment_mode']==='ROUND_ROBIN','R1/R2 native team assignment configuration mismatch.');
 // Exercise the approval-required native edge with actual Workflow and independent approvals.
-$pid=bin2hex(random_bytes(16));$from=bin2hex(random_bytes(16));$to=bin2hex(random_bytes(16));$wonStage=bin2hex(random_bytes(16));
+$pid=bin2hex(random_bytes(16));$from=bin2hex(random_bytes(16));$to=bin2hex(random_bytes(16));$wonStage=bin2hex(random_bytes(16));$lostStage=bin2hex(random_bytes(16));
 $db->prepare('INSERT INTO sales_pipelines(id,organization_id,code,name,is_default,initial_stage_id,status,configuration_version) VALUES (?,?,?,"R2 approval fixture",1,NULL,"ACTIVE",1)')->execute([$pid,$org,'r2-'.$nonce]);
 $insertStage=$db->prepare('INSERT INTO sales_pipeline_stages(id,organization_id,pipeline_id,code,name,sort_order,is_terminal,is_won,is_lost,probability_default,status,configuration_version) VALUES (?,?,?,?,?,?,?,?,?,?,"ACTIVE",1)');
 $insertStage->execute([$from,$org,$pid,'NEW','New',10,0,0,0,5]);
 $insertStage->execute([$to,$org,$pid,'QUALIFIED','Qualified',20,0,0,0,50]);
 $insertStage->execute([$wonStage,$org,$pid,'WON','Won',30,1,1,0,100]);
+$insertStage->execute([$lostStage,$org,$pid,'LOST','Lost',40,1,0,1,0]);
 $db->prepare('UPDATE sales_pipelines SET initial_stage_id=? WHERE organization_id=? AND id=?')->execute([$from,$org,$pid]);
 foreach([[$from,$to],[$to,$wonStage]] as [$f,$t]){
     $db->prepare('INSERT INTO sales_pipeline_transitions(id,organization_id,pipeline_id,from_stage_id,to_stage_id,requires_approval,conditions) VALUES (?,?,?,?,?,1,JSON_ARRAY())')->execute([bin2hex(random_bytes(16)),$org,$pid,$f,$t]);
