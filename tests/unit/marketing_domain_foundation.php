@@ -77,3 +77,15 @@ $assert($econ['cost_per_captured_lead']===null&&$econ['confirmed_collection_mino
 $econ=\Domains\Marketing\Domain\MarketingEconomicsPolicy::project($economicPlan,$lead,$order,null);
 $assert($econ['settled_media_minor']===null&&$econ['cost_per_captured_lead']===null,'Missing settlement represented as zero spend.');
 echo "Marketing M4 exact scoped cohort economics and unknown financial metrics PASS\n";
+
+$schedulePolicy=\Domains\Marketing\Domain\MarketingAttributionSchedulePolicy::class;
+$profile=['profile_id'=>'fixture','organization_id'=>'tenant-a','actor_id'=>'42','campaign_id'=>'mkt-'.str_repeat('a',24),'plan_id'=>null,'source_kind'=>'order','lookback_days'=>30,'max_pages'=>5];
+$parsed=$schedulePolicy::parse(json_encode([$profile],JSON_THROW_ON_ERROR));
+$assert(count($parsed)===1&&$parsed[0]['max_pages']===5,'Schedule explicit profile lost.');
+$clock=new DateTimeImmutable('2026-02-01T00:00:00Z');
+$assert($schedulePolicy::window($clock,30,null,'order')===['2026-01-02','2026-01-31'],'Schedule rolling UTC window invalid.');
+$assert($schedulePolicy::window($clock,30,['period_start'=>'2026-01-05','period_end'=>'2026-01-10'],'lead')===['2026-01-05','2026-01-10'],'Paid lead scope not bounded.');
+$assert($schedulePolicy::window($clock,30,['period_start'=>'2026-01-05','period_end'=>'2026-01-10'],'order')===['2026-01-05','2026-01-31'],'Late paid order scope lost.');
+$blocked=false;try{$schedulePolicy::parse(json_encode([$profile,$profile],JSON_THROW_ON_ERROR));}catch(DomainException){$blocked=true;}
+$assert($blocked,'Duplicate profile admitted.');
+echo "Marketing M4 explicit scheduled profile, rolling UTC windows and bounded paid scope PASS\n";

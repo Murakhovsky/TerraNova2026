@@ -26,6 +26,14 @@ final readonly class MarketingAttributionSweepOutcomeProvider implements RunScop
     public function observeRun(TenantContext $actor,string $runId,string $criterionId,DateTimeImmutable $from,DateTimeImmutable $to):array
     {
         if(!$this->supports($criterionId)||$to<=$from)throw new DomainException('Invalid sweep outcome request.');
+        $verified=$this->verifiedReceipt($actor,$runId);
+        return ['value'=>1,'evidence'=>['marketing:attribution_sweep:'.$verified['key']],
+            'source'=>'marketing.native_attribution.sweep_recorded.v1','window_start'=>$from->format('Y-m-d\TH:i:s.uP'),
+            'window_end'=>$to->format('Y-m-d\TH:i:s.uP'),'attribution'=>'run_linked_action','run_id'=>$runId];
+    }
+    /** Exact independently attested receipt for a completed canonical run. */
+    public function verifiedReceipt(TenantContext $actor,string $runId):array
+    {
         $org=$actor->organizationId()->value();
         $rows=$this->db->fetchAllAssociative('SELECT w.input_digest,w.state,w.actor_id,s.step_id,s.state AS step_state,
             s.idempotency_key,s.result_reference,p.plan_json
@@ -60,8 +68,6 @@ final readonly class MarketingAttributionSweepOutcomeProvider implements RunScop
             ||$r['recorded_or_already_present']+$r['unresolved']!==$r['scanned']
             ||!array_key_exists('next_after',$r)||($r['page_exhausted']??null)!==($r['next_after']===null))
             throw new DomainException('Native sweep receipt arithmetic invalid.');
-        return ['value'=>1,'evidence'=>['marketing:attribution_sweep:'.$key],
-            'source'=>'marketing.native_attribution.sweep_recorded.v1','window_start'=>$from->format('Y-m-d\TH:i:s.uP'),
-            'window_end'=>$to->format('Y-m-d\TH:i:s.uP'),'attribution'=>'run_linked_action','run_id'=>$runId];
+        return ['key'=>$key,'receipt'=>$r,'requested_by'=>(string)$row['actor_id']];
     }
 }
