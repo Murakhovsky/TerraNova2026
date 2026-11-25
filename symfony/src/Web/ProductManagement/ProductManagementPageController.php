@@ -186,7 +186,10 @@ final readonly class ProductManagementPageController
             $category=trim((string)$request->query->get('category',''));
             $page=filter_var($request->query->get('page','1'),FILTER_VALIDATE_INT);
             if($page===false||$page<1||$page>100001)return new Response('Invalid page.',422);
+            $dictionaryStatus=(string)$request->query->get('dictionary_status','active');
+            if(!in_array($dictionaryStatus,['active','archived'],true))throw new DomainException('Invalid dictionary status.');
             $defs=$this->read($actor,'attribute.search',['limit'=>100,'offset'=>($page-1)*100])['items'];
+            $dictionary=$dictionaryStatus==='active'?$defs:$this->read($actor,'attribute.search',['limit'=>100,'offset'=>($page-1)*100,'status'=>'archived'])['items'];
             $categories=$this->read($actor,'category.search',['limit'=>100])['items'];
             $bindings=$category===''?[]:$this->read($actor,'attribute.category.get',['category_id'=>$category])['items'];
             $filterCode=trim((string)$request->query->get('filter_code',''));$filterValue=(string)$request->query->get('filter_value','');$matches=[];
@@ -207,7 +210,7 @@ final readonly class ProductManagementPageController
             }
             $bulkDefinitions=array_column($defs,null,'code');
             if($filterDefinition!==null)$bulkDefinitions[$filterCode]=$filterDefinition;
-            return $this->render($request,$actor,'attributes',compact('defs','categories','category','bindings','page','filterCode','filterValue','filterDefinition','filterApplied','matches','bulkDefinitions'));
+            return $this->render($request,$actor,'attributes',compact('defs','categories','category','bindings','page','filterCode','filterValue','filterDefinition','filterApplied','matches','bulkDefinitions','dictionary','dictionaryStatus'));
         }catch(DomainException|\JsonException|\InvalidArgumentException){return new Response('Invalid attribute query.',422);}
         catch(Throwable){return new Response('Attribute Workspace unavailable.',503);}
     }
@@ -230,6 +233,41 @@ final readonly class ProductManagementPageController
                     if($offset>=9900)break; // bounded verification, uncertain rather than blind success
                 }
                 if(!$found)return new Response('Definition receipt unverified. Reload before retrying.',503);
+            }elseif($action==='lifecycle'){
+                $op=(string)$request->request->get('operation','');
+                $input=['operation'=>$op,'code'=>$code];
+                if(in_array($op,['rename','archive','restore'],true)){
+                    $input['expected_name']=(string)$request->request->get('expected_name','');
+                    if($op==='rename')$input['name']=(string)$request->request->get('name','');
+                }elseif(in_array($op,['binding.update','binding.remove'],true)){
+                    $category=(string)$request->request->get('category_id','');
+                    $input+=['category_id'=>$category,
+                        'expected_is_required'=>$request->request->get('expected_is_required')==='1',
+                        'expected_is_axis'=>$request->request->get('expected_is_axis')==='1'];
+                    if($op==='binding.update')$input+=['is_required'=>$request->request->get('is_required')==='1','is_axis'=>$request->request->get('is_axis')==='1'];
+                }else throw new DomainException('Unknown lifecycle operation.');
+                if($op!=='rename'&&$request->request->get('confirm_lifecycle')!=='yes')throw new DomainException('Explicit confirmation required.');
+                $receipt=$this->write($actor,'attribute.lifecycle.change',$input,$request);
+                if(($receipt['operation']??null)!==$op||($receipt['code']??null)!==$code)return new Response('Lifecycle receipt unverified.',503);
+                if($category!==''){
+                    if(($receipt['category_id']??null)!==$category)return new Response('Binding identity unverified.',503);
+                    $rows=array_column($this->read($actor,'attribute.category.get',['category_id'=>$category])['items'],null,'code');
+                    if($op==='binding.remove'){
+                        if(($receipt['bound']??null)!==false||isset($rows[$code]))return new Response('Binding removal unverified.',503);
+                    }elseif(($receipt['bound']??null)!==true||!isset($rows[$code])||
+                        $rows[$code]['is_required']!==$input['is_required']||$rows[$code]['is_axis']!==$input['is_axis']||
+                        $receipt['is_required']!==$input['is_required']||$receipt['is_axis']!==$input['is_axis'])return new Response('Binding update unverified.',503);
+                }else{
+                    $status=$op==='archive'?'archived':'active';
+                    $name=$op==='rename'?trim($input['name']):$input['expected_name'];
+                    $found=false;
+                    for($offset=0;$offset<10000;$offset+=100){
+                        $rows=$this->read($actor,'attribute.search',['limit'=>100,'offset'=>$offset,'status'=>$status])['items'];
+                        foreach($rows as $row)if($row['code']===$code){$found=$row['name']===$name;break 2;}
+                        if(count($rows)<100)break;
+                    }
+                    if(!$found||($receipt['status']??null)!==$status||($receipt['name']??null)!==$name)return new Response('Lifecycle readback unverified.',503);
+                }
             }elseif($action==='bind'){
                 $category=(string)$request->request->get('category_id','');
                 $input=['category_id'=>$category,'code'=>$code,'is_required'=>$request->request->get('is_required')==='1','is_axis'=>$request->request->get('is_axis')==='1'];
