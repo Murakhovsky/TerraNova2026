@@ -235,8 +235,8 @@ final readonly class SalesBusinessRunOutcomeProvider implements RunScopedGoalOut
         if ($row===null||$row['id']!==$id) throw new FederationOutcomeSourceNotReady('Native team unavailable.');
         $state=\App\Application\Sales\TeamSnapshot::fromRow($row);
         $matches=match($op){
-            'create'=>$state['code']===$p['code']&&$state['name']===$p['name']&&$state['status']==='ACTIVE'&&$state['assignment_mode']==='MANUAL',
-            'update'=>$state['name']===$p['name']&&$state['status']===$p['status']&&$state['assignment_mode']==='MANUAL',
+            'create'=>$state['code']===$p['code']&&$state['name']===$p['name']&&$state['status']==='ACTIVE'&&$state['assignment_mode']===($p['assignment_mode']??'MANUAL'),
+            'update'=>$state['name']===$p['name']&&$state['status']===$p['status']&&(!isset($p['assignment_mode'])||$state['assignment_mode']===$p['assignment_mode']),
             'member_set'=>count(array_filter($state['members'],static fn(array $m):bool=>$m['user_id']===$p['user_id']&&$m['role']===$p['role']&&$m['status']===$p['member_status']
                 &&$m['assignment_enabled']===$p['assignment_enabled']&&$m['approval_enabled']===$p['approval_enabled']&&$m['assignment_weight']===$p['assignment_weight']))===1,
             default=>false,

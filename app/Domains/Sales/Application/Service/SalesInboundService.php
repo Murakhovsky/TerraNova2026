@@ -250,7 +250,8 @@ final readonly class SalesInboundService
                 'status' => ClientCaseStatus::Active->value, 'priority' => SalesPriority::Normal->value,
                 'source' => isset($user['id'])?'operator-inbound-request':'site-inbound-request', 'description' => ClientCaseInput::text((string) ($input['message'] ?? $input['comment'] ?? '')), 'currency' => SalesCurrency::Usd->value,
             ];
-            $case = ClientCaseInput::caseData($caseInput, $name, null, null, null);
+            $owner=$user===null&&isset($input['assigned_user_id'])?(int)$input['assigned_user_id']:null;
+            $case = ClientCaseInput::caseData($caseInput, $name, $owner, null, null);
             $caseId = $this->commands->createCase($this->organizationId, $personId, $case);
             $created = $this->readModel->case($caseId);
             if (!$created) throw new RuntimeException('Created client case could not be reloaded.');

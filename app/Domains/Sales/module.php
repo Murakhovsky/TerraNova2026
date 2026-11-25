@@ -127,6 +127,7 @@ return [
             'app/migrations/20261125_009006_sales_order_sync_runs.sql',
             'app/migrations/20261125_009008_sales_order_lifecycle.sql',
             'app/migrations/20261125_009009_sales_order_journey_evidence.sql',
+            'app/migrations/20261126_009010_sales_round_robin.sql',
         ],
         'capability_contracts' => [
             [
@@ -1675,7 +1676,7 @@ return [
                 'idempotency' => 'required',
                 'timeout_policy' => ['seconds' => 30],
                 'retry_policy' => ['max_attempts' => 1],
-                'failure_contract' => 'Native Sales teams admin permission plus strict operation-specific fields, versioned membership, receipt and state verification. Manual assignment mode only.',
+                'failure_contract' => 'Native Sales teams admin permission plus strict operation-specific fields, versioned membership, receipt and state verification. Manual or weighted round robin assignment mode.',
                 'lifecycle' => 'experimental',
                 'tests' => ['tests/integration/sales_client_case_create_mysql.php'],
                 'documentation' => 'docs/04-domains/sales/completion-roadmap.md',
