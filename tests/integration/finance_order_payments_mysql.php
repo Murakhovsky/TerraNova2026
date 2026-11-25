@@ -555,7 +555,51 @@ $businessBus=new \App\Infrastructure\Messenger\SymfonyCommandBus(new \Symfony\Co
         \App\Application\Sales\Command\ManageSalesOfferCommand::class=>[new \App\Application\Sales\Command\ManageSalesOfferCommandHandler($businessOfferService)],
     ])),
 ]));
+// Use a bounded provider-port fixture, with real native reconciliation and JobQueue.
+$connectionId=bin2hex(random_bytes(16));$externalId='gid://shopify/Order/987654321';
+$commerceSource=new class($org,$connectionId,$externalId,$product) implements \Domains\ProductManagement\Application\Contract\CommerceOrderSourcePort{
+    public function __construct(private string $org,private string $connection,private string $external,private array $product){}
+    private function assertSource(string $org,string $channel,string $connection):void{
+        if($org!==$this->org||$channel!=='shopify'||$connection!==$this->connection)throw new DomainException('Unverified commerce fixture identity.');
+    }
+    public function order(string $org,string $channel,string $connection,string $externalId):array{
+        $this->assertSource($org,$channel,$connection);
+        if($externalId!==$this->external)throw new DomainException('Unknown provider order.');
+        return ['channel'=>$channel,'store_reference'=>$connection,'external_order_id'=>$externalId,
+            'created_at'=>'2026-11-25T00:00:00.000000Z','updated_at'=>'2026-11-25T00:00:01.000000Z',
+            'provider_hash'=>hash('sha256',$externalId),'financial_status'=>'PAID','fulfillment_status'=>'UNFULFILLED',
+            'cancelled_at'=>null,'test'=>false,'edited'=>false,'tax_included'=>false,'currency'=>'EUR',
+            'original_total'=>'10.00','current_total'=>'10.00','terms'=>['currency'=>'EUR','total'=>'10.00',
+                'lines'=>[['sku'=>$this->product['sku'],'title'=>'Source fixture','product_id'=>$this->product['product_id'],
+                    'variant_id'=>$this->product['variant_id'],'quantity'=>1,'unit_price'=>'10.00']]]];
+    }
+    public function page(string $org,string $channel,string $connection,?string $cursor,?string $cutoff=null):array{
+        $this->assertSource($org,$channel,$connection);
+        return ['order_ids'=>[$this->external],'next_cursor'=>null,'historical_access'=>'provider_limited'];
+    }
+    public function pendingPage(string $org,string $channel,string $connection,?string $cursor):array{
+        $this->assertSource($org,$channel,$connection);
+        return ['deliveries'=>[],'next_cursor'=>null];
+    }
+    public function pending(string $org,string $channel,string $connection):array{
+        $this->assertSource($org,$channel,$connection);return [];
+    }
+    public function assertDelivery(string $org,string $channel,string $connection,string $delivery,string $externalId):void{
+        throw new DomainException('No signed delivery in fixture.');
+    }
+    public function acknowledge(string $org,string $channel,string $connection,string $delivery,string $externalId):void{
+        throw new DomainException('No signed delivery in fixture.');
+    }
+};
+$businessReconcile=new \Domains\Sales\Application\Service\SalesOrderReconciliationService($commerceSource,
+    new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderSourceRepository($db),$sales,$orderReceipts,$orderGuard,$nativeOrders,$references,$sales);
+$businessSyncRepo=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderSyncRepository($db);
+$businessSync=new \Domains\Sales\Application\Service\SalesOrderSyncService($businessSyncRepo,$commerceSource,$businessReconcile,$orderGuard,
+    new \Infrastructure\Platform\Persistence\MySql\Queue\MysqlJobQueue($db,$tx,$businessEvents),
+    new \Infrastructure\Platform\ReadModel\MySql\MysqlAsyncOperationReadModel($db),$active);
 $businessHandler=new \App\Infrastructure\Automation\SalesGovernedBusinessHandler([
+    new \App\Infrastructure\Capability\SalesOrderSourceReconcileAdapter($businessReconcile),
+    new \App\Infrastructure\Capability\SalesOrderSyncStartAdapter($businessSync),
     new \App\Infrastructure\Capability\SalesCrmInboxProcessAdapter($businessBus),
     new \App\Infrastructure\Capability\SalesCrmInboxRecoverAdapter($businessBus),
     new \App\Infrastructure\Capability\SalesDealOwnerAssignAdapter($businessBus),
@@ -626,6 +670,18 @@ foreach([[$from,$to],[$to,$wonStage]] as [$f,$t]){
     $db->prepare('INSERT INTO sales_pipeline_transitions(id,organization_id,pipeline_id,from_stage_id,to_stage_id,requires_approval,conditions) VALUES (?,?,?,?,?,1,JSON_ARRAY())')->execute([bin2hex(random_bytes(16)),$org,$pid,$f,$t]);
 }
 $runBusiness=static fn(string $type,array $p,string $kind,string $target,array $extra=[])=>$executeWorkflow('sales.governed.'.$type,$p,$requester,$reviewer,[...$businessConfig,'target_type'=>$kind,'target'=>$target,...$extra]);
+$imported=$runBusiness('order.source.reconcile',['channel'=>'shopify','connection_id'=>$connectionId,'external_order_id'=>$externalId],
+    'sales_order_connection',$connectionId);
+$check($imported['outcome']==='imported'&&is_string($imported['order_id'])&&$sales->placement($org,$imported['order_id'])['order_total']==='10.00',
+    'Governed provider observation did not produce native placement.');
+$check($realStore->financialEvidence($org,$imported['order_id'])===null&&$productStore->stockBalance($org,$product['variant_id'],$location)['on_hand']==='8.000000',
+    'Provider observation created false Finance or inventory effect.');
+$syncStarted=$runBusiness('order.source.sync.start',['channel'=>'shopify','connection_id'=>$connectionId,'mode'=>'backfill'],
+    'sales_order_connection',$connectionId);
+$syncStatus=$businessSync->status($org,(int)$requester,$syncStarted['run_id'],null);
+$check($syncStatus['discovery_state']==='pending'&&$syncStatus['counts']['discovery_pending']===1&&count($syncStatus['tasks'])===1,
+    'Governed sync admission did not durably enqueue its first discovery task.');
+echo "Sales R1 canonical provider observation and durable sync admission PASS (fixture provider, no live Shopify claim).\n";
 $intake=$runBusiness('lead.intake',['full_name'=>'R1 operator intake','email'=>'r1-intake-'.$nonce.'@example.test'],'sales_intent',bin2hex(random_bytes(16)));
 $check((int)$businessRead->lead($org,$intake['lead_id'])['client_case_id']>0,'Governed intake lacks linked Deal.');
 $stateLead=$runBusiness('lead.create',['full_name'=>'R1 state lead','email'=>'r1-state-'.$nonce.'@example.test'],'sales_intent',bin2hex(random_bytes(16)));
