@@ -212,7 +212,9 @@ jobs:
             COS_TEST_WORKFLOW_EFFECT="$effect" php tests/integration/workflow_action_claim_admission_mysql.php
           done
           php tests/integration/workflow_action_receipt_mysql.php
-          php tests/integration/federation_canonical_goal_e2e_mysql.php
+          for effect in internal external financial irreversible; do
+            COS_TEST_WORKFLOW_EFFECT="$effect" php tests/integration/federation_canonical_goal_e2e_mysql.php
+          done
       - name: Federation historical cutover and non-Action MySQL
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
