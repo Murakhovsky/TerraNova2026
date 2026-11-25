@@ -505,6 +505,33 @@ try {
     $reject(fn()=>$invoke('sales.team.manage',[...$member,'configuration_version'=>3],'disabled-member'));
     $teamRead=$gateway->invoke($manager,'sales.team.read',['team_id'=>$newTeamId],'trusted_read','','trace-team');
     $check($teamRead['found'] && $teamRead['team']['configuration_version']===3,'Team readback failed.');
+    // R2: actual public intake, weighted assignment, replay and revoked eligibility.
+    $defaultQ=$db->prepare('SELECT id FROM sales_teams WHERE organization_id=? AND code="DEFAULT"');
+    $defaultQ->execute([$org]);$defaultTeam=$defaultQ->fetchColumn();
+    $check(is_string($defaultTeam),'Default Sales team unavailable.');
+    $db->prepare('UPDATE sales_teams SET status="ACTIVE",assignment_mode="ROUND_ROBIN",configuration_version=configuration_version+1 WHERE organization_id=? AND id=?')->execute([$org,$defaultTeam]);
+    $db->prepare('UPDATE sales_team_members SET assignment_enabled=0 WHERE organization_id=? AND team_id=?')->execute([$org,$defaultTeam]);
+    foreach([[$userId,2],[$targetOwner,1]] as [$memberId,$weight]){
+        $db->prepare('INSERT INTO sales_team_members(organization_id,team_id,user_id,role,status,assignment_enabled,approval_enabled,assignment_weight,created_at,updated_at) VALUES (?,?,?,"MEMBER","ACTIVE",1,0,?,NOW(6),NOW(6)) ON DUPLICATE KEY UPDATE status="ACTIVE",assignment_enabled=1,assignment_weight=VALUES(assignment_weight)')->execute([$org,$defaultTeam,$memberId,$weight]);
+        $db->prepare('INSERT INTO sales_user_capabilities(organization_id,user_id,capability,status,granted_by,created_at,updated_at) VALUES (?,?,"sales.workspace.use","ACTIVE",?,NOW(6),NOW(6)) ON DUPLICATE KEY UPDATE status="ACTIVE"')->execute([$org,$memberId,(string)$userId]);
+    }
+    $public=$factory->forOrganization($org);$owners=[];
+    for($i=0;$i<3;$i++){
+        $input=['full_name'=>'Round robin fixture','email'=>'rr-'.$token.'-'.$i.'@example.test','submission_id'=>bin2hex(random_bytes(16)),'assigned_user_id'=>999999];
+        $out=$public->receivePublicLead($input,'r2-ci');$check($out->ok,'Round robin intake rejected.');
+        $lead=$read->lead($org,(int)$out->data['lead_id']);$ownerId=(int)$lead['assigned_user_id'];$owners[]=$ownerId;
+        $linked=$read->deal($org,(int)$lead['client_case_id']);
+        $check($linked!==null&&(int)$linked['assigned_user_id']===$ownerId,'Lead and case owner diverged.');
+        $check($public->receivePublicLead($input,'r2-ci')->data['lead_id']===$out->data['lead_id'],'Round robin replay created a lead.');
+    }
+    $check($owners===[$userId,$userId,$targetOwner],'Weighted round robin sequence or replay incorrect.');
+    $db->prepare('UPDATE sales_team_members SET assignment_enabled=0 WHERE organization_id=? AND team_id=? AND user_id=?')->execute([$org,$defaultTeam,$userId]);
+    $next=$public->receivePublicLead(['full_name'=>'Round robin eligibility','email'=>'rr-revoked-'.$token.'@example.test','submission_id'=>bin2hex(random_bytes(16))],'r2-ci');
+    $check($next->ok&&(int)$read->lead($org,(int)$next->data['lead_id'])['assigned_user_id']===$targetOwner,'Disabled member received a lead.');
+    $db->prepare('UPDATE sales_teams SET assignment_mode="MANUAL" WHERE organization_id=? AND id=?')->execute([$org,$defaultTeam]);
+    $manual=$public->receivePublicLead(['full_name'=>'Manual fixture','email'=>'rr-manual-'.$token.'@example.test','submission_id'=>bin2hex(random_bytes(16))],'r2-ci');
+    $check($manual->ok&&$read->lead($org,(int)$manual->data['lead_id'])['assigned_user_id']===null,'Manual mode unexpectedly assigned a lead.');
+    echo "Sales R2 weighted public lead assignment, linked Deal, replay and eligibility PASS.\n";
     echo "Sales S1–S4 native intake, lifecycle, activities, Property/Product quote, approved-handler notification handoff, CRM evidence and WON/LOST PASS.\n";
 } finally {
     if ($db->inTransaction()) $db->rollBack();

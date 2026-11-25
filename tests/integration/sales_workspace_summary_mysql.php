@@ -481,6 +481,15 @@ try{
         $db->prepare("UPDATE cos_jobs SET status='RUNNING',attempts=?,locked_by='order-fixture-worker',locked_at=NOW(6) WHERE organization_id=? AND id=?")->execute([$attempt,$org,$j['id']]);
         return new \Kernel\Queue\Job($j['id'],$org,$j['type'],json_decode($j['payload'],true,512,JSON_THROW_ON_ERROR),$attempt,(int)$j['max_attempts'],(int)$j['timeout_seconds'],$j['correlation_id'],$j['idempotency_key'],'order-fixture-worker');
     };
+    $profile=['organization_id'=>$org,'actor_id'=>$owner,'connection_id'=>$conn,'mode'=>'webhooks','interval_minutes'=>15];
+    $periodic=new \App\Application\Sales\Service\PeriodicSalesOrderSync($db,$guard,$sync,json_encode([$profile],JSON_THROW_ON_ERROR));
+    $tick=new DateTimeImmutable('2026-11-26T12:00:00Z');
+    $check($periodic->run('foreign-'.$token,$tick)===[],'Periodic profile leaked outside tenant filter.');
+    $deferred=$periodic->run($org,$tick);
+    $check($deferred[0]['state']==='deferred'&&$deferred[0]['run_id']===$runId,'Periodic sync overlapped pending batch.');
+    $check($periodic::slotKey($profile,$tick)===$periodic::slotKey($profile,$tick->modify('+5 minutes'))&&$periodic::slotKey($profile,$tick)!==$periodic::slotKey($profile,$tick->modify('+15 minutes')),'Periodic slot identity incorrect.');
+    $reject(fn()=>$periodic::parseProfiles(json_encode([$profile,$profile],JSON_THROW_ON_ERROR)));
+
     $firstPage=$claimTask($runId,'page');
     $syncHandler->handle($firstPage);
     $checkpoint=$syncStatus($runId);
@@ -504,6 +513,13 @@ try{
     $job=$claimTask($runId,'order');$syncHandler->handle($job);$syncQueue->complete($job);
     $job=$claimTask($runId,'order');$syncHandler->handle($job);$syncQueue->complete($job);
     $check($syncStatus($runId)['counts']['orders_done']===2,'Backfill orders not reconciled after replay.');
+    $scheduled=$periodic->run($org,$tick);
+    $check($scheduled[0]['state']==='admitted','Periodic batch not admitted after prior completion.');
+    $scheduledRun=$scheduled[0]['run_id'];
+    $check($periodic->run($org,$tick)[0]['run_id']===$scheduledRun,'Periodic duplicate slot changed run identity.');
+    $pageJob=$claimTask($scheduledRun,'page');$syncHandler->handle($pageJob);$syncQueue->complete($pageJob);
+    $check($syncStatus($scheduledRun)['discovery_state']==='complete','Periodic batch did not reach native checkpoint.');
+    echo "Sales R2 periodic sync tenant filter, slot idempotency and native queue checkpoint PASS.\n";
     $http->pageMode=false;
     $rawSync='{"id":12350}';$sigSync=base64_encode(hash_hmac('sha256',$rawSync,'order-fixture-secret',true));
     $gidSync=\Domains\ProductManagement\Infrastructure\Shopify\ShopifyOrderWebhookEvidence::extractVerified($rawSync,$sigSync,'order-fixture-secret','orders/create');
@@ -654,6 +670,16 @@ try{
     $db->prepare('UPDATE tn_leads SET assigned_user_id=? WHERE organization_id=? AND id=?')->execute([$other,$org,$newLead]);
     $replay=$writes->createLead(['full_name'=>'Private guard fixture','email'=>'guard-'.$token.'@example.test'],$owner,'p4-replay','guard-'.$token);
     $check(!$replay->ok&&$replay->code==='sales_access_denied','Receipt replay exposed reassigned lead.');
+    // R2: customer can be selected independently; shared contact requires tenant scope.
+    $reject(fn()=>$createOrder([...$orderInput,'customer_id'=>$person],'r2-no-scope-'.$token));
+    $grant->execute([$org,$owner,'sales.director.view',(string)$owner]);
+    $customerOrder=$createOrder([...$orderInput,'customer_id'=>$person],'r2-customer-'.$token);
+    $check($customerOrder['order']['customer_id']===$person&&$customerOrder['order']['deal_id']===null,'Independent customer order failed.');
+    $check($createOrder([...$orderInput,'customer_id'=>$person],'r2-customer-'.$token)['replayed'],'Customer order replay failed.');
+    $reject(fn()=>$createOrder($orderInput,'r2-customer-'.$token));
+    $reject(fn()=>$createOrder([...$orderInput,'customer_id'=>PHP_INT_MAX],'r2-invalid-customer-'.$token));
+    $db->prepare('DELETE FROM sales_user_capabilities WHERE organization_id=? AND user_id=? AND capability="sales.director.view"')->execute([$org,$owner]);
+    echo "Sales R2 independent customer identity, scope and replay PASS.\n";
     $db->prepare('DELETE FROM sales_user_capabilities WHERE organization_id=? AND user_id=? AND capability="sales.workspace.use"')->execute([$org,$owner]);
     $denied=$writes->quickUpdateOpportunity($ownedId,['priority'=>'urgent'],$owner,'p4-revoked');
     $check(!$denied->ok&&$denied->code==='sales_access_denied'&&$read->deal($org,$ownedId)['priority']==='high','Revoked permission still wrote.');
