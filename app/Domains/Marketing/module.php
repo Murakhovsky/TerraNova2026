@@ -28,6 +28,26 @@ $manifest = [
         ],
         'cross_domain_contracts' => [
             [
+                'contract' => 'Domains\\Sales\\Application\\Contract\\SalesCommerceOrderLifecycleEvidencePort',
+                'role' => 'requires', 'counterpart' => 'sales', 'kind' => 'synchronous_port',
+                'purpose' => 'Read redacted lifecycle evidence through Marketing adapter.',
+            ],
+            [
+                'contract' => 'Domains\\Sales\\Application\\Contract\\SalesCommerceOrderEvidencePort',
+                'role' => 'requires', 'counterpart' => 'sales', 'kind' => 'synchronous_port',
+                'purpose' => 'Read immutable order placement through Marketing adapter.',
+            ],
+            [
+                'contract' => 'Domains\\Sales\\Application\\Contract\\SalesCommerceOrderJourneyReadPort',
+                'role' => 'requires', 'counterpart' => 'sales', 'kind' => 'synchronous_port',
+                'purpose' => 'Read verified source journey through Marketing adapter.',
+            ],
+            [
+                'contract' => 'Domains\\Finance\\Application\\Contract\\CommerceOrderFinancialEvidenceReadPort',
+                'role' => 'requires', 'counterpart' => 'finance', 'kind' => 'synchronous_port',
+                'purpose' => 'Read independent order collection evidence through Marketing adapter.',
+            ],
+            [
                 'contract' => 'Domains\\Marketing\\Application\\Contract\\MarketingCommerceFinancialReadPort',
                 'role' => 'requires', 'counterpart' => 'finance', 'kind' => 'synchronous_port',
                 'purpose' => 'Read independently confirmed order collection evidence, without payment authority or revenue inference.',

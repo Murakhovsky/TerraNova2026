@@ -12,7 +12,7 @@ $check=static function(bool $ok,string $msg):void{if(!$ok)throw new RuntimeExcep
 $deny=static function(callable $fn):void{try{$fn();}catch(DomainException){return;}throw new RuntimeException('Invalid Finance order operation accepted.');};
 $db=new PDO(sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',getenv('DB_HOST')?:'127.0.0.1',(int)(getenv('DB_PORT')?:3306),getenv('DB_DATABASE')?:'cos'),getenv('DB_USERNAME')?:'cos',getenv('DB_PASSWORD')?:'',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
 $org='fin-order-'.bin2hex(random_bytes(5));$id=bin2hex(random_bytes(16));
-$catalog=new ModuleCatalog([ModuleDefinition::fromArray(require $root.'/app/Domains/Sales/module.php'),ModuleDefinition::fromArray(require $root.'/app/Domains/Finance/module.php'),ModuleDefinition::fromArray(require $root.'/app/Domains/ProductManagement/module.php')]);
+$catalog=new ModuleCatalog([ModuleDefinition::fromArray(require $root.'/app/Domains/Sales/module.php'),ModuleDefinition::fromArray(require $root.'/app/Domains/Finance/module.php'),ModuleDefinition::fromArray(require $root.'/app/Domains/ProductManagement/module.php'),ModuleDefinition::fromArray(require $root.'/app/Domains/Marketing/module.php')]);
 $states=new class implements ModuleStateRepositoryInterface{
     public bool $enabled=true;
     public function enabledOverride(string $organizationId,string $moduleId):?bool{return $this->enabled;}
@@ -343,10 +343,37 @@ $location=$products->createLocation($org,'GOV-'.$nonce,'Governed order warehouse
 $products->recordMovement($org,$product['variant_id'],$location,'10','receipt','manual:gov-opening','gov-opening-'.$nonce,$requester,'gov-order');
 $config=['owner'=>'sales','effect'=>'internal','domains'=>$salesRegistry,'handlers'=>[$governed],'approval'=>$orderApproval];
 $prefix=\Domains\Sales\Automation\Action\SalesGovernedOrderHandler::PREFIX;
+// Unified O7: native Marketing campaign, then governed Order, stock, Finance collection and correction.
+$mktActor=new \Kernel\Tenant\Model\TenantContext(\Kernel\Shared\Domain\UserId::fromString($requester),
+    \Kernel\Shared\Domain\OrganizationId::fromString($org),\Kernel\Identity\Model\OrganizationRole::fromString('manager'),
+    [\Kernel\Tenant\Model\Permission::fromString(\Kernel\Tenant\Model\TenantPermissions::ACCESS),
+     \Kernel\Tenant\Model\Permission::fromString(\Kernel\Tenant\Model\TenantPermissions::MANAGE)]);
+$mktCampaigns=new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingCampaignRepository($db);
+$mktPolicy=new \Domains\Marketing\Domain\MarketingDraftPolicy();
+$mktCampaign=$mktCampaigns->createDraft($org,$requester,$mktPolicy->validate(['name'=>'Unified O7 campaign','business_objective'=>'Order collection evidence']),'o7-campaign-'.$nonce)['id'];
+$mktService=new \Domains\Marketing\Application\Service\MarketingCampaignService($mktCampaigns,$mktPolicy);
+$mktPlanning=new \Domains\Marketing\Application\Service\MarketingPlanningService(new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPlanningRepository($db),new \Domains\Marketing\Domain\MarketingPlanningPolicy());
+$mktAccounts=new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidReadRepository($db);
+$mktFunding=new \Domains\Finance\Application\Service\FinanceBudgetControlService(new \Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceBudgetRepository($db),new \Domains\Finance\Domain\BudgetControlPolicy());
+$mktPlans=new \Domains\Marketing\Application\Service\MarketingPaidLaunchPlanService(
+    new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidLaunchPlanStore($db),$mktService,$mktPlanning,$mktAccounts,
+    new \App\Infrastructure\Marketing\FinanceFundingReadAdapter($mktFunding,$active),$active);
+$mktCommerce=new \Domains\Marketing\Application\Service\MarketingCommerceAttributionService($mktService,$mktPlans,
+    new \App\Infrastructure\Marketing\CommerceOrderReadAdapter($active,$sales,$sales,$sales),
+    new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingCommerceAttributionStore($db),
+    new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingAttributionStore($db),$active,
+    new \App\Infrastructure\Marketing\CommerceFinancialReadAdapter($active,$realStore));
 $created=$executeWorkflow($prefix.'create',['currency'=>'EUR','lines'=>[['sku'=>$product['sku'],'title'=>'Governed stock',
-    'product_id'=>$product['product_id'],'variant_id'=>$product['variant_id'],'quantity'=>5,'unit_price'=>'10.00']],'total'=>'50.00'],
+    'product_id'=>$product['product_id'],'variant_id'=>$product['variant_id'],'quantity'=>5,'unit_price'=>'10.00']],'total'=>'50.00','attribution'=>['utm_campaign'=>$mktCampaign,'utm_source'=>'google','utm_medium'=>'organic']],
     $requester,$reviewer,[...$config,'target_type'=>'sales_order_intent','target'=>bin2hex(random_bytes(16))]);
 $governedId=$created['order']['order_id'];
+$mktDay=substr($sales->placement($org,$governedId)['occurred_at'],0,10);
+$mktReceipt=$mktCommerce->capture($mktActor,$mktCampaign,null,[$governedId],'o7-capture-'.$nonce);
+$check($mktReceipt['results'][0]['state']==='RECORDED'&&$mktCommerce->capture($mktActor,$mktCampaign,null,[$governedId],'o7-capture-'.$nonce)===$mktReceipt,'Unified Marketing placement or replay failed.');
+$mktReport=static fn()=>$mktCommerce->report($mktActor,$mktCampaign,null,$mktDay,$mktDay);
+$r=$mktReport();
+$check($r['placed_orders']===1&&$r['placed_order_value']===[['currency'=>'EUR','minor'=>5000]]&&
+    $r['net_cash_received']===null&&$r['lifecycle']['current_status_counts']['placed']===1,'Initial native attribution misrepresented collection or status.');
 $check($sales->placement($org,$governedId)['order_total']==='50.00','Governed creation has no native placement.');
 $runOrder=static fn(string $op,int $rev,string $reference,array $extra=[],array $override=[])=>$executeWorkflow($prefix.'lifecycle.'.$op,
     ['order_id'=>$governedId,'expected_revision'=>$rev,'reference'=>$reference,...$extra],$requester,$reviewer,[...$config,'target'=>$governedId,...$override]);
@@ -371,3 +398,29 @@ $check($sales->get($org,$governedId)['revision']===7&&$productStore->stockBalanc
 $check($realStore->financialEvidence($org,$governedId)===null,'Governed lifecycle fabricated Finance evidence.');
 $check(count($sales->lifecycleEvidence($org,$governedId)['events'])===6,'Governed lifecycle journal incomplete.');
 echo "Sales O6 governed native create/confirm/allocate/release/fulfill/cancel/return + independent Approval, revoked approver and Product readback candidate PASS (pinned Plan fixture).\n";
+
+$r=$mktReport();
+$check($r['placed_orders']===1&&$r['lifecycle']['coverage']==='COMPLETE_CAPTURED_COHORT'&&
+    $r['lifecycle']['current_status_counts']['cancelled']===1&&$r['lifecycle']['orders_with_returns']===1&&$r['net_cash_received']===null,
+    'Unified Marketing did not consume actual Sales/Product lifecycle corrections.');
+$finConfig=['target'=>$governedId];
+$settle=static function(array $p,int $rev)use($executeWorkflow,$requester,$reviewer,$finConfig):array{
+    $registered=$executeWorkflow('finance.order.payment.register',$p,$requester,$reviewer,$finConfig);
+    $executeWorkflow('finance.order.payment.reconcile',[...array_diff_key($p,['parent_id'=>true]),'operation_id'=>$registered['finance_reference'],
+        'statement_reference'=>'o7-statement-'.$rev,'expected_revision'=>$rev],$reviewer,$requester,$finConfig);
+    return $registered;
+};
+$pay=['order_id'=>$governedId,'kind'=>'capture','amount'=>'40.00','currency'=>'EUR','source_account'=>'test-bank','source_reference'=>'o7-capture-'.$nonce];
+$registered=$settle($pay,0);
+$check($mktReport()['net_cash_received']===[['currency'=>'EUR','minor'=>4000]],'Native Finance capture did not reach Marketing.');
+$settle([...$pay,'kind'=>'refund','amount'=>'10.00','source_reference'=>'o7-refund-'.$nonce,'parent_id'=>$registered['finance_reference']],1);
+$settle([...$pay,'kind'=>'chargeback','amount'=>'5.00','source_reference'=>'o7-chargeback-'.$nonce,'parent_id'=>$registered['finance_reference']],2);
+$r=$mktReport();
+$check($r['placed_orders']===1&&$r['placed_order_value']===[['currency'=>'EUR','minor'=>5000]]&&
+    $r['net_cash_received']===[['currency'=>'EUR','minor'=>2500]]&&$r['financial_evidence_status']==='COMPLETE_CAPTURED_COHORT'&&
+    $r['confirmed_financial_totals']===[['currency'=>'EUR','captured_minor'=>4000,'refunded_minor'=>1000,'chargeback_minor'=>500,'net_collected_minor'=>2500]]&&
+    $r['recognized_revenue']===null&&$r['roas']===null,'Unified financial corrections were not reflected independently of placement.');
+$check($nativeOrders->read($org,(int)$requester,$governedId)['financial_evidence']['net_collected_amount']==='25.00','Sales and Marketing Finance readbacks diverged.');
+$check($productStore->stockBalance($org,$product['variant_id'],$location)['on_hand']==='8.000000','Finance or Marketing modified Product inventory.');
+$check($sales->placement('foreign-'.$org,$governedId)===null&&$realStore->financialEvidence('foreign-'.$org,$governedId)===null,'Foreign tenant source leaked.');
+echo "O7 unified native Marketing campaign -> governed Sales order -> Product allocation/partial fulfillment/cancel/return -> independently approved Finance capture/refund/chargeback -> Marketing native report PASS (pinned Plan fixture, not provider settlement).\n";

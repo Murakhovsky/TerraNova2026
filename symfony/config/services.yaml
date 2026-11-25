@@ -3031,6 +3031,7 @@ services:
   App\Persistence\Finance\FinancePaidSettlementOutcomeProvider: ~
   Domains\Finance\Bootstrap\FinanceDomainModule:
     arguments:
+      $payments: '@Domains\Finance\Automation\Action\FinanceOrderPaymentActionHandler'
       $settlement: '@Domains\Finance\Automation\Action\FinancePaidSettlementHandler'
   financeDomainModule:
     alias: Domains\Finance\Bootstrap\FinanceDomainModule

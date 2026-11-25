@@ -419,7 +419,7 @@ try {
     $settlementHandler=new \Domains\Finance\Automation\Action\FinancePaidSettlementHandler(
         new \Domains\Finance\Application\Service\ApprovedFinancePaidSettlementService($settlements,$reviews,$financialWorker,$modules),$identityResolver,$tenantFactory);
     $domains=new DomainModuleRegistry([new \Domains\Marketing\Bootstrap\MarketingDomainModule($handler,$paidHandler),
-        new \Domains\Finance\Bootstrap\FinanceDomainModule(new \Domains\Finance\Automation\Action\FinanceBudgetActionHandler($financeOps),$settlementHandler)]);
+        new \Domains\Finance\Bootstrap\FinanceDomainModule(new \Domains\Finance\Automation\Action\FinanceBudgetActionHandler($financeOps),settlement:$settlementHandler)]);
     $bindings=new FederationCapabilityBindingResolver($capabilities,$domains,$modules);
     $gate=new ModuleActionExecutionGate($domains,$modules,null,$financialWorker);
     $actionService=new ActionService(new MysqlActionRepository($pdo),new ActionExecutor([$handler,$paidHandler,$settlementHandler],$gate));

@@ -22,7 +22,23 @@ return [
             'web.commands' => ['productManagementNavigationContributor'],
             'web.workspace' => ['productManagementNavigationContributor'],
         ],
-        'cross_domain_contracts' => [],
+        'cross_domain_contracts' => [
+            [
+                'contract' => 'Domains\\ProductManagement\\Application\\Contract\\OrderInventoryPort',
+                'role' => 'provides', 'counterpart' => 'sales', 'kind' => 'synchronous_port',
+                'purpose' => 'Product-owned transaction-bound order reservation and stock settlement.',
+            ],
+            [
+                'contract' => 'Domains\\ProductManagement\\Application\\Contract\\CommerceOrderSourcePort',
+                'role' => 'provides', 'counterpart' => 'sales', 'kind' => 'synchronous_port',
+                'purpose' => 'Verified commerce source read and durable observation acknowledgement.',
+            ],
+            [
+                'contract' => 'Domains\\ProductManagement\\Application\\Contract\\ProductCommercialReferencePort',
+                'role' => 'provides', 'counterpart' => 'sales', 'kind' => 'synchronous_port',
+                'purpose' => 'Tenant-scoped product and variant commercial reference.',
+            ],
+        ],
         'migration_files' => [
             'app/migrations/20261118_000152_product_management_catalog.sql',
             'app/migrations/20261118_000153_product_management_inventory.sql',
