@@ -44,7 +44,8 @@ print(v)
 bash /opt/cos/bin/shopify-series01-operator.sh default status "$CONN"
 bash /opt/cos/bin/shopify-series01-operator.sh default pull "$CONN"
 
-PREVIEW_JSON=$("${OPERATOR[@]}" preview --organization=default --confirm=STAGE_SERIES01_PREVIEW_ONLY)
+PREVIEW_JSON=$(docker exec -i -e COS_PRODUCT_SERIES01_OPERATOR_ENABLED=1 cos-php-1 \
+  php bin/console cos:product:series01 preview --organization=default --confirm=STAGE_SERIES01_PREVIEW_ONLY)
 printf '%s\n' "$PREVIEW_JSON"
 printf '%s' "$PREVIEW_JSON" | python3 -c '
 import json,sys,re

@@ -142,11 +142,15 @@ final class ProductManagementSeries01CutoverCommand extends Command
             ||($this->moduleDiagnostic()['status']??null)!=='READY') {
             throw new RuntimeException('Product Management is not READY for tenant default.');
         }
-        $path=dirname(__DIR__,3).'/resources/pilots/series01/approved-import-candidate.csv';
-        $csv=file_get_contents($path);
+        // Runtime container intentionally excludes pilot fixtures. Read the
+        // exact commit-pinned CSV supplied from trusted Actions checkout via
+        // SSH stdin -> docker exec -i. Never rely on mutable container files.
+        $csv=stream_get_contents(STDIN,12001);
         if(!is_string($csv)||strlen($csv)>12000
+            ||!hash_equals('f8122e58f81f61d112be1bd0db0e5ae8f20fda5d6dcce57eab4fa69a0e2a058c',
+                hash('sha256',$csv))
             ||substr_count(rtrim($csv,"\n"),"\n")!==9) {
-            throw new RuntimeException('SERIES01 nine-product fixture missing or changed.');
+            throw new RuntimeException('SERIES01 pinned CSV digest or nine-row count mismatch.');
         }
         $digest=hash('sha256',$csv);
         $report=$this->imports->preview(self::TENANT,$csv,self::SERVICE_ACTOR,
