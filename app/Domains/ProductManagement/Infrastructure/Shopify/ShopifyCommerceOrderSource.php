@@ -10,8 +10,26 @@ use Domains\ProductManagement\Application\Contract\ProductCommercialReferencePor
 use Kernel\Module\ActiveModuleResolver;
 
 /** Existing read-only transport/credential boundary. Store identity is independently checked on every call. */
-final readonly class ShopifyCommerceOrderSource implements CommerceOrderSourcePort
+final readonly class ShopifyCommerceOrderSource implements CommerceOrderSourcePort,\Domains\ProductManagement\Application\Contract\CommerceOrderFulfillmentEvidencePort
 {
+    private const FULFILLMENT=<<<'GQL'
+query COSCommerceFulfillmentEvidence($id: ID!) {
+  currentAppInstallation { accessScopes { handle } }
+  order(id: $id) {
+    id updatedAt test cancelledAt displayFulfillmentStatus
+    fulfillmentOrders(first: 10) {
+      nodes {
+        id status requestStatus assignedLocation { location { id } }
+        lineItems(first: 20) {
+          nodes { id totalQuantity remainingQuantity lineItem { id } }
+          pageInfo { hasNextPage }
+        }
+      }
+      pageInfo { hasNextPage }
+    }
+  }
+}
+GQL;
     private const ORDER=<<<'GQL'
 query COSCommerceOrder($id: ID!) {
   currentAppInstallation { accessScopes { handle } }
@@ -120,6 +138,32 @@ GQL;
         return ['provider_hash'=>$providerHash,'channel'=>'shopify','store_reference'=>$connection,'external_order_id'=>$externalId,'created_at'=>$created,'updated_at'=>$updated,
             'financial_status'=>$financial,'fulfillment_status'=>$fulfillment,'cancelled_at'=>$cancelled,'test'=>$raw['test'],'edited'=>$raw['edited'],'tax_included'=>$raw['taxesIncluded'],
             'currency'=>$currency,'original_total'=>$original,'current_total'=>$current,'terms'=>$terms,'blocked_reason'=>$reason,'journey'=>$journey];
+    }
+
+    public function fulfillmentEvidence(string $org,string $channel,string $connection,string $externalId):array
+    {
+        self::gid($externalId,'Order');
+        $c=$this->connection($org,$channel,$connection);
+        $token=$this->credentials->accessToken($c['shop_domain'],$c['secret_ref'],$org,$connection);
+        $data=$this->read->query($c['shop_domain'],$token,self::FULFILLMENT,['id'=>$externalId])['data'];
+        self::assertOrderScope($data);
+        $scopes=array_column($data['currentAppInstallation']['accessScopes'],'handle');
+        foreach(['merchant_managed','third_party','assigned'] as $scope)
+            if(!in_array('read_'.$scope.'_fulfillment_orders',$scopes,true)&&!in_array('write_'.$scope.'_fulfillment_orders',$scopes,true))
+                throw new DomainException('Fulfillment visibility incomplete; ownership cannot be inferred.');
+        $evidence=ShopifyFulfillmentEvidenceNormalizer::normalize($data,$externalId);
+        $fresh=$this->connection($org,$channel,$connection);
+        if($fresh['shop_domain']!==$c['shop_domain']||$fresh['secret_ref']!==$c['secret_ref']||$fresh['mode']!==$c['mode'])
+            throw new DomainException('Commerce fulfillment source changed.');
+        $missing=[];
+        foreach($evidence['assignments'] as &$assignment){
+            $assignment['canonical_location_id']=$this->store->fulfillmentLocation($org,$connection,$assignment['location_gid']);
+            if($assignment['canonical_location_id']===null)$missing[$assignment['location_gid']]=true;
+        }
+        unset($assignment);
+        return ['organization_id'=>$org,'channel'=>$channel,'connection_id'=>$connection,'configured_inventory_mode'=>$c['mode'],
+            ...$evidence,'unmapped_locations'=>array_keys($missing),'inventory_authority'=>'external_review',
+            'local_stock_write_allowed'=>false,'physical_commitment_verified'=>false];
     }
 
     public function page(string $org,string $channel,string $connection,?string $cursor,?string $cutoff=null):array

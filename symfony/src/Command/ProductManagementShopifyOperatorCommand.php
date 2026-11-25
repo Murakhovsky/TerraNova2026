@@ -45,7 +45,7 @@ final class ProductManagementShopifyOperatorCommand extends Command
 
     protected function configure(): void
     {
-        $this->addArgument('action',InputArgument::REQUIRED,'preflight|provision|status|pull|candidates|inspect|stage|audit|order|order-sandbox')
+        $this->addArgument('action',InputArgument::REQUIRED,'preflight|provision|status|pull|candidates|inspect|stage|audit|order|order-sandbox|order-fulfillment|map-location')
             ->addOption('organization',null,InputOption::VALUE_REQUIRED,'Explicit tenant organization')
             ->addOption('shop',null,InputOption::VALUE_REQUIRED,'Existing <shop>.myshopify.com name')
             ->addOption('secret-ref',null,InputOption::VALUE_REQUIRED,'Vault ref env://COS_SHOPIFY_* or pilot legacy','shopify_env_primary')
@@ -54,6 +54,8 @@ final class ProductManagementShopifyOperatorCommand extends Command
             ->addOption('limit',null,InputOption::VALUE_REQUIRED,'Maximum 1..50 snapshot candidates','20')
             ->addOption('product-gid',null,InputOption::VALUE_REQUIRED,'Observed Shopify Product GID')
             ->addOption('order-gid',null,InputOption::VALUE_REQUIRED,'Verified Shopify Order GID for read-only Order evidence')
+            ->addOption('location-gid',null,InputOption::VALUE_REQUIRED,'Observed Shopify Location GID')
+            ->addOption('location-id',null,InputOption::VALUE_REQUIRED,'Canonical active Product warehouse ID')
             ->addOption('preview-id',null,InputOption::VALUE_REQUIRED,'Existing Shopify import preview ID for read-only recovery audit')
             ->addOption('expected-hash',null,InputOption::VALUE_REQUIRED,'Pinned snapshot SHA-256')
             ->addOption('confirm',null,InputOption::VALUE_REQUIRED,'PROVISION_READ_ONLY or PULL_READ_ONLY');
@@ -72,7 +74,7 @@ final class ProductManagementShopifyOperatorCommand extends Command
             return $this->result($output,['status'=>'INVALID_TENANT'],Command::INVALID);
         }
         try {
-            if (!in_array($action,['preflight','provision','status','pull','candidates','inspect','stage','audit','order','order-sandbox'],true)) {
+            if (!in_array($action,['preflight','provision','status','pull','candidates','inspect','stage','audit','order','order-sandbox','order-fulfillment','map-location'],true)) {
                 return $this->result($output,['status'=>'INVALID_ACTION'],Command::INVALID);
             }
             // Supervised, read-only diagnostics are available even before tenant
@@ -128,6 +130,20 @@ final class ProductManagementShopifyOperatorCommand extends Command
                 return $this->result($output,
                     ['status'=>'SNAPSHOT_CANDIDATES','connection_id'=>$connection,
                         'count'=>count($items),'candidates'=>$items],Command::SUCCESS);
+            }
+            if ($action==='map-location') {
+                if($input->getOption('confirm')!=='MAP_LOCATION_NO_STOCK_WRITES')
+                    return $this->result($output,['status'=>'CONFIRMATION_REQUIRED'],Command::INVALID);
+                $gid=trim((string)$input->getOption('location-gid'));$location=trim((string)$input->getOption('location-id'));
+                $this->observations->mapFulfillmentLocation($org,$connection,$gid,$location);
+                return $this->result($output,['status'=>'LOCATION_MAPPED','location_gid'=>$gid,'location_id'=>$location,
+                    'inventory_authority'=>'external_review','local_stock_write_allowed'=>false],Command::SUCCESS);
+            }
+            if ($action==='order-fulfillment') {
+                if($input->getOption('confirm')!=='VERIFY_FULFILLMENT_READ_ONLY'||!($this->commerceOrders instanceof \Domains\ProductManagement\Application\Contract\CommerceOrderFulfillmentEvidencePort))
+                    return $this->result($output,['status'=>'CONFIRMATION_OR_PORT_REQUIRED'],Command::INVALID);
+                $gid=trim((string)$input->getOption('order-gid'));
+                return $this->result($output,$this->commerceOrders->fulfillmentEvidence($org,'shopify',$connection,$gid),Command::SUCCESS);
             }
             if ($action==='order-sandbox') {
                 if($input->getOption('confirm')!=='VERIFY_TEST_ORDER_READ_ONLY')

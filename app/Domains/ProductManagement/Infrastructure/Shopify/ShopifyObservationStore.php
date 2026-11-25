@@ -86,6 +86,29 @@ final readonly class ShopifyObservationStore
         if ($existing===null || $existing['canonical_id']!==$canonical) throw new DomainException('External identity collision.');
     }
 
+    /** A location mapping identifies a warehouse only. It never grants stock ownership. */
+    public function mapFulfillmentLocation(string $org,string $conn,string $gid,string $location):void
+    {
+        if(!preg_match('#^gid://shopify/Location/[1-9][0-9]{0,18}$#D',$gid)||!preg_match('/^[a-f0-9]{32}$/D',$location))
+            throw new DomainException('Invalid location mapping identity.');
+        $c=$this->connection($org,$conn);
+        $unique=$this->uniqueConnectionForShop($c['shop_domain']);
+        if($unique['organization_id']!==$org||$unique['connection_id']!==$conn)
+            throw new DomainException('Ambiguous fulfillment connection.');
+        $observed=$this->query('SELECT 1 FROM pm_external_stock_observations WHERE organization_id=? AND connection_id=? AND location_gid=? AND observed_at>=DATE_SUB(UTC_TIMESTAMP(6),INTERVAL 24 HOUR) LIMIT 1',[$org,$conn,$gid])->fetchColumn();
+        $active=$this->query('SELECT 1 FROM pm_locations WHERE organization_id=? AND location_id=? AND status="active"',[$org,$location])->fetchColumn();
+        if($observed===false||$active===false)throw new DomainException('Fresh provider observation and active tenant warehouse required.');
+        $this->query('INSERT INTO pm_external_mappings (organization_id,connection_id,entity_type,external_gid,canonical_id) VALUES (?,?,"location",?,?) ON DUPLICATE KEY UPDATE canonical_id=canonical_id',[$org,$conn,$gid,$location]);
+        if($this->fulfillmentLocation($org,$conn,$gid)!==$location)throw new DomainException('External location mapping collision.');
+    }
+
+    public function fulfillmentLocation(string $org,string $conn,string $gid):?string
+    {
+        $row=$this->query('SELECT m.canonical_id FROM pm_external_mappings m JOIN pm_locations l ON l.organization_id=m.organization_id AND l.location_id=m.canonical_id AND l.status="active"
+            WHERE m.organization_id=? AND BINARY m.organization_id=BINARY ? AND m.connection_id=? AND m.entity_type="location" AND m.external_gid=?',[$org,$org,$conn,$gid])->fetchColumn();
+        return is_string($row)?$row:null;
+    }
+
     /** @param array<string,mixed> $snapshot */
     public function observeProduct(string $org,string $conn,string $gid,array $snapshot,bool $complete=false): void
     {

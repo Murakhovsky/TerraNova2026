@@ -3096,6 +3096,8 @@ services:
     alias: Domains\ProductManagement\Infrastructure\Shopify\CurlShopifyHttpTransport
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyReadClient: ~
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyCommerceOrderSource: ~
+  Domains\ProductManagement\Application\Contract\CommerceOrderFulfillmentEvidencePort:
+    alias: Domains\ProductManagement\Infrastructure\Shopify\ShopifyCommerceOrderSource
   Domains\ProductManagement\Application\Contract\CommerceOrderSourcePort:
     alias: Domains\ProductManagement\Infrastructure\Shopify\ShopifyCommerceOrderSource
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyClientCredentials: ~

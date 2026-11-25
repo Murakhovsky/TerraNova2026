@@ -71,7 +71,7 @@ try{
     $shopStore->map($org,$conn,'product','gid://shopify/Product/41',str_repeat('a',32));
     $shopStore->map($org,$conn,'variant','gid://shopify/ProductVariant/42',str_repeat('b',32));
     $http=new class implements \Domains\ProductManagement\Infrastructure\Shopify\ShopifyHttpTransportInterface {
-        public bool $journeyReady=false;public string $journeyCampaign='mkt-aaaaaaaaaaaaaaaaaaaaaaaa';
+        public bool $fulfillmentScope=true;public bool $fulfillmentTruncated=false;public bool $journeyReady=false;public string $journeyCampaign='mkt-aaaaaaaaaaaaaaaaaaaaaaaa';
         public int $reads=0;public string $updated='2026-11-24T10:00:00Z';public string $financial='PAID';
         public string $current='120.00';public bool $edited=false;public bool $fail=false;public bool $unmapped=false;public bool $truncated=false;public bool $multi=false;public bool $revisionShift=false;public bool $pageMode=false;public bool $temporaryFailure=false;
         public function post(string $url,array $headers,string $body):array
@@ -85,7 +85,13 @@ try{
             if($this->fail)return ['status'=>403,'body'=>'{}'];
             $money=static fn(string $amount)=>['shopMoney'=>['amount'=>$amount,'currencyCode'=>'EUR']];
             $data=['currentAppInstallation'=>['accessScopes'=>[['handle'=>'read_orders']]]];
-            if(str_contains($request['query'],'COSCommerceOrderPage')){
+            if(str_contains($request['query'],'COSCommerceFulfillmentEvidence')){
+                if($this->fulfillmentScope)foreach(['merchant_managed','third_party','assigned'] as $scope)$data['currentAppInstallation']['accessScopes'][]=['handle'=>'read_'.$scope.'_fulfillment_orders'];
+                $data['order']=['id'=>$request['variables']['id'],'updatedAt'=>$this->updated,'test'=>false,'cancelledAt'=>null,'displayFulfillmentStatus'=>'UNFULFILLED',
+                    'fulfillmentOrders'=>['nodes'=>[['id'=>'gid://shopify/FulfillmentOrder/900','status'=>'OPEN','requestStatus'=>'UNSUBMITTED','assignedLocation'=>['location'=>['id'=>'gid://shopify/Location/88']],
+                        'lineItems'=>['nodes'=>[['id'=>'gid://shopify/FulfillmentOrderLineItem/901','totalQuantity'=>1,'remainingQuantity'=>1,'lineItem'=>['id'=>'gid://shopify/LineItem/77']]],'pageInfo'=>['hasNextPage'=>false]]]],
+                        'pageInfo'=>['hasNextPage'=>$this->fulfillmentTruncated]]];
+            }elseif(str_contains($request['query'],'COSCommerceOrderPage')){
                 $cursor=$request['variables']['after']??null;
                 if($this->pageMode){
                     if(!str_starts_with($request['variables']['filter']??'','created_at:<='))throw new RuntimeException('Backfill cutoff missing.');
@@ -699,6 +705,25 @@ try{
     $reject(fn()=>$reportCall('unknown'));
     $db->prepare('DELETE FROM cos_organization_memberships WHERE organization_id=? AND user_id=?')->execute([$org,$owner]);
     $reject(fn()=>$reportCall('outcomes'));
+    // R3 evidence is separate from commercial intake, never a Product stock mutation.
+    $providerOrder='gid://shopify/Order/12345';
+    $beforeR3=$orderRepo->get($org,$externalOrderId);
+    $readback=$source->fulfillmentEvidence($org,'shopify',$conn,$providerOrder);
+    $check($readback['unmapped_locations']===['gid://shopify/Location/88']&&$readback['assignments'][0]['items'][0]['remaining_quantity']===1
+        &&$readback['inventory_authority']==='external_review'&&!$readback['physical_commitment_verified']&&!$readback['local_stock_write_allowed'],'R3 assignment fabricated authority.');
+    $http->fulfillmentScope=false;$reject(fn()=>$source->fulfillmentEvidence($org,'shopify',$conn,$providerOrder));$http->fulfillmentScope=true;
+    $http->fulfillmentTruncated=true;$reject(fn()=>$source->fulfillmentEvidence($org,'shopify',$conn,$providerOrder));$http->fulfillmentTruncated=false;
+    $reject(fn()=>$source->fulfillmentEvidence('foreign-'.$token,'shopify',$conn,$providerOrder));
+    $mappedLocation=$productStore->createLocation($org,'R3-'.$token,'R3 mapped warehouse','r3-location-'.$token,(string)$owner,'r3-ci')['location_id'];
+    $reject(fn()=>$shopStore->mapFulfillmentLocation($org,$conn,'gid://shopify/Location/88',$mappedLocation));
+    $db->prepare('INSERT INTO pm_external_stock_observations(organization_id,connection_id,variant_gid,location_gid,inventory_gid,on_hand,available) VALUES (?,?,?,?,?,1,0)')
+        ->execute([$org,$conn,'gid://shopify/ProductVariant/42','gid://shopify/Location/88','gid://shopify/InventoryItem/99']);
+    $shopStore->mapFulfillmentLocation($org,$conn,'gid://shopify/Location/88',$mappedLocation);
+    $shopStore->mapFulfillmentLocation($org,$conn,'gid://shopify/Location/88',$mappedLocation);
+    $mapped=$source->fulfillmentEvidence($org,'shopify',$conn,$providerOrder);
+    $check($mapped['provider_hash']===$readback['provider_hash']&&$mapped['unmapped_locations']===[]&&$mapped['assignments'][0]['canonical_location_id']===$mappedLocation
+        &&$orderRepo->get($org,$externalOrderId)===$beforeR3&&!$mapped['local_stock_write_allowed'],'R3 mapping changed provider digest or Sales order state.');
+    echo "Sales R3 Product-owned fulfillment assignment readback, location mapping, scope/pagination fences and no stock effect PASS.\n";
     echo "Sales S5 scoped exact summary, redacted lists and timeline PASS.\n";
 }finally{$db->rollBack();}
 
