@@ -92,6 +92,7 @@ final readonly class ProductManagementDomainModule implements DomainModuleInterf
             'product_management.variant.created',
             'product_management.variant.updated',
             'product_management.attribute.defined',
+            'product_management.attribute.lifecycle_changed',
             'product_management.attribute.category_bound',
             'product_management.attribute.product_set',
             'product_management.attribute.bulk_set',
