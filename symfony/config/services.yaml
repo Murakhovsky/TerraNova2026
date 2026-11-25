@@ -2781,6 +2781,7 @@ services:
   Domains\Marketing\Application\Service\MarketingPlanningService: ~
   Domains\Marketing\Application\Service\MarketingAnalystContextService: ~
   Domains\Marketing\Application\Service\MarketingAnalystPerformanceService: ~
+  Domains\Marketing\Application\Service\MarketingBudgetOptimizationService: ~
   Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingAnalystRunStore:
     arguments:
       $connection: '@cos.database.pdo'

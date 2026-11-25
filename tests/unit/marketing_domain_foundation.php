@@ -34,7 +34,7 @@ foreach($manifest['contributions']['capability_contracts'] as $raw) {
     $assert(is_file($root.'/'.$contract->outputSchema),'Output schema missing: '.$contract->id);
 }
 $validator->validate(CapabilityContract::fromArray($manifest['contributions']['capability_contracts'][2]),['name'=>'Test launch','business_objective'=>'Leads']);
-$assert(count($found)===46,'Expected 46 typed Marketing contracts including Commerce Attribution');
+$assert(count($found)===47,'Expected 47 typed Marketing contracts including Commerce Attribution');
 echo "Marketing M0 foundation PASS\n";
 
 
@@ -89,3 +89,25 @@ $assert($schedulePolicy::window($clock,30,['period_start'=>'2026-01-05','period_
 $blocked=false;try{$schedulePolicy::parse(json_encode([$profile,$profile],JSON_THROW_ON_ERROR));}catch(DomainException){$blocked=true;}
 $assert($blocked,'Duplicate profile admitted.');
 echo "Marketing M4 explicit scheduled profile, rolling UTC windows and bounded paid scope PASS\n";
+
+$budgetPolicy=\Domains\Marketing\Domain\MarketingBudgetOptimizationPolicy::class;
+$budgetA=['plan_id'=>'mkpl-'.str_repeat('a',24),'plan_hash'=>str_repeat('a',64),'campaign_id'=>'mkt-'.str_repeat('a',24),
+    'provider_campaign_id'=>'111','account_id'=>'mads-'.str_repeat('a',24),'account_revision'=>1,'currency'=>'EUR',
+    'window_start'=>'2026-02-01','window_end'=>'2026-02-07','daily_minor'=>10000,'lifetime_minor'=>70000,
+    'attribution_hash'=>str_repeat('b',64),'snapshot_ref'=>'mis-'.str_repeat('a',24),'source_revision'=>1,'source_hash'=>str_repeat('c',64),
+    'reported_spend_decimal'=>'100.000000','impressions'=>5000,'clicks'=>100];
+$budgetB=[...$budgetA,'plan_id'=>'mkpl-'.str_repeat('b',24),'plan_hash'=>str_repeat('b',64),'campaign_id'=>'mkt-'.str_repeat('b',24),
+    'provider_campaign_id'=>'222','snapshot_ref'=>'mis-'.str_repeat('b',24),'source_hash'=>str_repeat('d',64),'reported_spend_decimal'=>'50.000000'];
+$preview=$budgetPolicy::preview($budgetA,$budgetB);
+$assert($preview['status']==='REVIEW_BOUNDED_REALLOCATION'&&$preview['shift_minor']===1000&&$preview['total_daily_minor']===20000
+    &&$preview['items'][0]['candidate_daily_minor']===9000&&$preview['items'][1]['candidate_daily_minor']===11000
+    &&!$preview['financial_mutation']&&!$preview['paid_activation_approved'],'Budget preview did not conserve bounded daily cap.');
+$assert($budgetPolicy::preview($budgetB,$budgetA)===$preview,'Budget preview is not deterministic.');
+$assert($budgetPolicy::preview($budgetA,[...$budgetB,'clicks'=>null])['shift_minor']===0,'Unknown click evidence moved budget.');
+$assert($budgetPolicy::preview([...$budgetA,'reported_spend_decimal'=>'701.00'],$budgetB)['shift_minor']===0,'Overspend promoted to optimization.');
+$assert($budgetPolicy::preview($budgetA,[...$budgetB,'reported_spend_decimal'=>'95.00'])['shift_minor']===0,'Small difference moved budget.');
+$blocked=false;try{$budgetPolicy::preview($budgetA,[...$budgetB,'currency'=>'USD']);}catch(DomainException){$blocked=true;}
+$assert($blocked,'Incompatible currencies accepted.');
+$blocked=false;try{$budgetPolicy::preview($budgetA,[...$budgetB,'provider_campaign_id'=>'111']);}catch(DomainException){$blocked=true;}
+$assert($blocked,'Duplicate provider campaign accepted.');
+echo "Marketing M5.4 bounded comparative budget preview, no mutation, exact cap conservation PASS\n";

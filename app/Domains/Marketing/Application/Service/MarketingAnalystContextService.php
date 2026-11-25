@@ -81,10 +81,12 @@ final readonly class MarketingAnalystContextService
         if($paidPlanId!==null){
             if($this->performance===null||$adsetId===null)throw new DomainException('Performance source and exact AdSet pin required.');
             $performance=$this->performance->observe($actor,$campaignId,$campaignRevision,$adsetId,$adsetRevision,$paidPlanId,$snapshotRef);
-            $facts['performance']=$performance['facts'];
+            // Structured dates and decimals are native validated metrics, not free-form text.
+            // Redact the planning copy first; generic phone masking would corrupt these facts.
             foreach($performance['sources'] as $source)$sources[]=$source;
         }
         $facts=(new SensitiveContextRedactor())->redact($facts);
+        if(isset($performance))$facts['performance']=$performance['facts'];
         $payload=['schema_version'=>'1.0.0','purpose'=>'MARKETING_PLANNING_ADVICE','sources'=>$sources,'facts'=>$facts,
             'constraints'=>['proposal_only'=>true,'launch_eligible'=>false,'provider_evidence_verified'=>false,'finance_reservation_confirmed'=>false]];
         $encoded=json_encode($payload,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
