@@ -3036,6 +3036,7 @@ services:
   App\Persistence\Finance\FinancePaidSettlementOutcomeProvider: ~
   App\Persistence\Finance\FinanceOrderRunOutcomeProvider: ~
   App\Persistence\Sales\SalesOrderRunOutcomeProvider: ~
+  App\Persistence\Sales\SalesBusinessRunOutcomeProvider: ~
   Domains\Finance\Bootstrap\FinanceDomainModule:
     arguments:
       $payments: '@Domains\Finance\Automation\Action\FinanceOrderPaymentActionHandler'
@@ -4305,6 +4306,7 @@ services:
         - '@App\Persistence\Finance\FinancePaidSettlementOutcomeProvider'
         - '@App\Persistence\Finance\FinanceOrderRunOutcomeProvider'
         - '@App\Persistence\Sales\SalesOrderRunOutcomeProvider'
+        - '@App\Persistence\Sales\SalesBusinessRunOutcomeProvider'
         - '@Domains\Growth\Application\Service\GrowthInboundResponseOutcomeEvidenceProvider'
         - '@App\Persistence\Federation\FederationGrowthRunLinkedOutcomeEvidenceProvider'
         - '@cos.federation.native_origin.research'
