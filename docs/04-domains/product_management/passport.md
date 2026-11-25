@@ -20,6 +20,7 @@ domain_id: product_management
       "id": "catalog",
       "capability_ids": [
         "product_management.attribute.define",
+        "product_management.attribute.lifecycle.change",
         "product_management.attribute.search",
         "product_management.attribute.category.bind",
         "product_management.attribute.category.get",
@@ -225,6 +226,10 @@ Read-only E5 Stock audit звіряє on_hand з ledger і reserved з акти�
 ## 13. План розвитку, борги та рішення
 
 Native release: all CI at candidate SHA, actual browser and independent approval acceptance, live agent/LLM test, explicit operator sign-off. All 29 planned governed operation contracts plus the Product-owned assembly Action are implemented; final integrated CI and actual agent acceptance remain required. Dynamic output substitution and historical verification of successive mutable writes are not implemented. Optional Shopify: independent live OAuth/scopes canary and recovery; write-back only after separate ownership decision.
+
+### P4–P5
+
+Typed product attributes, enum axes, filters and atomic bulk editing use the existing Gateway. Attribute lifecycle adds a human-only command for rename, archive/restore and category binding update/removal. Definition identity and semantic type are immutable. Archive requires zero bindings and values; changing/removing a binding requires an unused category. Native receipts and independent readback; existing approved Action contracts remain unchanged. New exact-head CI and browser acceptance pending.
 
 ## 14. Карта джерел
 
