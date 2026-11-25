@@ -76,6 +76,45 @@ $states->enabled=true;
 $check($sales->placement($org,$id)['realized_revenue']===null&&$sales->get($org,$id)['revision']===1,'Finance rewrote Sales terms or lifecycle.');
 echo "Finance native order ledger MySQL partial capture, refund, chargeback, replay, tenant and source fencing PASS; approval authority substituted only in this store-level test.\n";
 
+/* Two physical connections: an existing consistent-read snapshot must not
+ * permit a second refund to overdraw one capture even when order-wide funds
+ * are sufficient. The second connection commits before the first takes
+ * the balance lock, reproducing the stale-snapshot edge deterministically. */
+$db->exec('SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+$db2=new PDO(sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',getenv('DB_HOST')?:'127.0.0.1',(int)(getenv('DB_PORT')?:3306),getenv('DB_DATABASE')?:'cos'),getenv('DB_USERNAME')?:'cos',getenv('DB_PASSWORD')?:'',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
+$repo2=new MysqlCommerceOrderPaymentStore($db2,new MysqlSalesOrderRepository($db2),$active,$authority);
+$refundB=[...$base,'kind'=>'refund','amount'=>'20.00','source_reference'=>'race-refund-b','parent_id'=>$a['finance_reference']];
+$refundA=[...$base,'kind'=>'refund','amount'=>'10.00','source_reference'=>'race-refund-a','parent_id'=>$a['finance_reference']];
+$opB=$reg($refundB,'race-register-b');
+$opA=$reg($refundA,'race-register-a');
+$payloadB=['order_id'=>$id,...array_diff_key($refundB,['parent_id'=>true]),'operation_id'=>$opB['finance_reference'],'statement_reference'=>'race-statement-b','expected_revision'=>5];
+$payloadA=['order_id'=>$id,...array_diff_key($refundA,['parent_id'=>true]),'operation_id'=>$opA['finance_reference'],'statement_reference'=>'race-statement-a','expected_revision'=>6];
+$snapshotHook=static function()use($db,$repo2,$org,$id,$payloadB,$check):void{
+    $q=$db->prepare('SELECT revision FROM cos_finance_order_balances WHERE organization_id=? AND order_id=?');
+    $q->execute([$org,$id]);$check((int)$q->fetchColumn()===5,'Expected pre-race snapshot.');
+    $q->closeCursor();
+    $repo2->reconcile($org,$id,$payloadB,'102','race-action-b','race-trace-b','race-reconcile-b');
+};
+$snapshotAuthority=new class($snapshotHook) implements FinanceOrderExecutionAuthority{
+    public function __construct(private Closure $hook){}
+    public function assertApproved(string $organizationId,string $orderId,string $actionType,array $parameters,string $requester,string $actionId,string $correlationId,string $key):void
+    {($this->hook)();}
+};
+$snapshotRepo=new MysqlCommerceOrderPaymentStore($db,$sales,$active,$snapshotAuthority);
+try{
+    $snapshotRepo->reconcile($org,$id,$payloadA,'102','race-action-a','race-trace-a','race-reconcile-a');
+    throw new RuntimeException('Stale snapshot admitted a parent over-refund.');
+}catch(DomainException $e){
+    $check($e->getMessage()==='Operation exceeds confirmed parent balance.','Unexpected race denial: '.$e->getMessage());
+}
+$afterRace=$repo->financialEvidence($org,$id);
+$check($afterRace['revision']===6&&$afterRace['refunded_amount']==='35.00'&&$afterRace['net_collected_amount']==='50.00','Race rejection altered committed collection.');
+$q=$db->prepare('SELECT COUNT(*) FROM cos_finance_order_reconciliations WHERE organization_id=? AND operation_id=?');
+$q->execute([$org,$opA['finance_reference']]);
+$check((int)$q->fetchColumn()===0,'Rejected refund produced reconciliation evidence.');
+$q->closeCursor();
+echo "Finance two-connection parent exposure stale-snapshot fence PASS\n";
+
 /* Real persisted Kernel approval path. No replacement authority or payment provider. */
 $org='fin-auth-'.bin2hex(random_bytes(5));$id=bin2hex(random_bytes(16));
 $db->prepare('INSERT INTO cos_organizations (id,name,status) VALUES (?,?,"ACTIVE")')->execute([$org,'O4 approval fixture']);
