@@ -40,6 +40,17 @@ final readonly class MysqlSalesOrderSourceRepository implements SalesOrderSource
                 'observed_at'=>str_replace(' ','T',$e['observed_at']).'Z','current_order_revision'=>$evidence['provider_updated_at']===$fact['updated_at'],
                 'assignment_count'=>count($evidence['assignments']),'unmapped_locations'=>$evidence['unmapped_locations'],
                 'inventory_authority'=>'external_review','physical_commitment_verified'=>false,'local_stock_write_allowed'=>false];
+            if(isset($evidence['lifecycle'])){
+                $life=$evidence['lifecycle'];$summary=['provider_fulfilled_quantity'=>0,'assigned_pending_quantity'=>0,
+                    'return_requested_quantity'=>0,'return_processed_quantity'=>0,'cancelled_unfulfilled_quantity'=>0,
+                    'review_reasons'=>$life['review_reasons']];
+                foreach($life['lines'] as $line){
+                    foreach(['provider_fulfilled'=>'provider_fulfilled_quantity','assigned_pending'=>'assigned_pending_quantity','return_requested'=>'return_requested_quantity','return_processed'=>'return_processed_quantity'] as $from=>$to)$summary[$to]+=$line[$from];
+                    if($line['cancelled_unfulfilled']===null)$summary['cancelled_unfulfilled_quantity']=null;
+                    elseif($summary['cancelled_unfulfilled_quantity']!==null)$summary['cancelled_unfulfilled_quantity']+=$line['cancelled_unfulfilled'];
+                }
+                $view['fulfillment_evidence']['provider_lifecycle']=$summary;
+            }
         }
         return $view;
     }
@@ -56,6 +67,21 @@ final readonly class MysqlSalesOrderSourceRepository implements SalesOrderSource
             ||!is_string($evidence['provider_hash']??null)||!preg_match('/^[a-f0-9]{64}$/D',$evidence['provider_hash'])
             ||!is_array($evidence['assignments']??null)||!is_array($evidence['unmapped_locations']??null))
             throw new LogicException('External fulfillment evidence does not match canonical source.');
+        if(isset($evidence['lifecycle'])){
+            // Only the originally imported provider line IDs can bind native placement.
+            // Historical orders without that evidence are never silently rebound by SKU.
+            $q=$this->connection->prepare('SELECT observation FROM sales_order_source_observations WHERE organization_id=? AND source_id=? AND outcome="imported" LIMIT 2');
+            $q->execute([$org,$sourceId]);$rows=$q->fetchAll(PDO::FETCH_COLUMN);
+            $baseline=count($rows)===1?json_decode($rows[0],true,64,JSON_THROW_ON_ERROR):null;
+            $original=$baseline['line_identities']??null;$actual=[];
+            foreach($evidence['lifecycle']['lines']??[] as $line=>$fact)$actual[$line]=$fact['ordered'];
+            if(!is_array($original)||$original===[]||self::digest($original)!==self::digest($actual))
+                throw new \DomainException('Provider lifecycle cannot bind immutable placed order lines.');
+            $q=$this->connection->prepare('SELECT quantity FROM sales_order_lines WHERE organization_id=? AND order_id=? ORDER BY line_no');
+            $q->execute([$org,$orderId]);$placed=array_map('intval',$q->fetchAll(PDO::FETCH_COLUMN));
+            ksort($original,SORT_STRING);
+            if(array_values($original)!==$placed)throw new \DomainException('Provider line quantities differ from canonical placement.');
+        }
         $hash=self::digest($evidence);
         $q=$this->connection->prepare('INSERT INTO sales_order_external_fulfillment_evidence(organization_id,evidence_id,source_id,order_id,request_key,provider_updated_at,provider_hash,evidence_hash,evidence_json) VALUES(?,?,?,?,?,?,?,?,?)');
         $q->execute([$org,bin2hex(random_bytes(16)),$sourceId,$orderId,$key,$s['latest_updated_at'],$evidence['provider_hash'],$hash,json_encode($evidence,JSON_THROW_ON_ERROR)]);

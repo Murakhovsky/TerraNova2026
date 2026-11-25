@@ -345,6 +345,7 @@ final readonly class SalesBusinessRunOutcomeProvider implements RunScopedGoalOut
         }
         $input=[$user,$p['channel'],$p['connection_id'],$p['external_order_id'],$p['delivery_id']??null];
         if(($p['include_fulfillment_evidence']??false)===true)$input[]=true;
+        if(($p['include_lifecycle_evidence']??false)===true)$input[]=true;
         $hash=hash('sha256',json_encode($input,JSON_THROW_ON_ERROR));
         $receipt=$this->nativeReceipts->find($org,'order.source.reconcile',$key);
         if(!is_string($receipt)||!hash_equals($hash,$receipt))throw new DomainException('Commerce reconciliation receipt mismatch.');
@@ -365,6 +366,7 @@ final readonly class SalesBusinessRunOutcomeProvider implements RunScopedGoalOut
             if(($fact['organization_id']??null)!==$org||($fact['connection_id']??null)!==$p['connection_id']||($fact['external_order_id']??null)!==$p['external_order_id']
                 ||($fact['inventory_authority']??null)!=='external_review'||($fact['local_stock_write_allowed']??null)!==false)
                 throw new DomainException('Fulfillment observation identity mismatch.');
+            if(($p['include_lifecycle_evidence']??false)===true&&!is_array($fact['lifecycle']??null))throw new DomainException('Requested lifecycle evidence missing.');
             return 'sales:fulfillment-observation:'.$e['evidence_id'];
         }
         return 'sales:source-observation:'.$id.':'.$key;

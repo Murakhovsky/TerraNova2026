@@ -213,6 +213,50 @@
             },
             "local_stock_write_allowed": {
               "const": false
+            },
+            "provider_lifecycle": {
+              "type": "object",
+              "properties": {
+                "provider_fulfilled_quantity": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "assigned_pending_quantity": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "return_requested_quantity": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "return_processed_quantity": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "cancelled_unfulfilled_quantity": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 0
+                },
+                "review_reasons": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "provider_fulfilled_quantity",
+                "assigned_pending_quantity",
+                "return_requested_quantity",
+                "return_processed_quantity",
+                "cancelled_unfulfilled_quantity",
+                "review_reasons"
+              ],
+              "additionalProperties": false
             }
           },
           "required": [

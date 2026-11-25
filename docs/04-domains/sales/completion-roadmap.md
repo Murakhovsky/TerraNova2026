@@ -287,3 +287,7 @@ Signed machine proposal API (existing tenant rollout and HMAC headers):
 | D5 | Explicitly authorized canary/monitoring/rollback; no automatic activation. |
 
 Follow the DAS-001 acceptance runbook in `docs/10-operations/das-001-domain-acceptance.md`. No Passport promotion, no synthetic provider settlement, no production deployment. CI success alone does not close issues #459/#488.
+
+## R3.3 — Зовнішні відвантаження та повернення
+
+Optional `include_lifecycle_evidence=true` requires `include_fulfillment_evidence=true`, authenticated complete fulfillment and return visibility, and the immutable provider line identities recorded at original import. Bounded fulfillment counts, stable resource IDs, per-line quantities, status, processed returns and cancellation residuals are verified independently of assignment remaining quantities. Prior imported orders without immutable line identity evidence require review, not SKU guessing. The existing Sales evidence journal and scoped lifecycle summary expose provider-reported quantities only; successful fulfillment is not carrier delivery, processed return is not physical restock or Finance settlement. Local stock writes remain prohibited. Shopify API field references: https://shopify.dev/docs/api/admin-graphql/latest/objects/Order and https://shopify.dev/docs/api/admin-graphql/latest/objects/ReturnLineItem.

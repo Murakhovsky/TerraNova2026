@@ -23,6 +23,9 @@
     },
     "include_fulfillment_evidence": {
       "type": "boolean"
+    },
+    "include_lifecycle_evidence": {
+      "type": "boolean"
     }
   },
   "required": [
