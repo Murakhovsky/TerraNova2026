@@ -15,7 +15,9 @@
     "unresolved",
     "page_exhausted",
     "complete_coverage",
-    "financial_mutation"
+    "financial_mutation",
+    "max_pages",
+    "pages_processed"
   ],
   "properties": {
     "model": {
@@ -65,17 +67,17 @@
     "scanned": {
       "type": "integer",
       "minimum": 0,
-      "maximum": 50
+      "maximum": 250
     },
     "recorded_or_already_present": {
       "type": "integer",
       "minimum": 0,
-      "maximum": 50
+      "maximum": 250
     },
     "unresolved": {
       "type": "integer",
       "minimum": 0,
-      "maximum": 50
+      "maximum": 250
     },
     "page_exhausted": {
       "type": "boolean"
@@ -87,6 +89,16 @@
     "financial_mutation": {
       "type": "boolean",
       "const": false
+    },
+    "max_pages": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "pages_processed": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5
     }
   },
   "additionalProperties": false

@@ -4,7 +4,7 @@ namespace Domains\Marketing\Infrastructure\Persistence\MySql;
 use DomainException;
 use Domains\Marketing\Application\Contract\MarketingAttributionStore;
 use PDO;
-final readonly class MysqlMarketingAttributionStore implements MarketingAttributionStore
+final readonly class MysqlMarketingAttributionStore implements MarketingAttributionStore, \Domains\Marketing\Application\Contract\MarketingAttributionReceiptReadPort
 {
     public function __construct(private PDO $connection){}
     public function batch(string $org,string $key,string $hash,callable $capture):array
@@ -30,6 +30,15 @@ final readonly class MysqlMarketingAttributionStore implements MarketingAttribut
             $result=json_decode($stored,true,32,JSON_THROW_ON_ERROR);
             $this->connection->commit();return $result;
         }catch(\Throwable $e){if($this->connection->inTransaction())$this->connection->rollBack();throw $e;}
+    }
+    public function receipt(string $org,string $key):?array
+    {
+        if($org===''||!preg_match('/^[A-Za-z0-9_.:-]{8,191}$/D',$key))throw new DomainException('Invalid capture receipt scope.');
+        $q=$this->connection->prepare('SELECT request_hash,receipt_json FROM marketing_attribution_capture_intents
+            WHERE organization_id=? AND BINARY organization_id=BINARY ? AND idempotency_key=? AND BINARY idempotency_key=BINARY ?');
+        $q->execute([$org,$org,$key,$key]);$r=$q->fetch(PDO::FETCH_ASSOC);
+        if(!is_array($r)||$r['receipt_json']===null)return null;
+        return ['request_hash'=>$r['request_hash'],'receipt'=>json_decode($r['receipt_json'],true,32,JSON_THROW_ON_ERROR)];
     }
     public function record(string $org,string $campaign,array $evidence):array
     {

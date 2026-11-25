@@ -13,16 +13,17 @@ use Domains\Marketing\Domain\MarketingCommerceAttributionPolicy as OrderPolicy;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Tenant\Model\TenantContext;
 use Kernel\Tenant\Model\TenantPermissions;
-/** One bounded source page per canonical action. Reuse the existing evidence and immutable receipt stores. */
+/** Bounded keyset sweep in one atomic, replayable canonical Action. */
 final readonly class MarketingAttributionSweepService
 {
     public function __construct(private MarketingCampaignService $campaigns,private MarketingPaidLaunchPlanService $plans,
         private MarketingAttributionCandidateReadPort $candidates,private MarketingSalesAttributionReadPort $leads,
         private MarketingCommerceOrderReadPort $orders,private MarketingAttributionStore $receipts,
         private MarketingCommerceAttributionStore $commerce,private ActiveModuleResolver $modules){}
-    public function sweep(TenantContext $actor,string $campaign,?string $planId,string $kind,string $from,string $to,?string $after,string $key):array
+    public function sweep(TenantContext $actor,string $campaign,?string $planId,string $kind,string $from,string $to,?string $after,string $key,int $maxPages=1):array
     {
         LeadPolicy::window($from,$to);$org=$actor->organizationId()->value();
+        if($maxPages<1||$maxPages>5)throw new DomainException('Sweep page budget must be 1–5.');
         if(!$actor->isManager()||!$actor->allows(TenantPermissions::ACCESS)||!$actor->allows(TenantPermissions::MANAGE)
             ||!$this->modules->isEnabled($org,'marketing')||!$this->modules->isEnabled($org,'sales')
             ||$this->campaigns->get($actor,$campaign)===null||!in_array($kind,['lead','order'],true))
@@ -32,20 +33,23 @@ final readonly class MarketingAttributionSweepService
         $plan=$planId===null?null:$this->plans->get($actor,$planId);
         if($plan!==null&&$plan['campaign_id']!==$campaign)throw new DomainException('Paid plan scope mismatch.');
         if($kind==='order')$this->orders->assertAvailable($actor);
-        $h=hash('sha256',json_encode(['attribution-sweep-v1',$actor->userId()->value(),$campaign,$planId,$kind,$from,$to,$after],JSON_THROW_ON_ERROR));
-        return $this->receipts->batch($org,$key,$h,function()use($actor,$org,$campaign,$planId,$plan,$kind,$from,$to,$after,$pattern):array{
-            $page=$this->candidates->page($actor,$kind,$from,$to,$after,50);
+        $h=self::requestHash($actor->userId()->value(),$campaign,$planId,$kind,$from,$to,$after,$maxPages);
+        return $this->receipts->batch($org,$key,$h,function()use($actor,$org,$campaign,$planId,$plan,$kind,$from,$to,$after,$pattern,$maxPages):array{
+            $scanned=0;$recorded=0;$unresolved=0;$pages=0;$next=$after;
+            do{
+            $pageAfter=$next;
+            $page=$this->candidates->page($actor,$kind,$from,$to,$pageAfter,50);
             $ids=$page['ids']??null;$next=$page['next_after']??null;
             if(!is_array($ids)||!array_is_list($ids)||count($ids)>50||!array_key_exists('next_after',$page))
                 throw new LogicException('Malformed source page.');
-            $cursor=$after;
+            $cursor=$pageAfter;
             foreach($ids as $id){
                 if(!is_string($id)||!preg_match($pattern,$id)||($cursor!==null&&($kind==='lead'?(int)$id<=(int)$cursor:strcmp($id,$cursor)<=0)))
                     throw new LogicException('Unsafe source cursor progression.');
                 $cursor=$id;
             }
             if($next!==null&&(count($ids)!==50||$next!==$cursor))throw new LogicException('Malformed next cursor.');
-            $recorded=0;$unresolved=0;
+            $pages++;$scanned+=count($ids);
             foreach($ids as $id){
                 try{
                     if($kind==='lead'){
@@ -65,11 +69,17 @@ final readonly class MarketingAttributionSweepService
                     $recorded++;
                 }catch(DomainException){$unresolved++;}
             }
+            }while($next!==null&&$pages<$maxPages);
             // An exhausted page is not complete attribution; late journey evidence and new inserts require rescan.
             return ['model'=>'attribution-sweep-v1','campaign_id'=>$campaign,'plan_id'=>$planId,'source_kind'=>$kind,
-                'window_start'=>$from,'window_end'=>$to,'after'=>$after,'next_after'=>$next,'scanned'=>count($ids),
+                'window_start'=>$from,'window_end'=>$to,'after'=>$after,'next_after'=>$next,'scanned'=>$scanned,
+                'max_pages'=>$maxPages,'pages_processed'=>$pages,
                 'recorded_or_already_present'=>$recorded,'unresolved'=>$unresolved,'page_exhausted'=>$next===null,
                 'complete_coverage'=>false,'financial_mutation'=>false];
         });
+    }
+    public static function requestHash(string $actor,string $campaign,?string $plan,string $kind,string $from,string $to,?string $after,int $maxPages):string
+    {
+        return hash('sha256',json_encode(['attribution-sweep-v1',$actor,$campaign,$plan,$kind,$from,$to,$after,$maxPages],JSON_THROW_ON_ERROR));
     }
 }

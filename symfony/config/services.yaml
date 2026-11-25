@@ -2835,6 +2835,9 @@ services:
       $connection: '@cos.database.pdo'
   Domains\Marketing\Application\Contract\MarketingAttributionStore:
     alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingAttributionStore
+  Domains\Marketing\Application\Contract\MarketingAttributionReceiptReadPort:
+    alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingAttributionStore
+  App\Persistence\Marketing\MarketingAttributionSweepOutcomeProvider: ~
   App\Infrastructure\Marketing\SalesAttributionReadAdapter: ~
   Domains\Marketing\Application\Contract\MarketingSalesAttributionReadPort:
     alias: App\Infrastructure\Marketing\SalesAttributionReadAdapter
@@ -4307,6 +4310,7 @@ services:
         - '@App\Persistence\ProductManagement\ProductGovernedRunOutcomeProvider'
         - '@App\Persistence\ProductManagement\ShopifyImportRunOutcomeProvider'
         - '@App\Persistence\Marketing\MarketingAnalystRunOutcomeProvider'
+        - '@App\Persistence\Marketing\MarketingAttributionSweepOutcomeProvider'
         - '@App\Persistence\Marketing\MarketingPaidGoalOutcomeProvider'
         - '@App\Persistence\Finance\FinancePaidSettlementOutcomeProvider'
         - '@App\Persistence\Finance\FinanceOrderRunOutcomeProvider'

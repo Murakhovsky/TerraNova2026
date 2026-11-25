@@ -246,6 +246,7 @@ $candidateAdapter=new \App\Infrastructure\Marketing\AttributionCandidateReadAdap
 $sweepCampaign=$campaigns->createDraft($org,'42',(new MarketingDraftPolicy())->validate(['name'=>'M4 sweep fixture','business_objective'=>'Native conversion collection']),'m4-sweep-campaign')['id'];
 $insertLead=$db->prepare("INSERT INTO tn_leads (organization_id,full_name,status,utm_source,utm_medium,utm_campaign,created_at) VALUES (?,'Private sweep fixture','new','google','organic',?,'2026-02-01 10:00:00')");
 for($i=0;$i<51;$i++)$insertLead->execute([$org,$sweepCampaign]);
+$db->prepare('INSERT INTO cos_organizations (id,name,status) VALUES (?,?,"ACTIVE")')->execute([$other,'Other sweep fixture']);
 $insertLead->execute([$other,$sweepCampaign]);
 $sweepOrderRepo=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository($db);
 $sweepOrderSource=new \App\Infrastructure\Marketing\CommerceOrderReadAdapter($modules,$sweepOrderRepo,$sweepOrderRepo,$sweepOrderRepo);
@@ -262,3 +263,13 @@ $scan=$sweep->sweep($actor,$c2,null,'order','2026-01-02','2026-01-02',null,'m4-s
 $assert($scan['scanned']>=1&&$scan['recorded_or_already_present']>=1&&!$scan['financial_mutation'],'Native order sweep failed.');
 $assert($candidateRead->page(strtoupper($org),'lead','2026-02-01','2026-02-01',null,50)['ids']===[],'Case-variant tenant leaked.');
 echo "Marketing M4 governed sweep service native keyset discovery, source capture, replay and tenant fence PASS\n";
+
+$multi=$sweep->sweep($actor,$sweepCampaign,null,'lead','2026-02-01','2026-02-01',null,'m4-sweep-multi',5);
+$assert($multi['scanned']===51&&$multi['pages_processed']===2&&$multi['max_pages']===5&&$multi['recorded_or_already_present']===51&&$multi['page_exhausted'],'Bounded automatic page continuation failed.');
+$assert($store->receipt($org,'m4-sweep-multi')['receipt']===$multi&&$store->receipt($other,'m4-sweep-multi')===null,'Native sweep receipt readback or tenant fence failed.');
+$assert($sweep->sweep($actor,$sweepCampaign,null,'lead','2026-02-01','2026-02-01',null,'m4-sweep-multi',5)===$multi,'Multipage replay changed receipt.');
+$deny=false;try{$sweep->sweep($actor,$sweepCampaign,null,'lead','2026-02-01','2026-02-01',null,'m4-sweep-multi',4);}catch(DomainException){$deny=true;}
+$assert($deny,'Sweep replay changed approved page budget.');
+$deny=false;try{$sweep->sweep($actor,$sweepCampaign,null,'lead','2026-02-01','2026-02-01',null,'m4-sweep-invalid',6);}catch(DomainException){$deny=true;}
+$assert($deny&&$store->receipt($org,'m4-sweep-invalid')===null,'Unbounded page budget admitted.');
+echo "Marketing M4 multipage atomic native receipt, tenant fence, bounded continuation and replay PASS\n";

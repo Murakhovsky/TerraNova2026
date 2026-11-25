@@ -43,7 +43,7 @@ final readonly class MarketingAttributionSweepHandler implements IdempotentExter
             if($identity===null||$identity->userId()->value()!==$action->sourceId||$identity->organizationId()->value()!==$action->organizationId)
                 throw new DomainException('Live tenant identity unavailable.');
             return ExecutionResult::success($this->service->sweep($this->tenants->fromIdentity($identity),$action->targetId,
-                $p['plan_id'],$p['source_kind'],$p['window_start'],$p['window_end'],$p['after'],$this->idempotencyKey($action)));
+                $p['plan_id'],$p['source_kind'],$p['window_start'],$p['window_end'],$p['after'],$this->idempotencyKey($action),$p['max_pages']??1));
         }catch(Throwable){
             return ExecutionResult::failure('Marketing attribution sweep rejected or uncertain; inspect canonical action and native capture receipt.');
         }
