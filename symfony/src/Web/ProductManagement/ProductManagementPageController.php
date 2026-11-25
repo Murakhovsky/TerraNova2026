@@ -269,7 +269,32 @@ final readonly class ProductManagementPageController
             $product=$this->checkedProduct($actor,$id);if($product instanceof Response)return $product;
             $action=(string)$request->request->get('action','');
             if($action==='set'){
-                $values=json_decode((string)$request->request->get('values',''),true,32,JSON_THROW_ON_ERROR);
+                $definitions=$this->read($actor,'attribute.product.get',['product_id'=>$id]);
+                $byCode=array_column($definitions['items'],null,'code');
+                $modes=$request->request->all('attribute_mode');
+                $submitted=$request->request->all('attribute_value');
+                $values=[];
+                foreach($modes as $code=>$mode){
+                    if(!isset($byCode[$code])||!is_string($mode)||!in_array($mode,['keep','set','clear'],true))
+                        throw new DomainException('Invalid attribute selection.');
+                    if($mode==='keep')continue;
+                    $definition=$byCode[$code];
+                    if($mode==='clear'){
+                        if($definition['is_required'])throw new DomainException('Required attribute cannot be cleared.');
+                        $value=null;
+                    }else{
+                        $raw=$submitted[$code]??null;
+                        if(!is_string($raw))throw new DomainException('Invalid attribute value.');
+                        $value=match($definition['value_type']){
+                            'boolean'=>match($raw){'true'=>true,'false'=>false,default=>throw new DomainException('Invalid boolean.')},
+                            'enum'=>in_array($raw,$definition['choices'],true)?$raw:throw new DomainException('Invalid enum choice.'),
+                            'text','decimal'=>$raw,
+                            default=>throw new DomainException('Unsupported attribute type.')
+                        };
+                    }
+                    $values[]=['code'=>$code,'value'=>$value];
+                }
+                if($values===[]||count($values)>50)throw new DomainException('Select 1–50 attribute changes.');
                 $receipt=$this->write($actor,'attribute.product.set',['product_id'=>$id,'values'=>$values,'expected_revision'=>(int)$request->request->get('expected_revision',0)],$request);
                 if($receipt!=$this->read($actor,'attribute.product.get',['product_id'=>$id]))return new Response('Attribute readback uncertain.',503);
             }elseif(in_array($action,['preview','matrix'],true)){
