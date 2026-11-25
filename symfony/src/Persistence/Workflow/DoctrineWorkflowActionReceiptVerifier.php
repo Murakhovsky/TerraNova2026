@@ -102,7 +102,7 @@ final readonly class DoctrineWorkflowActionReceiptVerifier implements WorkflowRe
         if (!$context
             || !in_array($context['run_state'], ['running','waiting','ambiguous','completed'], true)
             || !in_array($context['step_state'], ['claimed','ambiguous','completed'], true)
-            || $context['side_effect_level'] !== 'external'
+            || !in_array($context['side_effect_level'],['external','financial'],true)
             || $context['input_digest'] !== $inputDigest
             || !preg_match('/^[a-f0-9]{64}$/', (string) $context['idempotency_key'])
             || ($context['result_reference'] !== null
@@ -144,7 +144,7 @@ final readonly class DoctrineWorkflowActionReceiptVerifier implements WorkflowRe
         }
         if (!is_array($step) || ($step['capability_id'] ?? null) !== $context['capability_id']
             || ($step['capability_version'] ?? null) !== $context['capability_version']
-            || ($step['side_effect_level'] ?? null) !== 'external'
+            || ($step['side_effect_level'] ?? null) !== $context['side_effect_level']
             || !is_string($step['execution_binding'] ?? null)
             || !str_starts_with($step['execution_binding'], 'action:')
             || !is_array($step['input'] ?? null)

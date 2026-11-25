@@ -196,7 +196,7 @@ final readonly class FederationCanonicalWorkflowBridge
                         throw new DomainException('Non-Action Step requires pinned Domain read evidence.');
                     }
                     $hasNonAction=true;
-                } elseif (($step['side_effect_level']??null)!=='external'
+                } elseif (!in_array($step['side_effect_level']??null,['external','financial'],true)
                     || !str_starts_with($step['execution_binding'],'action:')) {
                     throw new DomainException('Canonical Goal cannot dispatch unsupported side effects.');
                 }
@@ -219,8 +219,11 @@ final readonly class FederationCanonicalWorkflowBridge
                 }
             }
             $id=new WorkflowRunIdentity($org,$runId);
+            // Kernel policy evidence stores correlation_id in VARCHAR(40). Keep the full Run ID
+            // on the workflow; derive a stable tenant-scoped correlation shared by all its Actions.
+            $correlation='fed:'.substr(hash('sha256',$org."\0".$runId),0,32);
             $draft=new WorkflowRunDraft($id,$definition->id,$definition->version,$inputDigest,
-                $actor->userId()->value(),'federation:'.$runId,$planId,$approvalId,$digest,$definition);
+                $actor->userId()->value(),$correlation,$planId,$approvalId,$digest,$definition);
             if ($this->coordinator !== null) $this->coordinator->start($draft,$actor);
             else $this->workflow->create($draft,$actor);
             // Zero writes to cos_federation_runs/steps, no Action submission.
@@ -351,7 +354,7 @@ final readonly class FederationCanonicalWorkflowBridge
         }
         $selection=$this->scheduler->select(
             new WorkflowDefinitionSnapshot('federation.approved-plan','1.0.0',$steps),
-            $this->workflow->steps($id),['external','none'],
+            $this->workflow->steps($id),['external','financial','none'],
         );
         // A prior COMPLETED flag is never enough to authorize a subsequent Action.
         foreach ($selection->completed as $stepId) {
@@ -363,7 +366,7 @@ final readonly class FederationCanonicalWorkflowBridge
                 foreach($steps as $candidate) if(($candidate['id']??null)===$stepId) $pinned=$candidate;
                 if ($completed->sideEffectLevel==='none' && is_array($pinned)) {
                     $this->nonActions->assertVerified($id,$stepId,$receipt,$inputDigest,$pinned);
-                } elseif ($completed->sideEffectLevel==='external') {
+                } elseif (in_array($completed->sideEffectLevel,['external','financial'],true)) {
                     $proof=$this->receipts->attestForAudit($id,$stepId,$receipt,$inputDigest);
                     if (!$proof->verified || $proof->evidenceReference !== $receipt) {
                         return $result('manual_reconciliation_required',$stepId);
@@ -546,7 +549,8 @@ final readonly class FederationCanonicalWorkflowBridge
             || $contract===null || $contract->version!==($step['capability_version']??null)
             || $contract->ownerDomain!==($step['owner_domain']??null)
             || $contract->executionBinding!==($step['execution_binding']??null)
-            || $contract->sideEffectLevel!=='external'
+            || !in_array($contract->sideEffectLevel,['external','financial'],true)
+             || $contract->sideEffectLevel!==($step['side_effect_level']??null)
             || $contract->approvalPolicy!=='required' || $contract->idempotency!=='required'
             || !str_starts_with($contract->executionBinding,'action:')
             || !is_array($step['input']??null)) {

@@ -71,7 +71,7 @@ final readonly class DoctrineWorkflowActionWorkerAdmission implements WorkflowAc
             || $row['claim_expires_at'] === null
             || strtotime((string) $row['claim_expires_at'] . ' UTC') <= time()
             || $row['result_reference'] !== null
-            || $row['side_effect_level'] !== 'external'
+            || !in_array($row['side_effect_level'],['external','financial'],true)
             || $row['actor_id'] !== $action->sourceId
             || $row['correlation_id'] !== $action->correlationId
             || !is_string($row['source_plan_id']) || $row['source_plan_id'] === ''
@@ -95,7 +95,7 @@ final readonly class DoctrineWorkflowActionWorkerAdmission implements WorkflowAc
         $decision = (new WorkflowStepScheduler())->select(
             new WorkflowDefinitionSnapshot((string) $row['definition_id'],
                 (string) $row['definition_version'], $graph),
-            $snapshots, ['none','external'],
+            $snapshots, ['none','external','financial'],
         );
         if ($decision->state !== WorkflowStepSelectionState::CLAIMED
             || $decision->stepId !== $row['step_id']) {
@@ -117,7 +117,7 @@ final readonly class DoctrineWorkflowActionWorkerAdmission implements WorkflowAc
             || $capability->id !== $row['capability_id']
             || $capability->version !== $row['capability_version']
             || $capability->kind !== 'command'
-            || $capability->sideEffectLevel !== 'external'
+            || $capability->sideEffectLevel !== $row['side_effect_level']
             || $capability->approvalPolicy !== 'required'
             || $capability->idempotency !== 'required'
             || in_array($capability->lifecycle, ['deprecated','retired'], true)
@@ -127,7 +127,7 @@ final readonly class DoctrineWorkflowActionWorkerAdmission implements WorkflowAc
             || ($pinned['capability_version'] ?? null) !== $capability->version
             || ($pinned['owner_domain'] ?? null) !== $capability->ownerDomain
             || ($pinned['execution_binding'] ?? null) !== $capability->executionBinding
-            || ($pinned['side_effect_level'] ?? null) !== 'external'
+            || ($pinned['side_effect_level'] ?? null) !== $row['side_effect_level']
             || !is_array($pinned['input'] ?? null)
             || !is_array($pinned['input']['parameters'] ?? null)
             || ($pinned['input']['target_type'] ?? null) !== $action->targetType

@@ -74,13 +74,13 @@ final readonly class WorkflowPredecessorReceiptVerifier
                 || ($row['side_effect_level'] ?? null) !== ($pinned['side_effect_level'] ?? null)
                 || ($row['idempotency_key'] ?? null) !== $expectedKey
                 || (int) ($row['attempts'] ?? 0) < 1
-                || ($row['side_effect_level'] ?? null) === 'external'
+                || in_array($row['side_effect_level']??null,['external','financial'],true)
                     && (int) ($row['attempts'] ?? 0) !== 1
                 || (int) ($row['revision'] ?? 0) < 2
                 || !is_string($receipt) || $receipt === '') {
                 throw new DomainException('Completed Workflow Step has no pinned, versioned, one-attempt receipt.');
             }
-            if ($row['side_effect_level'] === 'external') {
+            if (in_array($row['side_effect_level'],['external','financial'],true)) {
                 if (!preg_match('/^action:[a-f0-9]{32}$/', $receipt)
                     || !is_string($pinned['execution_binding'] ?? null)
                     || !str_starts_with($pinned['execution_binding'], 'action:')) {

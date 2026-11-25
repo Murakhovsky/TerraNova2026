@@ -184,7 +184,7 @@ final readonly class DoctrineWorkflowRecoveryManager implements WorkflowRecovery
                     $identity,WorkflowRecoveryDisposition::NO_ACTION,'recovery_request_already_applied',
                     in_array($resolution,[WorkflowRecoveryResolution::QUARANTINE,
                         WorkflowRecoveryResolution::CANCEL_UNCERTAIN],true)
-                        && $step['side_effect_level']==='external',
+                        && in_array($step['side_effect_level'],['external','financial'],true),
                 );
             }
             if ($request['status']!=='APPROVED'
@@ -274,7 +274,7 @@ final readonly class DoctrineWorkflowRecoveryManager implements WorkflowRecovery
                 $command->actor->userId()->value(),(int)$run['revision']+1,
                 (int)$step['revision']+1,['run_state'=>$nextRun,'step_state'=>$nextStep,
                     'outcome_unknown'=>$resolution!==WorkflowRecoveryResolution::VERIFIED_COMPLETE
-                        && $step['side_effect_level']==='external']);
+                        && in_array($step['side_effect_level'],['external','financial'],true)]);
 
             return new WorkflowRecoveryAssessment($identity,
                 match($resolution){
@@ -284,7 +284,7 @@ final readonly class DoctrineWorkflowRecoveryManager implements WorkflowRecovery
                     WorkflowRecoveryResolution::CANCEL_UNCERTAIN=>WorkflowRecoveryDisposition::NO_ACTION,
                 },
                 'approved_'. $resolution->value,
-                $step['side_effect_level']==='external'
+                in_array($step['side_effect_level'],['external','financial'],true)
                     && $resolution!==WorkflowRecoveryResolution::VERIFIED_COMPLETE);
         });
     }
@@ -402,7 +402,7 @@ final readonly class DoctrineWorkflowRecoveryManager implements WorkflowRecovery
         WorkflowRunCommand $command,array $run,array $step,array $graph,string $reference,
     ): void {
         $identity=$command->identity;
-        if($step['side_effect_level']==='external') {
+        if(in_array($step['side_effect_level'],['external','financial'],true)) {
             if((int)$step['attempts']!==1) {
                 throw new DomainException('Recovered external Step must have exactly one durable claim attempt.');
             }

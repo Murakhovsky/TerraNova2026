@@ -129,7 +129,7 @@ final readonly class FederationPostCutoverIntegrity
                 }
                 try{
                     $identity=new WorkflowRunIdentity($org,$runId);
-                    if($step['side_effect_level']==='external'){
+                    if(in_array($step['side_effect_level'],['external','financial'],true)){
                         $proof=$this->actions->attestForAudit(
                             $identity,$sid,$reference,(string)$run['input_digest']);
                         if(!$proof->verified||$proof->evidenceReference!==$reference){

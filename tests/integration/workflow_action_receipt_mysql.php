@@ -38,6 +38,7 @@ $connection = DriverManager::getConnection([
     'password'=>(string)(getenv('DB_PASSWORD')?:''),
     'charset'=>'utf8mb4',
 ]);
+$effect=getenv('COS_TEST_FINANCIAL_WORKFLOW')==='1'?'financial':'external';
 $token=bin2hex(random_bytes(6));
 $org='wf-proof-'.$token;
 $actor=new TenantContext(
@@ -53,7 +54,7 @@ $planDigest=hash('sha256','approved-action-plan-'.$token);
 $approvalRef='approved-plan-'.$token;
 $definition=new WorkflowDefinitionSnapshot('test.action-proof','1.0.0',[
     ['id'=>'publish','capability_id'=>'test.publish','capability_version'=>'1.0.0',
-     'side_effect_level'=>'external','depends_on'=>[],
+     'side_effect_level'=>$effect,'depends_on'=>[],
      'execution_binding'=>'action:test.publish',
      'input'=>['target_type'=>'case','target_id'=>'case-ci','parameters'=>['approved'=>true,'n'=>1]]],
 ]);

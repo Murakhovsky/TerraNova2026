@@ -19,7 +19,7 @@ final readonly class WorkflowClaimAdmissionRouter implements WorkflowStepClaimAd
     public function assertAuthorized(WorkflowStepClaim $claim, WorkflowStepSnapshot $step): void
     {
         match($step->sideEffectLevel) {
-            'external'=>$this->actions->assertAuthorized($claim,$step),
+            'external','financial'=>$this->actions->assertAuthorized($claim,$step),
             'none'=>$this->nonActions->assertAuthorized($claim,$step),
             default=>throw new DomainException('Unsupported Workflow Step side effect.'),
         };

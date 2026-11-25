@@ -58,7 +58,7 @@ final readonly class DoctrineWorkflowExecutionCoordinator implements WorkflowExe
         if($run->status!==WorkflowStatus::RUNNING) return $run;
         $decision=$this->scheduler->select(new WorkflowDefinitionSnapshot(
             (string)$row['definition_id'],(string)$row['definition_version'],$graph),
-            $this->store->steps($command->identity),['external','none']);
+            $this->store->steps($command->identity),['external','financial','none']);
         // Never mint work here. Action/Agent/Tool remain with their domain runtime.
         if($decision->state!==WorkflowStepSelectionState::COMPLETE) return $run;
         return $this->transition($command,WorkflowStatus::RUNNING,WorkflowStatus::COMPLETED);
@@ -100,10 +100,10 @@ final readonly class DoctrineWorkflowExecutionCoordinator implements WorkflowExe
         }
         foreach($this->store->steps($command->identity) as $step) {
             if(in_array($step->state,['claimed','ambiguous','failed'],true)
-                || ($step->sideEffectLevel==='external' && $step->state==='waiting')) {
+                || (in_array($step->sideEffectLevel,['external','financial'],true) && $step->state==='waiting')) {
                 throw new DomainException('An in-flight Step requires reconciliation.');
             }
-            if($step->sideEffectLevel==='external' && $step->state!=='completed') {
+            if(in_array($step->sideEffectLevel,['external','financial'],true) && $step->state!=='completed') {
                 $count=(int)$this->db->fetchOne(
                     'SELECT COUNT(*) FROM cos_actions
                      WHERE organization_id=:org AND idempotency_key IN (:canonical,:legacy)',
@@ -165,7 +165,7 @@ final readonly class DoctrineWorkflowExecutionCoordinator implements WorkflowExe
             $side=$step['side_effect_level']??null;
             $binding=$step['execution_binding']??null;
             if(!is_string($binding)
-                || !(($side==='external' && str_starts_with($binding,'action:'))
+                || !((in_array($side,['external','financial'],true) && str_starts_with($binding,'action:'))
                    || ($side==='none' && str_starts_with($binding,'read:')))) {
                 throw new DomainException('Unknown Agent/Tool/Action/Wait capability has no approved runtime.');
             }
