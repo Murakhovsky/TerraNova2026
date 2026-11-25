@@ -20,6 +20,9 @@
       "type": "string",
       "minLength": 1,
       "maxLength": 190
+    },
+    "include_fulfillment_evidence": {
+      "type": "boolean"
     }
   },
   "required": [

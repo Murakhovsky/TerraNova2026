@@ -723,7 +723,21 @@ try{
     $mapped=$source->fulfillmentEvidence($org,'shopify',$conn,$providerOrder);
     $check($mapped['provider_hash']===$readback['provider_hash']&&$mapped['unmapped_locations']===[]&&$mapped['assignments'][0]['canonical_location_id']===$mappedLocation
         &&$orderRepo->get($org,$externalOrderId)===$beforeR3&&!$mapped['local_stock_write_allowed'],'R3 mapping changed provider digest or Sales order state.');
-    echo "Sales R3 Product-owned fulfillment assignment readback, location mapping, scope/pagination fences and no stock effect PASS.\n";
+    // Re-enable the isolated integration actor only for the explicit R3 reconciliation.
+    $db->prepare('INSERT INTO cos_organization_memberships(organization_id,user_id,role,status) VALUES (?,?,"manager","ACTIVE")')->execute([$org,$owner]);
+    $grant->execute([$org,$owner,'sales.workspace.use',(string)$owner]);
+    $http->financial='PAID';$http->edited=false;$http->current='120.00';$http->updated='2026-11-25T14:00:00Z';$http->unmapped=false;
+    $r3input=['channel'=>'shopify','connection_id'=>$conn,'external_order_id'=>$providerOrder,'include_fulfillment_evidence'=>true];
+    $r3key='r3-evidence-'.$token;
+    $r3=$reconcile->reconcile($org,$owner,$r3input,$r3key,'r3-ci');
+    $check($r3['order_id']===$externalOrderId,'External evidence created another order.');
+    $evidenceView=(new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderSourceRepository($db))->latestForOrder($org,$externalOrderId)['fulfillment_evidence'];
+    $check($evidenceView['current_order_revision']&&$evidenceView['assignment_count']===1&&$evidenceView['unmapped_locations']===[]&&!$evidenceView['local_stock_write_allowed'],'Durable external evidence readback failed.');
+    $check($reconcile->reconcile($org,$owner,$r3input,$r3key,'r3-ci')['replayed'],'External evidence receipt replay failed.');
+    $q=$db->prepare('SELECT COUNT(*) FROM sales_order_external_fulfillment_evidence WHERE organization_id=? AND request_key=?');$q->execute([$org,$r3key]);$check((int)$q->fetchColumn()===1,'External evidence duplicated.');
+    $reject(fn()=>$reconcile->reconcile($org,$owner,array_diff_key($r3input,['include_fulfillment_evidence'=>true]),$r3key,'r3-ci'));
+    $check($orderRepo->get($org,$externalOrderId)===$beforeR3,'External evidence changed native commercial order.');
+    echo "Sales R3 Product-owned fulfillment assignment readback, location mapping, scope/pagination fences, durable evidence and no stock effect PASS.\n";
     echo "Sales S5 scoped exact summary, redacted lists and timeline PASS.\n";
 }finally{$db->rollBack();}
 

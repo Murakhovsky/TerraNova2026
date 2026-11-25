@@ -128,6 +128,7 @@ return [
             'app/migrations/20261125_009008_sales_order_lifecycle.sql',
             'app/migrations/20261125_009009_sales_order_journey_evidence.sql',
             'app/migrations/20261126_009010_sales_round_robin.sql',
+            'app/migrations/20261126_009011_sales_external_fulfillment_evidence.sql',
         ],
         'capability_contracts' => [
             [

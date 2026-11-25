@@ -340,7 +340,9 @@ final readonly class SalesBusinessRunOutcomeProvider implements RunScopedGoalOut
                 throw new FederationOutcomeSourceNotReady('Native sync job admission unavailable.');
             return 'sales:sync-admission:'.$run;
         }
-        $hash=hash('sha256',json_encode([$user,$p['channel'],$p['connection_id'],$p['external_order_id'],$p['delivery_id']??null],JSON_THROW_ON_ERROR));
+        $input=[$user,$p['channel'],$p['connection_id'],$p['external_order_id'],$p['delivery_id']??null];
+        if(($p['include_fulfillment_evidence']??false)===true)$input[]=true;
+        $hash=hash('sha256',json_encode($input,JSON_THROW_ON_ERROR));
         $receipt=$this->nativeReceipts->find($org,'order.source.reconcile',$key);
         if(!is_string($receipt)||!hash_equals($hash,$receipt))throw new DomainException('Commerce reconciliation receipt mismatch.');
         $id=hash('sha256',json_encode([$org,$p['channel'],$p['connection_id'],$p['external_order_id']],JSON_THROW_ON_ERROR));
@@ -353,6 +355,15 @@ final readonly class SalesBusinessRunOutcomeProvider implements RunScopedGoalOut
         $fact=json_decode($row['observation'],true,32,JSON_THROW_ON_ERROR);
         if(($fact['channel']??null)!==$p['channel']||($fact['store_reference']??null)!==$p['connection_id']
             ||($fact['external_order_id']??null)!==$p['external_order_id'])throw new DomainException('Native provider observation mismatch.');
+        if(($p['include_fulfillment_evidence']??false)===true){
+            $e=$this->db->fetchAssociative('SELECT evidence_id,evidence_json FROM sales_order_external_fulfillment_evidence WHERE organization_id=? AND BINARY organization_id=BINARY ? AND source_id=? AND request_key=?',[$org,$org,$id,$key]);
+            if(!$e)throw new FederationOutcomeSourceNotReady('Requested fulfillment observation unavailable.');
+            $fact=json_decode($e['evidence_json'],true,64,JSON_THROW_ON_ERROR);
+            if(($fact['organization_id']??null)!==$org||($fact['connection_id']??null)!==$p['connection_id']||($fact['external_order_id']??null)!==$p['external_order_id']
+                ||($fact['inventory_authority']??null)!=='external_review'||($fact['local_stock_write_allowed']??null)!==false)
+                throw new DomainException('Fulfillment observation identity mismatch.');
+            return 'sales:fulfillment-observation:'.$e['evidence_id'];
+        }
         return 'sales:source-observation:'.$id.':'.$key;
     }
 }

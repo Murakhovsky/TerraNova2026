@@ -429,6 +429,7 @@ generated: true
 | `sales` | `app/migrations/20261125_009009_sales_order_journey_evidence.sql` | `sales_order_journey_evidence` |
 | `sales` | `app/migrations/20261125_009009_sales_order_journey_evidence.sql` | `sales_orders` |
 | `sales` | `app/migrations/20261126_009010_sales_round_robin.sql` | `sales_round_robin_cursors` |
+| `sales` | `app/migrations/20261126_009011_sales_external_fulfillment_evidence.sql` | `sales_order_external_fulfillment_evidence` |
 | `service` | `app/migrations/20260919_000064_service_wave11_cutover.sql` | `tn_service_assignments` |
 | `service` | `app/migrations/20260919_000064_service_wave11_cutover.sql` | `tn_service_cases` |
 | `service` | `app/migrations/20260919_000064_service_wave11_cutover.sql` | `tn_service_escalations` |
