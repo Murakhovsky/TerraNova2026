@@ -525,8 +525,22 @@ $activityOps=new \Domains\Sales\Application\Service\SalesOperationService(
 $businessActivity=new \App\Application\Sales\Command\ManageSalesActivityCommandHandler($businessFactory,$activityOps,$businessDeals,
     new \Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesActivityEvidenceReadModel($db),$orderReceipts,
     new \Domains\Property\Infrastructure\ReadModel\MySql\MysqlPropertyReferencePort($db),$tx);
+$crmRepo=new \Infrastructure\Integration\Crm\MysqlCrmInboxRepository($db);
+$crmEventsModule=new class implements \Kernel\Module\DomainModuleInterface,\Kernel\Module\Contract\EventOwningModuleInterface{
+    public function name():string{return 'sales';}
+    public function eventTypes():array{return [\Domains\Sales\Automation\Event\LeadChanged::TYPE,\Domains\Sales\Automation\Event\ClientCaseChanged::TYPE];}
+    public function ruleContextProvider():\Kernel\Rule\Contract\RuleContextProviderInterface{
+        return new class implements \Kernel\Rule\Contract\RuleContextProviderInterface{
+            public function contextFor(\Kernel\Event\DomainEvent $event):array{return [];}
+        };
+    }
+};
+$crmProcessor=new \Domains\Sales\Application\UseCase\ProcessCrmInbox($crmRepo,
+    new \Infrastructure\Integration\Crm\MysqlCrmInboundApplier($db),new \Kernel\Module\DomainModuleRegistry([$crmEventsModule]),$businessEvents,$tx);
 $businessBus=new \App\Infrastructure\Messenger\SymfonyCommandBus(new \Symfony\Component\Messenger\MessageBus([
     new \Symfony\Component\Messenger\Middleware\HandleMessageMiddleware(new \Symfony\Component\Messenger\Handler\HandlersLocator([
+        \App\Application\Integration\Command\ProcessCrmInboxNowCommand::class=>[new \App\Application\Integration\Command\ProcessCrmInboxNowCommandHandler($crmRepo,$crmProcessor,$orderGuard,$orderReceipts)],
+        \App\Application\Integration\Command\RecoverCrmInboxCommand::class=>[new \App\Application\Integration\Command\RecoverCrmInboxCommandHandler($crmRepo,$orderReceipts,$tx,new \App\Application\Integration\IntegrationMutationAudit(new \Infrastructure\Platform\Persistence\MySql\Audit\MysqlAuditRepository($db)))],
         \App\Application\Sales\Command\ReceivePublicLeadCommand::class=>[new \App\Application\Sales\Command\ReceivePublicLeadCommandHandler($businessFactory)],
         \App\Application\Sales\Command\ManageSalesLeadStateCommand::class=>[new \App\Application\Sales\Command\ManageSalesLeadStateCommandHandler($businessFactory,$businessRead,$orderReceipts,$tx)],
         \App\Application\Sales\Command\ManageSalesActivityCommand::class=>[$businessActivity],
@@ -542,6 +556,9 @@ $businessBus=new \App\Infrastructure\Messenger\SymfonyCommandBus(new \Symfony\Co
     ])),
 ]));
 $businessHandler=new \App\Infrastructure\Automation\SalesGovernedBusinessHandler([
+    new \App\Infrastructure\Capability\SalesCrmInboxProcessAdapter($businessBus),
+    new \App\Infrastructure\Capability\SalesCrmInboxRecoverAdapter($businessBus),
+    new \App\Infrastructure\Capability\SalesDealOwnerAssignAdapter($businessBus),
     new \App\Infrastructure\Capability\SalesLeadIntakeAdapter($businessBus,$businessRead),
     new \App\Infrastructure\Capability\SalesLeadStateManageAdapter($businessBus),
     new \App\Infrastructure\Capability\SalesActivityRecordAdapter($businessBus),
@@ -578,6 +595,8 @@ foreach($businessModule->actionTypes() as $type)
     $db->prepare('INSERT INTO cos_policies (id,organization_id,code,name,action_type,conditions,decision,priority,version,status) VALUES (?,?,?,?,?,?,"APPROVAL_REQUIRED",1,1,"ACTIVE")')
         ->execute([bin2hex(random_bytes(16)),$org,$type,$type,$type,'[]']);
 $grant->execute([$org,(int)$requester,'sales.admin.teams.manage',$requester]);
+$grant->execute([$org,(int)$requester,'sales.admin.integrations.manage',$requester]);
+$grant->execute([$org,(int)$requester,'sales.deal.assign',$requester]);
 $businessConfig=['owner'=>'sales','effect'=>'internal','domains'=>$businessRegistry,'handlers'=>[$businessHandler],'approval'=>$orderApproval,
     'outcome_factory'=>static fn($receipt)=>new \App\Persistence\Sales\SalesBusinessRunOutcomeProvider($wfDb,$businessRead,$orderReceipts,$receipt,
         new \Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesActivityEvidenceReadModel($db),
@@ -620,6 +639,20 @@ $deny(fn()=>$businessDealHandler($directStage));
 $check($dealSnapshot()['stage_id']===$from,'Unapproved stage edge mutated.');
 $stageResult=$runBusiness('pipeline.stage.manage',$stageInput,'deal',(string)$dealId);
 $check($stageResult['changed']&&$dealSnapshot()['stage_id']===$to,'Approved pipeline edge was not executed.');
+// Durable signed CRM event: DEAD recovery then independently approved native processing.
+$crmId=$tx->transactional(fn()=>$crmRepo->receive($org,'aida','r1-crm-'.$nonce,'deal.updated',
+    ['entity_type'=>'deal','external_id'=>(string)$dealId,'changes'=>['priority'=>'high']],'r1-crm-'.$nonce));
+$db->prepare('UPDATE cos_crm_inbox SET status="DEAD",attempts=10 WHERE organization_id=? AND id=?')->execute([$org,$crmId]);
+$dead=$crmRepo->status($org,$crmId);
+$recovered=$runBusiness('crm.inbox.recover',['inbox_id'=>$crmId,'revision'=>$dead['revision'],'reason'=>'mapping_repaired'],'sales_crm_inbox',$crmId);
+$check($recovered['requeued']&&$crmRepo->status($org,$crmId)['status']==='RECEIVED','Governed CRM recovery did not requeue.');
+$current=$crmRepo->status($org,$crmId);
+$processed=$runBusiness('crm.inbox.process',['inbox_id'=>$crmId,'revision'=>$current['revision']],'sales_crm_inbox',$crmId);
+$check($processed['status']==='COMPLETED'&&!$processed['replayed']&&$crmRepo->status($org,$crmId)['attempts']===1
+    &&$businessRead->deal($org,$dealId)['priority']==='high','Canonical CRM apply or completion failed.');
+$runBusiness('crm.inbox.process',['inbox_id'=>$crmId,'revision'=>$current['revision']],'sales_crm_inbox',$crmId,['expect_denied'=>true]);
+$check($crmRepo->status($org,$crmId)['attempts']===1,'Second Goal falsely repeated completed CRM processing.');
+echo "Sales R1 independent CRM recovery, native processing receipt and duplicate Goal fence PASS.\n";
 $commercial=$runBusiness('deal.commercial.set',['deal_id'=>$dealId,'expected_revision'=>$dealSnapshot()['revision'],'deal_value'=>'125.00','currency'=>'EUR'],'deal',(string)$dealId);
 $check($commercial['state']['deal_value']==='125.00','Governed commercial terms missing.');
 $due='2035-01-01T10:00:00Z';$due2='2035-01-02T10:00:00Z';
@@ -656,6 +689,17 @@ $wonInput=['deal_id'=>$dealId,'expected_revision'=>$dealSnapshot()['revision'],'
 $runBusiness('deal.outcome.record',$wonInput,'deal',(string)$dealId);
 $check($dealSnapshot()['status']==='closed','Approved terminal edge did not close Deal.');
 echo "Sales R1 governed conversion, commercial terms, lead activity and offer history + R2 approval-required Pipeline and WON edge PASS.\n";
+// The new owner's eligibility is established through the existing governed team command.
+$teamId=$teamResult['team']['team_id'];
+$runBusiness('team.manage',['operation'=>'member_set','team_id'=>$teamId,'configuration_version'=>1,
+    'user_id'=>(int)$reviewer,'role'=>'MEMBER','member_status'=>'ACTIVE','assignment_enabled'=>true,
+    'approval_enabled'=>false,'assignment_weight'=>1],'sales_team_intent',bin2hex(random_bytes(16)));
+$assignLead=$runBusiness('lead.intake',['full_name'=>'R1 assignment lead','email'=>'r1-assign-'.$nonce.'@example.test'],'sales_intent',bin2hex(random_bytes(16)));
+$assignDeal=(int)$businessRead->lead($org,$assignLead['lead_id'])['client_case_id'];
+$assignState=\Domains\Sales\Application\Support\DealStateSnapshot::fromNative($businessDeals->getForStageChange($org,(string)$assignDeal),$org,$assignDeal);
+$assignment=$runBusiness('deal.owner.assign',['deal_id'=>$assignDeal,'expected_revision'=>$assignState['revision'],'owner_id'=>(int)$reviewer],'deal',(string)$assignDeal);
+$check($assignment['state']['owner_id']===(int)$reviewer&&(int)$businessRead->deal($org,$assignDeal)['assigned_user_id']===(int)$reviewer,'Governed owner assignment readback failed.');
+echo "Sales R1 canonical team member configuration and Deal assignment PASS.\n";
 $executeWorkflow('sales.governed.team.manage',['operation'=>'create','code'=>'DENY_'.strtoupper($nonce),'name'=>'Revoked authority'],
     $requester,$reviewer,[...$businessConfig,'target_type'=>'sales_team_intent','target'=>bin2hex(random_bytes(16)),'expect_denied'=>true,
     'after_approval'=>static fn()=>$db->prepare('DELETE FROM sales_user_capabilities WHERE organization_id=? AND user_id=? AND capability="sales.approval.any_team"')->execute([$org,(int)$reviewer])]);
