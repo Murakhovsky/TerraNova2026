@@ -293,6 +293,7 @@ generated: true
 | `product_management` | `app/migrations/20261124_000162_product_management_shopify_order_pointer.sql` | `pm_webhook_inbox` |
 | `product_management` | `app/migrations/20261125_009007_product_order_reservation_evidence.sql` | `pm_order_reservation_operations` |
 | `product_management` | `app/migrations/20261125_009007_product_order_reservation_evidence.sql` | `pm_stock_reservations` |
+| `product_management` | `app/migrations/20261126_009100_product_attribute_lifecycle.sql` | `pm_attribute_definitions` |
 | `product_management` | `app/migrations/20261124_000190_product_management_price_lists.sql` | `pm_price_list_entries` |
 | `product_management` | `app/migrations/20261124_000190_product_management_price_lists.sql` | `pm_price_list_history` |
 | `product_management` | `app/migrations/20261124_000190_product_management_price_lists.sql` | `pm_price_lists` |
