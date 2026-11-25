@@ -11,12 +11,12 @@ foreach ([
   'e2rnbw-mr.myshopify.com','SHOPIFY_SHOP_DOMAIN',
   'SHOPIFY_CLIENT_ID','SHOPIFY_CLIENT_SECRET',
   'cos:product:shopify','COS_SHOPIFY_OPERATOR_ENABLED=1',
-  'PROVISION_READ_ONLY','PULL_READ_ONLY',
+  'PROVISION_READ_ONLY','PULL_READ_ONLY','order-sandbox','VERIFY_TEST_ORDER_READ_ONLY',
 ] as $token) if (!str_contains($script,$token)) throw new RuntimeException('Missing series guard: '.$token);
 if (str_contains($script,'lamps-6eey3z3e') || str_contains($workflow,'lamps-6eey3z3e')) {
   throw new RuntimeException('SERIES01 must never use Lamps pilot connection.');
 }
-foreach (['workflow_dispatch:','AWS TN2026',"github.ref == 'refs/heads/main'",'StrictHostKeyChecking=yes'] as $token) {
+foreach (['workflow_dispatch:','AWS TN2026',"github.ref == 'refs/heads/main'",'StrictHostKeyChecking=yes','order-sandbox'] as $token) {
   if (!str_contains($workflow,$token)) throw new RuntimeException('Operator workflow not guarded: '.$token);
 }
 if (str_contains($workflow,'push:') || str_contains($workflow,'schedule:')) {

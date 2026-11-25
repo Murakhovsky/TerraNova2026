@@ -11,6 +11,7 @@ use Domains\Sales\Application\Contract\SalesOrderRepositoryInterface;
 use Domains\Sales\Application\Contract\SalesOrderLifecycleRepositoryInterface;
 use Domains\Sales\Application\Contract\SalesMutationReceiptRepositoryInterface;
 use Domains\Sales\Application\Contract\SalesMutationAuthorityInterface;
+use Domains\Sales\Domain\Policy\SalesOrderInventoryOwnership;
 use Kernel\Module\ActiveModuleResolver;
 
 /** Sales owns business state. Product owns every physical stock effect, in the same native transaction. */
@@ -54,7 +55,7 @@ final readonly class SalesOrderLifecycleService
             if($order['revision']!==$revision)throw new DomainException('Order revision changed.');
             if($this->lifecycle->hasDocument($org,$id,$operation,$reference))throw new DomainException('Order operation document already recorded; use original receipt.');
             // A Shopify order may already have a provider commitment. Local stock effects are prohibited until explicit ownership cutover.
-            if($order['channel']!=='native'&&$operation!=='confirm')throw new DomainException('External order inventory and fulfillment require verified ownership reconciliation.');
+            SalesOrderInventoryOwnership::assertOperation($order['channel'],$operation);
             if(!in_array($operation,['confirm','cancel'],true)&&!$this->modules->isEnabled($org,'product_management'))throw new DomainException('Product Management inactive.');
             $allocations=$this->lifecycle->allocations($org,$id);$status=$order['status'];$next=$status;$effects=[];
             $byLine=array_column($order['lines'],null,'line_no');$byAllocation=array_column($allocations,null,'allocation_id');
@@ -158,8 +159,9 @@ final readonly class SalesOrderLifecycleService
         $allocations=$this->lifecycle->allocations($org,$order['order_id']);$total=array_sum(array_column($order['lines'],'quantity'));
         $fulfilled=array_sum(array_column($allocations,'fulfilled'));$returned=array_sum(array_column($allocations,'returned'));
         $reserved=0;foreach($allocations as $a)$reserved+=$a['quantity']-$a['fulfilled']-$a['cancelled'];
-        $external=$order['channel']!=='native';
-        return ['order_id'=>$order['order_id'],'status'=>$order['status'],'revision'=>$order['revision'],'inventory_authority'=>$external?'external_review':'local',
+        $authority=SalesOrderInventoryOwnership::authority($order['channel']);
+        $external=$authority!=='local';
+        return ['order_id'=>$order['order_id'],'status'=>$order['status'],'revision'=>$order['revision'],'inventory_authority'=>$authority,
             'external_observation'=>$external?$this->sources->latestForOrder($org,$order['order_id']):null,
             'ordered_quantity'=>$total,'allocated_pending_quantity'=>$reserved,'fulfilled_quantity'=>$fulfilled,'returned_quantity'=>$returned,
             'cancelled_quantity'=>$order['status']==='cancelled'?$total-$fulfilled:0,

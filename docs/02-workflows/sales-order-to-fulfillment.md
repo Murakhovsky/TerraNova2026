@@ -39,7 +39,7 @@ Sales володіє Order, OrderLine, allocation references, revision і біз
 - Резервування частини кількості на кількох складах, деалокація, часткове виконання, скасування залишку, повернення зі складським оприбуткуванням або без нього.
 - Product-owned рухи і Sales evidence в одній транзакції; помилка будь-якого рядка відкочує весь command.
 - Невідомий Product, відсутність stock, чужий tenant, застаріла revision або перевищення поверненої кількості відхиляються.
-- Shopify orders: локальні складські операції заблоковані до verified ownership cutover. Provider observation не є локальним резервом чи доказом відвантаження.
+- Shopify orders: локальні складські операції заблоковані до verified ownership cutover. Provider observation не є локальним резервом чи доказом відвантаження. `SalesOrderInventoryOwnership` визначає native → `local` (Product Management), усі зовнішні канали → `external_review`. Для зовнішнього Order дозволено тільки локальне підтвердження; заборонено allocation, release, fulfillment, cancellation та return. Це не твердження, що Shopify фізично володіє складом.
 - Payment і refund не створюються цим процесом. Фінансові факти належать Finance.
 
 ### Фінансове врегулювання
@@ -47,6 +47,10 @@ Sales володіє Order, OrderLine, allocation references, revision і біз
 Запит `sales.order.lifecycle.read` повертає `financial_review` через Finance-owned read port: сума первинного замовлення, підтверджена чиста сума збору коштів, ревізія та посилання на фінансовий доказ. За відсутності доказу стан `unverified`, сума невідома (null), а не нуль. Порівняння з первинною сумою не є підтвердженням остаточного розрахунку.
 
 Причини перевірки: скасоване замовлення, повернені товари, зовнішнє замовлення, chargeback або перевищення первинної суми. Скасування та повернення не створюють платіжних операцій і не визначають суму відшкодування автоматично. Фінансовий огляд не є підтвердженням refund, бухгалтерським доходом або дозволом на списання. Shopify PAID залишається спостереженням. Команди lifecycle не залежать від цього readback.
+
+## Перевірка Shopify sandbox
+
+Захищений оператор SERIES01 має read-only режим `order-sandbox`: точні tenant, connection ID та GID тестового замовлення. Викликається реальний `CommerceOrderSourcePort` для ізольованого магазину, вимагається provider `test=true`, `blocked_reason=test_order`, `terms=null` та валідний digest. Результат `SANDBOX_READBACK_VERIFIED` не створює Order, резерв, платіж або зовнішню мутацію. Режим `order-sandbox` запускається лише з вручну підтвердженого операторського workflow після розгортання коду на dev. Без фактичного provider readback acceptance залишається відкритим.
 
 ## Докази
 

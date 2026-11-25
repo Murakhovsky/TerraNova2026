@@ -12,6 +12,8 @@ use Domains\ProductManagement\Infrastructure\Shopify\ShopifyImportPreviewService
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyImportRecoveryAudit;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyOrderReadbackService;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyOrderReadbackNormalizer;
+use Domains\ProductManagement\Infrastructure\Shopify\ShopifySandboxOrderAcceptance;
+use Domains\ProductManagement\Application\Contract\CommerceOrderSourcePort;
 use Kernel\Module\ActiveModuleResolver;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -36,13 +38,14 @@ final class ProductManagementShopifyOperatorCommand extends Command
         private readonly ShopifyImportPreviewService $previews,
         private readonly ShopifyImportRecoveryAudit $recoveryAudit,
         private readonly ShopifyOrderReadbackService $orderReadback,
+        private readonly CommerceOrderSourcePort $commerceOrders,
     ) {
         parent::__construct();
     }
 
     protected function configure(): void
     {
-        $this->addArgument('action',InputArgument::REQUIRED,'preflight|provision|status|pull|candidates|inspect|stage|audit|order')
+        $this->addArgument('action',InputArgument::REQUIRED,'preflight|provision|status|pull|candidates|inspect|stage|audit|order|order-sandbox')
             ->addOption('organization',null,InputOption::VALUE_REQUIRED,'Explicit tenant organization')
             ->addOption('shop',null,InputOption::VALUE_REQUIRED,'Existing <shop>.myshopify.com name')
             ->addOption('secret-ref',null,InputOption::VALUE_REQUIRED,'Vault ref env://COS_SHOPIFY_* or pilot legacy','shopify_env_primary')
@@ -69,7 +72,7 @@ final class ProductManagementShopifyOperatorCommand extends Command
             return $this->result($output,['status'=>'INVALID_TENANT'],Command::INVALID);
         }
         try {
-            if (!in_array($action,['preflight','provision','status','pull','candidates','inspect','stage','audit','order'],true)) {
+            if (!in_array($action,['preflight','provision','status','pull','candidates','inspect','stage','audit','order','order-sandbox'],true)) {
                 return $this->result($output,['status'=>'INVALID_ACTION'],Command::INVALID);
             }
             // Supervised, read-only diagnostics are available even before tenant
@@ -125,6 +128,17 @@ final class ProductManagementShopifyOperatorCommand extends Command
                 return $this->result($output,
                     ['status'=>'SNAPSHOT_CANDIDATES','connection_id'=>$connection,
                         'count'=>count($items),'candidates'=>$items],Command::SUCCESS);
+            }
+            if ($action==='order-sandbox') {
+                if($input->getOption('confirm')!=='VERIFY_TEST_ORDER_READ_ONLY')
+                    return $this->result($output,['status'=>'CONFIRMATION_REQUIRED'],Command::INVALID);
+                $gid=trim((string)$input->getOption('order-gid'));
+                ShopifyOrderReadbackNormalizer::orderGid($gid);
+                $connectionRow=$this->observations->connection($org,$connection);
+                if(($connectionRow['shop_domain']??null)!=='e2rnbw-mr.myshopify.com')
+                    throw new DomainException('Sandbox acceptance requires the isolated SERIES01 shop.');
+                $snapshot=$this->commerceOrders->order($org,'shopify',$connection,$gid);
+                return $this->result($output,ShopifySandboxOrderAcceptance::verify($snapshot,$connection,$gid),Command::SUCCESS);
             }
             if ($action==='order') {
                 $gid=trim((string)$input->getOption('order-gid'));

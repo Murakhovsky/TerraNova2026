@@ -592,6 +592,8 @@ try{
     $review=$lifeRead($externalOrderId)['financial_review'];
     $check($review['collection_state']==='unverified'&&$review['net_collected_amount']===null&&$review['review_reasons']===['external_order'],'Shopify PAID observation was treated as confirmed collection.');
     $atomicReject(fn()=>$life('allocate',$externalOrderId,2,'external-double-reserve',['items'=>[['line_no'=>1,'location_id'=>$locA,'quantity'=>1]]]));
+    $atomicReject(fn()=>$life('cancel',$externalOrderId,2,'external-cancel'));
+    $check($lifeRead($externalOrderId)['revision']===2&&$lifeRead($externalOrderId)['allocations']===[],'External operation mutated native inventory state.');
     $atomicReject(fn()=>$gateway->invoke($actor($org,$other),'sales.order.lifecycle.cancel',['order_id'=>$one,'expected_revision'=>9,'reference'=>'foreign'],'human_api','foreign-o3-'.$token,'o3'));
     $atomicReject(fn()=>$gateway->invoke($actor('foreign-'.$token,$owner),'sales.order.lifecycle.read',['order_id'=>$one],'trusted_read','','o3'));
     $atomicReject(fn()=>$gateway->invoke($manager,'sales.order.lifecycle.cancel',['order_id'=>$two,'expected_revision'=>4,'reference'=>'auto'],'trusted_read','automated-o3-'.$token,'o3'));
