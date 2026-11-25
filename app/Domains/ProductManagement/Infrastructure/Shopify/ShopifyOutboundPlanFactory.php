@@ -157,10 +157,17 @@ GRAPHQL;
             ||!is_array($product['variants']['nodes']??null)
             ||count($product['variants']['nodes'])!==1
             ||($product['variants']['nodes'][0]['sku']??null)!==$expectedSku
-            ||(string)($product['variants']['nodes'][0]['price']??'')!==$expectedPriceUsd) {
+            ||self::decimal((string)($product['variants']['nodes'][0]['price']??''))!==self::decimal($expectedPriceUsd)) {
             throw new DomainException('Shopify returned nonmatching product; quarantine instead of remapping.');
         }
         return $gid;
+    }
+
+    private static function decimal(string $value):string
+    {
+        if(!preg_match('/^[0-9]+(?:\.[0-9]{1,6})?$/D',$value))throw new DomainException('Invalid provider price.');
+        [$whole,$fraction]=array_pad(explode('.',$value,2),2,'');
+        return (ltrim($whole,'0')?:'0').'.'.rtrim($fraction,'0');
     }
 
     private static function scope(string $org,string $conn):void
