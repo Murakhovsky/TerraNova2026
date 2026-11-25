@@ -211,7 +211,12 @@ $executeWorkflow=static function(string $type,array $p,string $initiator,string 
     $claimGate=new \App\Persistence\Workflow\DoctrineWorkflowActionClaimAdmission($wfDb,$planEvidence,$capabilities,$active);
     $store=new \App\Persistence\Workflow\DoctrineWorkflowExecutionStore($wfDb,$receipt,$claimGate);
     $worker=new \App\Persistence\Workflow\DoctrineWorkflowActionWorkerAdmission($wfDb,$planEvidence,$capabilities,$active,
-        new \App\Persistence\Workflow\WorkflowPredecessorReceiptVerifier($receipt,new \App\Persistence\Workflow\FailClosedWorkflowNonActionReceiptEvidence()));
+        new \App\Persistence\Workflow\WorkflowPredecessorReceiptVerifier($receipt,new \App\Persistence\Workflow\FailClosedWorkflowNonActionReceiptEvidence()),
+        new \Infrastructure\Platform\Persistence\MySql\Policy\MysqlPolicyRepository($db),
+        new \Kernel\Policy\Service\PolicyEngine(new \Kernel\Rule\Service\ConditionEvaluator()),
+        new \Kernel\Policy\Service\PolicyContextBuilder($domains),
+        new \App\Infrastructure\Persistence\MySql\MysqlIdentityRepository($db),
+        new \Kernel\Tenant\Service\TenantContextFactory(new \App\Security\RoleTenantPermissionResolver()));
     $actions=new \Kernel\Action\Service\ActionService(new \Infrastructure\Platform\Persistence\MySql\Action\MysqlActionRepository($db),
         new \Kernel\Action\Service\ActionExecutor([$handler],new \Kernel\Action\Service\ModuleActionExecutionGate($domains,$active,null,$worker)));
     $policy=new \Kernel\Policy\Service\ActionPolicyService($actions,new \Infrastructure\Platform\Persistence\MySql\Policy\MysqlPolicyRepository($db),
