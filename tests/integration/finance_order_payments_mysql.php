@@ -200,13 +200,7 @@ $executeWorkflow=static function(string $type,array $p,string $initiator,string 
          \Kernel\Tenant\Model\Permission::fromString(\Kernel\Tenant\Model\TenantPermissions::MANAGE)]);
     $planReader=new \App\Persistence\Federation\FederationPlanApprovalEvidenceReader($wfDb);
     $planHandler=new \App\Persistence\Federation\FederationPlanApproveHandler($wfDb,$planReader);
-    $businessModule=new class($ownerDomain,$handlers,$type) implements \Kernel\Module\DomainModuleInterface,\Kernel\Module\Contract\ActionOwningModuleInterface{
-        public function __construct(private string $owner,private array $handlers,private string $type){}
-        public function name():string{return $this->owner;}
-        public function actionTypes():array{return [$this->type];}
-        public function actionHandlers():array{return $this->handlers;}
-    };
-    $registry=new \Kernel\Module\DomainModuleRegistry([$businessModule,new \Domains\Federation\Bootstrap\FederationDomainModule($planHandler)]);
+    $registry=new \Kernel\Module\DomainModuleRegistry([...$registry->modules(),new \Domains\Federation\Bootstrap\FederationDomainModule($planHandler)]);
     $planEvidence=new \App\Persistence\Workflow\FederationWorkflowPlanApprovalEvidence($wfDb,$planReader);
     $receipt=new \App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier($wfDb,$planEvidence);
     $claimGate=new \App\Persistence\Workflow\DoctrineWorkflowActionClaimAdmission($wfDb,$planEvidence,$capabilities,$active);
@@ -238,11 +232,18 @@ $executeWorkflow=static function(string $type,array $p,string $initiator,string 
         $planEvidence,$receipt,$nonActions,$planReader,$capabilities,$registry,$active,$policies,$engine,$contexts,$policy,
         new \App\Persistence\Workflow\DoctrineWorkflowExecutionCoordinator($wfDb,$store,$scheduler,$planEvidence,$receipt));
     $goal='goal-'.$token;$plan='plan-'.$token;$run='fin-wf-'.$token;
-    $criterion=$ownerDomain==='sales'?\App\Persistence\Sales\SalesOrderRunOutcomeProvider::CRITERION:\App\Persistence\Finance\FinanceOrderRunOutcomeProvider::CRITERION;
-    $goals->createGoal($actor,new \Platform\Orchestration\Goal\GoalSpecification($goal,$org,$initiator,'Verify native order operation '.$type,
-        [['id'=>$criterion,'operator'=>'at_least','expected'=>1]],[$type],1,null,null,'',[],['independent_plan','independent_action'],'always'));
-    $goals->proposePlan($actor,$plan,$goal,[['id'=>'payment','capability_id'=>$type,'capability_version'=>'1.0.0',
-        'input'=>['target_type'=>$targetType,'target_id'=>$targetId,'parameters'=>$p]]]);
+    $steps=[['id'=>'payment','capability_id'=>$type,'capability_version'=>'1.0.0',
+        'input'=>['target_type'=>$targetType,'target_id'=>$targetId,'parameters'=>$p]],...($config['extra_steps']??[])];
+    $criteria=[];$allowed=[];
+    foreach($steps as $step){
+        $cap=$step['capability_id'];$allowed[]=$cap;
+        $criterion=str_starts_with($cap,'sales.')?\App\Persistence\Sales\SalesOrderRunOutcomeProvider::CRITERION:\App\Persistence\Finance\FinanceOrderRunOutcomeProvider::CRITERION;
+        $criteria[$criterion]=($criteria[$criterion]??0)+1;
+    }
+    $specCriteria=[];foreach($criteria as $criterion=>$count)$specCriteria[]=['id'=>$criterion,'operator'=>'at_least','expected'=>$count];
+    $goals->createGoal($actor,new \Platform\Orchestration\Goal\GoalSpecification($goal,$org,$initiator,'Verify native order operations',
+        $specCriteria,array_values(array_unique($allowed)),1,null,null,'',[],['independent_plan','independent_action'],'always'));
+    $goals->proposePlan($actor,$plan,$goal,$steps);
     $coordinator=new \App\Persistence\Federation\FederationPlanApprovalCoordinator($wfDb,$goals,$registry,$active,
         new \Platform\Orchestration\Goal\GoalPlanApprovalRequestFactory(),$policy,$policies,$contexts,$engine);
     $oldRollout=getenv('COS_FEDERATION_CANONICAL_ORGANIZATION');
@@ -260,6 +261,8 @@ $executeWorkflow=static function(string $type,array $p,string $initiator,string 
         $check($bridge->start($actor,$run,$plan,$planAction)['execution_authority']==='platform_workflow','Canonical Plan did not start.');
         $deny(fn()=>$bridge->start($actor,'duplicate-'.$token,$plan,$planAction));
         $check($bridge->advance($actor,$run,$planAction)['state']==='running','Canonical Run did not start running.');
+        $results=[];
+        foreach($steps as $step){
         $pending=$bridge->advance($actor,$run,$planAction);
         $check($pending['state']==='awaiting_human_approval','Canonical Action approval missing.');
         $actionId=$pending['action_id'];
@@ -277,10 +280,14 @@ $executeWorkflow=static function(string $type,array $p,string $initiator,string 
         $check($out!==null&&$out->result->successful&&$out->action()->status===\Kernel\Action\ActionStatus::Completed,'Approved Workflow Action failed.');
         $check($actions->executeOutcome($org,$actionId,'replay-worker')===null,'Completed Action replayed.');
         $check($bridge->advance($actor,$run,$planAction)['state']==='step_completed','Native Action receipt was not checkpointed.');
+        $results[$step['id']]=$out->result->data;
+        }
         $check($bridge->advance($actor,$run,$planAction)['state']==='completed','Canonical Workflow did not complete.');
         $eval=$goals->recordEvaluation($actor,'eval-'.$token,$run);
-        $check($eval['result']==='satisfied'&&($eval['criteria'][0]['observed']??null)===1,'Native Goal outcome was not verified.');
-        return $out->result->data;
+        $check($eval['result']==='satisfied'&&count($eval['criteria'])===count($criteria),'Native Goal outcome was not verified.');
+        foreach($specCriteria as $i=>$expected)
+            $check(($eval['criteria'][$i]['observed']??null)===$expected['expected'],'Native Goal evidence count differs.');
+        return count($steps)===1?$results['payment']:$results;
     }finally{
         if($oldRollout===false)putenv('COS_FEDERATION_CANONICAL_ORGANIZATION');else putenv('COS_FEDERATION_CANONICAL_ORGANIZATION='.$oldRollout);
     }
@@ -452,3 +459,21 @@ $check($nativeOrders->read($org,(int)$requester,$governedId)['financial_evidence
 $check($productStore->stockBalance($org,$product['variant_id'],$location)['on_hand']==='8.000000','Finance or Marketing modified Product inventory.');
 $check($sales->placement('foreign-'.$org,$governedId)===null&&$realStore->financialEvidence('foreign-'.$org,$governedId)===null,'Foreign tenant source leaked.');
 echo "O7 unified native Marketing campaign -> governed Sales order -> Product allocation/partial fulfillment/cancel/return -> independently approved Finance capture/refund/chargeback -> Marketing native report PASS (real independent Plan Approval and native Goal evaluation, not provider settlement).\n";
+
+// I4 mixed-domain Goal with immutable known inputs: one independently approved Plan,
+// two independently approved Actions, separate Sales and Finance outcome criteria.
+$grant->execute([$org,(int)$reviewer,'sales.approval.any_team',$requester]);
+$mixedOrder=$executeWorkflow($prefix.'create',['currency'=>'EUR','lines'=>[['sku'=>'MIXED','title'=>'Mixed Goal fixture',
+    'quantity'=>1,'unit_price'=>'10.00']],'total'=>'10.00'],$requester,$reviewer,
+    [...$config,'target_type'=>'sales_order_intent','target'=>bin2hex(random_bytes(16))])['order']['order_id'];
+$mixedPay=['order_id'=>$mixedOrder,'kind'=>'capture','amount'=>'10.00','currency'=>'EUR',
+    'source_account'=>'test-bank','source_reference'=>'mixed-goal-'.$nonce];
+$mixedRegistry=new \Kernel\Module\DomainModuleRegistry([$salesModule,$domain]);
+$mixed=$executeWorkflow($prefix.'lifecycle.confirm',['order_id'=>$mixedOrder,'expected_revision'=>1,'reference'=>'mixed-confirm'],
+    $requester,$reviewer,[...$config,'target'=>$mixedOrder,'domains'=>$mixedRegistry,'handlers'=>[$governed,$handler],
+    'extra_steps'=>[['id'=>'register-payment','depends_on'=>['payment'],'capability_id'=>'finance.order.payment.register','capability_version'=>'1.0.0',
+        'input'=>['target_type'=>'sales_order','target_id'=>$mixedOrder,'parameters'=>$mixedPay]]]]);
+$check($mixed['payment']['status']==='confirmed'&&$mixed['register-payment']['state']==='pending_registration'&&
+    $sales->get($org,$mixedOrder)['revision']===2&&$realStore->financialEvidence($org,$mixedOrder)===null,
+    'Mixed-domain Goal did not preserve independent Sales state and unconfirmed Finance registration.');
+echo "I4 mixed Sales and Finance canonical Goal, independent Plan and Actions, native outcomes PASS\n";
