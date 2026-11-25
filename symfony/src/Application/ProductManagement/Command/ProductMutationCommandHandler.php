@@ -29,6 +29,7 @@ final readonly class ProductMutationCommandHandler implements CommandHandlerInte
         $actor = $command->actorId;
         $trace = $command->correlationId;
         return match ($command->operation) {
+            'attribute.lifecycle.change' => $this->products->changeAttributeLifecycle($org,$in,$key,$actor,$trace),
             'attribute.define' => $this->products->defineAttribute($org,$in,$key,$actor,$trace),
             'attribute.category.bind' => $this->products->bindAttribute($org,(string)$in['category_id'],(string)$in['code'],(bool)$in['is_required'],(bool)$in['is_axis'],$key,$actor,$trace),
             'attribute.product.bulk_set' => $this->products->bulkSetAttributes($org,$in['products'],$in['values'],$key,$actor,$trace),
