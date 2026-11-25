@@ -211,7 +211,7 @@ External Shopify orders may be internally confirmed but local allocation/dispatc
 
 O5 source evidence: Shopify `customerJourneySummary.ready` + last visit exact UTM allowlist (source, medium, canonical campaign/plan ID). Journey is independent of commercial order revision, append-only and deduplicated by hash; conflicting observations are quarantined. Native placement remains unchanged; no revenue or payment assertion. Marketing consumes `SalesCommerceOrderEvidencePort` and `SalesCommerceOrderJourneyReadPort`. Historical orders require authorized re-read; no automatic attribution for missing tags.
 
-## S5A/O4 — Finance collection evidence
+## S5A/O4 — фінансові докази замовлення
 
 Finance owns order payment registrations and independent documentary reconciliation. Registration is pending; only an approved reconciliation by a different requesting actor changes the collection projection. Capture, refund, chargeback and chargeback reversal use exact order currency, per-capture debit limits, unique source and statement references, optimistic financial revision, and atomic immutable receipts. The native port returns null until a confirmed operation exists. Outstanding is calculated against immutable placement terms, not an accounting receivable or revenue; overpayments are retained in net collected. Manual document attestation is not automated bank/Shopify verification. No provider payment or refund initiation. Current package requires exact-head CI, canonical approved Action roundtrip, MySQL acceptance and Sales/Marketing consumer wiring before O4 closure.
 

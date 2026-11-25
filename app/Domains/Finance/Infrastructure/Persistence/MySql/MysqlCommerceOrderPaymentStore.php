@@ -23,6 +23,7 @@ final readonly class MysqlCommerceOrderPaymentStore implements CommerceOrderFina
     public function register(string $org,string $id,array $p,string $actor,string $action,string $trace,string $key):array
     {
         $this->active($org);Money::id($id);
+        if(($p['order_id']??null)!==$id||array_diff(array_keys($p),['order_id','kind','amount','currency','source_account','source_reference','parent_id']))throw new DomainException('Invalid registration parameters.');
         $kind=Money::kind($p['kind']??null);$n=Money::amount($p['amount']??null);$currency=Money::currency($p['currency']??null);
         $account=Money::ref($p['source_account']??null,120);$source=Money::ref($p['source_reference']??null);
         $parent=$p['parent_id']??null;
@@ -52,6 +53,7 @@ final readonly class MysqlCommerceOrderPaymentStore implements CommerceOrderFina
     public function reconcile(string $org,string $id,array $p,string $actor,string $action,string $trace,string $key):array
     {
         $this->active($org);Money::id($id);
+        if(($p['order_id']??null)!==$id||array_diff(array_keys($p),['order_id','kind','amount','currency','source_account','source_reference','operation_id','statement_reference','expected_revision']))throw new DomainException('Invalid reconciliation parameters.');
         $op=Money::id($p['operation_id']??null);$n=Money::amount($p['amount']??null);$currency=Money::currency($p['currency']??null);
         $account=Money::ref($p['source_account']??null,120);$source=Money::ref($p['source_reference']??null);
         $statement=Money::ref($p['statement_reference']??null);$kind=Money::kind($p['kind']??null);$rev=$p['expected_revision']??null;
@@ -111,7 +113,7 @@ final readonly class MysqlCommerceOrderPaymentStore implements CommerceOrderFina
     {
         if($org===''||strlen($org)>40||!$this->modules->isEnabled($org,'finance')||!$this->modules->isEnabled($org,'sales'))throw new DomainException('Finance/Sales unavailable.');
     }
-    private function operation(string $org,string $id,string $op):array{return $this->one('SELECT * FROM cos_finance_order_operations WHERE organization_id=? AND order_id=? AND id=?',[$org,$id,$op])??throw new DomainException('Financial operation unavailable.');}
+    private function operation(string $org,string $id,string $op):array{return $this->one('SELECT * FROM cos_finance_order_operations WHERE organization_id=? AND order_id=? AND id=? FOR UPDATE',[$org,$id,$op])??throw new DomainException('Financial operation unavailable.');}
     private function lock(string $org,string $id):array{return $this->one('SELECT * FROM cos_finance_order_balances WHERE organization_id=? AND order_id=? FOR UPDATE',[$org,$id])??throw new DomainException('Financial balance unavailable.');}
     private function receipt(array $row,string $hash,string $state):array
     {

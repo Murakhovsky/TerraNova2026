@@ -32,7 +32,7 @@ $db->beginTransaction();
 $sales->create($org,['order_id'=>$id,'owner_id'=>101,'deal_id'=>null,'customer_id'=>null,'channel'=>'native','store_reference'=>'manual','external_order_id'=>$id,'currency'=>'EUR','subtotal'=>'100.00','discount'=>'0.00','tax'=>'0.00','tax_included'=>false,'shipping'=>'0.00','total'=>'100.00','attribution'=>[],'placed_at'=>'2026-11-25 00:00:00','created_by'=>101],[$line],$placed);
 $db->commit();
 $reg=static fn(array $p,string $key)=>$repo->register($org,$id,['order_id'=>$id,...$p],'101','action-'.$key,'trace-'.$key,$key);
-$reconcile=static fn(array $p,string $key,string $actor='102')=>$repo->reconcile($org,$id,['order_id'=>$id,...$p],$actor,'action-'.$key,'trace-'.$key,$key);
+$reconcile=static fn(array $p,string $key,string $actor='102')=>$repo->reconcile($org,$id,['order_id'=>$id,...array_diff_key($p,['parent_id'=>true])],$actor,'action-'.$key,'trace-'.$key,$key);
 $base=['currency'=>'EUR','source_account'=>'bank-1'];
 $first=[...$base,'kind'=>'capture','amount'=>'40.00','source_reference'=>'cap-1'];
 $authority->allowed=false;$deny(fn()=>$reg($first,'denied'));$authority->allowed=true;

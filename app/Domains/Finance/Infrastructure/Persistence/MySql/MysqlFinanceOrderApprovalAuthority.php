@@ -37,7 +37,7 @@ final readonly class MysqlFinanceOrderApprovalAuthority implements ApprovalAutho
         if(!is_array($stored))throw new DomainException('Invalid approved parameters.');
         ksort($stored);ksort($parameters);
         if($stored!==$parameters)throw new DomainException('Finance parameters differ from approved Action.');
-        $q=$this->connection->prepare('SELECT decision FROM cos_policy_evaluations WHERE organization_id=? AND action_id=? ORDER BY evaluated_at DESC,id DESC LIMIT 1');
+        $q=$this->connection->prepare('SELECT decision FROM cos_policy_evaluations WHERE organization_id=? AND action_id=? ORDER BY evaluated_at DESC,id DESC LIMIT 1 FOR UPDATE');
         $q->execute([$organizationId,$actionId]);
         if($q->fetchColumn()!=='APPROVAL_REQUIRED')throw new DomainException('Independent Finance policy decision missing.');
         $q=$this->connection->prepare("SELECT status,approver_type,approver_id,requested_by_type,requested_by_id,decided_by_type,decided_by_id,decided_at,expires_at FROM cos_approvals WHERE organization_id=? AND action_id=? FOR UPDATE");
