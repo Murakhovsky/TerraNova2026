@@ -298,7 +298,23 @@ final readonly class ProductManagementPageController
                 $receipt=$this->write($actor,'attribute.product.set',['product_id'=>$id,'values'=>$values,'expected_revision'=>(int)$request->request->get('expected_revision',0)],$request);
                 if($receipt!=$this->read($actor,'attribute.product.get',['product_id'=>$id]))return new Response('Attribute readback uncertain.',503);
             }elseif(in_array($action,['preview','matrix'],true)){
-                $axes=json_decode((string)$request->request->get('axes',''),true,32,JSON_THROW_ON_ERROR);
+                if($action==='preview'){
+                    $definitions=$this->read($actor,'attribute.product.get',['product_id'=>$id]);
+                    $byCode=array_column($definitions['items'],null,'code');
+                    $axes=[];
+                    foreach($request->request->all('axis_choices') as $code=>$choices){
+                        $definition=$byCode[$code]??null;
+                        if($definition===null||!$definition['is_axis']||$definition['value_type']!=='enum'||!is_array($choices)||$choices===[])
+                            throw new DomainException('Invalid variant axis.');
+                        foreach($choices as $choice)if(!is_string($choice)||!in_array($choice,$definition['choices'],true))
+                            throw new DomainException('Invalid axis choice.');
+                        if(count(array_unique($choices))!==count($choices))throw new DomainException('Duplicate axis choice.');
+                        $axes[]=['code'=>$code,'choices'=>array_values($choices)];
+                    }
+                    if(count($axes)<1||count($axes)>4)throw new DomainException('Select 1–4 variant axes.');
+                }else{
+                    $axes=json_decode((string)$request->request->get('axes',''),true,32,JSON_THROW_ON_ERROR);
+                }
                 $input=['product_id'=>$id,'axes'=>$axes,'sku_prefix'=>trim((string)$request->request->get('sku_prefix',''))];
                 if($action==='preview'){
                     $preview=$this->read($actor,'variant.matrix.preview',$input);
