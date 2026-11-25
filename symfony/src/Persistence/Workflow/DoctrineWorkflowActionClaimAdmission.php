@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Persistence\Workflow;
 
+use Platform\Workflow\Service\DurableWorkflowTransitionPolicy;
+
 use Doctrine\DBAL\Connection;
 use DomainException;
 use Kernel\Module\ActiveModuleResolver;
@@ -40,7 +42,7 @@ final readonly class DoctrineWorkflowActionClaimAdmission implements WorkflowSte
         $actor = $command->actor;
         if (!$actor->isManager() || !$actor->allows(TenantPermissions::MANAGE)
             || $step->stepId !== $claim->stepId || $step->state !== 'pending'
-            || $step->sideEffectLevel !== 'external'
+            || !DurableWorkflowTransitionPolicy::isActionEffect($step->sideEffectLevel)
             || !is_string($step->idempotencyKey)
             || !preg_match('/^[a-f0-9]{64}$/', $step->idempotencyKey)) {
             throw new DomainException('Workflow claim is not an authorized pending external Action.');
@@ -64,7 +66,7 @@ final readonly class DoctrineWorkflowActionClaimAdmission implements WorkflowSte
             || $context['idempotency_key'] !== $step->idempotencyKey
             || $context['capability_id'] !== $step->capabilityId
             || $context['capability_version'] !== $step->capabilityVersion
-            || $context['side_effect_level'] !== 'external'
+            || $context['side_effect_level'] !== $step->sideEffectLevel
             || $context['actor_id'] !== $actor->userId()->value()
             || $context['correlation_id'] !== $command->correlationId
             || !is_string($context['source_plan_id']) || $context['source_plan_id'] === ''
@@ -87,7 +89,7 @@ final readonly class DoctrineWorkflowActionClaimAdmission implements WorkflowSte
         if (!is_array($approvedStep)
             || ($approvedStep['capability_id'] ?? null) !== $step->capabilityId
             || ($approvedStep['capability_version'] ?? null) !== $step->capabilityVersion
-            || ($approvedStep['side_effect_level'] ?? null) !== 'external'
+            || ($approvedStep['side_effect_level'] ?? null) !== $step->sideEffectLevel
             || !is_array($approvedStep['input'] ?? null)
             || !is_array($approvedStep['input']['parameters'] ?? null)) {
             throw new DomainException('Workflow Action Step diverges from approved immutable definition.');
@@ -96,7 +98,10 @@ final readonly class DoctrineWorkflowActionClaimAdmission implements WorkflowSte
         if ($contract === null
             || $contract->id !== $step->capabilityId
             || $contract->version !== $step->capabilityVersion
-            || $contract->sideEffectLevel !== 'external'
+            || $contract->sideEffectLevel !== $step->sideEffectLevel
+            || !DurableWorkflowTransitionPolicy::acceptsActionContract($contract)
+            || (DurableWorkflowTransitionPolicy::requiresExplicitPolicy($contract->sideEffectLevel)
+                && !$actor->allows((string)$contract->permission))
             || $contract->approvalPolicy !== 'required'
             || $contract->idempotency !== 'required'
             || $contract->lifecycle === 'retired'
@@ -161,6 +166,15 @@ final readonly class DoctrineWorkflowActionClaimAdmission implements WorkflowSte
         );
         if ($policy !== 'APPROVAL_REQUIRED') {
             throw new DomainException('Latest canonical Policy does not authorize human-approved Action.');
+        }
+        if (DurableWorkflowTransitionPolicy::requiresExplicitPolicy($step->sideEffectLevel)) {
+            $policyType=$this->db->fetchOne(
+                'SELECT p.action_type FROM cos_policy_evaluations e JOIN cos_policies p
+                 ON p.id=e.policy_id AND p.organization_id=e.organization_id
+                 WHERE e.organization_id=:org AND e.action_id=:action AND p.status="ACTIVE"
+                 ORDER BY e.evaluated_at DESC,e.id DESC LIMIT 1 FOR UPDATE',
+                ['org'=>$identity->organizationId,'action'=>$action['id']]);
+            if($policyType!==$action['type'])throw new DomainException('High-risk Action requires an explicit active action-specific Policy.');
         }
         $decisions = $this->db->fetchAllAssociative(
             'SELECT status,decided_by_type,decided_by_id,decided_at,expires_at

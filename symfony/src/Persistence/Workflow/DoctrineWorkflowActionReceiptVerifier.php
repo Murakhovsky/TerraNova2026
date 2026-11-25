@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Persistence\Workflow;
 
+use Platform\Workflow\Service\DurableWorkflowTransitionPolicy;
+
 use Doctrine\DBAL\Connection;
 use Kernel\Action\Action;
 use Kernel\Action\ActionStatus;
@@ -102,7 +104,7 @@ final readonly class DoctrineWorkflowActionReceiptVerifier implements WorkflowRe
         if (!$context
             || !in_array($context['run_state'], ['running','waiting','ambiguous','completed'], true)
             || !in_array($context['step_state'], ['claimed','ambiguous','completed'], true)
-            || $context['side_effect_level'] !== 'external'
+            || !DurableWorkflowTransitionPolicy::isActionEffect($context['side_effect_level'])
             || $context['input_digest'] !== $inputDigest
             || !preg_match('/^[a-f0-9]{64}$/', (string) $context['idempotency_key'])
             || ($context['result_reference'] !== null
@@ -144,7 +146,7 @@ final readonly class DoctrineWorkflowActionReceiptVerifier implements WorkflowRe
         }
         if (!is_array($step) || ($step['capability_id'] ?? null) !== $context['capability_id']
             || ($step['capability_version'] ?? null) !== $context['capability_version']
-            || ($step['side_effect_level'] ?? null) !== 'external'
+            || ($step['side_effect_level'] ?? null) !== $context['side_effect_level']
             || !is_string($step['execution_binding'] ?? null)
             || !str_starts_with($step['execution_binding'], 'action:')
             || !is_array($step['input'] ?? null)

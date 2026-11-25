@@ -30,7 +30,8 @@ final readonly class WorkflowStepScheduler implements WorkflowStepSchedulerInter
         if (count($approvedSteps) !== count($persistedSteps)) {
             throw new DomainException('Workflow definition and persisted step topology differ.');
         }
-        if ($allowedSideEffects === [] || count($allowedSideEffects) !== count(array_unique($allowedSideEffects))) {
+        if ($allowedSideEffects === [] || count($allowedSideEffects) !== count(array_unique($allowedSideEffects))
+            || array_diff($allowedSideEffects,DurableWorkflowTransitionPolicy::SUPPORTED_EFFECTS)!==[]) {
             throw new DomainException('Workflow allowed side effect policy is invalid.');
         }
 

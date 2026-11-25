@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Persistence\Workflow;
 
+
 use DomainException;
 use Platform\Workflow\Contract\WorkflowStepClaimAdmissionInterface;
 use Platform\Workflow\Model\WorkflowStepClaim;
@@ -19,7 +20,7 @@ final readonly class WorkflowClaimAdmissionRouter implements WorkflowStepClaimAd
     public function assertAuthorized(WorkflowStepClaim $claim, WorkflowStepSnapshot $step): void
     {
         match($step->sideEffectLevel) {
-            'external'=>$this->actions->assertAuthorized($claim,$step),
+            'internal','external','financial','irreversible'=>$this->actions->assertAuthorized($claim,$step),
             'none'=>$this->nonActions->assertAuthorized($claim,$step),
             default=>throw new DomainException('Unsupported Workflow Step side effect.'),
         };

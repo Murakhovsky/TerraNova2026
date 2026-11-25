@@ -2,6 +2,8 @@
 declare(strict_types=1);
 namespace App\Persistence\Federation;
 
+use Platform\Workflow\Service\DurableWorkflowTransitionPolicy;
+
 use App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier;
 use App\Persistence\Workflow\FederationWorkflowPlanApprovalEvidence;
 use Doctrine\DBAL\Connection;
@@ -85,7 +87,7 @@ final readonly class FederationCanonicalReceiptInspector
                 }
                 $receipt=$step['result_reference'];
                 if(!is_string($receipt)||$receipt==='')return $result('drift','missing_receipt',$verified,$total);
-                if($step['side_effect_level']==='external') {
+                if(DurableWorkflowTransitionPolicy::isActionEffect($step['side_effect_level'])) {
                     $proof=$this->actions->attestForAudit(
                         $identity,$sid,$receipt,(string)$run['input_digest']);
                     if(!$proof->verified||$proof->stepId!==$sid

@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Persistence\Workflow;
 
+use Platform\Workflow\Service\DurableWorkflowTransitionPolicy;
+
 use Doctrine\DBAL\Connection;
 use DomainException;
 use Platform\Workflow\Contract\WorkflowNonActionReceiptEvidenceInterface;
@@ -84,7 +86,7 @@ final readonly class DoctrineWorkflowShadowParityReader
                     if ($step->state !== 'completed'
                         || !is_string($step->resultReference) || $step->resultReference==='') continue;
                     try {
-                        if ($step->sideEffectLevel==='external') {
+                        if (DurableWorkflowTransitionPolicy::isActionEffect($step->sideEffectLevel)) {
                             $proof=$this->actions->attestForAudit($id,$step->stepId,
                                 $step->resultReference,(string)$run['input_digest']);
                             if (!$proof->verified || $proof->stepId!==$step->stepId

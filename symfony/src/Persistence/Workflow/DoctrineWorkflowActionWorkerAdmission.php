@@ -3,10 +3,18 @@ declare(strict_types=1);
 
 namespace App\Persistence\Workflow;
 
+use Platform\Workflow\Service\DurableWorkflowTransitionPolicy;
+
 use Doctrine\DBAL\Connection;
 use DomainException;
 use Kernel\Action\Action;
 use Kernel\Action\ActionStatus;
+use Kernel\Action\ActionProposal;
+use Kernel\Policy\Contract\PolicyRepositoryInterface;
+use Kernel\Policy\Service\PolicyEngine;
+use Kernel\Policy\Service\PolicyContextBuilder;
+use Kernel\Policy\PolicyDecision;
+use Kernel\Tenant\Model\TenantPermissions;
 use Kernel\Action\Contract\WorkflowActionWorkerAdmissionInterface;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Module\CanonicalCapabilityCatalog;
@@ -37,6 +45,9 @@ final readonly class DoctrineWorkflowActionWorkerAdmission implements WorkflowAc
         private CanonicalCapabilityCatalog $catalog,
         private ActiveModuleResolver $modules,
         private WorkflowPredecessorReceiptVerifier $predecessors,
+        private ?PolicyRepositoryInterface $policies=null,
+        private ?PolicyEngine $policyEngine=null,
+        private ?PolicyContextBuilder $contexts=null,
     ) {}
 
     public function assertAuthorized(Action $action): void
@@ -71,7 +82,7 @@ final readonly class DoctrineWorkflowActionWorkerAdmission implements WorkflowAc
             || $row['claim_expires_at'] === null
             || strtotime((string) $row['claim_expires_at'] . ' UTC') <= time()
             || $row['result_reference'] !== null
-            || $row['side_effect_level'] !== 'external'
+            || !DurableWorkflowTransitionPolicy::isActionEffect($row['side_effect_level'])
             || $row['actor_id'] !== $action->sourceId
             || $row['correlation_id'] !== $action->correlationId
             || !is_string($row['source_plan_id']) || $row['source_plan_id'] === ''
@@ -95,7 +106,7 @@ final readonly class DoctrineWorkflowActionWorkerAdmission implements WorkflowAc
         $decision = (new WorkflowStepScheduler())->select(
             new WorkflowDefinitionSnapshot((string) $row['definition_id'],
                 (string) $row['definition_version'], $graph),
-            $snapshots, ['none','external'],
+            $snapshots, DurableWorkflowTransitionPolicy::SUPPORTED_EFFECTS,
         );
         if ($decision->state !== WorkflowStepSelectionState::CLAIMED
             || $decision->stepId !== $row['step_id']) {
@@ -117,7 +128,8 @@ final readonly class DoctrineWorkflowActionWorkerAdmission implements WorkflowAc
             || $capability->id !== $row['capability_id']
             || $capability->version !== $row['capability_version']
             || $capability->kind !== 'command'
-            || $capability->sideEffectLevel !== 'external'
+            || $capability->sideEffectLevel !== $row['side_effect_level']
+            || !DurableWorkflowTransitionPolicy::acceptsActionContract($capability)
             || $capability->approvalPolicy !== 'required'
             || $capability->idempotency !== 'required'
             || in_array($capability->lifecycle, ['deprecated','retired'], true)
@@ -127,7 +139,7 @@ final readonly class DoctrineWorkflowActionWorkerAdmission implements WorkflowAc
             || ($pinned['capability_version'] ?? null) !== $capability->version
             || ($pinned['owner_domain'] ?? null) !== $capability->ownerDomain
             || ($pinned['execution_binding'] ?? null) !== $capability->executionBinding
-            || ($pinned['side_effect_level'] ?? null) !== 'external'
+            || ($pinned['side_effect_level'] ?? null) !== $capability->sideEffectLevel
             || !is_array($pinned['input'] ?? null)
             || !is_array($pinned['input']['parameters'] ?? null)
             || ($pinned['input']['target_type'] ?? null) !== $action->targetType
@@ -196,6 +208,44 @@ final readonly class DoctrineWorkflowActionWorkerAdmission implements WorkflowAc
                 && strtotime((string) $approvals[0]['expires_at'] . ' UTC') <= time())) {
             throw new DomainException('Worker Action human Approval is missing, expired or self-approved.');
         }
+        if(DurableWorkflowTransitionPolicy::requiresExplicitPolicy($capability->sideEffectLevel)){
+            $this->assertHighRiskPolicy($action,$capability,$row,(string)$approvals[0]['decided_by_id']);
+        }
+    }
+
+    private function assertHighRiskPolicy(Action $action,\Kernel\Module\CapabilityContract $capability,array $row,string $approver):void
+    {
+        if($this->policies===null||$this->policyEngine===null||$this->contexts===null)
+            throw new DomainException('High-risk Workflow requires live Kernel Policy services.');
+        // Current membership is checked, not merely a historical Approval.
+        foreach([$action->sourceId,$approver] as $user){
+            if(!ctype_digit($user)||(int)$user<1||(string)(int)$user!==$user)
+                throw new DomainException('High-risk Action requires a real tenant manager.');
+            $role=$this->db->fetchOne("SELECT m.role FROM cos_organization_memberships m
+                JOIN tn_users u ON u.id=m.user_id
+                WHERE m.organization_id=:org AND m.user_id=:user AND m.status='ACTIVE'
+                AND m.role IN ('manager','admin') AND u.status='active'",
+                ['org'=>$action->organizationId,'user'=>(int)$user]);
+            if(!is_string($role))throw new DomainException('High-risk Action manager no longer active.');
+            if($user===$action->sourceId){
+                $allowed=[TenantPermissions::ACCESS,TenantPermissions::MANAGE];
+                if($role==='admin')$allowed[]=TenantPermissions::ADMIN;
+                if(!in_array($capability->permission,$allowed,true))
+                    throw new DomainException('High-risk permission is not currently established.');
+            }
+        }
+        $proposal=new ActionProposal($action->type,$action->targetType,$action->targetId,$action->parameters,
+            $action->sourceType,$action->sourceId,$action->executionMode,$action->riskLevel,
+            (string)$action->idempotencyKey,['federation'=>['run_id'=>$row['run_id'],'step_id'=>$row['step_id']]]);
+        $evaluation=$this->policyEngine->evaluate($action->type,
+            $this->contexts->build($action->organizationId,$proposal),
+            $this->policies->activeFor($action->organizationId,$action->type));
+        $originalPolicy=$this->db->fetchOne('SELECT policy_id FROM cos_policy_evaluations
+            WHERE organization_id=:org AND action_id=:id ORDER BY evaluated_at DESC,id DESC LIMIT 1',
+            ['org'=>$action->organizationId,'id'=>$action->id]);
+        if($evaluation->decision!==PolicyDecision::ApprovalRequired||$evaluation->policy===null
+            ||$evaluation->policy->actionType!==$action->type||$evaluation->policy->id!==$originalPolicy)
+            throw new DomainException('High-risk Action requires the same explicit current Kernel Policy.');
     }
 
     private static function canonical(mixed $value): string
