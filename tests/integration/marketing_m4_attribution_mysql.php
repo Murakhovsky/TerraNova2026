@@ -11,7 +11,7 @@ $assert=static function(bool $ok,string $why):void{if(!$ok)throw new RuntimeExce
 $org='mkt-m4-'.bin2hex(random_bytes(6));$other='mkt-m4-'.bin2hex(random_bytes(6));
 $campaigns=new MysqlMarketingCampaignRepository($db);$store=new MysqlMarketingAttributionStore($db);
 $campaign=$campaigns->createDraft($org,'42',(new MarketingDraftPolicy())->validate(['name'=>'M4 integration fixture','business_objective'=>'Native lead attribution']),'m4-campaign-1')['id'];
-$lead=['lead_id'=>'42','created_at'=>'2026-01-01 10:00:00','utm_campaign'=>$campaign,'utm_source'=>'google','utm_medium'=>'organic'];
+$lead=['lead_id'=>'999999999999999998','created_at'=>'2026-01-01 10:00:00','utm_campaign'=>$campaign,'utm_source'=>'google','utm_medium'=>'organic'];
 $e=Policy::evidence($lead,$campaign,null);
 $h=hash('sha256','capture');
 $r=$store->batch($org,'m4-capture-key',$h,fn()=>['result'=>$store->record($org,$campaign,$e)]);
@@ -25,7 +25,7 @@ $assert($deny,'Source attribution drift reallocated.');
 $assert(count($store->list($org,$campaign,'2026-01-01','2026-01-01',50,0))===1
     &&$store->list($other,$campaign,'2026-01-01','2026-01-01',50,0)===[],'Tenant/window evidence scope incorrect.');
 try{$store->batch($org,'m4-rollback-key',$h,function()use($store,$org,$campaign,$lead){
-    $store->record($org,$campaign,Policy::evidence([...$lead,'lead_id'=>'43'],$campaign,null));
+    $store->record($org,$campaign,Policy::evidence([...$lead,'lead_id'=>'999999999999999997'],$campaign,null));
     throw new RuntimeException('synthetic rollback');
 });}catch(RuntimeException $e){if($e->getMessage()!=='synthetic rollback')throw $e;}
 $assert(count($store->list($org,$campaign,'2026-01-01','2026-01-01',50,0))===1,'Partial capture committed.');
