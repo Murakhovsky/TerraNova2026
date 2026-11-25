@@ -251,6 +251,6 @@ Outcome provider covers all 28 new governed operation IDs via native receipt, en
 
 Implementation candidate only. R1/R2 acceptance requires exact-head tests, canonical Workflow/Approval denial and replay cases, and deployed tenant evidence; no production activation or D3–D5 promotion.
 
-## R3.1 — External inventory identity and assignment evidence
+## R3.1 — Ідентифікація зовнішніх складів та призначень
 
 Product-owned `CommerceOrderFulfillmentEvidencePort` provides bounded, tenant-attested Shopify FulfillmentOrder assignment observations with exact provider line identity, location, status, total and remaining quantities. GraphQL 2026-10 scope visibility and pagination fences reject incomplete results. This is an assignment observation, not independent proof of committed stock, dispatch, return or settlement. Product-owned existing external mapping table supports explicit active warehouse identity mapping after a recent authenticated stock observation. Mapping does not change authority or native stock. Supervised `cos:product:shopify order-fulfillment --confirm=VERIFY_FULFILLMENT_READ_ONLY` and `map-location --confirm=MAP_LOCATION_NO_STOCK_WRITES` use the existing operator gate. No provider mutations. R3.2 still needs durable Sales-owned external lifecycle evidence, independent fulfillment/return facts and commitment/cutover verification. `external_review` remains enforced.

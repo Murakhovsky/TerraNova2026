@@ -280,7 +280,7 @@ $executeWorkflow=static function(string $type,array $p,string $initiator,string 
             $check($out!==null&&!$out->result->successful,'Revoked Sales order approval still executed.');
             return [];
         }
-        $check($out!==null&&$out->result->successful&&$out->action()->status===\Kernel\Action\ActionStatus::Completed,'Approved Workflow Action failed.');
+        $check($out!==null&&$out->result->successful&&$out->action()->status===\Kernel\Action\ActionStatus::Completed,'Approved Workflow Action failed: '.$step['capability_id']);
         $check($actions->executeOutcome($org,$actionId,'replay-worker')===null,'Completed Action replayed.');
         $check($bridge->advance($actor,$run,$planAction)['state']==='step_completed','Native Action receipt was not checkpointed.');
         $results[$step['id']]=$out->result->data;
@@ -524,7 +524,9 @@ $businessBus=new \App\Infrastructure\Messenger\SymfonyCommandBus(new \Symfony\Co
         \App\Application\Sales\Command\UpdateSalesLeadCommand::class=>[$leadUpdate],
         \App\Application\Sales\Command\ManageSalesTeamCommand::class=>[$teamManage],
         \App\Application\Sales\Command\ConvertSalesLeadToOpportunityCommand::class=>[new \App\Application\Sales\Command\ConvertSalesLeadToOpportunityCommandHandler($businessFactory)],
-        \App\Application\Sales\Command\ManageSalesDealCommand::class=>[$businessDealHandler],
+        \App\Application\Sales\Command\ManageSalesDealCommand::class=>[static function($command)use($businessDealHandler){
+            try{return $businessDealHandler($command);}catch(Throwable $e){fwrite(STDERR,'Synthetic R2 stage fixture: '.get_class($e).': '.$e->getMessage()."\n");throw $e;}
+        }],
         \App\Application\Sales\Command\ManageScheduledSalesActivityCommand::class=>[new \App\Application\Sales\Command\ManageScheduledSalesActivityCommandHandler($businessScheduled)],
         \App\Application\Sales\Command\ManageSalesOfferCommand::class=>[new \App\Application\Sales\Command\ManageSalesOfferCommandHandler($businessOfferService)],
     ])),
