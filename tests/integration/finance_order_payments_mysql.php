@@ -12,7 +12,7 @@ $check=static function(bool $ok,string $msg):void{if(!$ok)throw new RuntimeExcep
 $deny=static function(callable $fn):void{try{$fn();}catch(DomainException){return;}throw new RuntimeException('Invalid Finance order operation accepted.');};
 $db=new PDO(sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',getenv('DB_HOST')?:'127.0.0.1',(int)(getenv('DB_PORT')?:3306),getenv('DB_DATABASE')?:'cos'),getenv('DB_USERNAME')?:'cos',getenv('DB_PASSWORD')?:'',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
 $org='fin-order-'.bin2hex(random_bytes(5));$id=bin2hex(random_bytes(16));
-$catalog=new ModuleCatalog([ModuleDefinition::fromArray(require $root.'/app/Domains/Sales/module.php'),ModuleDefinition::fromArray(require $root.'/app/Domains/Finance/module.php'),ModuleDefinition::fromArray(require $root.'/app/Domains/ProductManagement/module.php'),ModuleDefinition::fromArray(require $root.'/app/Domains/Marketing/module.php')]);
+$catalog=new ModuleCatalog([ModuleDefinition::fromArray(require $root.'/app/Domains/Sales/module.php'),ModuleDefinition::fromArray(require $root.'/app/Domains/Finance/module.php'),ModuleDefinition::fromArray(require $root.'/app/Domains/ProductManagement/module.php'),ModuleDefinition::fromArray((static fn()=>require $root.'/app/Domains/Marketing/module.php')())]);
 $states=new class implements ModuleStateRepositoryInterface{
     public bool $enabled=true;
     public function enabledOverride(string $organizationId,string $moduleId):?bool{return $this->enabled;}

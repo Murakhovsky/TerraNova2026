@@ -19,16 +19,6 @@ return [
         'extension_services' => [],
         'cross_domain_contracts' => [
             [
-                'contract' => 'Domains\\Finance\\Application\\Contract\\CommerceOrderFinancialEvidenceReadPort',
-                'role' => 'provides', 'counterpart' => 'sales', 'kind' => 'synchronous_port',
-                'purpose' => 'Read independently reconciled order collection facts.',
-            ],
-            [
-                'contract' => 'Domains\\Finance\\Application\\Contract\\CommerceOrderFinancialEvidenceReadPort',
-                'role' => 'provides', 'counterpart' => 'marketing', 'kind' => 'synchronous_port',
-                'purpose' => 'Read independently reconciled order collection facts.',
-            ],
-            [
                 'contract'=>'Domains\\Sales\\Application\\Contract\\SalesCommerceOrderEvidencePort',
                 'role'=>'requires','counterpart'=>'sales','kind'=>'synchronous_port',
                 'purpose'=>'Read immutable placed order terms; no Sales mutation.',

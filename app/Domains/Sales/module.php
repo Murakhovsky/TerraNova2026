@@ -34,26 +34,6 @@ return [
         ],
         'cross_domain_contracts' => [
             [
-                'contract' => 'Domains\\Sales\\Application\\Contract\\SalesCommerceOrderLifecycleEvidencePort',
-                'role' => 'provides', 'counterpart' => 'marketing', 'kind' => 'synchronous_port',
-                'purpose' => 'Read immutable tenant-scoped order revisions without mutation or financial authority.',
-            ],
-            [
-                'contract' => 'Domains\\Sales\\Application\\Contract\\SalesCommerceOrderEvidencePort',
-                'role' => 'provides', 'counterpart' => 'marketing', 'kind' => 'synchronous_port',
-                'purpose' => 'Read immutable placement and commercial identity.',
-            ],
-            [
-                'contract' => 'Domains\\Sales\\Application\\Contract\\SalesCommerceOrderJourneyReadPort',
-                'role' => 'provides', 'counterpart' => 'marketing', 'kind' => 'synchronous_port',
-                'purpose' => 'Read independently observed source journey.',
-            ],
-            [
-                'contract' => 'Domains\\Sales\\Application\\Contract\\SalesCommerceOrderEvidencePort',
-                'role' => 'provides', 'counterpart' => 'finance', 'kind' => 'synchronous_port',
-                'purpose' => 'Read immutable commercial order terms.',
-            ],
-            [
                 'contract'=>'Domains\\Finance\\Application\\Contract\\CommerceOrderFinancialEvidenceReadPort',
                 'role'=>'requires','counterpart'=>'finance','kind'=>'synchronous_port',
                 'purpose'=>'Read independently reconciled collection evidence; no financial mutation.',
