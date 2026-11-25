@@ -493,13 +493,6 @@ $leadCreate=new \App\Application\Sales\Command\CreateSalesLeadCommandHandler($bu
 $leadUpdate=new \App\Application\Sales\Command\UpdateSalesLeadCommandHandler($businessFactory);
 $teamManage=new \App\Application\Sales\Command\ManageSalesTeamCommandHandler($businessTeams,
     new \App\Application\Sales\Admin\SalesAdminAuthorization($orderAccess),$orderReceipts,$tx);
-$businessBus=new \App\Infrastructure\Messenger\SymfonyCommandBus(new \Symfony\Component\Messenger\MessageBus([
-    new \Symfony\Component\Messenger\Middleware\HandleMessageMiddleware(new \Symfony\Component\Messenger\Handler\HandlersLocator([
-        \App\Application\Sales\Command\CreateSalesLeadCommand::class=>[$leadCreate],
-        \App\Application\Sales\Command\UpdateSalesLeadCommand::class=>[$leadUpdate],
-        \App\Application\Sales\Command\ManageSalesTeamCommand::class=>[$teamManage],
-    ])),
-]));
 $identities=new \App\Infrastructure\Persistence\MySql\MysqlIdentityRepository($db);
 $tenantFactory=new \Kernel\Tenant\Service\TenantContextFactory(new \App\Security\RoleTenantPermissionResolver());
 $businessPlanEvidence=new \App\Persistence\Workflow\FederationWorkflowPlanApprovalEvidence($wfDb,new \App\Persistence\Federation\FederationPlanApprovalEvidenceReader($wfDb));
@@ -508,10 +501,50 @@ $businessAdmission=new \App\Persistence\Workflow\FailClosedWorkflowActionWorkerA
     new \App\Persistence\Workflow\DoctrineWorkflowActionWorkerAdmission($wfDb,$businessPlanEvidence,$capabilities,$active,
         new \App\Persistence\Workflow\WorkflowPredecessorReceiptVerifier($businessReceipt,new \App\Persistence\Workflow\FailClosedWorkflowNonActionReceiptEvidence())),
     $org);
+
+$businessEvents=new \Kernel\Event\EventBus(new \Infrastructure\Platform\Persistence\MySql\Event\MysqlEventStore($db),$tx);
+$businessDeals=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlDealRepository($db);
+$businessPipelines=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlPipelineRepository($db);
+$businessStages=new \Domains\Sales\Application\UseCase\ChangeDealStage($businessDeals,$businessPipelines,new \Domains\Sales\Domain\Policy\StageTransitionPolicy(),$businessEvents,$tx,
+    new \App\Infrastructure\Automation\CanonicalSalesStageApprovalVerifier($businessAdmission,$orderApproval,$orderAuthority));
+$businessCommercial=new \Domains\Sales\Application\UseCase\SetDealCommercialTerms($businessDeals,$businessDeals,$businessEvents,$tx);
+$businessDealHandler=new \App\Application\Sales\Command\ManageSalesDealCommandHandler($businessDeals,
+    new \Domains\Sales\Application\UseCase\AssignDealOwner($businessDeals,$businessEvents,$tx,new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAssignmentAuthority($db)),
+    $businessStages,$businessCommercial,$orderReceipts,$tx);
+$businessScheduled=new \Domains\Sales\Application\Service\SalesScheduledActivityService(
+    new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesScheduledActivityRepository($db),
+    new \Domains\Sales\Application\UseCase\ScheduleLeadFollowup(new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlLeadFollowupRepository($db),$businessEvents,$tx),
+    $orderReceipts,$businessEvents,$tx);
+$businessOfferService=new \Domains\Sales\Application\Service\SalesOfferService($businessOffers,
+    new \App\Application\Sales\SalesOfferReferenceResolver($productReferences,new \Domains\Property\Infrastructure\ReadModel\MySql\MysqlPropertyReferencePort($db),$active),
+    $businessDeals,$businessCommercial,$orderReceipts,$businessEvents,$tx);
+$businessBus=new \App\Infrastructure\Messenger\SymfonyCommandBus(new \Symfony\Component\Messenger\MessageBus([
+    new \Symfony\Component\Messenger\Middleware\HandleMessageMiddleware(new \Symfony\Component\Messenger\Handler\HandlersLocator([
+        \App\Application\Sales\Command\CreateSalesLeadCommand::class=>[$leadCreate],
+        \App\Application\Sales\Command\UpdateSalesLeadCommand::class=>[$leadUpdate],
+        \App\Application\Sales\Command\ManageSalesTeamCommand::class=>[$teamManage],
+        \App\Application\Sales\Command\ConvertSalesLeadToOpportunityCommand::class=>[new \App\Application\Sales\Command\ConvertSalesLeadToOpportunityCommandHandler($businessFactory)],
+        \App\Application\Sales\Command\ManageSalesDealCommand::class=>[$businessDealHandler],
+        \App\Application\Sales\Command\ManageScheduledSalesActivityCommand::class=>[new \App\Application\Sales\Command\ManageScheduledSalesActivityCommandHandler($businessScheduled)],
+        \App\Application\Sales\Command\ManageSalesOfferCommand::class=>[new \App\Application\Sales\Command\ManageSalesOfferCommandHandler($businessOfferService)],
+    ])),
+]));
 $businessHandler=new \App\Infrastructure\Automation\SalesGovernedBusinessHandler([
     new \App\Infrastructure\Capability\SalesLeadCreateAdapter($businessBus,$businessRead),
     new \App\Infrastructure\Capability\SalesLeadQualificationAdapter($businessBus,$businessRead),
     new \App\Infrastructure\Capability\SalesTeamManageAdapter($businessBus),
+    new \App\Infrastructure\Capability\SalesClientCaseCreateAdapter($businessBus,$businessRead),
+    new \App\Infrastructure\Capability\SalesPipelineStageManageAdapter($businessBus),
+    new \App\Infrastructure\Capability\SalesDealCommercialSetAdapter($businessBus),
+    new \App\Infrastructure\Capability\SalesDealOutcomeRecordAdapter($businessBus),
+    new \App\Infrastructure\Capability\SalesLeadFollowupScheduleAdapter($businessBus),
+    new \App\Infrastructure\Capability\SalesLeadActivityCompleteAdapter($businessBus),
+    new \App\Infrastructure\Capability\SalesLeadActivityRescheduleAdapter($businessBus),
+    new \App\Infrastructure\Capability\SalesLeadActivityCancelAdapter($businessBus),
+    new \App\Infrastructure\Capability\SalesOfferCreateAdapter($businessBus),
+    new \App\Infrastructure\Capability\SalesOfferReviseAdapter($businessBus),
+    new \App\Infrastructure\Capability\SalesOfferTransitionAdapter($businessBus),
+    new \App\Infrastructure\Capability\SalesNegotiationRecordAdapter($businessBus),
 ],new \App\Application\Sales\SalesDirectInvocationPolicy($entityScope,$orderAccess,$businessOffers,$orderGuard),
     $orderApproval,$businessAdmission,$active,$capabilities,$identities,$tenantFactory,$tx);
 $businessModule=new class($businessHandler) implements \Kernel\Module\DomainModuleInterface,\Kernel\Module\Contract\ActionOwningModuleInterface{
@@ -521,7 +554,7 @@ $businessModule=new class($businessHandler) implements \Kernel\Module\DomainModu
     public function actionHandlers():array{return [$this->handler];}
 };
 $businessRegistry=new \Kernel\Module\DomainModuleRegistry([$businessModule]);
-foreach(['sales.governed.lead.create','sales.governed.lead.qualify','sales.governed.team.manage'] as $type)
+foreach($businessModule->actionTypes() as $type)
     $db->prepare('INSERT INTO cos_policies (id,organization_id,code,name,action_type,conditions,decision,priority,version,status) VALUES (?,?,?,?,?,?,"APPROVAL_REQUIRED",1,1,"ACTIVE")')
         ->execute([bin2hex(random_bytes(16)),$org,$type,$type,$type,'[]']);
 $grant->execute([$org,(int)$requester,'sales.admin.teams.manage',$requester]);
@@ -541,6 +574,49 @@ $check($qualified['status']==='contacted'&&$businessRead->lead($org,$leadId)['st
 $teamResult=$executeWorkflow('sales.governed.team.manage',['operation'=>'create','code'=>'R1_'.strtoupper($nonce),'name'=>'R1 canonical team','assignment_mode'=>'ROUND_ROBIN'],
     $requester,$reviewer,[...$businessConfig,'target_type'=>'sales_team_intent','target'=>bin2hex(random_bytes(16))]);
 $check($businessTeams->team($org,$teamResult['team']['team_id'])['assignment_mode']==='ROUND_ROBIN','R1/R2 native team assignment configuration mismatch.');
+// Exercise the approval-required native edge with actual Workflow and independent approvals.
+$pid=bin2hex(random_bytes(16));$from=bin2hex(random_bytes(16));$to=bin2hex(random_bytes(16));$wonStage=bin2hex(random_bytes(16));
+$db->prepare('INSERT INTO sales_pipelines(id,organization_id,code,name,is_default,initial_stage_id,status,configuration_version) VALUES (?,?,?,"R2 approval fixture",1,NULL,"ACTIVE",1)')->execute([$pid,$org,'r2-'.$nonce]);
+$insertStage=$db->prepare('INSERT INTO sales_pipeline_stages(id,organization_id,pipeline_id,code,name,sort_order,is_terminal,is_won,is_lost,probability_default,status,configuration_version) VALUES (?,?,?,?,?,?,?,?,?,?,"ACTIVE",1)');
+$insertStage->execute([$from,$org,$pid,'NEW','New',10,0,0,0,5]);
+$insertStage->execute([$to,$org,$pid,'QUALIFIED','Qualified',20,0,0,0,50]);
+$insertStage->execute([$wonStage,$org,$pid,'WON','Won',30,1,1,0,100]);
+$db->prepare('UPDATE sales_pipelines SET initial_stage_id=? WHERE organization_id=? AND id=?')->execute([$from,$org,$pid]);
+foreach([[$from,$to],[$to,$wonStage]] as [$f,$t]){
+    $db->prepare('INSERT INTO sales_pipeline_transitions(id,organization_id,pipeline_id,from_stage_id,to_stage_id,requires_approval,conditions) VALUES (?,?,?,?,?,1,JSON_ARRAY())')->execute([bin2hex(random_bytes(16)),$org,$pid,$f,$t]);
+}
+$runBusiness=static fn(string $type,array $p,string $kind,string $target,array $extra=[])=>$executeWorkflow('sales.governed.'.$type,$p,$requester,$reviewer,[...$businessConfig,'target_type'=>$kind,'target'=>$target,...$extra]);
+$conversion=$runBusiness('client_case.create',['lead_id'=>$leadId],'lead',(string)$leadId);
+$dealId=$conversion['case_id'];
+$dealSnapshot=static fn()=>\Domains\Sales\Application\Support\DealStateSnapshot::fromNative($businessDeals->getForStageChange($org,(string)$dealId),$org,$dealId);
+$stageInput=['deal_id'=>$dealId,'expected_revision'=>$dealSnapshot()['revision'],'target_stage_id'=>$to];
+$directStage=new \App\Application\Sales\Command\ManageSalesDealCommand(\Kernel\Shared\Domain\OrganizationId::fromString($org),(int)$requester,'stage.manage',$stageInput,'r2-direct-deny-'.$nonce,'r2-direct');
+$deny(fn()=>$businessDealHandler($directStage));
+$check($dealSnapshot()['stage_id']===$from,'Unapproved stage edge mutated.');
+$stageResult=$runBusiness('pipeline.stage.manage',$stageInput,'deal',(string)$dealId);
+$check($stageResult['changed']&&$dealSnapshot()['stage_id']===$to,'Approved pipeline edge was not executed.');
+$commercial=$runBusiness('deal.commercial.set',['deal_id'=>$dealId,'expected_revision'=>$dealSnapshot()['revision'],'deal_value'=>'125.00','currency'=>'EUR'],'deal',(string)$dealId);
+$check($commercial['state']['deal_value']==='125.00','Governed commercial terms missing.');
+$due='2035-01-01T10:00:00Z';$due2='2035-01-02T10:00:00Z';
+$leadActivity=$runBusiness('lead.followup.schedule',['lead_id'=>$leadId,'title'=>'R1 callback','due_at'=>$due],'lead',(string)$leadId);
+$act=$leadActivity['activity_id'];
+$runBusiness('lead.activity.reschedule',['lead_id'=>$leadId,'activity_id'=>$act,'due_at'=>$due2],'lead',(string)$leadId);
+$runBusiness('lead.activity.complete',['lead_id'=>$leadId,'activity_id'=>$act],'lead',(string)$leadId);
+$cancelActivity=$runBusiness('lead.followup.schedule',['lead_id'=>$leadId,'title'=>'R1 cancellation','due_at'=>$due],'lead',(string)$leadId);
+$runBusiness('lead.activity.cancel',['lead_id'=>$leadId,'activity_id'=>$cancelActivity['activity_id'],'reason'=>'No longer needed'],'lead',(string)$leadId);
+$quote=['title'=>'R1 service quote','currency'=>'EUR','valid_until'=>'2035-01-01T00:00:00Z','lines'=>[['kind'=>'service','title'=>'Service','quantity'=>1,'unit_price'=>'125.00']]];
+$offer=$runBusiness('offer.create',['deal_id'=>$dealId,...$quote],'deal',(string)$dealId)['offer'];
+$offerId=$offer['offer_id'];$identity=['deal_id'=>$dealId,'offer_id'=>$offerId];
+$runBusiness('offer.transition',[...$identity,'expected_revision'=>1,'target_status'=>'presented','evidence_reference'=>'r1-email'],'offer',$offerId);
+$runBusiness('negotiation.record',[...$identity,'expected_revision'=>2,'kind'=>'objection','note'=>'Alternative requested'],'offer',$offerId);
+$runBusiness('offer.revise',[...$identity,'expected_revision'=>3,...$quote,'direction'=>'customer','evidence_reference'=>'r1-counter'],'offer',$offerId);
+$runBusiness('offer.revise',[...$identity,'expected_revision'=>4,...$quote,'direction'=>'sales'],'offer',$offerId);
+$runBusiness('offer.transition',[...$identity,'expected_revision'=>5,'target_status'=>'presented','evidence_reference'=>'r1-second'],'offer',$offerId);
+$runBusiness('offer.transition',[...$identity,'expected_revision'=>6,'target_status'=>'accepted','evidence_reference'=>'r1-accept'],'offer',$offerId);
+$wonInput=['deal_id'=>$dealId,'expected_revision'=>$dealSnapshot()['revision'],'target_stage_id'=>$wonStage,'outcome'=>'won'];
+$runBusiness('deal.outcome.record',$wonInput,'deal',(string)$dealId);
+$check($dealSnapshot()['status']==='closed','Approved terminal edge did not close Deal.');
+echo "Sales R1 governed conversion, commercial terms, lead activity and offer history + R2 approval-required Pipeline and WON edge PASS.\n";
 $executeWorkflow('sales.governed.team.manage',['operation'=>'create','code'=>'DENY_'.strtoupper($nonce),'name'=>'Revoked authority'],
     $requester,$reviewer,[...$businessConfig,'target_type'=>'sales_team_intent','target'=>bin2hex(random_bytes(16)),'expect_denied'=>true,
     'after_approval'=>static fn()=>$db->prepare('DELETE FROM sales_user_capabilities WHERE organization_id=? AND user_id=? AND capability="sales.approval.any_team"')->execute([$org,(int)$reviewer])]);
