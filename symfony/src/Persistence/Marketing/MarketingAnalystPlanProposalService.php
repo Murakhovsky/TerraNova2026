@@ -24,18 +24,19 @@ final readonly class MarketingAnalystPlanProposalService
 
     /** @return array<string,mixed> */
     public function propose(TenantContext $actor,string $campaignId,int $campaignRevision,string $creativeId,int $creativeRevision,
-        ?string $adsetId,?int $adsetRevision,string $key):array
+        ?string $adsetId,?int $adsetRevision,string $key,?string $paidPlanId=null,?string $snapshotRef=null):array
     {
         MarketingPlanningPolicy::key($key);
         $status=$this->readiness->status($actor);
         if(!$status['plan_available']||!$this->workflow->newRunsEnabled($actor))throw new DomainException('Canonical Marketing analysis planning is not enabled.');
-        $envelope=$this->contexts->build($actor,$campaignId,$campaignRevision,$creativeId,$creativeRevision,$adsetId,$adsetRevision);
+        $envelope=$this->contexts->build($actor,$campaignId,$campaignRevision,$creativeId,$creativeRevision,$adsetId,$adsetRevision,$paidPlanId,$snapshotRef);
         $org=$actor->organizationId()->value();
         $suffix=substr(hash('sha256',json_encode([$org,$actor->userId()->value(),$key],JSON_THROW_ON_ERROR)),0,24);
         $goalId='goal-'.$suffix;$planId='plan-'.$suffix;
         $parameters=['campaign_revision'=>$campaignRevision,'creative_id'=>$creativeId,'creative_revision'=>$creativeRevision,
             'configuration_hash'=>$status['configuration_hash'],'context_hash'=>$envelope['context_hash']];
         if($adsetId!==null){$parameters['adset_id']=$adsetId;$parameters['adset_revision']=$adsetRevision;}
+        if($paidPlanId!==null){$parameters['paid_plan_id']=$paidPlanId;$parameters['snapshot_ref']=$snapshotRef;}
         $input=['target_type'=>'marketing_campaign','target_id'=>$campaignId,'parameters'=>$parameters];
         return $this->db->transactional(function()use($actor,$org,$goalId,$planId,$input,$campaignId):array{
             $existing=$this->db->fetchOne('SELECT plan_json FROM cos_federation_plans

@@ -370,6 +370,19 @@ try {
         &&$native['observation']['source_snapshot_ref']===$snapshotId&&$native['observation']['reported_spend_decimal']==='12.500000',
         'Native Marketing settlement source readback differs from confirmed receipts.');
     $deny(fn()=>$read->settlementSource($actor,$paidPlan['id'],'mis-'.str_repeat('0',24)),'Unrelated insight accepted for settlement.');
+    $performance=new \Domains\Marketing\Application\Service\MarketingAnalystPerformanceService($fundPlans,$read,$paidRead,$accounts);
+    $performanceContexts=new \Domains\Marketing\Application\Service\MarketingAnalystContextService($campaignService,
+        new \Domains\Marketing\Application\Service\MarketingPlanningService($planning,$planningPolicy),
+        new \Domains\Marketing\Application\Service\MarketingProductDraftCheckService($product),$performance);
+    $performanceContext=$performanceContexts->build($actor,$campaign['id'],1,$creative['id'],1,$adset['id'],1,$paidPlan['id'],$snapshotId);
+    $perf=$performanceContext['context']['facts']['performance'];
+    $assert($perf['status']==='NATIVE_BOUND_PROVIDER_REPORT'&&$perf['reported_spend_decimal']==='12.500000'&&$perf['recognized_revenue']===null
+        &&$perf['payment_confirmed']===false&&!$performanceContext['context']['constraints']['provider_evidence_verified'],'M5 context promoted media facts into financial proof.');
+    $pins=array_column($performanceContext['context']['sources'],null,'alias');
+    $assert($pins['paid_plan']['content_hash']===$paidPlan['plan_hash']&&$pins['media_snapshot']['record_id']===$snapshotId,'M5 evidence pins missing.');
+    $assert($performanceContexts->build($actor,$campaign['id'],1,$creative['id'],1,$adset['id'],1,$paidPlan['id'],$snapshotId)['context_hash']===$performanceContext['context_hash'],'M5 context unstable.');
+    $deny(fn()=>$performanceContexts->build($actor,$campaign['id'],1,$creative['id'],1,$adset['id'],1,$paidPlan['id'],'mis-'.str_repeat('0',24)),'Foreign media snapshot accepted by analyst.');
+    echo "Marketing M5 native bound paid campaign analytics context and immutable evidence pins PASS\n";
     $assert($transport->posts===0,'Hermes unexpectedly invoked by paid lifecycle.');
     $deny(fn()=>$planner->propose($actor,$paidPlan['id'],'activate','reactivation-'.$token,$envelope['id'],$reservation['id']),'Paused plan reactivated.');
 

@@ -11,11 +11,11 @@ use Kernel\Tenant\Model\TenantContext;
 final readonly class MarketingAnalystContextService
 {
     public function __construct(private MarketingCampaignService $campaigns,private MarketingPlanningService $planning,
-        private MarketingProductDraftCheckService $products){}
+        private MarketingProductDraftCheckService $products,private ?MarketingAnalystPerformanceService $performance=null){}
 
     /** @return array<string,mixed> */
     public function build(TenantContext $actor,string $campaignId,int $campaignRevision,string $creativeId,int $creativeRevision,
-        ?string $adsetId=null,?int $adsetRevision=null):array
+        ?string $adsetId=null,?int $adsetRevision=null,?string $paidPlanId=null,?string $snapshotRef=null):array
     {
         MarketingPlanningPolicy::id($creativeId,'mkcr-');
         MarketingPlanningPolicy::revision($campaignRevision);
@@ -77,6 +77,13 @@ final readonly class MarketingAnalystContextService
         }
         // Provider metrics cannot be attributed to an internal Campaign without a verified binding.
         $facts['performance']=['status'=>'NO_VERIFIED_CAMPAIGN_BINDING'];
+        if(($paidPlanId===null)!==($snapshotRef===null))throw new DomainException('Performance requires both paid plan and snapshot pins.');
+        if($paidPlanId!==null){
+            if($this->performance===null||$adsetId===null)throw new DomainException('Performance source and exact AdSet pin required.');
+            $performance=$this->performance->observe($actor,$campaignId,$campaignRevision,$adsetId,$adsetRevision,$paidPlanId,$snapshotRef);
+            $facts['performance']=$performance['facts'];
+            foreach($performance['sources'] as $source)$sources[]=$source;
+        }
         $facts=(new SensitiveContextRedactor())->redact($facts);
         $payload=['schema_version'=>'1.0.0','purpose'=>'MARKETING_PLANNING_ADVICE','sources'=>$sources,'facts'=>$facts,
             'constraints'=>['proposal_only'=>true,'launch_eligible'=>false,'provider_evidence_verified'=>false,'finance_reservation_confirmed'=>false]];
