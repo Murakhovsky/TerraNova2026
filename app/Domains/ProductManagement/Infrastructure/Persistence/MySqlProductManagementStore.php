@@ -170,7 +170,7 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
                 $product=$this->one('SELECT status FROM pm_products WHERE organization_id=? AND product_id=? FOR UPDATE',
                     [$org,$productId]);
                 if($product===null||$product['status']==='archived')throw new DomainException('Product missing or archived.');
-                if($this->one('SELECT category_id FROM pm_categories WHERE organization_id=? AND category_id=?',
+                if($this->one('SELECT category_id FROM pm_categories WHERE organization_id=? AND category_id=? FOR UPDATE',
                     [$org,$categoryId])===null)throw new DomainException('Category missing in tenant.');
                 $this->execute('INSERT INTO pm_product_categories (organization_id,product_id,category_id) VALUES (?,?,?)',
                     [$org,$productId,$categoryId]);
@@ -653,9 +653,9 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
         foreach(['is_required','is_axis'] as $flag)if(isset($row[$flag]))$row[$flag]=(bool)$row[$flag];
         return $row;
     }
-    private function attributeDefinition(string $org,string $code):array
+    private function attributeDefinition(string $org,string $code,bool $lock=false):array
     {
-        $row=$this->one('SELECT code,name,value_type,unit,choices_json FROM pm_attribute_definitions WHERE organization_id=? AND code=?',[$org,$code]);
+        $row=$this->one("SELECT code,name,value_type,unit,choices_json FROM pm_attribute_definitions WHERE organization_id=? AND code=? AND lifecycle_status='active'".($lock?' FOR UPDATE':''),[$org,$code]);
         if($row===null)throw new DomainException('Unknown tenant attribute.');
         return $this->decodeAttribute($row);
     }
@@ -667,16 +667,16 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
             return $this->attributeDefinition($org,$definition['code']);
         },'product_management.attribute.defined','Attribute');
     }
-    public function attributes(string $org,int $limit,int $offset):array
+    public function attributes(string $org,int $limit,int $offset,string $status='active'):array
     {
-        $stmt=$this->connection->prepare('SELECT code,name,value_type,unit,choices_json FROM pm_attribute_definitions WHERE organization_id=:org ORDER BY code LIMIT :lim OFFSET :off');
-        $stmt->bindValue(':org',$org);$stmt->bindValue(':lim',$limit,PDO::PARAM_INT);$stmt->bindValue(':off',$offset,PDO::PARAM_INT);$stmt->execute();
+        $stmt=$this->connection->prepare('SELECT code,name,value_type,unit,choices_json FROM pm_attribute_definitions WHERE organization_id=:org AND lifecycle_status=:status ORDER BY code LIMIT :lim OFFSET :off');
+        $stmt->bindValue(':org',$org);$stmt->bindValue(':status',$status);$stmt->bindValue(':lim',$limit,PDO::PARAM_INT);$stmt->bindValue(':off',$offset,PDO::PARAM_INT);$stmt->execute();
         return array_map($this->decodeAttribute(...),$stmt->fetchAll(PDO::FETCH_ASSOC));
     }
     public function bindAttribute(string $org,string $category,string $code,bool $required,bool $axis,string $key,string $actor,string $trace):array
     {
         return $this->mutate($org,'attribute.category.bind',$key,[$category,$code,$required,$axis],$actor,$trace,function()use($org,$category,$code,$required,$axis):array{
-            $def=$this->attributeDefinition($org,$code);
+            $def=$this->attributeDefinition($org,$code,true);
             if($axis&&$def['value_type']!=='enum')throw new DomainException('Matrix axis must be enum.');
             if($this->one('SELECT category_id FROM pm_categories WHERE organization_id=? AND category_id=? FOR UPDATE',[$org,$category])===null)
                 throw new DomainException('Unknown tenant category.');
@@ -684,6 +684,50 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
             return ['category_id'=>$category,'code'=>$code,'is_required'=>$required,'is_axis'=>$axis];
         },'product_management.attribute.category_bound','Category');
     }
+    public function changeAttributeLifecycle(string $org,array $in,string $key,string $actor,string $trace):array
+    {
+        return $this->mutate($org,'attribute.lifecycle.change',$key,[$in],$actor,$trace,function()use($org,$in):array{
+            $code=$in['code'];$op=$in['operation'];
+            $def=$this->one('SELECT code,name,value_type,lifecycle_status FROM pm_attribute_definitions WHERE organization_id=? AND code=? FOR UPDATE',[$org,$code]);
+            if($def===null)throw new DomainException('Unknown tenant attribute.');
+            $result=['operation'=>$op,'code'=>$code];
+            if(in_array($op,['rename','archive','restore'],true)){
+                $expectedStatus=$op==='restore'?'archived':'active';
+                if($def['lifecycle_status']!==$expectedStatus||$def['name']!==$in['expected_name'])throw new DomainException('Attribute state conflict.');
+                if($op==='rename'){
+                    $this->execute('UPDATE pm_attribute_definitions SET name=? WHERE organization_id=? AND code=?',[$in['name'],$org,$code]);
+                    return $result+['name'=>$in['name'],'status'=>'active'];
+                }
+                if($op==='archive'){
+                    if($this->one('SELECT code FROM pm_category_attributes WHERE organization_id=? AND code=? LIMIT 1 FOR UPDATE',[$org,$code])!==null
+                        ||$this->one('SELECT code FROM pm_product_attribute_values WHERE organization_id=? AND code=? LIMIT 1 FOR UPDATE',[$org,$code])!==null)
+                        throw new DomainException('Cannot archive an attribute still in use.');
+                }
+                $status=$op==='archive'?'archived':'active';
+                $this->execute('UPDATE pm_attribute_definitions SET lifecycle_status=? WHERE organization_id=? AND code=?',[$status,$org,$code]);
+                return $result+['name'=>$def['name'],'status'=>$status];
+            }
+            if($def['lifecycle_status']!=='active')throw new DomainException('Active attribute required.');
+            $category=$in['category_id'];
+            if($this->one('SELECT category_id FROM pm_categories WHERE organization_id=? AND category_id=? FOR UPDATE',[$org,$category])===null)
+                throw new DomainException('Unknown tenant category.');
+            $row=$this->one('SELECT is_required,is_axis FROM pm_category_attributes WHERE organization_id=? AND category_id=? AND code=? FOR UPDATE',[$org,$category,$code]);
+            if($row===null||(bool)$row['is_required']!==$in['expected_is_required']||(bool)$row['is_axis']!==$in['expected_is_axis'])
+                throw new DomainException('Category binding state conflict.');
+            // Deliberately conservative: no schema change under products or existing SKU matrices.
+            if($this->one('SELECT product_id FROM pm_product_categories WHERE organization_id=? AND category_id=? LIMIT 1 FOR UPDATE',[$org,$category])!==null)
+                throw new DomainException('Category is in use; migrate its products before changing bindings.');
+            if($op==='binding.remove'){
+                $this->execute('DELETE FROM pm_category_attributes WHERE organization_id=? AND category_id=? AND code=?',[$org,$category,$code]);
+                return $result+['category_id'=>$category,'bound'=>false];
+            }
+            if($op!=='binding.update'||($in['is_axis']&&$def['value_type']!=='enum'))throw new DomainException('Invalid binding update.');
+            $this->execute('UPDATE pm_category_attributes SET is_required=?,is_axis=? WHERE organization_id=? AND category_id=? AND code=?',
+                [(int)$in['is_required'],(int)$in['is_axis'],$org,$category,$code]);
+            return $result+['category_id'=>$category,'bound'=>true,'is_required'=>$in['is_required'],'is_axis'=>$in['is_axis']];
+        },'product_management.attribute.lifecycle_changed','Attribute');
+    }
+
     public function categoryAttributes(string $org,string $category):array
     {
         return array_map($this->decodeAttribute(...),$this->rows('SELECT d.code,d.name,d.value_type,d.unit,d.choices_json,a.is_required,a.is_axis FROM pm_category_attributes a JOIN pm_attribute_definitions d ON d.organization_id=a.organization_id AND d.code=a.code WHERE a.organization_id=? AND a.category_id=? ORDER BY d.code',[$org,$category]));
