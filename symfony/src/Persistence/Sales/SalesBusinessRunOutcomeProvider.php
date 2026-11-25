@@ -46,6 +46,9 @@ final readonly class SalesBusinessRunOutcomeProvider implements RunScopedGoalOut
         'sales.governed.negotiation.record'=>'negotiation',
     ];
 
+    private const INTAKE = ['sales.governed.lead.create','sales.governed.lead.intake','sales.governed.lead.qualify','sales.governed.client_case.create'];
+    private const SOURCE = ['sales.governed.crm.inbox.process','sales.governed.crm.inbox.recover','sales.governed.order.source.reconcile','sales.governed.order.source.sync.start'];
+
     public function __construct(
         private Connection $db,
         private SalesWorkspaceReadModelInterface $sales,
@@ -55,6 +58,8 @@ final readonly class SalesBusinessRunOutcomeProvider implements RunScopedGoalOut
         private \Domains\Sales\Application\Contract\SalesScheduledActivityRepositoryInterface $scheduled,
         private \Domains\Sales\Application\Contract\SalesOfferRepositoryInterface $offers,
         private \Domains\Sales\Application\Contract\SalesTeamAdministrationInterface $teams,
+        private \Domains\Sales\Application\Contract\CrmInboxRecoveryRepositoryInterface $crm,
+        private \Domains\Sales\Application\Contract\SalesOrderSyncRepositoryInterface $sync,
     ) {}
 
     public function domain(): string { return 'sales'; }
@@ -79,7 +84,8 @@ final readonly class SalesBusinessRunOutcomeProvider implements RunScopedGoalOut
             if (!isset(self::DEAL_OPERATIONS[$r['capability_id']]) && $r['capability_id']!=='sales.governed.lead.state.manage'
                 && !SalesActivityOutcomeEvidence::supports($r['capability_id'])
                 && !isset(self::SCHEDULED[$r['capability_id']]) && !isset(self::OFFERS[$r['capability_id']])
-                && $r['capability_id']!=='sales.governed.team.manage')
+                && $r['capability_id']!=='sales.governed.team.manage'
+                && !in_array($r['capability_id'],self::INTAKE,true) && !in_array($r['capability_id'],self::SOURCE,true))
                 throw new FederationOutcomeSourceNotReady('Independent native proof not yet available for every Sales operation in this Run.');
             if ($r['state']!=='completed'||$r['step_state']!=='completed'||!is_string($r['action_id']??null))
                 throw new FederationOutcomeSourceNotReady('Completed Sales business Run required.');
@@ -122,6 +128,8 @@ final readonly class SalesBusinessRunOutcomeProvider implements RunScopedGoalOut
         if (isset(self::SCHEDULED[$type])) return $this->scheduledProof($org,$r,$p,$user,$key);
         if (isset(self::OFFERS[$type])) return $this->offerProof($org,$r,$p,$user,$key);
         if ($type==='sales.governed.team.manage') return $this->teamProof($org,$p,$user,$key);
+        if (in_array($type,self::INTAKE,true)) return $this->intakeProof($org,$r,$p,$user,$key);
+        if (in_array($type,self::SOURCE,true)) return $this->sourceProof($org,$r,$p,$user,$key);
         $op=self::DEAL_OPERATIONS[$type];
         $id=$p['deal_id'];
         ksort($p);
@@ -235,5 +243,116 @@ final readonly class SalesBusinessRunOutcomeProvider implements RunScopedGoalOut
         };
         if (!$matches) throw new FederationOutcomeSourceNotReady('Native team state changed.');
         return 'sales:team:'.$id.':'.$key;
+    }
+
+    private function intakeProof(string $org,array $r,array $p,int $user,string $key): string
+    {
+        $type=$r['capability_id'];
+        if (in_array($type,['sales.governed.lead.create','sales.governed.lead.intake'],true)) {
+            $intake=$type==='sales.governed.lead.intake';
+            $contact=static fn(string $field):?string=>trim($p[$field]??'')!==''?trim($p[$field]):null;
+            $lead=['property_id'=>$p['property_id']??null,'full_name'=>trim($p['full_name']),
+                'phone'=>$contact('phone'),'email'=>$contact('email'),'role'=>$p['role']??'buyer',
+                'deal_type'=>$p['deal_type']??'consultation','message'=>$contact('message'),
+                'source_page'=>$intake?'operator-intake':'manager-api','request_intent'=>$p['request_intent']??'general_contact'];
+            $payload=$intake?($lead+['telegram'=>$contact('telegram')]):
+                (['person_id'=>null,'client_case_id'=>null]+$lead+['manager_note'=>null,'assigned_user_id'=>$user,'next_contact_at'=>null]);
+            $hash=hash('sha256',json_encode(['actor_id'=>$user,'lead'=>$payload],JSON_THROW_ON_ERROR));
+            $receipt=$this->nativeReceipts->find($org,$intake?'operator.lead.intake':'api.lead.create',
+                $intake?substr(hash('sha256','operator-intake:'.$key),0,32):$key);
+            if (!is_string($receipt)||!preg_match('/^([a-f0-9]{64}):([1-9][0-9]{0,18})$/D',$receipt,$m)
+                ||!hash_equals($hash,$m[1])||(string)(int)$m[2]!==$m[2])
+                throw new DomainException('Lead intake receipt differs from approved operation.');
+            $id=(int)$m[2];$row=$this->sales->lead($org,$id);
+            if ($row===null||$row['organization_id']!==$org||(int)$row['id']!==$id)
+                throw new FederationOutcomeSourceNotReady('Native lead unavailable.');
+            foreach($lead as $field=>$value) {
+                $actual=$row[$field]??null;
+                if($field==='property_id'&&$actual!==null)$actual=(int)$actual;
+                if($actual!==$value)throw new FederationOutcomeSourceNotReady('Native lead fields changed.');
+            }
+            $event=$this->leadEvent($org,$r,$id,'sales.lead.created');
+            if (($event['payload']['source_page']??null)!==$lead['source_page'])throw new DomainException('Lead creation event mismatch.');
+            if ($intake) {
+                $deal=(int)($event['payload']['client_case_id']??0);
+                $case=$deal>0?$this->sales->deal($org,$deal):null;
+                if($case===null||$case['organization_id']!==$org||(int)$row['client_case_id']!==$deal)
+                    throw new FederationOutcomeSourceNotReady('Intake case relationship unavailable.');
+            }
+            return 'sales:lead:'.$id.':'.$event['id'];
+        }
+        $id=$p['lead_id'];$row=$this->sales->lead($org,$id);
+        if ($row===null||$row['organization_id']!==$org||(int)$row['id']!==$id||(string)$id!==$r['target_id'])
+            throw new FederationOutcomeSourceNotReady('Native lead unavailable.');
+        if ($type==='sales.governed.lead.qualify') {
+            $eventType=match($p['target_status']){'contacted'=>'sales.lead.contacted','qualified'=>'sales.lead.qualified','disqualified'=>'sales.lead.disqualified',default=>throw new DomainException('Unknown qualification outcome.')};
+            $event=$this->leadEvent($org,$r,$id,$eventType);
+            if (($event['payload']['previous_status']??null)!==$p['expected_status']||($event['payload']['status']??null)!==$p['target_status'])
+                throw new DomainException('Qualification event mismatch.');
+        } else {
+            $event=$this->leadEvent($org,$r,$id,'sales.lead.changed');
+            $deal=(int)($event['payload']['changes']['client_case_id']['to']??0);
+            $case=$deal>0?$this->sales->deal($org,$deal):null;
+            if($case===null||$case['organization_id']!==$org||(int)$row['client_case_id']!==$deal
+                ||($event['payload']['changes']['client_case_id']['from']??null)!==null)
+                throw new FederationOutcomeSourceNotReady('Conversion relationship unavailable.');
+        }
+        return 'sales:lead:'.$id.':'.$event['id'];
+    }
+
+    private function leadEvent(string $org,array $r,int $lead,string $type):array
+    {
+        $rows=$this->db->fetchAllAssociative('SELECT id,payload FROM cos_events WHERE organization_id=? AND BINARY organization_id=BINARY ?
+            AND aggregate_type="lead" AND aggregate_id=? AND type=? AND actor_type="USER" AND actor_id=? AND correlation_id=? LIMIT 2',
+            [$org,$org,(string)$lead,$type,$r['source_id'],$r['correlation_id']]);
+        if(count($rows)!==1)throw new FederationOutcomeSourceNotReady('Unique native lead event unavailable; no-op is not a new effect.');
+        $row=$rows[0];$row['payload']=json_decode($row['payload'],true,32,JSON_THROW_ON_ERROR);return $row;
+    }
+
+    private function sourceProof(string $org,array $r,array $p,int $user,string $key): string
+    {
+        $type=$r['capability_id'];
+        if (str_starts_with($type,'sales.governed.crm.inbox.')) {
+            $id=$p['inbox_id'];$row=$this->crm->status($org,$id);
+            if($row===null||!$row['signature_verified']||$id!==$r['target_id'])
+                throw new FederationOutcomeSourceNotReady('Verified CRM inbox unavailable.');
+            if ($type==='sales.governed.crm.inbox.recover') {
+                $hash=hash('sha256',json_encode([$user,$id,$p['revision'],$p['reason']],JSON_THROW_ON_ERROR));
+                $receipt=$this->nativeReceipts->find($org,'crm.inbox.recover',$key);
+                if(!is_string($receipt)||!hash_equals('done:'.$hash,$receipt))
+                    throw new DomainException('CRM recovery receipt mismatch.');
+                // This proves admission/requeue, not successful remote processing.
+            } elseif($row['status']!=='COMPLETED') {
+                throw new FederationOutcomeSourceNotReady('CRM inbox processing is not complete.');
+            }
+            return 'sales:crm:'.$id.':'.$key;
+        }
+        if($p['connection_id']!==$r['target_id'])throw new DomainException('Commerce connection mismatch.');
+        if ($type==='sales.governed.order.source.sync.start') {
+            $run=substr(hash('sha256',json_encode([$org,'sales.order.source.sync.start',$key],JSON_THROW_ON_ERROR)),0,32);
+            $hash=hash('sha256',json_encode([$user,$p['channel'],$p['connection_id'],$p['mode']],JSON_THROW_ON_ERROR));
+            $row=$this->sync->run($org,$run);
+            if($row===null||!hash_equals($hash,$row['request_hash'])||(int)$row['actor_id']!==$user
+                ||$row['connection_id']!==$p['connection_id']||$row['channel']!==$p['channel']||$row['mode']!==$p['mode'])
+                throw new FederationOutcomeSourceNotReady('Native sync admission unavailable.');
+            $counts=$this->sync->summary($org,$run);
+            if($counts['discovery_pending']+$counts['discovery_done']+$counts['discovery_review']<1)
+                throw new FederationOutcomeSourceNotReady('Native sync job admission unavailable.');
+            return 'sales:sync-admission:'.$run;
+        }
+        $hash=hash('sha256',json_encode([$user,$p['channel'],$p['connection_id'],$p['external_order_id'],$p['delivery_id']??null],JSON_THROW_ON_ERROR));
+        $receipt=$this->nativeReceipts->find($org,'order.source.reconcile',$key);
+        if(!is_string($receipt)||!hash_equals($hash,$receipt))throw new DomainException('Commerce reconciliation receipt mismatch.');
+        $id=hash('sha256',json_encode([$org,$p['channel'],$p['connection_id'],$p['external_order_id']],JSON_THROW_ON_ERROR));
+        $row=$this->db->fetchAssociative('SELECT s.order_id,s.outcome,o.observation FROM sales_order_sources s
+            JOIN sales_order_source_observations o ON o.organization_id=s.organization_id AND o.source_id=s.source_id
+                AND o.provider_updated_at=s.latest_updated_at AND o.provider_hash=s.latest_hash
+            WHERE s.organization_id=? AND BINARY s.organization_id=BINARY ? AND s.source_id=?',
+            [$org,$org,$id]);
+        if(!$row)throw new FederationOutcomeSourceNotReady('Native provider observation unavailable.');
+        $fact=json_decode($row['observation'],true,32,JSON_THROW_ON_ERROR);
+        if(($fact['channel']??null)!==$p['channel']||($fact['store_reference']??null)!==$p['connection_id']
+            ||($fact['external_order_id']??null)!==$p['external_order_id'])throw new DomainException('Native provider observation mismatch.');
+        return 'sales:source-observation:'.$id.':'.$key;
     }
 }
