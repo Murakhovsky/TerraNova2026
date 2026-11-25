@@ -14,6 +14,7 @@ use Domains\ProductManagement\Automation\Action\ProductStockCountApplyHandler;
 use Domains\ProductManagement\Automation\Action\ProductStockCountSessionApplyHandler;
 use Domains\ProductManagement\Automation\Action\ProductGovernedOperationHandler;
 use Domains\ProductManagement\Automation\Action\ShopifyImportApplyHandler;
+use Domains\ProductManagement\Automation\Action\ShopifyDraftWritebackHandler;
 use Kernel\Module\Contract\EventOwningModuleInterface;
 use Kernel\Rule\Contract\RuleContextProviderInterface;
 use Domains\ProductManagement\Rule\ProductManagementRuleContextProvider;
@@ -28,6 +29,7 @@ final readonly class ProductManagementDomainModule implements DomainModuleInterf
         private ?ProductStockCountApplyHandler $stockCountHandler = null,
         private ?ProductStockCountSessionApplyHandler $countSessionHandler = null,
         private ?ProductGovernedOperationHandler $governedHandler = null,
+        private ?ShopifyDraftWritebackHandler $writebackHandler = null,
     ) {}
 
     public function name(): string { return 'product_management'; }
@@ -35,13 +37,14 @@ final readonly class ProductManagementDomainModule implements DomainModuleInterf
         return array_merge(array_values(array_filter([
             $this->importHandler===null?null:ProductImportApplyHandler::TYPE,
             $this->shopifyHandler===null?null:ShopifyImportApplyHandler::TYPE,
+            $this->writebackHandler===null?null:ShopifyDraftWritebackHandler::TYPE,
             $this->stockCountHandler===null?null:ProductStockCountApplyHandler::TYPE,
             $this->countSessionHandler===null?null:ProductStockCountSessionApplyHandler::TYPE,
         ])), $this->governedHandler===null?[]:ProductGovernedOperationHandler::types());
     }
 
     public function actionHandlers():array {
-        return array_values(array_filter([$this->importHandler,$this->shopifyHandler,$this->stockCountHandler,$this->countSessionHandler,$this->governedHandler]));
+        return array_values(array_filter([$this->importHandler,$this->shopifyHandler,$this->stockCountHandler,$this->countSessionHandler,$this->governedHandler,$this->writebackHandler]));
     }
 
     public function policies(string $organizationId):array {
