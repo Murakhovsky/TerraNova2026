@@ -35,7 +35,7 @@ query COSCommerceFulfillmentEvidenceLifecycle($id: ID!) {
   currentAppInstallation { accessScopes { handle } }
   order(id: $id) {
     id updatedAt test cancelledAt edited displayFulfillmentStatus
-    lineItems(first: 100) { nodes { id quantity } pageInfo { hasNextPage } }
+    lineItems(first: 100) { nodes { id quantity product { id } variant { id } } pageInfo { hasNextPage } }
     fulfillmentOrders(first: 10) {
       nodes {
         id status requestStatus assignedLocation { location { id } }
@@ -200,6 +200,19 @@ GQL;
             if($assignment['canonical_location_id']===null)$missing[$assignment['location_gid']]=true;
         }
         unset($assignment);
+        if($includeLifecycle){
+            // Canonical reference lookup is separate from the provider hash.
+            $mapped=[];
+            foreach($data['order']['lineItems']['nodes'] as $line){
+                $p=$line['product']['id']??null;$v=$line['variant']['id']??null;
+                $pid=is_string($p)?$this->store->mapping($org,$connection,'product',self::gid($p,'Product'))['canonical_id']??null:null;
+                $vid=is_string($v)?$this->store->mapping($org,$connection,'variant',self::gid($v,'ProductVariant'))['canonical_id']??null:null;
+                $ref=is_string($pid)&&is_string($vid)?$this->products->quoteReference($org,$pid,$vid):null;
+                $mapped[$line['id']]=$ref!==null&&($ref['product_id']??null)===$pid&&($ref['variant_id']??null)===$vid
+                    ?['product_id'=>$pid,'variant_id'=>$vid]:null;
+            }
+            ksort($mapped,SORT_STRING);$evidence['canonical_line_mappings']=$mapped;
+        }
         return ['organization_id'=>$org,'channel'=>$channel,'connection_id'=>$connection,'configured_inventory_mode'=>$c['mode'],
             ...$evidence,'unmapped_locations'=>array_keys($missing),'inventory_authority'=>'external_review',
             'local_stock_write_allowed'=>false,'physical_commitment_verified'=>false];

@@ -109,6 +109,49 @@ final readonly class ShopifyObservationStore
         return is_string($row)?$row:null;
     }
 
+    /**
+     * Read-only R3 cutover preflight. A per-order observation cannot prove
+     * that every sales channel and provider writer has been fenced.
+     * Never mutate connection mode, reservations, Product or Sales state.
+     */
+    public function inventoryCutoverReview(string $org,string $conn,array $evidence):array
+    {
+        $c=$this->connection($org,$conn);
+        if(($evidence['organization_id']??null)!==$org||($evidence['connection_id']??null)!==$conn
+            ||($evidence['channel']??null)!=='shopify'||($evidence['test']??null)!==false
+            ||($evidence['configured_inventory_mode']??null)!==$c['mode']
+            ||!is_array($evidence['lifecycle']??null)||!is_array($evidence['canonical_line_mappings']??null))
+            throw new DomainException('Complete authenticated ownership observation required.');
+        $life=$evidence['lifecycle'];$reasons=['provider_global_write_fence_unverified'=>true,'independent_cutover_approval_required'=>true];
+        if($c['mode']!=='shopify_authoritative')$reasons['connection_not_provider_authoritative']=true;
+        if($evidence['unmapped_locations']!==[])$reasons['unmapped_provider_location']=true;
+        foreach($life['review_reasons'] as $reason)$reasons[$reason]=true;
+        $variants=[];
+        foreach($life['lines'] as $line=>$fact){
+            if($fact['assigned_pending']>0)$reasons['provider_pending_assignment']=true;
+            if($fact['provider_fulfilled']>0)$reasons['provider_fulfillment_history']=true;
+            if($fact['return_requested']>$fact['return_processed'])$reasons['provider_return_pending']=true;
+            $map=$evidence['canonical_line_mappings'][$line]??null;
+            if(!is_array($map)){$reasons['unmapped_order_line']=true;continue;}
+            $pid=$map['product_id'];$vid=$map['variant_id'];
+            $exists=$this->query('SELECT 1 FROM pm_variants v JOIN pm_products p ON p.organization_id=v.organization_id AND p.product_id=v.product_id WHERE v.organization_id=? AND BINARY v.organization_id=BINARY ? AND v.variant_id=? AND p.product_id=? AND v.status="active" AND p.status="active"',[$org,$org,$vid,$pid])->fetchColumn();
+            if($exists===false){$reasons['native_variant_unavailable']=true;continue;}
+            $variants[$vid]=true;
+            // Check all warehouses, not only the currently assigned location.
+            $hasStock=$this->query('SELECT 1 FROM pm_stock_balances WHERE organization_id=? AND variant_id=? AND (on_hand<>0 OR reserved<>0) LIMIT 1',[$org,$vid])->fetchColumn();
+            $hasReservation=$this->query('SELECT 1 FROM pm_stock_reservations WHERE organization_id=? AND variant_id=? AND status="active" LIMIT 1',[$org,$vid])->fetchColumn();
+            if($hasStock!==false)$reasons['native_balance_requires_reconciliation']=true;
+            if($hasReservation!==false)$reasons['native_active_reservation']=true;
+            $other=$this->query('SELECT 1 FROM pm_external_mappings m JOIN pm_external_connections c ON c.organization_id=m.organization_id AND c.connection_id=m.connection_id WHERE m.organization_id=? AND m.connection_id<>? AND ((m.entity_type="variant" AND m.canonical_id=?) OR (m.entity_type="product" AND m.canonical_id=?)) AND c.mode="shopify_authoritative" LIMIT 1',[$org,$conn,$vid,$pid])->fetchColumn();
+            if($other!==false)$reasons['other_provider_authority']=true;
+        }
+        ksort($reasons,SORT_STRING);
+        return ['status'=>'CUTOVER_BLOCKED','organization_id'=>$org,'connection_id'=>$conn,
+            'external_order_id'=>$evidence['external_order_id'],'provider_hash'=>$evidence['provider_hash'],
+            'configured_inventory_mode'=>$c['mode'],'mapped_native_variants'=>count($variants),
+            'blocking_reasons'=>array_keys($reasons),'local_stock_write_allowed'=>false,'ownership_changed'=>false];
+    }
+
     /** @param array<string,mixed> $snapshot */
     public function observeProduct(string $org,string $conn,string $gid,array $snapshot,bool $complete=false): void
     {

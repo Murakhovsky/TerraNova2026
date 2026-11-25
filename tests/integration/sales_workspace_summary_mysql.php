@@ -94,7 +94,7 @@ try{
                 if(str_contains($request['query'],'COSCommerceFulfillmentEvidenceLifecycle')){
                     if($this->returnScope)$data['currentAppInstallation']['accessScopes'][]=['handle'=>'read_returns'];
                     $o=&$data['order'];$o['edited']=false;
-                    $o['lineItems']=['nodes'=>[['id'=>'gid://shopify/LineItem/77','quantity'=>1]],'pageInfo'=>['hasNextPage'=>false]];
+                    $o['lineItems']=['nodes'=>[['id'=>'gid://shopify/LineItem/77','quantity'=>1,'product'=>['id'=>'gid://shopify/Product/41'],'variant'=>['id'=>'gid://shopify/ProductVariant/42']]],'pageInfo'=>['hasNextPage'=>false]];
                     $o['fulfillmentsCount']=['count'=>$this->lifecycleCountMismatch?2:($this->fulfilledLifecycle?1:0),'precision'=>'EXACT'];
                     $o['fulfillments']=[];$o['returns']=['nodes'=>[],'pageInfo'=>['hasNextPage'=>false]];
                     if($this->fulfilledLifecycle){
@@ -757,9 +757,15 @@ try{
     // Independently observed provider fulfillment/return, not a local stock or Finance effect.
     $http->fulfilledLifecycle=true;$http->updated='2026-11-25T15:00:00Z';
     $lifeInput=[...$r3input,'include_lifecycle_evidence'=>true];$lifeKey='r3-life-'.$token;
-    $http->returnScope=false;$reject(fn()=>$reconcile->reconcile($org,$owner,$lifeInput,$lifeKey,'r3-ci'));$http->returnScope=true;
-    $http->lifecycleCountMismatch=true;$reject(fn()=>$reconcile->reconcile($org,$owner,$lifeInput,$lifeKey,'r3-ci'));$http->lifecycleCountMismatch=false;
-    $http->badReturn=true;$reject(fn()=>$reconcile->reconcile($org,$owner,$lifeInput,$lifeKey,'r3-ci'));$http->badReturn=false;
+    $rejectLife=static function()use($db,$reject,$reconcile,$org,$owner,$lifeInput,$lifeKey):void{
+        // The enclosing fixture owns the transaction; production guard rolls back on denial.
+        $db->exec('SAVEPOINT r3_denial');
+        try{$reject(fn()=>$reconcile->reconcile($org,$owner,$lifeInput,$lifeKey,'r3-ci'));}
+        finally{$db->exec('ROLLBACK TO SAVEPOINT r3_denial');$db->exec('RELEASE SAVEPOINT r3_denial');}
+    };
+    $http->returnScope=false;$rejectLife();$http->returnScope=true;
+    $http->lifecycleCountMismatch=true;$rejectLife();$http->lifecycleCountMismatch=false;
+    $http->badReturn=true;$rejectLife();$http->badReturn=false;
     $life=$reconcile->reconcile($org,$owner,$lifeInput,$lifeKey,'r3-ci');
     $check($life['order_id']===$externalOrderId,'Provider lifecycle changed order identity.');
     $lifeView=(new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderSourceRepository($db))->latestForOrder($org,$externalOrderId)['fulfillment_evidence'];
@@ -789,7 +795,13 @@ try{
     $check($cancelled['cancelled_unfulfilled']===1&&$cancelled['provider_fulfilled']===2,'Cancellation residual incorrectly included fulfilled units.');
     $rawLife['order']['fulfillments'][0]['fulfillmentLineItems']['nodes'][0]['quantity']=4;
     $reject(fn()=>$normalizer::normalize($rawLife,$providerOrder,true));
+    $review=$shopStore->inventoryCutoverReview($org,$conn,$source->fulfillmentEvidence($org,'shopify',$conn,$providerOrder,true));
+    $check($review['status']==='CUTOVER_BLOCKED'&&!$review['local_stock_write_allowed']&&!$review['ownership_changed']
+        &&in_array('provider_fulfillment_history',$review['blocking_reasons'],true)
+        &&in_array('provider_global_write_fence_unverified',$review['blocking_reasons'],true),'Cutover inferred from a per-order read.');
+    $reject(fn()=>$shopStore->inventoryCutoverReview('foreign-'.$token,$conn,$source->fulfillmentEvidence($org,'shopify',$conn,$providerOrder,true)));
     echo "Sales R3.3 full provider lifecycle, partial quantity, return processing, cancellation, immutable line binding, replay and no stock effect PASS.\n";
+    echo "Sales R3.4 provider ownership preflight blocks unauthenticated global handover PASS.\n";
     echo "Sales R3 Product-owned fulfillment assignment readback, location mapping, scope/pagination fences, durable evidence and no stock effect PASS.\n";
     echo "Sales S5 scoped exact summary, redacted lists and timeline PASS.\n";
 }finally{$db->rollBack();}

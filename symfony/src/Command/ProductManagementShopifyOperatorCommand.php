@@ -45,7 +45,7 @@ final class ProductManagementShopifyOperatorCommand extends Command
 
     protected function configure(): void
     {
-        $this->addArgument('action',InputArgument::REQUIRED,'preflight|provision|status|pull|candidates|inspect|stage|audit|order|order-sandbox|order-fulfillment|map-location')
+        $this->addArgument('action',InputArgument::REQUIRED,'preflight|provision|status|pull|candidates|inspect|stage|audit|order|order-sandbox|order-fulfillment|inventory-cutover-review|map-location')
             ->addOption('organization',null,InputOption::VALUE_REQUIRED,'Explicit tenant organization')
             ->addOption('shop',null,InputOption::VALUE_REQUIRED,'Existing <shop>.myshopify.com name')
             ->addOption('secret-ref',null,InputOption::VALUE_REQUIRED,'Vault ref env://COS_SHOPIFY_* or pilot legacy','shopify_env_primary')
@@ -74,7 +74,7 @@ final class ProductManagementShopifyOperatorCommand extends Command
             return $this->result($output,['status'=>'INVALID_TENANT'],Command::INVALID);
         }
         try {
-            if (!in_array($action,['preflight','provision','status','pull','candidates','inspect','stage','audit','order','order-sandbox','order-fulfillment','map-location'],true)) {
+            if (!in_array($action,['preflight','provision','status','pull','candidates','inspect','stage','audit','order','order-sandbox','order-fulfillment','inventory-cutover-review','map-location'],true)) {
                 return $this->result($output,['status'=>'INVALID_ACTION'],Command::INVALID);
             }
             // Supervised, read-only diagnostics are available even before tenant
@@ -138,6 +138,14 @@ final class ProductManagementShopifyOperatorCommand extends Command
                 $this->observations->mapFulfillmentLocation($org,$connection,$gid,$location);
                 return $this->result($output,['status'=>'LOCATION_MAPPED','location_gid'=>$gid,'location_id'=>$location,
                     'inventory_authority'=>'external_review','local_stock_write_allowed'=>false],Command::SUCCESS);
+            }
+            if ($action==='inventory-cutover-review') {
+                if($input->getOption('confirm')!=='REVIEW_OWNERSHIP_NO_WRITES'||!($this->commerceOrders instanceof \Domains\ProductManagement\Application\Contract\CommerceOrderFulfillmentEvidencePort))
+                    return $this->result($output,['status'=>'CONFIRMATION_OR_PORT_REQUIRED'],Command::INVALID);
+                $gid=trim((string)$input->getOption('order-gid'));
+                $evidence=$this->commerceOrders->fulfillmentEvidence($org,'shopify',$connection,$gid,true);
+                $review=$this->observations->inventoryCutoverReview($org,$connection,$evidence);
+                return $this->result($output,$review,Command::SUCCESS);
             }
             if ($action==='order-fulfillment') {
                 if($input->getOption('confirm')!=='VERIFY_FULFILLMENT_READ_ONLY'||!($this->commerceOrders instanceof \Domains\ProductManagement\Application\Contract\CommerceOrderFulfillmentEvidencePort))
