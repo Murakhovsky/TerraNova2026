@@ -42,6 +42,12 @@ Sales володіє Order, OrderLine, allocation references, revision і біз
 - Shopify orders: локальні складські операції заблоковані до verified ownership cutover. Provider observation не є локальним резервом чи доказом відвантаження.
 - Payment і refund не створюються цим процесом. Фінансові факти належать Finance.
 
+### Фінансове врегулювання
+
+Запит `sales.order.lifecycle.read` повертає `financial_review` через Finance-owned read port: сума первинного замовлення, підтверджена чиста сума збору коштів, ревізія та посилання на фінансовий доказ. За відсутності доказу стан `unverified`, сума невідома (null), а не нуль. Порівняння з первинною сумою не є підтвердженням остаточного розрахунку.
+
+Причини перевірки: скасоване замовлення, повернені товари, зовнішнє замовлення, chargeback або перевищення первинної суми. Скасування та повернення не створюють платіжних операцій і не визначають суму відшкодування автоматично. Фінансовий огляд не є підтвердженням refund, бухгалтерським доходом або дозволом на списання. Shopify PAID залишається спостереженням. Команди lifecycle не залежать від цього readback.
+
 ## Докази
 
 `tests/integration/sales_workspace_summary_mysql.php` перевіряє actual MySQL stock ledger, atomic rollback, two-connection locking та replay. Реальне provider acceptance і release promotion залишаються окремими воротами.
