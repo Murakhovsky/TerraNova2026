@@ -178,7 +178,7 @@ final readonly class DoctrineWorkflowActionReceiptVerifier implements WorkflowRe
             throw new DomainException('Canonical Action parameters changed from the approved Workflow Step.');
         }
         $attempts = $this->db->fetchAllAssociative(
-            'SELECT attempt, status, finished_at FROM cos_action_attempts
+            'SELECT attempt, status, started_at, finished_at FROM cos_action_attempts
              WHERE organization_id=:org AND action_id=:id',
             ['org' => $keys['org'], 'id' => $matched[1]],
         );
@@ -209,6 +209,17 @@ final readonly class DoctrineWorkflowActionReceiptVerifier implements WorkflowRe
             || ($approvals[0]['expires_at'] !== null
                 && strtotime((string) $approvals[0]['expires_at'] . ' UTC') <= time())) {
             throw new DomainException('Canonical Action lacks independent valid human Approval.');
+        }
+        if(DurableWorkflowTransitionPolicy::requiresExplicitPolicy($context['side_effect_level'])){
+            $explicit=$this->db->fetchOne(
+                'SELECT p.action_type FROM cos_policy_evaluations e JOIN cos_policies p
+                 ON p.id=e.policy_id AND p.organization_id=e.organization_id
+                 WHERE e.organization_id=:org AND e.action_id=:id
+                 ORDER BY e.evaluated_at DESC,e.id DESC LIMIT 1',
+                ['org'=>$keys['org'],'id'=>$matched[1]]);
+            if($explicit!==$action['type']||$attempts[0]['started_at']===null
+                ||strcmp((string)$approvals[0]['decided_at'],(string)$attempts[0]['started_at'])>0)
+                throw new DomainException('High-risk receipt lacks explicit Policy and prior independent Approval.');
         }
         return new WorkflowReceiptAttestation(
             $identity, $stepId, true, 'canonical-action',

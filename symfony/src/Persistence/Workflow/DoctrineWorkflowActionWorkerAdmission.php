@@ -14,7 +14,10 @@ use Kernel\Policy\Contract\PolicyRepositoryInterface;
 use Kernel\Policy\Service\PolicyEngine;
 use Kernel\Policy\Service\PolicyContextBuilder;
 use Kernel\Policy\PolicyDecision;
-use Kernel\Tenant\Model\TenantPermissions;
+use Kernel\Identity\Contract\IdentityResolverInterface;
+use Kernel\Shared\Domain\UserId;
+use Kernel\Shared\Domain\OrganizationId;
+use Kernel\Tenant\Service\TenantContextFactory;
 use Kernel\Action\Contract\WorkflowActionWorkerAdmissionInterface;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Module\CanonicalCapabilityCatalog;
@@ -48,6 +51,8 @@ final readonly class DoctrineWorkflowActionWorkerAdmission implements WorkflowAc
         private ?PolicyRepositoryInterface $policies=null,
         private ?PolicyEngine $policyEngine=null,
         private ?PolicyContextBuilder $contexts=null,
+        private ?IdentityResolverInterface $identities=null,
+        private ?TenantContextFactory $tenants=null,
     ) {}
 
     public function assertAuthorized(Action $action): void
@@ -157,7 +162,7 @@ final readonly class DoctrineWorkflowActionWorkerAdmission implements WorkflowAc
         );
         $dbAction = $this->db->fetchAssociative(
             'SELECT id,status,type,target_type,target_id,parameters,source_type,source_id,
-                    execution_mode,idempotency_key,correlation_id
+                    execution_mode,risk_level,idempotency_key,correlation_id
              FROM cos_actions WHERE organization_id=:org AND id=:id
                AND idempotency_key=:key',
             ['org'=>$org,'id'=>$action->id,'key'=>$action->idempotencyKey],
@@ -169,6 +174,7 @@ final readonly class DoctrineWorkflowActionWorkerAdmission implements WorkflowAc
             || $dbAction['source_type'] !== $action->sourceType
             || $dbAction['source_id'] !== $action->sourceId
             || $dbAction['execution_mode'] !== $action->executionMode
+            || $dbAction['risk_level'] !== $action->riskLevel
             || $dbAction['correlation_id'] !== $action->correlationId
             || self::canonical(json_decode((string) $dbAction['parameters'], true, 512, JSON_THROW_ON_ERROR))
                 !== self::canonical($action->parameters)) {
@@ -215,24 +221,18 @@ final readonly class DoctrineWorkflowActionWorkerAdmission implements WorkflowAc
 
     private function assertHighRiskPolicy(Action $action,\Kernel\Module\CapabilityContract $capability,array $row,string $approver):void
     {
-        if($this->policies===null||$this->policyEngine===null||$this->contexts===null)
-            throw new DomainException('High-risk Workflow requires live Kernel Policy services.');
-        // Current membership is checked, not merely a historical Approval.
+        if($this->policies===null||$this->policyEngine===null||$this->contexts===null
+            ||$this->identities===null||$this->tenants===null)
+            throw new DomainException('High-risk Workflow requires live Kernel Identity and Policy services.');
+        // Reuse the canonical identity and tenant permission resolution, not a second role matrix.
         foreach([$action->sourceId,$approver] as $user){
             if(!ctype_digit($user)||(int)$user<1||(string)(int)$user!==$user)
                 throw new DomainException('High-risk Action requires a real tenant manager.');
-            $role=$this->db->fetchOne("SELECT m.role FROM cos_organization_memberships m
-                JOIN tn_users u ON u.id=m.user_id
-                WHERE m.organization_id=:org AND m.user_id=:user AND m.status='ACTIVE'
-                AND m.role IN ('manager','admin') AND u.status='active'",
-                ['org'=>$action->organizationId,'user'=>(int)$user]);
-            if(!is_string($role))throw new DomainException('High-risk Action manager no longer active.');
-            if($user===$action->sourceId){
-                $allowed=[TenantPermissions::ACCESS,TenantPermissions::MANAGE];
-                if($role==='admin')$allowed[]=TenantPermissions::ADMIN;
-                if(!in_array($capability->permission,$allowed,true))
-                    throw new DomainException('High-risk permission is not currently established.');
-            }
+            $identity=$this->identities->resolve(UserId::fromString($user),OrganizationId::fromString($action->organizationId));
+            if($identity===null)throw new DomainException('High-risk Action manager no longer active.');
+            $tenant=$this->tenants->fromIdentity($identity);
+            if(!$tenant->isManager()||($user===$action->sourceId&&!$tenant->allows((string)$capability->permission)))
+                throw new DomainException('High-risk permission is not currently established.');
         }
         $proposal=new ActionProposal($action->type,$action->targetType,$action->targetId,$action->parameters,
             $action->sourceType,$action->sourceId,$action->executionMode,$action->riskLevel,
