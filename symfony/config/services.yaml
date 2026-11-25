@@ -2095,6 +2095,7 @@ services:
       $scheduleLeadFollowup: '@Domains\Sales\Application\UseCase\ScheduleLeadFollowup'
       $offerDelivery: '@Domains\Sales\Automation\Action\QueueSalesOfferDeliveryHandler'
       $activityReminders: '@Domains\Sales\Automation\Action\QueueSalesActivityReminderHandler'
+      $governedOrders: '@Domains\Sales\Automation\Action\SalesGovernedOrderHandler'
 
   # Capital Markets CM-FOUNDATION runtime
   Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlInstrumentRepository:
@@ -3284,6 +3285,7 @@ services:
   Domains\Sales\Application\Service\SalesActivityReminderService: ~
   Domains\Sales\Automation\Action\QueueSalesActivityReminderHandler: ~
   Domains\Sales\Automation\Action\QueueSalesOfferDeliveryHandler: ~
+  Domains\Sales\Automation\Action\SalesGovernedOrderHandler: ~
 
   Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOfferRepository:
     arguments:
@@ -3418,6 +3420,9 @@ services:
   Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesApprovalAuthority:
     arguments:
       $connection: '@cos.database.pdo'
+
+  Domains\Sales\Application\Contract\SalesOrderActionAuthority:
+    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesApprovalAuthority
 
   App\Infrastructure\Automation\FederationPlanApprovalAuthority:
     arguments:

@@ -89,6 +89,13 @@ domain_id: sales
     {
       "id": "orders",
       "capability_ids": [
+        "sales.governed.order.create",
+        "sales.governed.order.lifecycle.confirm",
+        "sales.governed.order.lifecycle.allocate",
+        "sales.governed.order.lifecycle.release",
+        "sales.governed.order.lifecycle.fulfill",
+        "sales.governed.order.lifecycle.cancel",
+        "sales.governed.order.lifecycle.return",
         "sales.order.create",
         "sales.order.read",
         "sales.order.source.reconcile",

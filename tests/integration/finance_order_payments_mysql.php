@@ -12,7 +12,7 @@ $check=static function(bool $ok,string $msg):void{if(!$ok)throw new RuntimeExcep
 $deny=static function(callable $fn):void{try{$fn();}catch(DomainException){return;}throw new RuntimeException('Invalid Finance order operation accepted.');};
 $db=new PDO(sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',getenv('DB_HOST')?:'127.0.0.1',(int)(getenv('DB_PORT')?:3306),getenv('DB_DATABASE')?:'cos'),getenv('DB_USERNAME')?:'cos',getenv('DB_PASSWORD')?:'',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
 $org='fin-order-'.bin2hex(random_bytes(5));$id=bin2hex(random_bytes(16));
-$catalog=new ModuleCatalog([ModuleDefinition::fromArray(require $root.'/app/Domains/Sales/module.php'),ModuleDefinition::fromArray(require $root.'/app/Domains/Finance/module.php')]);
+$catalog=new ModuleCatalog([ModuleDefinition::fromArray(require $root.'/app/Domains/Sales/module.php'),ModuleDefinition::fromArray(require $root.'/app/Domains/Finance/module.php'),ModuleDefinition::fromArray(require $root.'/app/Domains/ProductManagement/module.php')]);
 $states=new class implements ModuleStateRepositoryInterface{
     public bool $enabled=true;
     public function enabledOverride(string $organizationId,string $moduleId):?bool{return $this->enabled;}
@@ -185,9 +185,13 @@ $wfDb=\Doctrine\DBAL\DriverManager::getConnection([
     'password'=>getenv('DB_PASSWORD')?:'','charset'=>'utf8mb4',
 ]);
 $capabilities=new \Kernel\Module\CanonicalCapabilityCatalog($catalog);
-$executeWorkflow=static function(string $type,array $p,string $initiator,string $approver)use(
+$executeWorkflow=static function(string $type,array $p,string $initiator,string $approver,?array $config=null)use(
     $wfDb,$db,$org,$id,$catalog,$capabilities,$active,$domains,$handler,$approvals,$tx,$realAuthority,$check,$deny
 ):array{
+    $ownerDomain=$config['owner']??'finance';$effect=$config['effect']??'financial';
+    $targetType=$config['target_type']??'sales_order';$targetId=$config['target']??$id;
+    $registry=$config['domains']??$domains;$handlers=$config['handlers']??[$handler];
+    $approvalAuthority=$config['approval']??$realAuthority;
     $token=bin2hex(random_bytes(8));
     $actor=new \Kernel\Tenant\Model\TenantContext(\Kernel\Shared\Domain\UserId::fromString($initiator),
         \Kernel\Shared\Domain\OrganizationId::fromString($org),\Kernel\Identity\Model\OrganizationRole::fromString('manager'),
@@ -195,10 +199,10 @@ $executeWorkflow=static function(string $type,array $p,string $initiator,string 
          \Kernel\Tenant\Model\Permission::fromString(\Kernel\Tenant\Model\TenantPermissions::MANAGE)]);
     $identity=new \Platform\Workflow\Model\WorkflowRunIdentity($org,'fin-wf-'.$token);
     $plan='fin-plan-'.$token;$approval='fin-plan-approval-'.$token;$digest=hash('sha256',$plan);
-    $definition=new \Platform\Workflow\Model\WorkflowDefinitionSnapshot('test.finance.order','1.0.0',[[
-        'id'=>'payment','capability_id'=>$type,'capability_version'=>'1.0.0','owner_domain'=>'finance',
-        'execution_binding'=>'action:'.$type,'side_effect_level'=>'financial','depends_on'=>[],
-        'input'=>['target_type'=>'sales_order','target_id'=>$id,'parameters'=>$p],
+    $definition=new \Platform\Workflow\Model\WorkflowDefinitionSnapshot('test.'.$ownerDomain.'.order','1.0.0',[[
+        'id'=>'payment','capability_id'=>$type,'capability_version'=>'1.0.0','owner_domain'=>$ownerDomain,
+        'execution_binding'=>'action:'.$type,'side_effect_level'=>$effect,'depends_on'=>[],
+        'input'=>['target_type'=>$targetType,'target_id'=>$targetId,'parameters'=>$p],
     ]]);
     $draft=new \Platform\Workflow\Model\WorkflowRunDraft($identity,$definition->id,$definition->version,
         hash('sha256',json_encode($p,JSON_THROW_ON_ERROR)),$initiator,'fin-corr-'.$token,$plan,$approval,$digest,$definition);
@@ -214,21 +218,21 @@ $executeWorkflow=static function(string $type,array $p,string $initiator,string 
         new \App\Persistence\Workflow\WorkflowPredecessorReceiptVerifier($receipt,new \App\Persistence\Workflow\FailClosedWorkflowNonActionReceiptEvidence()),
         new \Infrastructure\Platform\Persistence\MySql\Policy\MysqlPolicyRepository($db),
         new \Kernel\Policy\Service\PolicyEngine(new \Kernel\Rule\Service\ConditionEvaluator()),
-        new \Kernel\Policy\Service\PolicyContextBuilder($domains),
+        new \Kernel\Policy\Service\PolicyContextBuilder($registry),
         new \App\Infrastructure\Persistence\MySql\MysqlIdentityRepository($db),
         new \Kernel\Tenant\Service\TenantContextFactory(new \App\Security\RoleTenantPermissionResolver()));
     $actions=new \Kernel\Action\Service\ActionService(new \Infrastructure\Platform\Persistence\MySql\Action\MysqlActionRepository($db),
-        new \Kernel\Action\Service\ActionExecutor([$handler],new \Kernel\Action\Service\ModuleActionExecutionGate($domains,$active,null,$worker)));
+        new \Kernel\Action\Service\ActionExecutor($handlers,new \Kernel\Action\Service\ModuleActionExecutionGate($registry,$active,null,$worker)));
     $policy=new \Kernel\Policy\Service\ActionPolicyService($actions,new \Infrastructure\Platform\Persistence\MySql\Policy\MysqlPolicyRepository($db),
         new \Infrastructure\Platform\Persistence\MySql\Policy\MysqlPolicyEvaluationRepository($db),$approvals,
-        new \Kernel\Policy\Service\PolicyEngine(new \Kernel\Rule\Service\ConditionEvaluator()),$tx,null,$domains,$active);
-    $approvalService=new \Kernel\Approval\Service\ApprovalService($approvals,$actions,$tx,null,null,$realAuthority);
+        new \Kernel\Policy\Service\PolicyEngine(new \Kernel\Rule\Service\ConditionEvaluator()),$tx,null,$registry,$active);
+    $approvalService=new \Kernel\Approval\Service\ApprovalService($approvals,$actions,$tx,null,null,$approvalAuthority);
     $store->create($draft,$actor);
     $store->compareAndTransition(new \Platform\Workflow\Model\WorkflowRunTransition(
         new \Platform\Workflow\Model\WorkflowRunCommand($identity,$actor,1,$draft->correlationId),
         \Kernel\Workflow\Model\WorkflowStatus::CREATED,\Kernel\Workflow\Model\WorkflowStatus::RUNNING,'Finance candidate fixture'));
     $step=$store->steps($identity)[0];
-    $action=$policy->submit($org,new \Kernel\Action\ActionProposal($type,'sales_order',$id,$p,'USER',
+    $action=$policy->submit($org,new \Kernel\Action\ActionProposal($type,$targetType,$targetId,$p,'USER',
         $initiator,'APPROVAL_REQUIRED','HIGH','wf:'.$step->idempotencyKey),$draft->correlationId);
     $check($action->status===\Kernel\Action\ActionStatus::PendingApproval,'Workflow Finance Action must await human approval.');
     $claim=$store->claim(new \Platform\Workflow\Model\WorkflowStepClaim(
@@ -239,7 +243,12 @@ $executeWorkflow=static function(string $type,array $p,string $initiator,string 
     $deny(fn()=>$approvalService->approve($org,$approvalId,$initiator));
     $check($actions->executeOutcome($org,$action->id,'unapproved-worker')===null,'Unapproved Workflow Action executed.');
     $approvalService->approve($org,$approvalId,$approver);
+    if(isset($config['after_approval']))($config['after_approval'])();
     $out=$actions->executeOutcome($org,$action->id,'finance-workflow-worker');
+    if(($config['expect_denied']??false)===true){
+        $check($out!==null&&!$out->result->successful,'Revoked Sales order approval still executed.');
+        return [];
+    }
     $check($out!==null&&$out->result->successful&&$out->action()->status===\Kernel\Action\ActionStatus::Completed,'Financial Workflow worker Action failed.');
     $check($actions->executeOutcome($org,$action->id,'replay-worker')===null,'Completed financial Action replayed.');
     $store->checkpoint(new \Platform\Workflow\Model\WorkflowStepCheckpoint(
@@ -292,3 +301,73 @@ $check($sales->lifecycleEvidence($org,$id,3)['events']===[],'Exhausted lifecycle
 $check($sales->placement($org,$id)['event_id']===$placementId,'Lifecycle changed placement identity.');
 $check($realStore->financialEvidence($org,$id)['net_collected_amount']==='100.00','Cancellation incorrectly changed Finance collection.');
 echo "Sales O5 lifecycle evidence pagination, rollback, tenant isolation and Finance independence PASS.\n";
+
+// O6: independently approved canonical Workflow Actions invoke the same native Sales and Product services.
+$orderAccess=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAccessControl($db);
+$orderScope=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesWorkspaceScope($db,$orderAccess);
+$entityScope=new \Domains\Sales\Application\Service\SalesEntityScopeService($orderScope,new \Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceReadModel($db));
+$orderAuthority=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesMutationAuthority($db,$orderScope,$orderAccess);
+$orderGuard=new \Domains\Sales\Application\Service\SalesMutationGuard($tx,$orderAuthority);
+$orderApproval=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesApprovalAuthority($db);
+$orderReceipts=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesMutationReceiptRepository($db);
+$productStore=new \Domains\ProductManagement\Infrastructure\Persistence\MySqlProductManagementStore($db,new \Infrastructure\Platform\Persistence\MySql\Event\MysqlEventStore($db));
+$products=new \Domains\ProductManagement\Application\Service\ProductManagementService($productStore);
+$productReferences=new \Domains\ProductManagement\Application\Service\ProductCommercialReference($productStore);
+$references=new class($productReferences) implements \Domains\Sales\Application\Contract\SalesOfferReferencePort{
+    public function __construct(private \Domains\ProductManagement\Application\Contract\ProductCommercialReferencePort $products){}
+    public function resolve(string $org,array $line):?array{
+        return $this->products->quoteReference($org,(string)($line['product_id']??''),(string)($line['variant_id']??''));
+    }
+};
+$nativeOrders=new \Domains\Sales\Application\Service\SalesOrderService($sales,$orderReceipts,$orderGuard,$entityScope,$references,$realStore);
+$nativeLifecycle=new \Domains\Sales\Application\Service\SalesOrderLifecycleService($sales,$sales,$orderReceipts,$orderGuard,$orderAuthority,$entityScope,$productStore,$active,
+    new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderSourceRepository($db),$realStore);
+$governed=new \Domains\Sales\Automation\Action\SalesGovernedOrderHandler($nativeOrders,$nativeLifecycle,$orderGuard,$orderApproval,$active,$capabilities);
+$salesModule=new class($governed) implements \Kernel\Module\DomainModuleInterface,\Kernel\Module\Contract\ActionOwningModuleInterface{
+    public function __construct(private \Domains\Sales\Automation\Action\SalesGovernedOrderHandler $handler){}
+    public function name():string{return 'sales';}
+    public function actionTypes():array{return $this->handler::types();}
+    public function actionHandlers():array{return [$this->handler];}
+};
+$salesRegistry=new \Kernel\Module\DomainModuleRegistry([$salesModule]);
+$grant=$db->prepare('INSERT INTO sales_user_capabilities(organization_id,user_id,capability,status,granted_by,created_at,updated_at) VALUES (?,?,?,"ACTIVE",?,NOW(6),NOW(6))');
+$grant->execute([$org,(int)$requester,'sales.workspace.use',$requester]);
+$grant->execute([$org,(int)$reviewer,'sales.approval.any_team',$requester]);
+foreach($salesModule->actionTypes() as $type){
+    $db->prepare('INSERT INTO cos_policies (id,organization_id,code,name,action_type,conditions,decision,priority,version,status) VALUES (?,?,?,?,?,?,"APPROVAL_REQUIRED",1,1,"ACTIVE")')->execute([bin2hex(random_bytes(16)),$org,$type,$type,$type,'[]']);
+}
+$nonce=bin2hex(random_bytes(6));
+$product=$products->createProduct($org,['name'=>'Governed order stock','sku'=>'GOV-'.$nonce,'type'=>'stock'],'gov-product-'.$nonce,$requester,'gov-order');
+$db->prepare("UPDATE pm_products SET status='active' WHERE organization_id=? AND product_id=?")->execute([$org,$product['product_id']]);
+$location=$products->createLocation($org,'GOV-'.$nonce,'Governed order warehouse','gov-location-'.$nonce,$requester,'gov-order')['location_id'];
+$products->recordMovement($org,$product['variant_id'],$location,'10','receipt','manual:gov-opening','gov-opening-'.$nonce,$requester,'gov-order');
+$config=['owner'=>'sales','effect'=>'internal','domains'=>$salesRegistry,'handlers'=>[$governed],'approval'=>$orderApproval];
+$prefix=\Domains\Sales\Automation\Action\SalesGovernedOrderHandler::PREFIX;
+$created=$executeWorkflow($prefix.'create',['currency'=>'EUR','lines'=>[['sku'=>$product['sku'],'title'=>'Governed stock',
+    'product_id'=>$product['product_id'],'variant_id'=>$product['variant_id'],'quantity'=>5,'unit_price'=>'10.00']],'total'=>'50.00'],
+    $requester,$reviewer,[...$config,'target_type'=>'sales_order_intent','target'=>bin2hex(random_bytes(16))]);
+$governedId=$created['order']['order_id'];
+$check($sales->placement($org,$governedId)['order_total']==='50.00','Governed creation has no native placement.');
+$runOrder=static fn(string $op,int $rev,string $reference,array $extra=[],array $override=[])=>$executeWorkflow($prefix.'lifecycle.'.$op,
+    ['order_id'=>$governedId,'expected_revision'=>$rev,'reference'=>$reference,...$extra],$requester,$reviewer,[...$config,'target'=>$governedId,...$override]);
+$check($runOrder('confirm',1,'gov-confirm')['status']==='confirmed','Governed confirmation failed.');
+$alloc=$runOrder('allocate',2,'gov-reserve',['items'=>[['line_no'=>1,'location_id'=>$location,'quantity'=>5]]]);
+$allocation=$alloc['allocations'][0]['allocation_id'];
+$check($productStore->stockBalance($org,$product['variant_id'],$location)['reserved']==='5.000000','Governed reservation not owned by Product.');
+$runOrder('release',3,'gov-release',['items'=>[['allocation_id'=>$allocation,'quantity'=>1]]]);
+$part=$runOrder('fulfill',4,'gov-dispatch',['items'=>[['allocation_id'=>$allocation,'quantity'=>3]]]);
+$check($part['fulfilled_quantity']===3,'Governed partial fulfillment missing.');
+$cancel=$runOrder('cancel',5,'gov-cancel');
+$check($cancel['status']==='cancelled'&&$cancel['cancelled_quantity']===2,'Governed cancel failed.');
+$return=$runOrder('return',6,'gov-return',['items'=>[['allocation_id'=>$allocation,'quantity'=>1,'disposition'=>'restock']]]);
+$check($return['returned_quantity']===1&&$productStore->stockBalance($org,$product['variant_id'],$location)['on_hand']==='8.000000'&&
+    $productStore->stockBalance($org,$product['variant_id'],$location)['reserved']==='0.000000','Governed return or stock balance failed.');
+$runOrder('return',7,'gov-revoked',['items'=>[['allocation_id'=>$allocation,'quantity'=>1,'disposition'=>'restock']]],[
+    'expect_denied'=>true,'after_approval'=>static function()use($db,$org,$reviewer):void{
+        $db->prepare('DELETE FROM sales_user_capabilities WHERE organization_id=? AND user_id=? AND capability="sales.approval.any_team"')->execute([$org,(int)$reviewer]);
+    }]);
+$check($sales->get($org,$governedId)['revision']===7&&$productStore->stockBalance($org,$product['variant_id'],$location)['on_hand']==='8.000000',
+    'Revoked approver produced a native order or stock effect.');
+$check($realStore->financialEvidence($org,$governedId)===null,'Governed lifecycle fabricated Finance evidence.');
+$check(count($sales->lifecycleEvidence($org,$governedId)['events'])===6,'Governed lifecycle journal incomplete.');
+echo "Sales O6 governed native create/confirm/allocate/release/fulfill/cancel/return + independent Approval, revoked approver and Product readback candidate PASS (pinned Plan fixture).\n";

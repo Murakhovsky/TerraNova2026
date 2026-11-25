@@ -482,6 +482,13 @@ Manifest capabilities не задекларовані.
 - `sales.deal.won.observation`;
 - `sales.director.view`;
 - `sales.followup.schedule`;
+- `sales.governed.order.create`;
+- `sales.governed.order.lifecycle.allocate`;
+- `sales.governed.order.lifecycle.cancel`;
+- `sales.governed.order.lifecycle.confirm`;
+- `sales.governed.order.lifecycle.fulfill`;
+- `sales.governed.order.lifecycle.release`;
+- `sales.governed.order.lifecycle.return`;
 - `sales.inbound.request.read`;
 - `sales.lead.activity.cancel`;
 - `sales.lead.activity.complete`;

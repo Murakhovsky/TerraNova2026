@@ -226,3 +226,7 @@ O4 Action inputs use the canonical `target_type=sales_order`, `target_id`, `para
 ## O6 — Звіт за замовленнями
 
 Existing `sales.reports.data.read` accepts report_id `orders`: a bounded placed-date cohort (exclusive end, up to 366 days and 500 candidate orders) grouped by current native status and currency. Scope is resolved under live Sales authority; linked deal authorization is rechecked under transaction. No customer or order identifiers in the aggregate. Gross placed value is not revenue; net collection is null until every order in the group has independent matching Finance evidence. No pipeline filtering, FX, rendering or new permission registry. Native Gateway/MySQL fixtures extend the real Product allocation/fulfillment/cancellation/return scenario. Finance read port fixture is not a provider settlement test.
+
+## O6 — Керовані операції AI
+
+Seven `sales.governed.order.*` contracts wrap native create, confirm, allocate, release, fulfill, cancel and return. Human Gateway operations stay unchanged; AI must use the canonical `action:` binding, pinned input, Workflow worker admission, independent human approval, explicit Kernel policy and the same native Sales services. The existing Sales approval authority rechecks persisted Action/Policy/Approval and current order/deal/team scope in the mutation transaction. No separate permission registry, external effect or Finance write. Shopify integration administration remains human-authorized until separately governed job admission is accepted. No production rollout or D3–D5 claim.
