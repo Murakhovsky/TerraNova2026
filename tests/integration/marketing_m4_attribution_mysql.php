@@ -251,10 +251,16 @@ $insertLead->execute([$other,$sweepCampaign]);
 $sweepOrderRepo=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository($db);
 $sweepOrderSource=new \App\Infrastructure\Marketing\CommerceOrderReadAdapter($modules,$sweepOrderRepo,$sweepOrderRepo,$sweepOrderRepo);
 $sweep=new \Domains\Marketing\Application\Service\MarketingAttributionSweepService($campaignService,$plans,$candidateAdapter,$sales,$sweepOrderSource,$store,$commerceStore,$modules);
+$sourcePage=$candidateRead->page($org,'lead','2026-02-01','2026-02-01',null,50);
+$assert(count($sourcePage['ids'])===50&&$sourcePage['next_after']!==null,'Native Sales source page invalid: '.json_encode(['count'=>count($sourcePage['ids']),'has_more'=>$sourcePage['next_after']!==null],JSON_THROW_ON_ERROR));
+$firstLead=$sales->lead($actor,$sourcePage['ids'][0]);
+$assert($firstLead!==null&&$firstLead['utm_campaign']===$sweepCampaign,'Native lead source tag mismatch.');
+$firstEvidence=Policy::evidence($firstLead,$sweepCampaign,null);
+$assert(substr($firstEvidence['created_at'],0,10)==='2026-02-01','Native source date mismatch.');
 $page1=$sweep->sweep($actor,$sweepCampaign,null,'lead','2026-02-01','2026-02-01',null,'m4-sweep-first');
-$assert($page1['scanned']===50&&$page1['recorded_or_already_present']===50&&!$page1['page_exhausted']&&!$page1['complete_coverage'],'Sweep first page or tenant fence invalid.');
+$assert($page1['scanned']===50&&$page1['recorded_or_already_present']===50&&!$page1['page_exhausted']&&!$page1['complete_coverage'],'Sweep first page or tenant fence invalid: '.json_encode($page1,JSON_THROW_ON_ERROR));
 $page2=$sweep->sweep($actor,$sweepCampaign,null,'lead','2026-02-01','2026-02-01',$page1['next_after'],'m4-sweep-second');
-$assert($page2['scanned']===1&&$page2['recorded_or_already_present']===1&&$page2['page_exhausted']&&!$page2['complete_coverage'],'Sweep cursor skipped or duplicated rows.');
+$assert($page2['scanned']===1&&$page2['recorded_or_already_present']===1&&$page2['page_exhausted']&&!$page2['complete_coverage'],'Sweep cursor skipped or duplicated rows: '.json_encode($page2,JSON_THROW_ON_ERROR));
 $assert($sweep->sweep($actor,$sweepCampaign,null,'lead','2026-02-01','2026-02-01',null,'m4-sweep-first')===$page1,'Sweep receipt replay changed.');
 $deny=false;try{$sweep->sweep($actor,$sweepCampaign,null,'lead','2026-02-01','2026-02-01',$page1['next_after'],'m4-sweep-first');}catch(DomainException){$deny=true;}
 $assert($deny,'Sweep replay key accepted changed cursor.');
