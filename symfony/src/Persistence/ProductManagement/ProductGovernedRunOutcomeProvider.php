@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use Doctrine\DBAL\Connection;
 use DomainException;
+use Domains\ProductManagement\Application\Contract\ProductMediaFileReferenceInterface;
 use Domains\ProductManagement\Automation\Action\ProductGovernedOperationHandler;
 use Domains\ProductManagement\Domain\AttributeRules;
 use Domains\ProductManagement\Domain\ProductRules;
@@ -22,7 +23,7 @@ final readonly class ProductGovernedRunOutcomeProvider implements RunScopedGoalO
 {
     public const CRITERION='product_management.governed_operations_verified';
     public function __construct(private Connection $db,private ProductManagementService $products,private PricingService $prices,
-        private DoctrineWorkflowActionReceiptVerifier $receipts){}
+        private DoctrineWorkflowActionReceiptVerifier $receipts,private ProductMediaFileReferenceInterface $files){}
     public function domain():string{return 'product_management';}
     public function supports(string $criterionId):bool{return $criterionId===self::CRITERION;}
     public function observe(string $organizationId,string $criterionId,DateTimeImmutable $from,DateTimeImmutable $to):array
@@ -181,6 +182,50 @@ final readonly class ProductGovernedRunOutcomeProvider implements RunScopedGoalO
                     $ids[]='product_management:stock_movement:'.$m['movement_id'];
                 }
                 $this->require($ids[0]!==$ids[1],'distinct transfer movements');
+                break;
+            case 'media.attach':
+                $id=$r['media_id']??null;
+                $fresh=$this->db->fetchAssociative('SELECT product_id,variant_id,source_file_id,storage_ref,checksum,role,sort_order,status FROM pm_media_refs WHERE organization_id=? AND media_id=?',[$org,$id]);
+                $file=$this->files->verifiedImage($org,$p['file_id']);
+                $this->require($fresh!==false&&$fresh['product_id']===$p['product_id']&&$fresh['variant_id']===($p['variant_id']??null)
+                    &&$fresh['source_file_id']===$p['file_id']&&$fresh['storage_ref']===$file['storage_key']&&$fresh['checksum']===$file['sha256']
+                    &&$fresh['role']===($p['role']??'gallery')&&(int)$fresh['sort_order']===($p['sort_order']??0)&&$fresh['status']==='active','verified native media link and image bytes');
+                $expected=['media_id'=>$id,'product_id'=>$fresh['product_id'],'variant_id'=>$fresh['variant_id'],'file_id'=>$fresh['source_file_id'],'role'=>$fresh['role'],'sort_order'=>(int)$fresh['sort_order'],'status'=>'active'];
+                $this->require($r==$expected,'media attach receipt');
+                $ids=['product_management:media:'.$id];
+                break;
+            case 'media.detach':
+                $id=$p['media_id'];
+                $fresh=$this->db->fetchAssociative('SELECT product_id,status FROM pm_media_refs WHERE organization_id=? AND media_id=?',[$org,$id]);
+                $this->require($fresh!==false&&$fresh['status']==='detached'&&($r['media_id']??null)===$id
+                    &&$r['product_id']===$fresh['product_id']&&$r['status']==='detached','native soft detach');
+                $ids=['product_management:media:'.$id];
+                break;
+            case 'attribute.define':
+                $expected=AttributeRules::definition($p);
+                $fresh=$this->db->fetchAssociative('SELECT code,name,value_type,unit,choices_json FROM pm_attribute_definitions WHERE organization_id=? AND code=?',[$org,$expected['code']]);
+                $this->require($fresh!==false,'native attribute definition exists');
+                $fresh['choices']=json_decode($fresh['choices_json'],true,64,JSON_THROW_ON_ERROR);unset($fresh['choices_json']);
+                $this->require($fresh==$expected&&$r==$expected,'native typed definition');
+                $ids=['product_management:attribute:'.$expected['code']];
+                break;
+            case 'attribute.category.bind':
+                $fresh=$this->db->fetchAssociative('SELECT is_required,is_axis FROM pm_category_attributes WHERE organization_id=? AND category_id=? AND code=?',[$org,$p['category_id'],$p['code']]);
+                $this->require($fresh!==false&&(bool)$fresh['is_required']===$p['is_required']&&(bool)$fresh['is_axis']===$p['is_axis']
+                    &&$r==['category_id'=>$p['category_id'],'code'=>$p['code'],'is_required'=>$p['is_required'],'is_axis'=>$p['is_axis']],'native category attribute binding');
+                $ids=['product_management:category:'.$p['category_id'],'product_management:attribute:'.$p['code']];
+                break;
+            case 'attribute.product.set':
+                $fresh=$this->products->productAttributes($org,$p['product_id']);
+                $this->require($fresh['found']&&$fresh['revision']===$p['expected_revision']+1&&($r['product_id']??null)===$p['product_id']
+                    &&($r['revision']??null)===$fresh['revision'],'native attribute revision');
+                $defs=array_column($fresh['items'],null,'code');$reported=array_column($r['items']??[],null,'code');
+                foreach(AttributeRules::changes($p['values']) as $code=>$value){
+                    $this->require(isset($defs[$code],$reported[$code]),'attribute exists');
+                    $expected=AttributeRules::value($defs[$code],$value);
+                    $this->require($defs[$code]['value']===$expected&&$reported[$code]['value']===$expected,'native approved attribute value');
+                }
+                $ids=['product_management:product:'.$p['product_id']];
                 break;
             case 'price.list.create':
                 $id=$r['list_id']??null;

@@ -10,9 +10,14 @@ foreach($raw['contributions']['capability_contracts'] as $definition) {
     $cap=CapabilityContract::fromArray($definition);
     $contracts[$cap->id]=$cap;
 }
-if(count($contracts)!==89)throw new RuntimeException('Missing typed PM contracts.');
+if(count($contracts)!==94)throw new RuntimeException('Missing typed PM contracts.');
 $validator=new CapabilityJsonInputValidator();
 $good=[
+ 'product_management.governed.media.attach'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['product_id'=>str_repeat('a',32),'file_id'=>'FILE-QA']],
+ 'product_management.governed.media.detach'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['media_id'=>str_repeat('a',32)]],
+ 'product_management.governed.attribute.define'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['code'=>'notes','name'=>'Notes','value_type'=>'text']],
+ 'product_management.governed.attribute.category.bind'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['category_id'=>str_repeat('a',32),'code'=>'notes','is_required'=>false,'is_axis'=>false]],
+ 'product_management.governed.attribute.product.set'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['product_id'=>str_repeat('a',32),'expected_revision'=>1,'values'=>[['code'=>'notes','value'=>'QA']]]],
  'product_management.governed.price.list.create'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['code'=>'QA','name'=>'QA','kind'=>'retail','currency'=>'USD']],
  'product_management.governed.price.list.update'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['list_id'=>str_repeat('a',32),'name'=>'QA','expected_revision'=>1]],
  'product_management.governed.price.list.archive'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['list_id'=>str_repeat('a',32),'expected_revision'=>1]],

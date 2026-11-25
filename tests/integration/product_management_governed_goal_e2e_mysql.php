@@ -28,6 +28,9 @@ use App\Persistence\ProductManagement\ProductGovernedPlanProposalService;
 use App\Persistence\Capability\CanonicalAutomationIntentStore;
 use App\Application\Capability\AutomationIntentSignatureVerifier;
 use Domains\ProductManagement\Application\Service\PricingService;
+use Domains\ProductManagement\Application\Service\ProductMediaService;
+use Domains\ProductManagement\Infrastructure\Media\ExistingDocumentsImageReference;
+use Infrastructure\Storage\LocalFileStorage;
 use App\Persistence\ProductManagement\ProductGovernedRunOutcomeProvider;
 use App\Persistence\Workflow\DoctrineWorkflowActionClaimAdmission;
 use App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier;
@@ -141,7 +144,10 @@ try {
     $modules=new ActiveModuleResolver($catalog,$states);
     $prices=new PricingService($pdo,new MysqlEventStore($pdo));
     $capabilities=new CanonicalCapabilityCatalog($catalog);
-    $handler=new ProductGovernedOperationHandler($products,$prices,$modules,$capabilities);
+    $storage=new LocalFileStorage(sys_get_temp_dir().'/cos-governed-media-'.$token);
+    $fileReference=new ExistingDocumentsImageReference($pdo,$storage);
+    $media=new ProductMediaService(new MySqlProductManagementStore($pdo,new MysqlEventStore($pdo)),$fileReference);
+    $handler=new ProductGovernedOperationHandler($products,$prices,$modules,$capabilities,$media);
     $planReader=new FederationPlanApprovalEvidenceReader($db);
     $planHandler=new FederationPlanApproveHandler($db,$planReader);
     $domains=new DomainModuleRegistry([new ProductManagementDomainModule(governedHandler:$handler),new FederationDomainModule($planHandler)]);
@@ -162,7 +168,7 @@ try {
     $policyService=new ActionPolicyService($actionService,$policies,
         new MysqlPolicyEvaluationRepository($pdo),$approvalRepo,$engine,
         $transactions,null,$domains,$modules,$contexts);
-    $outcome=new ProductGovernedRunOutcomeProvider($db,$products,$prices,$receipts);
+    $outcome=new ProductGovernedRunOutcomeProvider($db,$products,$prices,$receipts,$fileReference);
     $goals=new FederationGoalStore($db,$bindings,new GoalPlanValidator($capabilities),
         new GoalOutcomeEvaluator(),
         new FederationTrustedOutcomeEvidenceResolver($modules,[$outcome]),$planReader);
@@ -194,8 +200,8 @@ try {
     }
     $catalogSeed=$products->createProduct($org,['name'=>'Catalog fixture','sku'=>'CAT'.strtoupper($token),'type'=>'stock'],'seed-catalog',$owner,'governed-e2e');
     $suite=(string)(getenv('COS_TEST_PM_GOVERNED_SUITE')?:'catalog');
-    $assert(in_array($suite,['catalog','pricing'],true),'Known governed suite');
-    $pricingOnly=$suite==='pricing';
+    $assert(in_array($suite,['catalog','pricing','media_attributes'],true),'Known governed suite');
+    $pricingOnly=$suite==='pricing';$mediaOnly=$suite==='media_attributes';
     $renameList=$prices->createList($org,'QA-RENAME','Before rename','retail','USD','seed-rename-list',$owner,'governed-e2e')['list_id'];
     $archiveList=$prices->createList($org,'QA-ARCHIVE','Before archive','partner','EUR','seed-archive-list',$owner,'governed-e2e')['list_id'];
     $removeList=$prices->createList($org,'QA-REMOVE','Remove entry','retail','USD','seed-remove-list',$owner,'governed-e2e')['list_id'];
@@ -231,7 +237,26 @@ try {
         ['tier-set','price.list.tier.set',['list_id'=>$listId,'variant_id'=>$variant,'min_quantity'=>'10','amount'=>'90.50','expected_revision'=>0]],
         ['tier-remove','price.list.tier.set',['list_id'=>$removeList,'variant_id'=>$variant,'min_quantity'=>'20','amount'=>null,'expected_revision'=>1]],
     ];
-    $selected=$pricingOnly?$pricingOperations:$catalogOperations;$expectedCount=count($selected);
+    $mediaOperations=[];
+    if($mediaOnly){
+        $products->assignCategory($org,$catalogSeed['product_id'],$category,'seed-attribute-target',$owner,'governed-e2e');
+        $attributeRevision=$products->productAttributes($org,$catalogSeed['product_id'])['revision'];
+        $products->defineAttribute($org,['code'=>'qa_bind','name'=>'Bind fixture','value_type'=>'text'],'seed-bind-definition',$owner,'governed-e2e');
+        $fileId='FILE-'.$token;
+        $fileKey='documents/'.substr(hash('sha256',$org),0,20).'/DOC-'.$token.'/'.$fileId.'/tiny.png';
+        $png=base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==',true);
+        $uploaded=$storage->put($fileKey,$png,'image/png');
+        $pdo->prepare('INSERT INTO cos_document_files (organization_id,file_id,storage_key,mime_type,size_bytes,sha256,created_by) VALUES (?,?,?,?,?,?,?)')->execute([$org,$fileId,$uploaded->key,'image/png',$uploaded->size,$uploaded->sha256,$owner]);
+        $detachId=$media->attach($org,$second['product_id'],$fileId,null,'gallery',0,'seed-media-detach',$owner,'governed-e2e')['media_id'];
+        $mediaOperations=[
+            ['define','attribute.define',['code'=>'qa_new','name'=>'Approved attribute','value_type'=>'enum','choices'=>['red','blue']]],
+            ['bind','attribute.category.bind',['category_id'=>$category,'code'=>'qa_bind','is_required'=>false,'is_axis'=>false]],
+            ['set','attribute.product.set',['product_id'=>$catalogSeed['product_id'],'expected_revision'=>$attributeRevision,'values'=>[['code'=>'notes','value'=>'Approved notes']]]],
+            ['attach','media.attach',['product_id'=>$catalogSeed['product_id'],'file_id'=>$fileId,'variant_id'=>$catalogSeed['variant_id'],'role'=>'cover','sort_order'=>7]],
+            ['detach','media.detach',['media_id'=>$detachId]],
+        ];
+    }
+    $selected=$mediaOnly?$mediaOperations:($pricingOnly?$pricingOperations:$catalogOperations);$expectedCount=count($selected);
     foreach($selected as [$id,$op,$input]){
         $steps[]=['id'=>$id,'capability_id'=>ProductGovernedOperationHandler::PREFIX.$op,'capability_version'=>'1.0.0',
             'input'=>['target_type'=>'product_governed_operation','target_id'=>substr(hash('sha256',$token.':'.$id),0,32),'parameters'=>$input]];
@@ -249,7 +274,7 @@ try {
     $machine=$intents->submitProduct('ai',$ts,$nonce,$sign($raw),$raw);
     $assert($machine['state']==='pending_review'&&$machine['execution_authority']==='none','Machine intake only');
     $assert($intents->submitProduct('ai',$ts,$nonce,$sign($raw),$raw)['intent_id']===$machine['intent_id'],'Machine nonce replay');
-    $changed=$operations;if($pricingOnly)$changed[0]['parameters']['name']='Different approved list';else $changed[0]['parameters']['quantity']='9';
+    $changed=$operations;if($pricingOnly||$mediaOnly)$changed[0]['parameters']['name']='Different approved name';else $changed[0]['parameters']['quantity']='9';
     $altered=json_encode(['kind'=>'product_management.governed_plan.v1','description'=>$description,'operations'=>$changed],JSON_THROW_ON_ERROR);
     $deny(fn()=>$intents->submitProduct('ai',$ts,$nonce,$sign($altered),$altered),'Conflicting signed nonce');
     $assert((int)$db->fetchOne('SELECT COUNT(*) FROM cos_federation_plans WHERE organization_id=?',[$org])===0,'Machine intake created Plan before manager adoption');
@@ -313,10 +338,14 @@ try {
         $assert($actionService->execute($org,$actionId,'pm-governed-worker')?->status===ActionStatus::Completed,'Approved Action failed: '.$step['id']);
         $assert($actionService->execute($org,$actionId,'pm-replay-worker')===null,'Action executed twice');
         $assert($bridge->advance($actor,$runId,$planApproval)['state']==='step_completed','Step checkpoint failed: '.$step['id']);
-        if($i===0&&!$pricingOnly)$assert($products->balance($org,$variant,$loc)['on_hand']==='10.000000'&&$prices->get($org,$variant,'USD')['price']===null,'First effect and later step isolation');
+        if($i===0&&!$pricingOnly&&!$mediaOnly)$assert($products->balance($org,$variant,$loc)['on_hand']==='10.000000'&&$prices->get($org,$variant,'USD')['price']===null,'First effect and later step isolation');
     }
     $assert($bridge->advance($actor,$runId,$planApproval)['state']==='completed','Workflow completion');
-    if(!$pricingOnly){
+    if($mediaOnly){
+        $assert(count($media->search($org,$catalogSeed['product_id']))===1&&$media->search($org,$second['product_id'])===[]&&$storage->exists($fileKey),'Media link and unlink without deleting bytes');
+        $attrs=array_column($products->productAttributes($org,$catalogSeed['product_id'])['items'],'value','code');
+        $assert($attrs['notes']==='Approved notes','Native typed attribute update');
+    }elseif(!$pricingOnly){
     $balance=$products->balance($org,$variant,$loc);
     $assert($balance['on_hand']==='6.000000'&&$balance['reserved']==='3.000000'&&$balance['available']==='3.000000','Business stock result');
     $assert($prices->get($org,$variant,'USD')['price']==='125.5000','Business price result');
@@ -341,7 +370,17 @@ try {
     $assert((int)$db->fetchOne('SELECT COUNT(*) FROM cos_federation_runs WHERE organization_id=?',[$org])===0,'No legacy executor');
     $foreign=new TenantContext(UserId::fromString($owner),OrganizationId::fromString('foreign-'.$token),OrganizationRole::fromString('manager'),[Permission::fromString(TenantPermissions::MANAGE)]);
     $deny(fn()=>$outcome->observeRun($foreign,$runId,ProductGovernedRunOutcomeProvider::CRITERION,new DateTimeImmutable('-1 day'),new DateTimeImmutable('+1 day')),'Foreign tenant evidence');
-    if($pricingOnly){
+    if($mediaOnly){
+        $db->executeStatement('UPDATE pm_media_refs SET sort_order=8 WHERE organization_id=? AND product_id=?',[$org,$catalogSeed['product_id']]);
+        $deny(fn()=>$goals->recordEvaluation($actor,'media-tampered-'.$token,$runId),'Media metadata tampering');
+        $db->executeStatement('UPDATE pm_media_refs SET sort_order=7 WHERE organization_id=? AND product_id=?',[$org,$catalogSeed['product_id']]);
+        $db->executeStatement('UPDATE pm_product_attribute_values SET value_json=? WHERE organization_id=? AND product_id=? AND code=?',[json_encode('FORGED'),$org,$catalogSeed['product_id'],'notes']);
+        $deny(fn()=>$goals->recordEvaluation($actor,'attribute-tampered-'.$token,$runId),'Typed attribute tampering');
+        $db->executeStatement('UPDATE pm_product_attribute_values SET value_json=? WHERE organization_id=? AND product_id=? AND code=?',[json_encode('Approved notes'),$org,$catalogSeed['product_id'],'notes']);
+        $storage->put($fileKey,'FORGED','image/png');
+        $deny(fn()=>$goals->recordEvaluation($actor,'media-bytes-tampered-'.$token,$runId),'Image bytes tampering');
+        $storage->delete($fileKey);
+    }elseif($pricingOnly){
         $db->executeStatement('UPDATE pm_price_list_tier_history SET new_amount=? WHERE organization_id=? AND list_id=? AND variant_id=? AND min_quantity=?',['91.0000',$org,$listId,$variant,'10.000000']);
         $deny(fn()=>$goals->recordEvaluation($actor,'tier-tampered-'.$token,$runId),'Quantity tier history tampering');
         $db->executeStatement('UPDATE pm_price_list_tier_history SET new_amount=? WHERE organization_id=? AND list_id=? AND variant_id=? AND min_quantity=?',['90.5000',$org,$listId,$variant,'10.000000']);

@@ -5,6 +5,7 @@ namespace Domains\ProductManagement\Automation\Action;
 use Domains\ProductManagement\Application\Service\ProductManagementService;
 use Domains\ProductManagement\Application\Service\PricingService;
 use DomainException;
+use Domains\ProductManagement\Application\Service\ProductMediaService;
 use Kernel\Action\Action;
 use Kernel\Action\ActionStatus;
 use Kernel\Action\Contract\IdempotentExternalActionHandlerInterface;
@@ -44,9 +45,14 @@ final readonly class ProductGovernedOperationHandler implements IdempotentExtern
         'price.list.archive'=>'price.list.archive',
         'price.list.entry.remove'=>'price.list.entry.remove',
         'price.list.tier.set'=>'price.list.tier.set',
+        'media.attach'=>'media.attach',
+        'media.detach'=>'media.detach',
+        'attribute.define'=>'attribute.define',
+        'attribute.category.bind'=>'attribute.category.bind',
+        'attribute.product.set'=>'attribute.product.set',
     ];
     public function __construct(private ProductManagementService $products,private PricingService $prices,
-        private ActiveModuleResolver $modules,private CanonicalCapabilityCatalog $catalog){}
+        private ActiveModuleResolver $modules,private CanonicalCapabilityCatalog $catalog,private ProductMediaService $media){}
     public static function types():array{return array_map(static fn($op)=>self::PREFIX.$op,array_keys(self::OPERATIONS));}
     public function supports(string $actionType):bool{return in_array($actionType,self::types(),true);}
     public function idempotencyKey(Action $action):string{return ExternalActionIdempotency::resolve($action);}
@@ -89,6 +95,11 @@ final readonly class ProductGovernedOperationHandler implements IdempotentExtern
                 'price.list.archive'=>$this->prices->archiveList($org,$p['list_id'],$p['expected_revision'],$key,$actor,$trace),
                 'price.list.entry.remove'=>$this->prices->removeListPrice($org,$p['list_id'],$p['variant_id'],$p['expected_revision'],$key,$actor,$trace),
                 'price.list.tier.set'=>$this->prices->setTier($org,$p['list_id'],$p['variant_id'],$p['min_quantity'],$p['amount'],$p['expected_revision'],$key,$actor,$trace),
+                'media.attach'=>$this->media->attach($org,$p['product_id'],$p['file_id'],$p['variant_id']??null,$p['role']??'gallery',$p['sort_order']??0,$key,$actor,$trace),
+                'media.detach'=>$this->media->detach($org,$p['media_id'],$key,$actor,$trace),
+                'attribute.define'=>$this->products->defineAttribute($org,$p,$key,$actor,$trace),
+                'attribute.category.bind'=>$this->products->bindAttribute($org,$p['category_id'],$p['code'],$p['is_required'],$p['is_axis'],$key,$actor,$trace),
+                'attribute.product.set'=>$this->products->setAttributes($org,$p['product_id'],$p['values'],$p['expected_revision'],$key,$actor,$trace),
             };
             return ExecutionResult::success($result);
         }catch(Throwable){
