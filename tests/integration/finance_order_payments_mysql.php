@@ -223,7 +223,8 @@ $executeWorkflow=static function(string $type,array $p,string $initiator,string 
             new \App\Infrastructure\Automation\FederationPlanApprovalAuthority($db),$realAuthority));
     $outcomes=new \App\Persistence\Federation\FederationTrustedOutcomeEvidenceResolver($active,[
         new \App\Persistence\Sales\SalesOrderRunOutcomeProvider($wfDb,$sales,$sales,new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesMutationReceiptRepository($db),$receipt),
-        new \App\Persistence\Finance\FinanceOrderRunOutcomeProvider($wfDb,$realStore,$receipt)]);
+        new \App\Persistence\Finance\FinanceOrderRunOutcomeProvider($wfDb,$realStore,$receipt),
+        ...(isset($config['outcome_factory'])?[$config['outcome_factory']($receipt)]:[])]);
     $goals=new \App\Persistence\Federation\FederationGoalStore($wfDb,
         new \App\Persistence\Federation\FederationCapabilityBindingResolver($capabilities,$registry,$active),
         new \Platform\Orchestration\Goal\GoalPlanValidator($capabilities),new \Platform\Orchestration\Goal\GoalOutcomeEvaluator(),$outcomes,$planReader);
@@ -237,7 +238,9 @@ $executeWorkflow=static function(string $type,array $p,string $initiator,string 
     $criteria=[];$allowed=[];
     foreach($steps as $step){
         $cap=$step['capability_id'];$allowed[]=$cap;
-        $criterion=str_starts_with($cap,'sales.')?\App\Persistence\Sales\SalesOrderRunOutcomeProvider::CRITERION:\App\Persistence\Finance\FinanceOrderRunOutcomeProvider::CRITERION;
+        $criterion=in_array($cap,\Domains\Sales\Automation\Action\SalesGovernedBusinessOperations::types(),true)
+            ?\App\Persistence\Sales\SalesBusinessRunOutcomeProvider::CRITERION
+            :(str_starts_with($cap,'sales.')?\App\Persistence\Sales\SalesOrderRunOutcomeProvider::CRITERION:\App\Persistence\Finance\FinanceOrderRunOutcomeProvider::CRITERION);
         $criteria[$criterion]=($criteria[$criterion]??0)+1;
     }
     $specCriteria=[];foreach($criteria as $criterion=>$count)$specCriteria[]=['id'=>$criterion,'operator'=>'at_least','expected'=>$count];
@@ -477,3 +480,70 @@ $check($mixed['payment']['status']==='confirmed'&&$mixed['register-payment']['st
     $sales->get($org,$mixedOrder)['revision']===2&&$realStore->financialEvidence($org,$mixedOrder)===null,
     'Mixed-domain Goal did not preserve independent Sales state and unconfirmed Finance registration.');
 echo "I4 mixed Sales and Finance canonical Goal, independent Plan and Actions, native outcomes PASS\n";
+
+// R1: real governed commands, not a substitute Action handler or synthetic outcome.
+// Independent native provider resolves lead event/receipt and team record from the completed canonical Run.
+$businessRead=new \Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceReadModel($db);
+$businessOffers=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOfferRepository($db);
+$businessTeams=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesTeamAdministration($db);
+$businessFactory=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesWriteServiceFactory($db,
+    new \Domains\Property\Infrastructure\ReadModel\MySql\MysqlPropertyReferencePort($db),
+    new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesAssignmentAuthority($db));
+$leadCreate=new \App\Application\Sales\Command\CreateSalesLeadCommandHandler($businessFactory);
+$leadUpdate=new \App\Application\Sales\Command\UpdateSalesLeadCommandHandler($businessFactory);
+$teamManage=new \App\Application\Sales\Command\ManageSalesTeamCommandHandler($businessTeams,
+    new \App\Application\Sales\Admin\SalesAdminAuthorization($orderAccess),$orderReceipts,$tx);
+$businessBus=new \App\Infrastructure\Messenger\SymfonyCommandBus(new \Symfony\Component\Messenger\MessageBus([
+    new \Symfony\Component\Messenger\Middleware\HandleMessageMiddleware(new \Symfony\Component\Messenger\Handler\HandlersLocator([
+        \App\Application\Sales\Command\CreateSalesLeadCommand::class=>[$leadCreate],
+        \App\Application\Sales\Command\UpdateSalesLeadCommand::class=>[$leadUpdate],
+        \App\Application\Sales\Command\ManageSalesTeamCommand::class=>[$teamManage],
+    ])),
+]));
+$identities=new \App\Infrastructure\Persistence\MySql\MysqlIdentityRepository($db);
+$tenantFactory=new \Kernel\Tenant\Service\TenantContextFactory(new \App\Security\RoleTenantPermissionResolver());
+$businessPlanEvidence=new \App\Persistence\Workflow\FederationWorkflowPlanApprovalEvidence($wfDb,new \App\Persistence\Federation\FederationPlanApprovalEvidenceReader($wfDb));
+$businessReceipt=new \App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier($wfDb,$businessPlanEvidence);
+$businessAdmission=new \App\Persistence\Workflow\FailClosedWorkflowActionWorkerAdmission(
+    new \App\Persistence\Workflow\DoctrineWorkflowActionWorkerAdmission($wfDb,$businessPlanEvidence,$capabilities,$active,
+        new \App\Persistence\Workflow\WorkflowPredecessorReceiptVerifier($businessReceipt,new \App\Persistence\Workflow\FailClosedWorkflowNonActionReceiptEvidence())),
+    $org);
+$businessHandler=new \App\Infrastructure\Automation\SalesGovernedBusinessHandler([
+    new \App\Infrastructure\Capability\SalesLeadCreateAdapter($businessBus,$businessRead),
+    new \App\Infrastructure\Capability\SalesLeadQualificationAdapter($businessBus,$businessRead),
+    new \App\Infrastructure\Capability\SalesTeamManageAdapter($businessBus),
+],new \App\Application\Sales\SalesDirectInvocationPolicy($entityScope,$orderAccess,$businessOffers,$orderGuard),
+    $orderApproval,$businessAdmission,$active,$capabilities,$identities,$tenantFactory,$tx);
+$businessModule=new class($businessHandler) implements \Kernel\Module\DomainModuleInterface,\Kernel\Module\Contract\ActionOwningModuleInterface{
+    public function __construct(private \App\Infrastructure\Automation\SalesGovernedBusinessHandler $handler){}
+    public function name():string{return 'sales';}
+    public function actionTypes():array{return \Domains\Sales\Automation\Action\SalesGovernedBusinessOperations::types();}
+    public function actionHandlers():array{return [$this->handler];}
+};
+$businessRegistry=new \Kernel\Module\DomainModuleRegistry([$businessModule]);
+foreach(['sales.governed.lead.create','sales.governed.lead.qualify','sales.governed.team.manage'] as $type)
+    $db->prepare('INSERT INTO cos_policies (id,organization_id,code,name,action_type,conditions,decision,priority,version,status) VALUES (?,?,?,?,?,?,"APPROVAL_REQUIRED",1,1,"ACTIVE")')
+        ->execute([bin2hex(random_bytes(16)),$org,$type,$type,$type,'[]']);
+$grant->execute([$org,(int)$requester,'sales.admin.teams.manage',$requester]);
+$businessConfig=['owner'=>'sales','effect'=>'internal','domains'=>$businessRegistry,'handlers'=>[$businessHandler],'approval'=>$orderApproval,
+    'outcome_factory'=>static fn($receipt)=>new \App\Persistence\Sales\SalesBusinessRunOutcomeProvider($wfDb,$businessRead,$orderReceipts,$receipt,
+        new \Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesActivityEvidenceReadModel($db),
+        new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesScheduledActivityRepository($db),$businessOffers,$businessTeams,
+        new \Infrastructure\Integration\Crm\MysqlCrmInboxRepository($db),
+        new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderSyncRepository($db))];
+$createdLead=$executeWorkflow('sales.governed.lead.create',['full_name'=>'R1 canonical lead','email'=>'r1-'.$nonce.'@example.test'],
+    $requester,$reviewer,[...$businessConfig,'target_type'=>'sales_intent','target'=>bin2hex(random_bytes(16))]);
+$leadId=$createdLead['lead_id'];
+$check((int)$businessRead->lead($org,$leadId)['assigned_user_id']===(int)$requester,'R1 native lead owner mismatch.');
+$qualified=$executeWorkflow('sales.governed.lead.qualify',['lead_id'=>$leadId,'expected_status'=>'new','target_status'=>'contacted'],
+    $requester,$reviewer,[...$businessConfig,'target_type'=>'lead','target'=>(string)$leadId]);
+$check($qualified['status']==='contacted'&&$businessRead->lead($org,$leadId)['status']==='contacted','R1 native lead qualification mismatch.');
+$teamResult=$executeWorkflow('sales.governed.team.manage',['operation'=>'create','code'=>'R1_'.strtoupper($nonce),'name'=>'R1 canonical team','assignment_mode'=>'ROUND_ROBIN'],
+    $requester,$reviewer,[...$businessConfig,'target_type'=>'sales_team_intent','target'=>bin2hex(random_bytes(16))]);
+$check($businessTeams->team($org,$teamResult['team']['team_id'])['assignment_mode']==='ROUND_ROBIN','R1/R2 native team assignment configuration mismatch.');
+$executeWorkflow('sales.governed.team.manage',['operation'=>'create','code'=>'DENY_'.strtoupper($nonce),'name'=>'Revoked authority'],
+    $requester,$reviewer,[...$businessConfig,'target_type'=>'sales_team_intent','target'=>bin2hex(random_bytes(16)),'expect_denied'=>true,
+    'after_approval'=>static fn()=>$db->prepare('DELETE FROM sales_user_capabilities WHERE organization_id=? AND user_id=? AND capability="sales.approval.any_team"')->execute([$org,(int)$reviewer])]);
+$q=$db->prepare('SELECT COUNT(*) FROM sales_teams WHERE organization_id=? AND code=?');$q->execute([$org,'DENY_'.strtoupper($nonce)]);
+$check((int)$q->fetchColumn()===0,'Revoked reviewer permitted native team mutation.');
+echo "Sales R1 canonical Goal -> independent Plan and Action approvals -> real lead create/qualify and team configuration -> native Goal outcome and revocation PASS.\n";
