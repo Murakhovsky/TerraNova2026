@@ -28,10 +28,10 @@ contract: domain-v1
 ```text
 id: product_management
 version: 0.1.0
-schema_version: 0.15.0
+schema_version: 0.16.0
 runtime: tenant-disabled by default
 persistence: 17 registered migrations; production acceptance pending
-capabilities: 95 typed contracts (31 queries, 30 direct human commands, 34 approved Actions)
+capabilities: 96 typed contracts (31 queries, 31 direct human commands, 34 approved Actions)
 Shopify: read-only; no outbound writes
 process model: six canonical Process Registry models; independent release acceptance pending
 ```
@@ -127,3 +127,7 @@ AI/CRON подає підписаний intent без execution authority. Не�
 ## Extended CSV import
 
 Підтримано legacy header та розширений `sku,name,type,uom,track_inventory,price_currency,price_amount,category_ids_json,attributes_json,media_json,variants_json`. JSON-колонки є масивами даних, а не командами. Один рядок створює атомарний draft Product через ProductAssemblyService з усіма SKU, цінами, атрибутами та verified Documents media. Staging перевіряє tenant references, усі SKU та typed values; незмінний payload доступний для review. Apply зберігає наявний approved Action, digest і карантин при помилці. Native outcome перевіряє кожен assembly receipt та його дочірні результати. CI нової схеми ще не підтверджено.
+
+## P4–P5: Attribute lifecycle
+
+Типізовані форми редагування, фільтрів, bulk patch і матриці SKU не потребують ручного JSON. Lifecycle command дозволяє перейменувати визначення, архівувати/відновити невикористаний атрибут, змінити або видалити прив'язку порожньої категорії. Код, тип, одиниця та enum choices незмінні; категорії з товарами вимагають окремої міграції каталогу. Потрібне CI-приймання точного SHA.
