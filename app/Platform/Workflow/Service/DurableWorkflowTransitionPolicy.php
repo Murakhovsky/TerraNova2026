@@ -8,6 +8,31 @@ use InvalidArgumentException;
 /** State transition policy. Pure technical state validation. Policy/Approval/Action remain separate. */
 final class DurableWorkflowTransitionPolicy
 {
+    public const ACTION_EFFECTS = ['internal','external','financial','irreversible'];
+    public const SUPPORTED_EFFECTS = ['none','internal','external','financial','irreversible'];
+
+    public static function isActionEffect(mixed $effect): bool
+    {
+        return in_array($effect,self::ACTION_EFFECTS,true);
+    }
+
+    public static function requiresExplicitPolicy(mixed $effect): bool
+    {
+        return in_array($effect,['financial','irreversible'],true);
+    }
+
+    /** Classification is not authorization. All canonical mutations still require Policy and Approval. */
+    public static function acceptsActionContract(\Kernel\Module\CapabilityContract $contract):bool
+    {
+        return self::isActionEffect($contract->sideEffectLevel)
+            && $contract->kind==='command'
+            && str_starts_with($contract->executionBinding,'action:')
+            && $contract->approvalPolicy==='required'
+            && $contract->idempotency==='required'
+            && (!self::requiresExplicitPolicy($contract->sideEffectLevel)
+                || ($contract->retryPolicy['max_attempts']??null)===1);
+    }
+
     private const RUN_TRANSITIONS = [
         'created' => ['running', 'cancelled'],
         'pending' => ['running', 'cancelled'],

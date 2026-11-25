@@ -70,7 +70,7 @@ final readonly class DoctrineWorkflowExecutionStore implements WorkflowExecution
                     throw new DomainException('Workflow definition lacks executable binding: ' . $field);
                 }
             }
-            if (!in_array($step['side_effect_level'], ['external','none'], true)) {
+            if (!in_array($step['side_effect_level'], DurableWorkflowTransitionPolicy::SUPPORTED_EFFECTS, true)) {
                 throw new DomainException('Workflow definition has unsupported side-effect class.');
             }
         }
@@ -177,7 +177,7 @@ final readonly class DoctrineWorkflowExecutionStore implements WorkflowExecution
             $selection = (new WorkflowStepScheduler())->select(
                 new WorkflowDefinitionSnapshot((string) $run['definition_id'], (string) $run['definition_version'], $plan),
                 array_map(static fn(array $row): WorkflowStepSnapshot => self::stepSnapshot($row), $rows),
-                ['none','external'],
+                DurableWorkflowTransitionPolicy::SUPPORTED_EFFECTS,
             );
             if ($selection->state->value !== 'pending' || $selection->stepId !== $claim->stepId) {
                 throw new DomainException('Workflow claim bypasses the immutable dependency order or active claim.');
@@ -186,7 +186,7 @@ final readonly class DoctrineWorkflowExecutionStore implements WorkflowExecution
             // Production's composite admission explicitly guards BOTH Action
             // and evidence-only claims. Historical isolated Store callers using
             // a custom admission retain their narrow fixture semantics.
-            if ($row['side_effect_level'] === 'external'
+            if (DurableWorkflowTransitionPolicy::isActionEffect($row['side_effect_level'])
                 || ($row['side_effect_level'] === 'none'
                     && $this->admission instanceof WorkflowClaimAdmissionRouter)) {
                 $this->admission->assertAuthorized($claim, self::stepSnapshot($row));

@@ -1,4 +1,5 @@
 parameters:
+  env(COS_WORKFLOW_ACTION_WORKER_ORGANIZATION): ''
   env(COS_AI_CAPABILITY_INTENT_SECRET): ''
   env(COS_CRON_CAPABILITY_INTENT_SECRET): ''
   env(COS_AUTOMATION_TENANT_ORGANIZATION): ''
@@ -345,6 +346,16 @@ services:
   App\Persistence\Workflow\DoctrineWorkflowActionWorkerAdmission:
     arguments:
       $plans: '@App\Persistence\Workflow\FederationWorkflowPlanApprovalEvidence'
+      $policies: '@Kernel\Policy\Contract\PolicyRepositoryInterface'
+      $policyEngine: '@Kernel\Policy\Service\PolicyEngine'
+      $contexts: !service_locator
+        policy_context: '@Kernel\Policy\Service\PolicyContextBuilder'
+      $identities: '@Kernel\Identity\Contract\IdentityResolverInterface'
+      $tenants: '@Kernel\Tenant\Service\TenantContextFactory'
+  App\Persistence\Workflow\FailClosedWorkflowActionWorkerAdmission:
+    arguments:
+      $candidate: '@App\Persistence\Workflow\DoctrineWorkflowActionWorkerAdmission'
+      $enabledOrganization: '%env(COS_WORKFLOW_ACTION_WORKER_ORGANIZATION)%'
   App\Persistence\Workflow\FederationNonActionClaimAdmission:
     arguments:
       $plans: '@App\Persistence\Workflow\FederationWorkflowPlanApprovalEvidence'

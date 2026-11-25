@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Persistence\Workflow;
 
+use Platform\Workflow\Service\DurableWorkflowTransitionPolicy;
+
 use Doctrine\DBAL\Connection;
 use Kernel\Action\Action;
 use Kernel\Action\ActionStatus;
@@ -102,7 +104,7 @@ final readonly class DoctrineWorkflowActionReceiptVerifier implements WorkflowRe
         if (!$context
             || !in_array($context['run_state'], ['running','waiting','ambiguous','completed'], true)
             || !in_array($context['step_state'], ['claimed','ambiguous','completed'], true)
-            || $context['side_effect_level'] !== 'external'
+            || !DurableWorkflowTransitionPolicy::isActionEffect($context['side_effect_level'])
             || $context['input_digest'] !== $inputDigest
             || !preg_match('/^[a-f0-9]{64}$/', (string) $context['idempotency_key'])
             || ($context['result_reference'] !== null
@@ -144,7 +146,7 @@ final readonly class DoctrineWorkflowActionReceiptVerifier implements WorkflowRe
         }
         if (!is_array($step) || ($step['capability_id'] ?? null) !== $context['capability_id']
             || ($step['capability_version'] ?? null) !== $context['capability_version']
-            || ($step['side_effect_level'] ?? null) !== 'external'
+            || ($step['side_effect_level'] ?? null) !== $context['side_effect_level']
             || !is_string($step['execution_binding'] ?? null)
             || !str_starts_with($step['execution_binding'], 'action:')
             || !is_array($step['input'] ?? null)
@@ -176,7 +178,7 @@ final readonly class DoctrineWorkflowActionReceiptVerifier implements WorkflowRe
             throw new DomainException('Canonical Action parameters changed from the approved Workflow Step.');
         }
         $attempts = $this->db->fetchAllAssociative(
-            'SELECT attempt, status, finished_at FROM cos_action_attempts
+            'SELECT attempt, status, started_at, finished_at FROM cos_action_attempts
              WHERE organization_id=:org AND action_id=:id',
             ['org' => $keys['org'], 'id' => $matched[1]],
         );
@@ -207,6 +209,17 @@ final readonly class DoctrineWorkflowActionReceiptVerifier implements WorkflowRe
             || ($approvals[0]['expires_at'] !== null
                 && strtotime((string) $approvals[0]['expires_at'] . ' UTC') <= time())) {
             throw new DomainException('Canonical Action lacks independent valid human Approval.');
+        }
+        if(DurableWorkflowTransitionPolicy::requiresExplicitPolicy($context['side_effect_level'])){
+            $explicit=$this->db->fetchOne(
+                'SELECT p.action_type FROM cos_policy_evaluations e JOIN cos_policies p
+                 ON p.id=e.policy_id AND p.organization_id=e.organization_id
+                 WHERE e.organization_id=:org AND e.action_id=:id
+                 ORDER BY e.evaluated_at DESC,e.id DESC LIMIT 1',
+                ['org'=>$keys['org'],'id'=>$matched[1]]);
+            if($explicit!==$action['type']||$attempts[0]['started_at']===null
+                ||strcmp((string)$approvals[0]['decided_at'],(string)$attempts[0]['started_at'])>0)
+                throw new DomainException('High-risk receipt lacks explicit Policy and prior independent Approval.');
         }
         return new WorkflowReceiptAttestation(
             $identity, $stepId, true, 'canonical-action',

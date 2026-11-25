@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Persistence\Federation;
 
+use Platform\Workflow\Service\DurableWorkflowTransitionPolicy;
+
 use App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier;
 use Platform\Workflow\Contract\WorkflowNonActionReceiptEvidenceInterface;
 use Platform\Workflow\Contract\WorkflowEvidenceSignalStoreInterface;
@@ -196,7 +198,7 @@ final readonly class FederationCanonicalWorkflowBridge
                         throw new DomainException('Non-Action Step requires pinned Domain read evidence.');
                     }
                     $hasNonAction=true;
-                } elseif (($step['side_effect_level']??null)!=='external'
+                } elseif (!DurableWorkflowTransitionPolicy::isActionEffect($step['side_effect_level']??null)
                     || !str_starts_with($step['execution_binding'],'action:')) {
                     throw new DomainException('Canonical Goal cannot dispatch unsupported side effects.');
                 }
@@ -219,8 +221,10 @@ final readonly class FederationCanonicalWorkflowBridge
                 }
             }
             $id=new WorkflowRunIdentity($org,$runId);
+            // Preserve the full Run ID while bounding the Kernel correlation_id to 40 characters.
+            $correlation='fed:'.substr(hash('sha256',$org."\0".$runId),0,32);
             $draft=new WorkflowRunDraft($id,$definition->id,$definition->version,$inputDigest,
-                $actor->userId()->value(),'federation:'.$runId,$planId,$approvalId,$digest,$definition);
+                $actor->userId()->value(),$correlation,$planId,$approvalId,$digest,$definition);
             if ($this->coordinator !== null) $this->coordinator->start($draft,$actor);
             else $this->workflow->create($draft,$actor);
             // Zero writes to cos_federation_runs/steps, no Action submission.
@@ -351,7 +355,7 @@ final readonly class FederationCanonicalWorkflowBridge
         }
         $selection=$this->scheduler->select(
             new WorkflowDefinitionSnapshot('federation.approved-plan','1.0.0',$steps),
-            $this->workflow->steps($id),['external','none'],
+            $this->workflow->steps($id),DurableWorkflowTransitionPolicy::SUPPORTED_EFFECTS,
         );
         // A prior COMPLETED flag is never enough to authorize a subsequent Action.
         foreach ($selection->completed as $stepId) {
@@ -363,7 +367,7 @@ final readonly class FederationCanonicalWorkflowBridge
                 foreach($steps as $candidate) if(($candidate['id']??null)===$stepId) $pinned=$candidate;
                 if ($completed->sideEffectLevel==='none' && is_array($pinned)) {
                     $this->nonActions->assertVerified($id,$stepId,$receipt,$inputDigest,$pinned);
-                } elseif ($completed->sideEffectLevel==='external') {
+                } elseif (DurableWorkflowTransitionPolicy::isActionEffect($completed->sideEffectLevel)) {
                     $proof=$this->receipts->attestForAudit($id,$stepId,$receipt,$inputDigest);
                     if (!$proof->verified || $proof->evidenceReference !== $receipt) {
                         return $result('manual_reconciliation_required',$stepId);
@@ -509,6 +513,11 @@ final readonly class FederationCanonicalWorkflowBridge
             if ($policy->decision !== PolicyDecision::ApprovalRequired) {
                 throw new DomainException('Canonical Goal Action requires independent human Approval.');
             }
+            $contract=$this->capabilities->describe($step->capabilityId);
+            if($contract===null || (DurableWorkflowTransitionPolicy::requiresExplicitPolicy($contract->sideEffectLevel)
+                && ($policy->policy===null || $policy->policy->actionType!==$proposal->type))){
+                throw new DomainException('High-risk Workflow requires an explicit action-specific Kernel Policy.');
+            }
             $issued=$this->actions->submit($org,$proposal,$run->correlationId);
             $action=['id'=>$issued->id,'status'=>$issued->status->value];
             if ($issued->status !== ActionStatus::PendingApproval) {
@@ -546,7 +555,9 @@ final readonly class FederationCanonicalWorkflowBridge
             || $contract===null || $contract->version!==($step['capability_version']??null)
             || $contract->ownerDomain!==($step['owner_domain']??null)
             || $contract->executionBinding!==($step['execution_binding']??null)
-            || $contract->sideEffectLevel!=='external'
+            || $contract->sideEffectLevel!==($step['side_effect_level']??null)
+            || !DurableWorkflowTransitionPolicy::acceptsActionContract($contract)
+            || !$actor->allows((string)$contract->permission)
             || $contract->approvalPolicy!=='required' || $contract->idempotency!=='required'
             || !str_starts_with($contract->executionBinding,'action:')
             || !is_array($step['input']??null)) {
