@@ -174,3 +174,79 @@ $check($realStore->financialEvidence($org,$id)===null,'Unreconciled approved reg
 $submit('finance.order.payment.reconcile',[...$payload,'operation_id'=>$registered['finance_reference'],'statement_reference'=>'bank-statement-line','expected_revision'=>0],$reviewer,$requester,'real-reconcile');
 $check($realStore->financialEvidence($org,$id)['net_collected_amount']==='40.00','Reconciled Action missing collection.');
 echo "Finance persisted Kernel Policy/Approval/Action + Sales order MySQL acceptance PASS (native Action path, not Platform Workflow admission).\n";
+
+
+/* Canonical Workflow integration candidate. Plan trust is a pinned fixture,
+ * not a production Plan approval. Real claim, worker gate, Finance Action,
+ * independent Approval, receipt verification and checkpoint use MySQL. */
+$wfDb=\Doctrine\DBAL\DriverManager::getConnection([
+    'driver'=>'pdo_mysql','host'=>getenv('DB_HOST')?:'127.0.0.1','port'=>(int)(getenv('DB_PORT')?:3306),
+    'dbname'=>getenv('DB_DATABASE')?:'cos','user'=>getenv('DB_USERNAME')?:'cos',
+    'password'=>getenv('DB_PASSWORD')?:'','charset'=>'utf8mb4',
+]);
+$capabilities=new \Kernel\Module\CanonicalCapabilityCatalog($catalog);
+$executeWorkflow=static function(string $type,array $p,string $initiator,string $approver)use(
+    $wfDb,$db,$org,$id,$catalog,$capabilities,$active,$domains,$handler,$approvals,$tx,$realAuthority,$check,$deny
+):array{
+    $token=bin2hex(random_bytes(8));
+    $actor=new \Kernel\Tenant\Model\TenantContext(\Kernel\Shared\Domain\UserId::fromString($initiator),
+        \Kernel\Shared\Domain\OrganizationId::fromString($org),\Kernel\Identity\Model\OrganizationRole::fromString('manager'),
+        [\Kernel\Tenant\Model\Permission::fromString(\Kernel\Tenant\Model\TenantPermissions::ACCESS),
+         \Kernel\Tenant\Model\Permission::fromString(\Kernel\Tenant\Model\TenantPermissions::MANAGE)]);
+    $identity=new \Platform\Workflow\Model\WorkflowRunIdentity($org,'fin-wf-'.$token);
+    $plan='fin-plan-'.$token;$approval='fin-plan-approval-'.$token;$digest=hash('sha256',$plan);
+    $definition=new \Platform\Workflow\Model\WorkflowDefinitionSnapshot('test.finance.order','1.0.0',[[
+        'id'=>'payment','capability_id'=>$type,'capability_version'=>'1.0.0','owner_domain'=>'finance',
+        'execution_binding'=>'action:'.$type,'side_effect_level'=>'financial','depends_on'=>[],
+        'input'=>['target_type'=>'sales_order','target_id'=>$id,'parameters'=>$p],
+    ]]);
+    $draft=new \Platform\Workflow\Model\WorkflowRunDraft($identity,$definition->id,$definition->version,
+        hash('sha256',json_encode($p,JSON_THROW_ON_ERROR)),$initiator,'fin-corr-'.$token,$plan,$approval,$digest,$definition);
+    $planEvidence=new class($identity,$plan,$digest,$approval) implements \Platform\Workflow\Contract\WorkflowPlanApprovalEvidenceInterface{
+        public function __construct(private \Platform\Workflow\Model\WorkflowRunIdentity $run,private string $plan,private string $digest,private string $approval){}
+        public function assertTrusted(\Platform\Workflow\Model\WorkflowRunIdentity $identity,string $planId,string $planDigest,string $approvalReference):void
+        {if($identity!=$this->run||$planId!==$this->plan||$planDigest!==$this->digest||$approvalReference!==$this->approval)throw new DomainException('Pinned test Plan proof mismatch.');}
+    };
+    $receipt=new \App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier($wfDb,$planEvidence);
+    $claimGate=new \App\Persistence\Workflow\DoctrineWorkflowActionClaimAdmission($wfDb,$planEvidence,$capabilities,$active);
+    $store=new \App\Persistence\Workflow\DoctrineWorkflowExecutionStore($wfDb,$receipt,$claimGate);
+    $worker=new \App\Persistence\Workflow\DoctrineWorkflowActionWorkerAdmission($wfDb,$planEvidence,$capabilities,$active,
+        new \App\Persistence\Workflow\WorkflowPredecessorReceiptVerifier($receipt,new \App\Persistence\Workflow\FailClosedWorkflowNonActionReceiptEvidence()));
+    $actions=new \Kernel\Action\Service\ActionService(new \Infrastructure\Platform\Persistence\MySql\Action\MysqlActionRepository($db),
+        new \Kernel\Action\Service\ActionExecutor([$handler],new \Kernel\Action\Service\ModuleActionExecutionGate($domains,$active,null,$worker)));
+    $policy=new \Kernel\Policy\Service\ActionPolicyService($actions,new \Infrastructure\Platform\Persistence\MySql\Policy\MysqlPolicyRepository($db),
+        new \Infrastructure\Platform\Persistence\MySql\Policy\MysqlPolicyEvaluationRepository($db),$approvals,
+        new \Kernel\Policy\Service\PolicyEngine(new \Kernel\Rule\Service\ConditionEvaluator()),$tx,null,$domains,$active);
+    $approvalService=new \Kernel\Approval\Service\ApprovalService($approvals,$actions,$tx,null,null,$realAuthority);
+    $store->create($draft,$actor);
+    $store->compareAndTransition(new \Platform\Workflow\Model\WorkflowRunTransition(
+        new \Platform\Workflow\Model\WorkflowRunCommand($identity,$actor,1,$draft->correlationId),
+        \Kernel\Workflow\Model\WorkflowStatus::CREATED,\Kernel\Workflow\Model\WorkflowStatus::RUNNING,'Finance candidate fixture'));
+    $step=$store->steps($identity)[0];
+    $action=$policy->submit($org,new \Kernel\Action\ActionProposal($type,'sales_order',$id,$p,'USER',
+        $initiator,'APPROVAL_REQUIRED','HIGH','wf:'.$step->idempotencyKey),$draft->correlationId);
+    $check($action->status===\Kernel\Action\ActionStatus::PendingApproval,'Workflow Finance Action must await human approval.');
+    $claim=$store->claim(new \Platform\Workflow\Model\WorkflowStepClaim(
+        new \Platform\Workflow\Model\WorkflowRunCommand($identity,$actor,2,$draft->correlationId),'payment','finance-workflow-fixture',120));
+    $check($claim->state==='claimed'&&$claim->claimToken!==null,'Financial Workflow claim missing.');
+    $q=$db->prepare('SELECT id FROM cos_approvals WHERE organization_id=? AND action_id=?');$q->execute([$org,$action->id]);$approvalId=(string)$q->fetchColumn();$q->closeCursor();
+    $check($approvalId!=='','Workflow Action approval missing.');
+    $deny(fn()=>$approvalService->approve($org,$approvalId,$initiator));
+    $check($actions->executeOutcome($org,$action->id,'unapproved-worker')===null,'Unapproved Workflow Action executed.');
+    $approvalService->approve($org,$approvalId,$approver);
+    $out=$actions->executeOutcome($org,$action->id,'finance-workflow-worker');
+    $check($out!==null&&$out->result->successful&&$out->action()->status===\Kernel\Action\ActionStatus::Completed,'Financial Workflow worker Action failed.');
+    $check($actions->executeOutcome($org,$action->id,'replay-worker')===null,'Completed financial Action replayed.');
+    $store->checkpoint(new \Platform\Workflow\Model\WorkflowStepCheckpoint(
+        new \Platform\Workflow\Model\WorkflowRunCommand($identity,$actor,3,$draft->correlationId),'payment',$claim->claimToken,
+        \Kernel\Workflow\Model\StepStatus::COMPLETED,'action:'.$action->id));
+    $check($store->steps($identity)[0]->state==='completed','Financial Action receipt was not checkpointed.');
+    return $out->result->data;
+};
+$wfPayload=[...$payload,'amount'=>'60.00','source_reference'=>'workflow-capture'];
+$wfRegistered=$executeWorkflow('finance.order.payment.register',$wfPayload,$requester,$reviewer);
+$check($realStore->financialEvidence($org,$id)['net_collected_amount']==='40.00','Workflow registration incorrectly changed confirmed collection.');
+$executeWorkflow('finance.order.payment.reconcile',[...$wfPayload,'operation_id'=>$wfRegistered['finance_reference'],
+    'statement_reference'=>'workflow-statement-line','expected_revision'=>1],$reviewer,$requester);
+$check($realStore->financialEvidence($org,$id)['net_collected_amount']==='100.00','Financial Workflow reconciliation did not settle captured evidence.');
+echo "Finance actual Action + canonical financial Workflow claim, worker, receipt and checkpoint candidate PASS (pinned Plan fixture; no production cutover).\n";
