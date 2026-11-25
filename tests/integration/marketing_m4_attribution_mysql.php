@@ -279,3 +279,22 @@ $assert($deny,'Sweep replay changed approved page budget.');
 $deny=false;try{$sweep->sweep($actor,$sweepCampaign,null,'lead','2026-02-01','2026-02-01',null,'m4-sweep-invalid',6);}catch(DomainException){$deny=true;}
 $assert($deny&&$store->receipt($org,'m4-sweep-invalid')===null,'Unbounded page budget admitted.');
 echo "Marketing M4 multipage atomic native receipt, tenant fence, bounded continuation and replay PASS\n";
+
+$historyService=new \Domains\Marketing\Application\Service\MarketingTouchAttributionService($nativeSource,$campaignService,$plans,$modules);
+$assert($historyService->report($actor,$nativeId,'linear')['status']==='UNAVAILABLE','Missing history fabricated attribution.');
+$touch1=str_repeat('1',64);$touch2=str_repeat('2',64);$touch3=str_repeat('3',64);
+$history=['model'=>'shopify-journey-moments-v1','first_touch'=>$touch1,'last_touch'=>$touch3,'touches'=>[
+    ['touch_id'=>$touch1,'visit_at'=>'2026-01-01T08:00:00.000000Z','tags'=>['utm_campaign'=>$campaign,'utm_source'=>'google','utm_medium'=>'organic']],
+    ['touch_id'=>$touch2,'visit_at'=>'2026-01-01T09:00:00.000000Z','tags'=>null],
+    ['touch_id'=>$touch3,'visit_at'=>'2026-01-01T10:00:00.000000Z','tags'=>['utm_campaign'=>$c2,'utm_source'=>'google','utm_medium'=>'organic']]]];
+$beforeJourney=$nativeRepo->journey($org,$nativeId);
+$db->beginTransaction();$nativeRepo->recordJourney($org,$nativeId,$placement['store_reference'],$placement['external_order_id'],$history);$db->commit();
+$assert($nativeRepo->journey($org,$nativeId)===$beforeJourney,'Full history rewrote last visit evidence.');
+$first=$historyService->report($actor,$nativeId,'first_touch');$last=$historyService->report($actor,$nativeId,'last_touch');$linear=$historyService->report($actor,$nativeId,'linear');
+$assert($first['allocations'][0]['campaign_id']===$campaign&&$first['allocations'][0]['minor']===2500&&$last['allocations'][0]['campaign_id']===$c2&&$last['allocations'][0]['minor']===2500,'First/last touch models invalid.');
+$assert($linear['touch_count']===3&&$linear['unassigned_minor']===833&&array_sum(array_column($linear['allocations'],'minor'))===1667&&$linear['recognized_revenue']===null,'Linear allocation failed exact conservation or unknown share.');
+$assert($nativeRepo->touchHistory($other,$nativeId)===null,'Cross tenant touch history leak.');
+$changed=$history;$changed['touches'][1]['tags']=['utm_campaign'=>$c2,'utm_source'=>'google','utm_medium'=>'organic'];
+$db->beginTransaction();$nativeRepo->recordJourney($org,$nativeId,$placement['store_reference'],$placement['external_order_id'],$changed);$db->commit();
+$assert($historyService->report($actor,$nativeId,'linear')['status']==='CONFLICT'&&$nativeRepo->journey($org,$nativeId)===$beforeJourney,'History conflict silently reallocated or poisoned last touch.');
+echo "Marketing M4.11 native history independent of last touch, first/last/linear exact allocation and conflict PASS\n";

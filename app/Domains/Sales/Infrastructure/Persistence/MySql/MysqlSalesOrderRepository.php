@@ -6,7 +6,7 @@ use Domains\Sales\Application\Contract\SalesOrderRepositoryInterface;
 use PDO;
 use LogicException;
 
-final readonly class MysqlSalesOrderRepository implements SalesOrderRepositoryInterface, \Domains\Sales\Application\Contract\SalesOrderLifecycleRepositoryInterface, \Domains\Sales\Application\Contract\SalesCommerceOrderEvidencePort, \Domains\Sales\Application\Contract\SalesOrderJourneyStore, \Domains\Sales\Application\Contract\SalesCommerceOrderLifecycleEvidencePort, \Domains\Sales\Application\Contract\SalesOrderReportReadPort
+final readonly class MysqlSalesOrderRepository implements SalesOrderRepositoryInterface, \Domains\Sales\Application\Contract\SalesOrderLifecycleRepositoryInterface, \Domains\Sales\Application\Contract\SalesCommerceOrderEvidencePort, \Domains\Sales\Application\Contract\SalesOrderJourneyStore, \Domains\Sales\Application\Contract\SalesCommerceOrderTouchHistoryReadPort, \Domains\Sales\Application\Contract\SalesCommerceOrderLifecycleEvidencePort, \Domains\Sales\Application\Contract\SalesOrderReportReadPort
 {
     public function __construct(private PDO $connection){}
     public function create(string $org,array $order,array $lines,array $evidence):void
@@ -112,23 +112,27 @@ final readonly class MysqlSalesOrderRepository implements SalesOrderRepositoryIn
         $fact=$this->placement($org,$order);
         if($fact===null||$fact['channel']!=='shopify'||$fact['store_reference']!==$store||$fact['external_order_id']!==$external)
             throw new LogicException('Journey does not belong to native Order.');
-        $journey=\Domains\Sales\Domain\Policy\SalesOrderJourneyEvidence::normalize($journey,$fact['occurred_at']);
+        $journey=($journey['model']??null)==='shopify-journey-moments-v1'?\Domains\Sales\Domain\Policy\SalesOrderTouchHistoryEvidence::normalize($journey,$fact['occurred_at']):\Domains\Sales\Domain\Policy\SalesOrderJourneyEvidence::normalize($journey,$fact['occurred_at']);
         $hash=hash('sha256',json_encode($journey,JSON_THROW_ON_ERROR));
         $q=$this->connection->prepare('INSERT INTO sales_order_journey_evidence(organization_id,order_id,evidence_hash,evidence_json)
             VALUES(?,?,?,?) ON DUPLICATE KEY UPDATE evidence_hash=evidence_hash');
         $q->execute([$org,$order,$hash,json_encode($journey,JSON_THROW_ON_ERROR)]);
     }
     public function journey(string $org,string $order):?array
+    {return $this->journeyModel($org,$order,'shopify-last-visit-utm-v1');}
+    public function touchHistory(string $org,string $order):?array
+    {return $this->journeyModel($org,$order,'shopify-journey-moments-v1');}
+    private function journeyModel(string $org,string $order,string $model):?array
     {
         if($org===''||!preg_match('/^[a-f0-9]{32}$/D',$order))return null;
-        $q=$this->connection->prepare('SELECT evidence_hash,evidence_json FROM sales_order_journey_evidence WHERE organization_id=? AND order_id=? ORDER BY evidence_hash LIMIT 2');
-        $q->execute([$org,$order]);$rows=$q->fetchAll(PDO::FETCH_ASSOC);
+        $q=$this->connection->prepare("SELECT evidence_hash,evidence_json FROM sales_order_journey_evidence WHERE organization_id=? AND BINARY organization_id=BINARY ? AND order_id=? AND JSON_UNQUOTE(JSON_EXTRACT(evidence_json,'$.model'))=? ORDER BY evidence_hash LIMIT 2");
+        $q->execute([$org,$org,$order,$model]);$rows=$q->fetchAll(PDO::FETCH_ASSOC);
         if($rows===[])return null;
         if(count($rows)!==1)return ['state'=>'conflict'];
         $e=json_decode($rows[0]['evidence_json'],true,16,JSON_THROW_ON_ERROR);
         $fact=$this->placement($org,$order);
         if($fact===null)throw new LogicException('Journey placement missing.');
-        $e=\Domains\Sales\Domain\Policy\SalesOrderJourneyEvidence::normalize($e,$fact['occurred_at']);
+        $e=$model==='shopify-journey-moments-v1'?\Domains\Sales\Domain\Policy\SalesOrderTouchHistoryEvidence::normalize($e,$fact['occurred_at']):\Domains\Sales\Domain\Policy\SalesOrderJourneyEvidence::normalize($e,$fact['occurred_at']);
         if(!hash_equals($rows[0]['evidence_hash'],hash('sha256',json_encode($e,JSON_THROW_ON_ERROR))))throw new LogicException('Journey integrity failed.');
         return ['state'=>'observed','evidence_hash'=>$rows[0]['evidence_hash'],...$e];
     }

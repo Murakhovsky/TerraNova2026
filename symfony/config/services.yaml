@@ -2863,6 +2863,7 @@ services:
   Domains\Marketing\Application\Contract\MarketingCommerceFinancialReadPort:
     alias: App\Infrastructure\Marketing\CommerceFinancialReadAdapter
   Domains\Marketing\Application\Service\MarketingCommerceAttributionService: ~
+  Domains\Marketing\Application\Service\MarketingTouchAttributionService: ~
   Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingMediaAnalyticsStore:
     arguments:
       $connection: '@cos.database.pdo'

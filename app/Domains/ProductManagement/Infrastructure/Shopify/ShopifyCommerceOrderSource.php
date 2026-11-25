@@ -18,7 +18,12 @@ query COSCommerceOrder($id: ID!) {
   order(id: $id) {
     id createdAt updatedAt cancelledAt test edited taxesIncluded
     displayFinancialStatus displayFulfillmentStatus
-    customerJourneySummary { ready lastVisit { occurredAt utmParameters { source medium campaign } } }
+    customerJourneySummary {
+      ready firstVisit { id occurredAt utmParameters { source medium campaign } }
+      lastVisit { id occurredAt utmParameters { source medium campaign } }
+      momentsCount { count precision }
+      moments(first: 100) { nodes { occurredAt ... on CustomerVisit { id utmParameters { source medium campaign } } } pageInfo { hasNextPage hasPreviousPage } }
+    }
     originalTotalPriceSet { shopMoney { amount currencyCode } }
     totalPriceSet { shopMoney { amount currencyCode } }
     currentTotalPriceSet { shopMoney { amount currencyCode } }
@@ -78,6 +83,7 @@ GQL;
         $items=$this->allLines($c['shop_domain'],$token,$externalId,$updated,$raw['lineItems']??null);
         $raw['lineItems']=$items;
         $journey=self::journey($raw['customerJourneySummary']??null,$created);
+        $journeyHistory=self::journeyHistory($raw['customerJourneySummary']??null,$created,$externalId);
         unset($raw['customerJourneySummary']); // Journey readiness may change independently of the Order updatedAt.
         $reason=null;$terms=null;
         if($raw['test'])$reason='test_order';
@@ -119,7 +125,7 @@ GQL;
         $providerHash=hash('sha256',json_encode($raw,JSON_THROW_ON_ERROR));
         return ['provider_hash'=>$providerHash,'channel'=>'shopify','store_reference'=>$connection,'external_order_id'=>$externalId,'created_at'=>$created,'updated_at'=>$updated,
             'financial_status'=>$financial,'fulfillment_status'=>$fulfillment,'cancelled_at'=>$cancelled,'test'=>$raw['test'],'edited'=>$raw['edited'],'tax_included'=>$raw['taxesIncluded'],
-            'currency'=>$currency,'original_total'=>$original,'current_total'=>$current,'terms'=>$terms,'blocked_reason'=>$reason,'journey'=>$journey];
+            'currency'=>$currency,'original_total'=>$original,'current_total'=>$current,'terms'=>$terms,'blocked_reason'=>$reason,'journey'=>$journey,'journey_history'=>$journeyHistory];
     }
 
     public function page(string $org,string $channel,string $connection,?string $cursor,?string $cutoff=null):array
@@ -200,6 +206,43 @@ GQL;
     }
 
     /** No raw landing URL, identifiers, contact fields or arbitrary UTM values leave the provider boundary. */
+    private static function journeyHistory(mixed $summary,string $placed,string $order):?array
+    {
+        if(!is_array($summary)||($summary['ready']??null)!==true)return null;
+        $page=$summary['moments']??null;$count=$summary['momentsCount']??null;
+        $nodes=$page['nodes']??null;
+        if(!is_array($nodes)||!array_is_list($nodes)||count($nodes)<1||count($nodes)>100
+            ||($page['pageInfo']['hasNextPage']??null)!==false||($page['pageInfo']['hasPreviousPage']??null)!==false
+            ||($count['precision']??null)!=='EXACT'||($count['count']??null)!==count($nodes))return null;
+        $touches=[];$seen=[];
+        try{
+            $pin=static function(mixed $id)use($order):string{
+                if(!is_string($id)||!preg_match('#^gid://shopify/CustomerVisit/[A-Za-z0-9_.:-]{1,120}$#D',$id))
+                    throw new DomainException('Unsupported visit identity.');
+                return hash('sha256',$order.':'.$id);
+            };
+            foreach($nodes as $v){
+                $id=$pin($v['id']??null);if(isset($seen[$id]))return null;$seen[$id]=true;
+                $at=self::time($v['occurredAt']??null);
+                if($at>$placed)return null;
+                $u=$v['utmParameters']??null;$tags=null;
+                if(is_array($u)&&is_string($u['source']??null)&&is_string($u['medium']??null)&&is_string($u['campaign']??null)
+                    &&preg_match('/^[a-z0-9][a-z0-9_.-]{0,63}$/D',$u['source'])
+                    &&preg_match('/^[a-z0-9][a-z0-9_.-]{0,63}$/D',$u['medium'])
+                    &&preg_match('/^(?:mkt|mkpl)-[a-f0-9]{24}$/D',$u['campaign']))
+                    $tags=['utm_source'=>$u['source'],'utm_medium'=>$u['medium'],'utm_campaign'=>$u['campaign']];
+                $touches[]=['touch_id'=>$id,'visit_at'=>$at,'tags'=>$tags];
+            }
+            $first=$pin($summary['firstVisit']['id']??null);$last=$pin($summary['lastVisit']['id']??null);
+            if(!isset($seen[$first],$seen[$last]))return null;
+            // Canonical order independent of provider pagination order.
+            usort($touches,static fn(array $a,array $b):int=>[$a['visit_at'],$a['touch_id']]<=>[$b['visit_at'],$b['touch_id']]);
+            if($touches[0]['visit_at']!==self::time($summary['firstVisit']['occurredAt']??null)
+                ||$touches[count($touches)-1]['visit_at']!==self::time($summary['lastVisit']['occurredAt']??null))return null;
+            return ['model'=>'shopify-journey-moments-v1','first_touch'=>$first,'last_touch'=>$last,'touches'=>$touches];
+        }catch(DomainException){return null;}
+    }
+
     private static function journey(mixed $summary,string $placed):?array
     {
         if(!is_array($summary)||($summary['ready']??null)!==true)return null;

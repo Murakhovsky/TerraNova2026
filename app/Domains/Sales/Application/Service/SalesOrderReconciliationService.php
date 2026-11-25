@@ -98,6 +98,8 @@ final readonly class SalesOrderReconciliationService
             // Journey readiness is independent of immutable order placement and provider order updatedAt.
             if($id!==null&&$advance&&in_array($outcome,['imported','observed','unchanged'],true)&&is_array($snapshot['journey']??null))
                 $this->journeys->recordJourney($org,$id,$connection,$external,$snapshot['journey']);
+            if($id!==null&&$advance&&in_array($outcome,['imported','observed','unchanged'],true)&&is_array($snapshot['journey_history']??null))
+                $this->journeys->recordJourney($org,$id,$connection,$external,$snapshot['journey_history']);
             // Existing native order + successful observation: acknowledge only the pointer, not downstream lifecycle.
             if($delivery!==null&&$id!==null&&in_array($outcome,['imported','observed','unchanged'],true))
                 $this->source->acknowledge($org,$channel,$connection,$delivery,$external);
