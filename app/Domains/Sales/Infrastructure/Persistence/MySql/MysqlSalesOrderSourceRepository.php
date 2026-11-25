@@ -77,10 +77,18 @@ final readonly class MysqlSalesOrderSourceRepository implements SalesOrderSource
             foreach($evidence['lifecycle']['lines']??[] as $line=>$fact)$actual[$line]=$fact['ordered'];
             if(!is_array($original)||$original===[]||self::digest($original)!==self::digest($actual))
                 throw new \DomainException('Provider lifecycle cannot bind immutable placed order lines.');
-            $q=$this->connection->prepare('SELECT quantity FROM sales_order_lines WHERE organization_id=? AND order_id=? ORDER BY line_no');
-            $q->execute([$org,$orderId]);$placed=array_map('intval',$q->fetchAll(PDO::FETCH_COLUMN));
+            $q=$this->connection->prepare('SELECT quantity,product_id,variant_id FROM sales_order_lines WHERE organization_id=? AND order_id=? ORDER BY line_no');
+            $q->execute([$org,$orderId]);$placed=$q->fetchAll(PDO::FETCH_ASSOC);
             ksort($original,SORT_STRING);
-            if(array_values($original)!==$placed)throw new \DomainException('Provider line quantities differ from canonical placement.');
+            if(array_values($original)!==array_map(static fn(array $r):int=>(int)$r['quantity'],$placed))
+                throw new \DomainException('Provider line quantities differ from canonical placement.');
+            $mappings=$evidence['canonical_line_mappings']??null;
+            if(!is_array($mappings)||count($mappings)!==count($original))throw new \DomainException('Canonical lifecycle line mappings missing.');
+            foreach(array_keys($original) as $index=>$externalLine){
+                $map=$mappings[$externalLine]??null;
+                if(!is_array($map)||($map['product_id']??null)!==$placed[$index]['product_id']||($map['variant_id']??null)!==$placed[$index]['variant_id'])
+                    throw new \DomainException('Provider lifecycle line mapping differs from canonical placement.');
+            }
         }
         $hash=self::digest($evidence);
         $q=$this->connection->prepare('INSERT INTO sales_order_external_fulfillment_evidence(organization_id,evidence_id,source_id,order_id,request_key,provider_updated_at,provider_hash,evidence_hash,evidence_json) VALUES(?,?,?,?,?,?,?,?,?)');

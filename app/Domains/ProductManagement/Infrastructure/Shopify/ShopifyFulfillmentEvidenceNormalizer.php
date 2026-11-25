@@ -56,7 +56,9 @@ final class ShopifyFulfillmentEvidenceNormalizer
         foreach(self::nodes($order['lineItems']??null,100) as $line){
             $id=self::gid($line['id']??null,'LineItem');
             if(isset($lines[$id]))throw new DomainException('Duplicate order line.');
-            $lines[$id]=['ordered'=>self::quantity($line['quantity']??null,1),'assigned_pending'=>0,
+            $lines[$id]=['provider_product_gid'=>isset($line['product']['id'])?self::gid($line['product']['id'],'Product'):null,
+                'provider_variant_gid'=>isset($line['variant']['id'])?self::gid($line['variant']['id'],'ProductVariant'):null,
+                'ordered'=>self::quantity($line['quantity']??null,1),'assigned_pending'=>0,
                 'provider_fulfilled'=>0,'return_requested'=>0,'return_processed'=>0,'cancelled_unfulfilled'=>null];
         }
         if($lines===[])throw new DomainException('Missing provider order lines.');
