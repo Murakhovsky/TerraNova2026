@@ -272,7 +272,7 @@ Signed machine proposal API (existing tenant rollout and HMAC headers):
 - POST `/api/v1/capability-intents/sales-business/review/{intentId}/adopt` requires authenticated session, CSRF and exact reviewed digest. Adoption creates canonical Goal/Plan only, not approval or execution. Same signed nonce replays the original intent, not a new business effect.
 - Tests exercise signed AI and CRON requests, unauthorized/CSRF/nonce/target denial, human adoption, actual independent Plan and Action Approval, native readback and equality outcome; the MySQL fixture asserts all 28 governed business operation IDs have successful canonical outcomes. Exact-head CI required. No live model or production scheduler claim.
 
-## S7 — Domain Release Acceptance gate (2026-11-26)
+## S7 — Критерії приймання домену (2026-11-26)
 
 | Gate | Required evidence / current status |
 | --- | --- |
