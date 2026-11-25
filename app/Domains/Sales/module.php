@@ -34,6 +34,13 @@ return [
         ],
         'cross_domain_contracts' => [
             [
+                'contract' => 'Domains\\ProductManagement\\Application\\Contract\\CommerceOrderFulfillmentEvidencePort',
+                'role' => 'requires',
+                'counterpart' => 'product_management',
+                'kind' => 'synchronous_port',
+                'purpose' => 'Read authenticated external fulfillment assignment evidence without transferring inventory ownership.',
+            ],
+            [
                 'contract'=>'Domains\\Finance\\Application\\Contract\\CommerceOrderFinancialEvidenceReadPort',
                 'role'=>'requires','counterpart'=>'finance','kind'=>'synchronous_port',
                 'purpose'=>'Read independently reconciled collection evidence; no financial mutation.',
