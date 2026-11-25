@@ -51,6 +51,18 @@ final class SalesGovernedBusinessOperations
         return (self::OPERATIONS[$type] ?? throw new DomainException('Unknown governed Sales operation.'))[0];
     }
 
+    /** Derive the pinned target from the typed native payload, not caller-selected authority. */
+    public static function proposalTarget(string $type,array $parameters,string $intent):array
+    {
+        [, $targetType, $field]=self::OPERATIONS[$type]??throw new DomainException('Unknown governed Sales operation.');
+        $value=$field===null?$intent:($parameters[$field]??null);
+        if((!is_string($value)&&!is_int($value))||(string)$value==='')
+            throw new DomainException('Governed Sales target required.');
+        if($field===null&&preg_match('/^[a-f0-9]{32}$/D',(string)$value)!==1)
+            throw new DomainException('Invalid Sales intent identity.');
+        return ['target_type'=>$targetType,'target_id'=>(string)$value,'parameters'=>$parameters];
+    }
+
     public static function assertTarget(Action $action): void
     {
         [, $type, $field] = self::OPERATIONS[$action->type] ?? throw new DomainException('Unknown governed Sales operation.');

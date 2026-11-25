@@ -4592,4 +4592,5 @@ services:
   App\Persistence\Capability\CanonicalAutomationIntentStore:
     arguments:
       $productPlans: '@App\Persistence\ProductManagement\ProductGovernedPlanProposalService'
+      $salesPlans: '@App\Persistence\Sales\SalesGovernedPlanProposalService'
       $catalog: '@Kernel\Module\CanonicalCapabilityCatalog'
