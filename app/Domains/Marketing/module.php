@@ -131,6 +131,7 @@ $manifest = [
             'marketing.optimization.audience.preview',
             'marketing.experiment.register',
             'marketing.experiment.get',
+            'marketing.experiment.study.inspect',
             'marketing.optimization.creative.preview',
             'marketing.optimization.rule.evaluate',
             'marketing.optimization.rule.plan.propose',
@@ -275,6 +276,7 @@ foreach ([
 foreach([
     'marketing.experiment.register'=>['command','internal','marketing/experiment-register'],
     'marketing.experiment.get'=>['query','none','marketing/experiment-get'],
+    'marketing.experiment.study.inspect'=>['query','none','marketing/experiment-study-inspect'],
     'marketing.optimization.creative.preview'=>['query','none','marketing/optimization-creative-preview'],
 ] as $id=>[$kind,$sideEffect,$schema]){
     $contracts[]=[

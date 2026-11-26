@@ -351,6 +351,7 @@ Manifest capabilities не задекларовані.
 - `marketing.creative.revise`;
 - `marketing.experiment.get`;
 - `marketing.experiment.register`;
+- `marketing.experiment.study.inspect`;
 - `marketing.optimization.audience.preview`;
 - `marketing.optimization.budget.preview`;
 - `marketing.optimization.creative.preview`;

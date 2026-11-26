@@ -2883,6 +2883,8 @@ services:
   Domains\Marketing\Infrastructure\Meta\MetaHttpTransport:
     alias: Domains\Marketing\Infrastructure\Meta\CurlMetaHttpTransport
   Domains\Marketing\Infrastructure\Meta\MetaGraphReadAdapter: ~
+  Domains\Marketing\Application\Contract\MarketingExperimentStudyReadPort:
+    alias: Domains\Marketing\Infrastructure\Meta\MetaGraphReadAdapter
   Domains\Marketing\Application\Contract\PaidMediaProviderInterface:
     alias: Domains\Marketing\Infrastructure\Meta\MetaGraphReadAdapter
   Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidReadRepository:

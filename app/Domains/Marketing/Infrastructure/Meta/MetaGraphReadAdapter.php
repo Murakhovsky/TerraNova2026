@@ -5,6 +5,7 @@ namespace Domains\Marketing\Infrastructure\Meta;
 use DateTimeImmutable;
 use DomainException;
 use Domains\Marketing\Application\Contract\PaidMediaProviderInterface;
+use Domains\Marketing\Application\Contract\MarketingExperimentStudyReadPort;
 use Kernel\Resilience\ExternalCallExecutor;
 use Kernel\Resilience\ExternalCallPolicy;
 use Kernel\Shared\Domain\OrganizationId;
@@ -15,7 +16,7 @@ use Platform\Integration\Model\Credential;
  * Version-pinned, paginated, bounded Meta Marketing API read adapter.
  * Accepts only opaque Vault refs, never inline or request-supplied access tokens.
  */
-final readonly class MetaGraphReadAdapter implements PaidMediaProviderInterface
+final readonly class MetaGraphReadAdapter implements PaidMediaProviderInterface, MarketingExperimentStudyReadPort
 {
     private const VERSION='v27.0';
     private const MAX_PAGES=10;
@@ -80,14 +81,87 @@ final readonly class MetaGraphReadAdapter implements PaidMediaProviderInterface
         ]);
     }
 
+    /** Read only linked classic split studies, never arbitrary provider objects. */
+    public function inspectSplitStudy(string $org,string $providerAccountId,string $ref,string $studyId,string $controlCampaign,string $candidateCampaign,string $from,string $to):array
+    {
+        $account=$this->account($providerAccountId);
+        foreach([$studyId,$controlCampaign,$candidateCampaign] as $id)$this->numericId($id);
+        if($controlCampaign===$candidateCampaign)throw new DomainException('Distinct study campaigns required.');
+        $start=DateTimeImmutable::createFromFormat('!Y-m-d',$from,new \DateTimeZone('UTC'));
+        $end=DateTimeImmutable::createFromFormat('!Y-m-d',$to,new \DateTimeZone('UTC'));
+        if(!$start||!$end||$start->format('Y-m-d')!==$from||$end->format('Y-m-d')!==$to||$start>$end)
+            throw new DomainException('Invalid registered study window.');
+        $end=$end->modify('+1 day');
+        $studies=[];
+        foreach([$controlCampaign,$candidateCampaign] as $campaign){
+            $rows=$this->pages($org,$account,$ref,$campaign.'/ad_studies',[
+                'fields'=>'id,type,created_time,start_time,end_time,canceled_time','limit'=>'100',
+            ],true);
+            $matches=array_values(array_filter($rows,static fn(array $row):bool=>($row['id']??null)===$studyId));
+            if(count($matches)!==1)throw new DomainException('Split study is not uniquely linked to both native campaigns.');
+            $row=$matches[0];
+            if(($row['type']??null)!=='SPLIT_TEST'||!empty($row['canceled_time']))
+                throw new DomainException('Uncanceled classic split study required.');
+            $created=$this->studyTimestamp($row['created_time']??null);
+            $actualStart=$this->studyTimestamp($row['start_time']??null);
+            $actualEnd=$this->studyTimestamp($row['end_time']??null);
+            if($created>$start->getTimestamp()||$actualStart!==$start->getTimestamp()||$actualEnd!==$end->getTimestamp())
+                throw new DomainException('Study timeline differs from pre-registered window.');
+            $studies[]=['study_id'=>$studyId,'type'=>'SPLIT_TEST','created_at_utc'=>gmdate('Y-m-d\\TH:i:s\\Z',$created),
+                'start_at_utc'=>gmdate('Y-m-d\\TH:i:s\\Z',$actualStart),'end_at_utc'=>gmdate('Y-m-d\\TH:i:s\\Z',$actualEnd)];
+        }
+        if($studies[0]!==$studies[1])throw new DomainException('Study associations disagree.');
+        $cells=$this->pages($org,$account,$ref,$studyId.'/cells',[
+            'fields'=>'id,ad_entities_count,control_percentage,treatment_percentage','limit'=>'100',
+        ],true);
+        if(count($cells)!==2)throw new DomainException('Exactly two study cells required.');
+        $byCampaign=[];$seen=[];
+        foreach($cells as $cell){
+            $id=$cell['id']??null;
+            if(!is_string($id))throw new DomainException('Invalid split study cell.');
+            $this->numericId($id);
+            if(isset($seen[$id])||!in_array($cell['ad_entities_count']??null,[1,'1'],true)
+                ||!in_array($cell['treatment_percentage']??null,[50,50.0,'50','50.0'],true)
+                ||!in_array($cell['control_percentage']??null,[null,0,0.0,'0','0.0'],true))
+                throw new DomainException('Exact two-arm 50/50 campaign allocation required.');
+            $seen[$id]=true;
+            $campaigns=$this->pages($org,$account,$ref,$id.'/campaigns',['fields'=>'id,account_id','limit'=>'100'],true);
+            if(count($campaigns)!==1)throw new DomainException('Study cell must contain exactly one campaign.');
+            $campaign=$campaigns[0]['id']??null;$owner=$campaigns[0]['account_id']??null;
+            if(!in_array($campaign,[$controlCampaign,$candidateCampaign],true)||isset($byCampaign[$campaign])
+                ||!in_array($owner,[$account,substr($account,4)],true))
+                throw new DomainException('Study campaign ownership or allocation differs from registered native arms.');
+            $byCampaign[$campaign]=['cell_id'=>$id,'provider_campaign_id'=>$campaign,'allocation_percent'=>50];
+        }
+        if(!isset($byCampaign[$controlCampaign],$byCampaign[$candidateCampaign]))throw new DomainException('Both registered arms required.');
+        return [...$studies[0],'provider_ad_account_id'=>$account,'control'=>$byCampaign[$controlCampaign],
+            'candidate'=>$byCampaign[$candidateCampaign],'provider_split_configuration_verified'=>true,'provider_results_available'=>false];
+    }
+
+    private function numericId(string $id):void
+    {
+        if(!preg_match('/^[0-9]{1,30}$/D',$id))throw new DomainException('Invalid Meta object ID.');
+    }
+
+    private function studyTimestamp(mixed $value):int
+    {
+        if(is_int($value)||is_string($value)&&preg_match('/^[0-9]{1,10}$/D',$value))return (int)$value;
+        if(!is_string($value)||!preg_match('/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:Z|[+-]\\d{2}:?\\d{2})$/D',$value))
+            throw new DomainException('Missing or ambiguous study timestamp.');
+        $time=new DateTimeImmutable($value);
+        if(($errors=DateTimeImmutable::getLastErrors())!==false&&($errors['warning_count']||$errors['error_count']))
+            throw new DomainException('Invalid study timestamp.');
+        return $time->getTimestamp();
+    }
+
     /** @param array<string,string> $parameters @return list<array<string,mixed>> */
-    private function pages(string $org,string $account,string $ref,string $path,array $parameters):array
+    private function pages(string $org,string $account,string $ref,string $path,array $parameters,bool $studyPath=false):array
     {
         $items=[];$after=null;$seen=[];
         for($page=0;$page<self::MAX_PAGES;$page++){
             $query=$parameters;
             if($after!==null)$query['after']=$after;
-            $response=$this->request($org,$account,$ref,$path,$query);
+            $response=$this->request($org,$account,$ref,$path,$query,$studyPath);
             if(!isset($response['data'])||!is_array($response['data'])||!array_is_list($response['data']))throw new DomainException('Meta page missing array data.');
             foreach($response['data'] as $row){
                 if(!is_array($row)||!isset($row['id'])&&$path!==$account.'/insights')throw new DomainException('Malformed Meta page row.');
@@ -104,9 +178,10 @@ final readonly class MetaGraphReadAdapter implements PaidMediaProviderInterface
     }
 
     /** @param array<string,string> $params @return array<string,mixed> */
-    private function request(string $org,string $account,string $ref,string $path,array $params):array
+    private function request(string $org,string $account,string $ref,string $path,array $params,bool $studyPath=false):array
     {
-        if(!preg_match('#^act_[0-9]{1,30}(?:/(?:campaigns|adsets|ads|insights))?$#D',$path))throw new DomainException('Meta path not allowlisted.');
+        if(!preg_match('#^act_[0-9]{1,30}(?:/(?:campaigns|adsets|ads|insights))?$#D',$path)
+            &&!($studyPath&&preg_match('#^[0-9]{1,30}/(?:ad_studies|cells|campaigns)$#D',$path)))throw new DomainException('Meta path not allowlisted.');
         if(!preg_match('/^env:\/\/[A-Z][A-Z0-9_]{2,127}$/D',$ref))throw new DomainException('Invalid opaque credential reference.');
         $credential=new Credential('marketing-meta-'.substr(hash('sha256',$org.$account),0,24),
             OrganizationId::fromString($org),$account,'meta_ads_read',$ref,['ads_read']);

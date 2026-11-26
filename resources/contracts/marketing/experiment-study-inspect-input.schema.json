@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "experiment_id": {
+      "type": "string",
+      "pattern": "^mkex-[a-f0-9]{24}$"
+    },
+    "study_id": {
+      "type": "string",
+      "pattern": "^[0-9]{1,30}$"
+    },
+    "control_snapshot_ref": {
+      "type": "string",
+      "pattern": "^mis-[a-f0-9]{24}$"
+    },
+    "candidate_snapshot_ref": {
+      "type": "string",
+      "pattern": "^mis-[a-f0-9]{24}$"
+    }
+  },
+  "required": [
+    "experiment_id",
+    "study_id",
+    "control_snapshot_ref",
+    "candidate_snapshot_ref"
+  ],
+  "additionalProperties": false
+}
