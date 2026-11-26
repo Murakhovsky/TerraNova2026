@@ -139,6 +139,8 @@ $manifest = [
             'marketing.optimization.learning.get',
             'marketing.optimization.learning.plan.propose',
             'marketing.optimization.learning.record',
+            'marketing.optimization.replacement.plan.propose',
+            'marketing.optimization.replacement.record',
         ],
         'capability_contracts' => [],
     ],
@@ -361,6 +363,22 @@ foreach([
         'timeout_policy'=>$kind==='command'?['seconds'=>60]:[],'retry_policy'=>$kind==='command'?['max_attempts'=>1]:[],
         'failure_contract'=>'Require persisted trusted review Outcome and exact native follow-up batch pins. Receipt is observational only; never train, alter rules, mutate provider or Finance.',
         'lifecycle'=>'experimental','tests'=>['tests/integration/marketing_analyst_approved_goal_e2e_mysql.php'],
+        'documentation'=>'docs/04-domains/marketing/overview.md',
+    ];
+}
+foreach([
+    'marketing.optimization.replacement.plan.propose'=>['command','optimization-replacement-plan-propose','conditional'],
+    'marketing.optimization.replacement.record'=>['action','optimization-replacement-record','required'],
+] as $id=>[$binding,$schema,$approval]){
+    $contracts[]=[
+        'id'=>$id,'version'=>'1.0.0','owner_domain'=>'marketing','kind'=>'command',
+        'input_schema'=>'resources/contracts/marketing/'.$schema.'-input.schema.json',
+        'output_schema'=>'resources/contracts/marketing/'.$schema.'-output.schema.json',
+        'execution_binding'=>$binding.':'.$id,'side_effect_level'=>'internal','permission'=>'cos.tenant.manage',
+        'async'=>$binding==='action','approval_policy'=>$approval,'idempotency'=>'required',
+        'timeout_policy'=>['seconds'=>60],'retry_policy'=>['max_attempts'=>1],
+        'failure_contract'=>'Atomic future replacement draft creation from exact historical native comparison. Never mutates an active provider object or Finance.',
+        'lifecycle'=>'experimental','tests'=>['tests/integration/marketing_paid_approved_goal_e2e_mysql.php'],
         'documentation'=>'docs/04-domains/marketing/overview.md',
     ];
 }

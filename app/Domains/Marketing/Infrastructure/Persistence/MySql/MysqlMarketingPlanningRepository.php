@@ -5,12 +5,13 @@ namespace Domains\Marketing\Infrastructure\Persistence\MySql;
 
 use DomainException;
 use Domains\Marketing\Application\Contract\MarketingPlanningRepository;
+use Domains\Marketing\Application\Contract\MarketingOptimizationDraftRepository;
 use PDO;
 use PDOException;
 use Throwable;
 
 /** Native Marketing planning ledger; tenant is present in every read, write and FK. */
-final readonly class MysqlMarketingPlanningRepository implements MarketingPlanningRepository
+final readonly class MysqlMarketingPlanningRepository implements MarketingPlanningRepository,MarketingOptimizationDraftRepository
 {
     public function __construct(private PDO $connection){}
 
@@ -47,7 +48,7 @@ final readonly class MysqlMarketingPlanningRepository implements MarketingPlanni
         return array_map(self::planProjection(...),$q->fetchAll(PDO::FETCH_ASSOC));
     }
 
-    public function saveAdset(string $org,string $campaignId,int $campaignRevision,string $actor,?string $id,?int $expectedRevision,array $content,string $key):array
+    public function saveAdset(string $org,string $campaignId,int $campaignRevision,string $actor,?string $id,?int $expectedRevision,array $content,string $key,bool $replacementTransaction=false):array
     {
         $hash=self::hash([$campaignId,$campaignRevision,$actor,$id,$expectedRevision,$content]);
         return $this->write($org,'adset_save',$key,$hash,function()use($org,$campaignId,$campaignRevision,$actor,$id,$expectedRevision,$content):array{
@@ -80,7 +81,31 @@ final readonly class MysqlMarketingPlanningRepository implements MarketingPlanni
                 (organization_id,adset_id,revision,actor_id,content_hash,content_json) VALUES (?,?,?,?,?,?)')
                 ->execute([$org,$id,$revision,$actor,hash('sha256',$json),$json]);
             return $this->planRevision($org,'adset',$id,$revision);
-        });
+        },$replacementTransaction);
+    }
+
+    public function atomic(string $org,string $account,array $plans,array $snapshots,callable $body):array
+    {
+        if($this->connection->inTransaction())throw new DomainException('Nested replacement transaction denied.');
+        $this->connection->beginTransaction();
+        try{
+            // Lock the account before its snapshots, then the native paid plans in sorted order.
+            // All IDs are scoped to the authenticated tenant; no provider reads under the lock.
+            $q=$this->connection->prepare('SELECT id FROM marketing_paid_accounts WHERE organization_id=? AND id=? FOR UPDATE');
+            $q->execute([$org,$account]);if($q->fetchColumn()!==$account)throw new DomainException('Replacement account unavailable.');
+            foreach(['marketing_paid_insight_snapshots'=>$snapshots,'marketing_paid_launch_plans'=>$plans] as $table=>$ids){
+                sort($ids,SORT_STRING);
+                $q=$this->connection->prepare('SELECT id FROM '.$table.' WHERE organization_id=? AND id=? FOR UPDATE');
+                foreach($ids as $id){$q->execute([$org,$id]);if($q->fetchColumn()!==$id)throw new DomainException('Replacement source unavailable.');}
+            }
+            $result=$body();$this->connection->commit();return $result;
+        }catch(Throwable $e){if($this->connection->inTransaction())$this->connection->rollBack();throw $e;}
+    }
+
+    public function createReplacementAdset(string $org,string $actor,string $campaign,int $revision,array $content,string $key):array
+    {
+        if(!$this->connection->inTransaction())throw new DomainException('Replacement transaction required.');
+        return $this->saveAdset($org,$campaign,$revision,$actor,null,null,$content,$key,true);
     }
 
     public function adsets(string $org,string $campaignId):array
@@ -308,9 +333,19 @@ final readonly class MysqlMarketingPlanningRepository implements MarketingPlanni
      * Transaction-wide idempotency receipt. The final result is resolved from the native record.
      * Unique-key races roll back the speculative write and reconcile the committed receipt.
      */
-    private function write(string $org,string $op,string $key,string $hash,callable $body):array
+    private function write(string $org,string $op,string $key,string $hash,callable $body,bool $replacementTransaction=false):array
     {
-        if($this->connection->inTransaction())throw new DomainException('Nested Marketing planning transaction denied.');
+        if($this->connection->inTransaction()){
+            if(!$replacementTransaction||$op!=='adset_save')throw new DomainException('Nested Marketing planning transaction denied.');
+            $old=$this->receipt($org,$op,$key,$hash,true);
+            if($old!==null)return $this->resolve($org,$op,$old['id'],$old['revision']);
+            $result=$body();
+            $this->connection->prepare('INSERT INTO marketing_planning_intents
+                (organization_id,operation,idempotency_key,request_hash,record_id,record_revision)
+                VALUES (?,?,?,?,?,?)')->execute([$org,$op,$key,$hash,$result['id'],$result['revision']]);
+            return $result;
+        }
+        if($replacementTransaction)throw new DomainException('Replacement transaction required.');
         try {
             $this->connection->beginTransaction();
             $existing=$this->receipt($org,$op,$key,$hash,true);
