@@ -90,7 +90,7 @@ query COSCommerceOrderJourney($id: ID!) {
 }
 GQL;
     private const HISTORY=<<<'GQL'
-query COSCommerceOrderHistory($id: ID!) {
+query COSCommerceOrderHistory($id: ID!, $after: String) {
   currentAppInstallation { accessScopes { handle } }
   order(id: $id) {
     id createdAt
@@ -98,7 +98,7 @@ query COSCommerceOrderHistory($id: ID!) {
       ready firstVisit { id occurredAt utmParameters { source medium campaign } }
       lastVisit { id occurredAt utmParameters { source medium campaign } }
       momentsCount { count precision }
-      moments(first: 100) { nodes { occurredAt ... on CustomerVisit { id utmParameters { source medium campaign } } } pageInfo { hasNextPage hasPreviousPage } }
+      moments(first: 100, after: $after) { nodes { occurredAt ... on CustomerVisit { id utmParameters { source medium campaign } } } pageInfo { hasNextPage hasPreviousPage endCursor } }
     }
   }
 }
@@ -159,7 +159,7 @@ GQL;
         unset($raw['customerJourneySummary']);
         $summary=$this->optionalJourney($c['shop_domain'],$token,$externalId,$created,self::JOURNEY);
         $journey=self::journey($summary,$created);
-        $historySummary=$this->optionalJourney($c['shop_domain'],$token,$externalId,$created,self::HISTORY);
+        $historySummary=$this->optionalHistory($c['shop_domain'],$token,$externalId,$created);
         $journeyHistory=self::journeyHistory($historySummary,$created,$externalId);
         // A different last visit during the two observations requires a fresh source read.
         if($journeyHistory!==null&&self::journey($historySummary,$created)!==$journey)$journeyHistory=null;
@@ -325,10 +325,11 @@ GQL;
     }
 
     /** No raw landing URL, identifiers, contact fields or arbitrary UTM values leave the provider boundary. */
-    private function optionalJourney(string $shop,string $token,string $order,string $created,string $query):?array
+    private function optionalJourney(string $shop,string $token,string $order,string $created,string $query,?string $after=null):?array
     {
         try{
-            $data=$this->read->query($shop,$token,$query,['id'=>$order])['data'];
+            $variables=['id'=>$order];if($query===self::HISTORY)$variables['after']=$after;
+            $data=$this->read->query($shop,$token,$query,$variables)['data'];
             self::assertOrderScope($data);
             $row=$data['order']??null;
             if(!is_array($row)||($row['id']??null)!==$order||self::time($row['createdAt']??null)!==$created)return null;
@@ -339,12 +340,50 @@ GQL;
             return null;
         }
     }
+    /** Bounded two-pass import for multi-page histories. Never persist cursors or raw provider nodes. */
+    private function optionalHistory(string $shop,string $token,string $order,string $created):?array
+    {
+        $read=function()use($shop,$token,$order,$created):?array{
+            $summary=null;$nodes=[];$seen=[];$after=null;$pages=0;
+            do{
+                if(++$pages>5)return null;
+                $page=$this->optionalJourney($shop,$token,$order,$created,self::HISTORY,$after);
+                if(!is_array($page)||($page['ready']??null)!==true)return null;
+                $count=$page['momentsCount']??null;$connection=$page['moments']??null;$part=$connection['nodes']??null;$info=$connection['pageInfo']??null;
+                if(!is_array($count)||($count['precision']??null)!=='EXACT'||!is_int($count['count']??null)||$count['count']<1||$count['count']>500
+                    ||!is_array($part)||!array_is_list($part)||count($part)<1||count($part)>100
+                    ||!is_bool($info['hasNextPage']??null)||!is_bool($info['hasPreviousPage']??null)
+                    ||($after===null&&$info['hasPreviousPage']!==false))return null;
+                $pin=['ready'=>true,'firstVisit'=>$page['firstVisit']??null,'lastVisit'=>$page['lastVisit']??null,'momentsCount'=>$count];
+                if($summary!==null&&$summary!==$pin)return null;
+                $summary=$pin;
+                foreach($part as $visit){
+                    $id=$visit['id']??null;
+                    if(!is_string($id)||isset($seen[$id]))return null;
+                    $seen[$id]=true;$nodes[]=$visit;
+                }
+                if(count($nodes)>$count['count'])return null;
+                if(!$info['hasNextPage'])break;
+                $cursor=$info['endCursor']??null;
+                if(!is_string($cursor)||$cursor===''||strlen($cursor)>512||isset($seen['cursor:'.$cursor])
+                    ||count($nodes)>=$count['count'])return null;
+                $seen['cursor:'.$cursor]=true;$after=$cursor;
+            }while(true);
+            if(count($nodes)!==$summary['momentsCount']['count'])return null;
+            return [...$summary,'moments'=>['nodes'=>$nodes,'pageInfo'=>['hasNextPage'=>false,'hasPreviousPage'=>false]]];
+        };
+        $first=$read();if($first===null)return null;
+        // A provider can revise the history while paginating; repeat the whole bounded read to detect drift.
+        if(count($first['moments']['nodes'])>100&&$read()!==$first)return null;
+        return $first;
+    }
+
     private static function journeyHistory(mixed $summary,string $placed,string $order):?array
     {
         if(!is_array($summary)||($summary['ready']??null)!==true)return null;
         $page=$summary['moments']??null;$count=$summary['momentsCount']??null;
         $nodes=$page['nodes']??null;
-        if(!is_array($nodes)||!array_is_list($nodes)||count($nodes)<1||count($nodes)>100
+        if(!is_array($nodes)||!array_is_list($nodes)||count($nodes)<1||count($nodes)>500
             ||($page['pageInfo']['hasNextPage']??null)!==false||($page['pageInfo']['hasPreviousPage']??null)!==false
             ||($count['precision']??null)!=='EXACT'||($count['count']??null)!==count($nodes))return null;
         $touches=[];$seen=[];$earliest=(new DateTimeImmutable($placed))->modify('-30 days');

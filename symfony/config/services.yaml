@@ -4,8 +4,11 @@ parameters:
   env(COS_MARKETING_META_EXECUTION_PROFILES_JSON): '{}'
   env(COS_MARKETING_META_ACTIVATION_ENABLED): '0'
   env(COS_MARKETING_ATTRIBUTION_SCHEDULER_ENABLED): '0'
+  env(COS_MARKETING_OPTIMIZATION_SCHEDULER_ENABLED): '0'
   env(COS_MARKETING_ATTRIBUTION_SCHEDULER_INTERVAL_MINUTES): '15'
+  env(COS_MARKETING_OPTIMIZATION_SCHEDULER_INTERVAL_MINUTES): '15'
   env(COS_MARKETING_ATTRIBUTION_SCHEDULER_TARGETS_JSON): '[]'
+  env(COS_MARKETING_OPTIMIZATION_SCHEDULER_TARGETS_JSON): '[]'
   env(COS_WORKFLOW_ACTION_WORKER_ORGANIZATION): ''
   env(COS_AI_CAPABILITY_INTENT_SECRET): ''
   env(COS_CRON_CAPABILITY_INTENT_SECRET): ''
@@ -478,7 +481,9 @@ services:
   App\Scheduler\CosScheduleProvider:
     arguments:
       $marketingAttributionEnabled: '%env(bool:COS_MARKETING_ATTRIBUTION_SCHEDULER_ENABLED)%'
+      $marketingOptimizationEnabled: '%env(bool:COS_MARKETING_OPTIMIZATION_SCHEDULER_ENABLED)%'
       $marketingAttributionIntervalMinutes: '%env(int:COS_MARKETING_ATTRIBUTION_SCHEDULER_INTERVAL_MINUTES)%'
+      $marketingOptimizationIntervalMinutes: '%env(int:COS_MARKETING_OPTIMIZATION_SCHEDULER_INTERVAL_MINUTES)%'
       $salesAutomationEnabled: '%env(bool:COS_SALES_AUTOMATION_SCHEDULER_ENABLED)%'
       $growthCollectorPollingEnabled: '%env(bool:COS_GROWTH_COLLECTOR_SCHEDULER_ENABLED)%'
       $growthCollectorPollingIntervalMinutes: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_INTERVAL_MINUTES)%'
@@ -2891,6 +2896,11 @@ services:
     arguments:
       $enabled: '%env(bool:COS_MARKETING_ATTRIBUTION_SCHEDULER_ENABLED)%'
       $targetsJson: '%env(COS_MARKETING_ATTRIBUTION_SCHEDULER_TARGETS_JSON)%'
+  App\Persistence\Marketing\MarketingOptimizationScheduleService: ~
+  App\Application\Marketing\Handler\ContinueMarketingOptimizationSchedulesHandler:
+    arguments:
+      $enabled: '%env(bool:COS_MARKETING_OPTIMIZATION_SCHEDULER_ENABLED)%'
+      $targetsJson: '%env(COS_MARKETING_OPTIMIZATION_SCHEDULER_TARGETS_JSON)%'
   App\Infrastructure\Marketing\SalesAttributionReadAdapter: ~
   Domains\Marketing\Application\Contract\MarketingSalesAttributionReadPort:
     alias: App\Infrastructure\Marketing\SalesAttributionReadAdapter

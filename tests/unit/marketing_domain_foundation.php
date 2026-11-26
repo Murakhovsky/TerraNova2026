@@ -78,6 +78,13 @@ $order=[...$scope,'placed_orders'=>2,'unresolved_captured_orders'=>0,'financial_
 $settlement=['state'=>'SETTLED','finance_settled'=>true,'currency'=>'EUR','reservation_id'=>'finr-'.str_repeat('c',24),'committed_minor'=>2000,'released_minor'=>8000,'reserved_minor'=>10000];
 $econ=\Domains\Marketing\Domain\MarketingEconomicsPolicy::project($economicPlan,$lead,$order,$settlement);
 $assert($econ['cost_per_captured_lead']===2.0&&$econ['cost_per_captured_placed_order']===10.0&&$econ['net_collected_to_settled_media_spend']===4.0&&$econ['roas']===null&&$econ['cac']===null,'Cohort economics fabricated or lost confirmed amounts.');
+$dedupEcon=['status'=>'COMPLETE_CAPTURED_COHORT','captured_leads'=>$lead['leads'],'won_deals'=>$lead['won_deals'],'placed_orders'=>$order['placed_orders'],
+    'overlapping_won_deals'=>1,'unique_outcomes'=>$lead['won_deals']+$order['placed_orders']-1];
+$uniqueEcon=\Domains\Marketing\Domain\MarketingEconomicsPolicy::project($economicPlan,$lead,[...$order,'deduplication'=>$dedupEcon],$settlement);
+$assert($uniqueEcon['captured_unique_outcomes']===$dedupEcon['unique_outcomes']
+    &&$uniqueEcon['cost_per_captured_unique_outcome']===round(20/$dedupEcon['unique_outcomes'],4)&&$uniqueEcon['cac']===null,'Deduplicated outcome cost differs or became CAC.');
+$invalidEcon=\Domains\Marketing\Domain\MarketingEconomicsPolicy::project($economicPlan,$lead,[...$order,'deduplication'=>[...$dedupEcon,'unique_outcomes'=>99]],$settlement);
+$assert($invalidEcon['captured_unique_outcomes']===null&&$invalidEcon['cost_per_captured_unique_outcome']===null,'Invalid deduplication promoted to economics.');
 $econ=\Domains\Marketing\Domain\MarketingEconomicsPolicy::project($economicPlan,[...$lead,'source_drift_count'=>1],[...$order,'financial_evidence_status'=>'PARTIAL'],$settlement);
 $assert($econ['cost_per_captured_lead']===null&&$econ['confirmed_collection_minor']===null&&$econ['net_collected_to_settled_media_spend']===null,'Partial cohort promoted to complete economics.');
 $econ=\Domains\Marketing\Domain\MarketingEconomicsPolicy::project($economicPlan,$lead,$order,null);
@@ -198,3 +205,16 @@ $assert($rulePolicy::evaluate($currentBatch,$baselineBatch,'90001','CTR_DECLINE'
 $blocked=false;try{$rulePolicy::evaluate($currentBatch,$baselineBatch,'90001','CTR_DECLINE',19);}catch(DomainException){$blocked=true;}
 $assert($blocked,'Unsafe threshold admitted.');
 echo "Marketing M5.8 bounded optimization rule evaluation with exact native evidence and no action authority PASS\n";
+
+$monitorPolicy=\Domains\Marketing\Domain\MarketingOptimizationSchedulePolicy::class;
+$monitorProfile=['profile_id'=>'monitor-fixture','organization_id'=>'tenant-a','actor_id'=>'42','account_id'=>'mads-'.str_repeat('a',24),
+    'external_id'=>'90001','rule'=>'CTR_DECLINE','threshold_percent'=>20,'lookback_days'=>7];
+$assert(count($monitorPolicy::parse(json_encode([$monitorProfile],JSON_THROW_ON_ERROR)))===1,'Monitoring profile missing.');
+$mw=$monitorPolicy::windows(new DateTimeImmutable('2026-02-15T00:00:00Z'),7);
+$assert($mw===['cycle_date'=>'2026-02-15','window_start'=>'2026-02-08','window_end'=>'2026-02-14',
+    'baseline_start'=>'2026-02-01','baseline_end'=>'2026-02-07'],'Monitoring windows not equal UTC completed periods.');
+foreach([[$monitorProfile,[...$monitorProfile,'profile_id'=>'duplicate']],[[...$monitorProfile,'threshold_percent'=>19]],[[...$monitorProfile,'lookback_days'=>31]]] as $bad){
+    $blocked=false;try{$monitorPolicy::parse(json_encode($bad,JSON_THROW_ON_ERROR));}catch(DomainException){$blocked=true;}
+    $assert($blocked,'Invalid scheduled monitor profile accepted.');
+}
+echo "Marketing M5 scheduler explicit bounded profile and UTC windows PASS.\n";

@@ -146,7 +146,7 @@ Product є власником товару, Finance власником бюдж�
 
 ## 8. Процеси та результати
 
-Process Registry містить два M4 процеси `marketing.attribution-to-analytics` і `marketing.media-import-to-report`. Marketing exemption знято. Source-verified topology не означає D3/D4 або повне приймання M3/M4.
+Process Registry містить три процеси: `marketing.attribution-to-analytics`, `marketing.media-import-to-report` та `marketing.optimization-review-learning`. Marketing exemption знято. Source-verified topology не означає D3/D4 або повне приймання M3/M4.
 
 ## 9. Tenant, Policy та Security
 
