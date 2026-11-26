@@ -212,6 +212,52 @@ $financial->facts[$shopId]['net_collected_amount']='99.00';
 $f=$withFinance->report($actor,$c2,null,'2026-01-01','2026-01-02');
 $assert($f['financial_evidence_invalid_count']===1&&$f['net_cash_received']===null,'Broken collection arithmetic accepted.');
 echo "Marketing Commerce Finance contract fixtures: partial, exact net collection, separate currency and invalid evidence PASS\n";
+
+// Historical fixture: native persisted Paid Plan and Sales lead/deal, independent delayed Shopify read-port fact.
+// Seeding a historical immutable snapshot is test-only, not a production backdated plan admission.
+$lateCampaign=$campaigns->createDraft($org,'42',(new MarketingDraftPolicy())->validate([
+    'name'=>'M4 late paid conversion fixture','business_objective'=>'Historical acquisition cohort']),'m4-late-campaign')['id'];
+$lateCreative=$planning->createCreative($actor,$lateCampaign,['headline'=>'Late fixture creative','primary_text'=>'Synthetic late commerce fixture',
+    'call_to_action'=>'Read more','destination_url'=>'https://example.com/catalog','language'=>'uk'],'m4-late-creative');
+$lateAudience=$planning->saveAudience($actor,null,null,['name'=>'Late fixture audience','target_spec'=>[
+    'market_countries'=>['UA'],'audience_hypothesis'=>'Historical fixture only']],'m4-late-audience');
+$lateAdset=$planning->saveAdset($actor,$lateCampaign,1,null,null,['name'=>'Late fixture traffic','audience_id'=>$lateAudience['id'],
+    'audience_revision'=>$lateAudience['revision'],'creatives'=>[['creative_id'=>$lateCreative['id'],'revision'=>$lateCreative['revision']]],
+    'placements'=>['AUTOMATIC'],'optimization'=>'TRAFFIC','planned_daily_budget'=>'10.00','currency'=>'USD'],'m4-late-adset');
+$historicalPlan=(new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidLaunchPlanStore($db))->create($org,'42','m4-late-plan',
+    hash('sha256','m4 late historical fixture'),['campaign_id'=>$lateCampaign,'campaign_revision'=>1,'adset_id'=>$lateAdset['id'],
+        'adset_revision'=>$lateAdset['revision'],'adset_content_hash'=>$lateAdset['content_hash'],'account_id'=>$account['id'],
+        'account_revision'=>$account['revision'],'currency'=>'USD','account_timezone'=>'UTC',
+        'period_start'=>'2026-01-01','period_end'=>'2026-01-03','days'=>3,'daily_minor'=>1000,'lifetime_minor'=>3000]);
+$latePlan=$historicalPlan['id'];
+$db->prepare("INSERT INTO tn_leads (organization_id,full_name,status,utm_source,utm_medium,utm_campaign,created_at) VALUES (?,'Late lead fixture','qualified','meta','paid_social',?,'2026-01-02 10:00:00')")->execute([$org,$latePlan]);
+$lateLead=(string)$db->lastInsertId();
+$db->prepare("INSERT INTO tn_leads (organization_id,full_name,status,utm_source,utm_medium,utm_campaign,created_at) VALUES (?,'Expired UTM fixture','new','meta','paid_social',?,'2026-01-04 10:00:00')")->execute([$org,$latePlan]);
+$expiredLead=(string)$db->lastInsertId();
+$db->prepare("INSERT INTO tn_client_cases (organization_id,public_id,person_id,type,title,status,inbound_request_id,pipeline_id,stage_id,deal_value,currency,closed_at) VALUES (?,?,?,'buy','Late fixture deal','closed',?,?,?,50.00,'USD','2026-01-10 10:00:00')")->execute([$org,'CC-'.bin2hex(random_bytes(5)),$person,$lateLead,$pipeline,$stage]);
+$lateDeal=(int)$db->lastInsertId();
+$db->prepare('UPDATE tn_leads SET client_case_id=? WHERE organization_id=? AND id=?')->execute([$lateDeal,$org,$lateLead]);
+$lateCapture=$analytics->capture($actor,$lateCampaign,$latePlan,[$lateLead,$expiredLead],'m4-late-lead-capture');
+$lateStates=array_column($lateCapture['results'],'state','lead_id');
+$assert($lateStates[$lateLead]==='RECORDED'&&$lateStates[$expiredLead]==='REJECTED','Paid Lead expiry fence not applied on native capture.');
+$lateOrder=bin2hex(random_bytes(16));
+$commerceSource->facts[$org][$lateOrder]=$fact($lateOrder,bin2hex(random_bytes(16)),'shopify','USD','50.00',[]);
+$commerceSource->facts[$org][$lateOrder]['placement']['occurred_at']='2026-01-10T10:00:00.000000Z';
+$commerceSource->facts[$org][$lateOrder]['placement']['deal_id']=null;
+$commerceSource->facts[$org][$lateOrder]['journey']=['state'=>'observed','evidence_hash'=>str_repeat('e',64),
+    'model'=>'shopify-last-visit-utm-v1','visit_at'=>'2026-01-02T10:00:00.000000Z',
+    'utm_campaign'=>$latePlan,'utm_source'=>'meta','utm_medium'=>'paid_social'];
+$assert($withFinance->capture($actor,$lateCampaign,$latePlan,[$lateOrder],'m4-late-order-capture')['results'][0]['state']==='RECORDED',
+    'Bounded delayed order capture failed.');
+$economics=new \Domains\Marketing\Application\Service\MarketingEconomicsService($plans,$analytics,$withFinance,$finance);
+$early=$economics->report($actor,$latePlan,null);
+$late=$economics->report($actor,$latePlan,null,'2026-01-10');
+$assert($early['captured_leads']===1&&$early['won_deals']===0&&$early['placed_orders']===0
+    &&$late['window_end']==='2026-01-03'&&$late['conversion_through']==='2026-01-10'&&$late['captured_leads']===1
+    &&$late['won_deals']===1&&$late['placed_orders']===1&&$late['settled_media_minor']===null&&$late['roas']===null,
+    'Late conversion economics changed acquisition or invented financial evidence.');
+echo "Marketing M4 native historical cohort, expired paid UTM, bounded late Deal/Order economics PASS\n";
+
 // Real repository readback runs only on unified Sales/Marketing checkout; explicitly report missing dependency.
 if(interface_exists(\Domains\Sales\Application\Contract\SalesOrderJourneyStore::class)){
     $nativeRepo=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository($db);
