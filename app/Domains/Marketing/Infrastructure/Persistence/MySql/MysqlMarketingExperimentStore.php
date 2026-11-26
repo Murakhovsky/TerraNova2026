@@ -16,16 +16,30 @@ final readonly class MysqlMarketingExperimentStore implements MarketingExperimen
     {
         $ids=[$protocol['control']['plan_id'],$protocol['candidate']['plan_id']];sort($ids,SORT_STRING);
         $pairHash=MarketingExperimentPolicy::digest($ids);
-        $this->connection->prepare('INSERT INTO marketing_experiment_protocols
-            (organization_id,id,actor_id,idempotency_key,request_hash,pair_hash,protocol_hash,protocol_json,created_at)
-            SELECT ?,?,?,?,?,?,?,?,UTC_TIMESTAMP(6) WHERE UTC_DATE() < ?
-            ON DUPLICATE KEY UPDATE id=id')
-            ->execute([$org,'mkex-'.bin2hex(random_bytes(12)),$actor,$key,$requestHash,$pairHash,
-                MarketingExperimentPolicy::digest($protocol),json_encode($protocol,JSON_THROW_ON_ERROR),$protocol['control']['period_start']]);
-        $row=$this->byKey($org,$key);
-        if($row===null||!hash_equals($requestHash,$row['request_hash']))
-            throw new DomainException('Experiment registration conflict or window has started.');
-        return $row;
+        if($this->connection->inTransaction())throw new DomainException('Nested experiment registration denied.');
+        $this->connection->beginTransaction();
+        try{
+            // Same native plan lock as beginCommand; sorted locking prevents competing arm registrations.
+            $lock=$this->connection->prepare('SELECT id FROM marketing_paid_launch_plans WHERE organization_id=? AND id=? FOR UPDATE');
+            foreach($ids as $id){$lock->execute([$org,$id]);if($lock->fetchColumn()!==$id)throw new DomainException('Experiment paid plan unavailable.');}
+            $old=$this->byKey($org,$key);
+            if($old!==null){
+                if(!hash_equals($requestHash,$old['request_hash']))throw new DomainException('Experiment registration conflict.');
+                $this->connection->commit();return $old;
+            }
+            $q=$this->connection->prepare('SELECT operation FROM marketing_paid_operation_journal WHERE organization_id=? AND plan_id IN (?,?) LIMIT 1');
+            $q->execute([$org,...$ids]);if($q->fetchColumn()!==false)throw new DomainException('Experiment must precede all paid operations.');
+            $this->connection->prepare('INSERT INTO marketing_experiment_protocols
+                (organization_id,id,actor_id,idempotency_key,request_hash,pair_hash,protocol_hash,protocol_json,created_at)
+                SELECT ?,?,?,?,?,?,?,?,UTC_TIMESTAMP(6) WHERE UTC_DATE() < ?
+                ON DUPLICATE KEY UPDATE id=id')
+                ->execute([$org,'mkex-'.bin2hex(random_bytes(12)),$actor,$key,$requestHash,$pairHash,
+                    MarketingExperimentPolicy::digest($protocol),json_encode($protocol,JSON_THROW_ON_ERROR),$protocol['control']['period_start']]);
+            $row=$this->byKey($org,$key);
+            if($row===null||!hash_equals($requestHash,$row['request_hash']))
+                throw new DomainException('Experiment registration conflict or window has started.');
+            $this->connection->commit();return $row;
+        }catch(\Throwable $e){if($this->connection->inTransaction())$this->connection->rollBack();throw $e;}
     }
     private function read(string $org,string $column,string $value):?array
     {

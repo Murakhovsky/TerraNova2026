@@ -389,8 +389,9 @@ try {
     $register=new \App\Application\Capability\MarketingExperimentRegisterAdapter($experiments);
     $getExperiment=new \App\Application\Capability\MarketingExperimentGetAdapter($experiments);
     $creativePreview=new \App\Application\Capability\MarketingCreativeOptimizationPreviewAdapter($experiments);
-    $makeArm=static function(string $label,string $headline,string $primaryText)use($org,$owner,$token,$campaigns,$planning,$planningPolicy,$audience,
+    $makeArm=static function(string $label,string $headline,string $primaryText,?array $armAudience=null)use($org,$owner,$token,$campaigns,$planning,$planningPolicy,$audience,
         $fundPlans,$actor,$account,$start,$end):array{
+        if($armAudience!==null)$audience=$armAudience;
         $c=$campaigns->createDraft($org,$owner,(new \Domains\Marketing\Domain\MarketingDraftPolicy())->validate([
             'name'=>'Experiment '.$label,'business_objective'=>'Experimental traffic','brief'=>'Synthetic experimental design'
         ]),'experiment-campaign-'.$label.'-'.$token);
@@ -425,6 +426,72 @@ try {
     $deny(fn()=>$creativePreview->invoke($actor,['experiment_id'=>$experiment['id'],'control_snapshot_ref'=>$snapshotId,
         'candidate_snapshot_ref'=>$snapshotId],'fixture','fixture'),'Future experiment ranked with unrelated snapshots.');
     $assert(count($metaTransport->writes)===$writesBefore,'Experiment design or preview mutated provider.');
+    // Historical synthetic records: exercise the positive native terminal analytics path without
+    // advancing wall-clock or pretending that a provider randomized study has been verified.
+    $historicalFrom=gmdate('Y-m-d',time()-14*86400);$historicalTo=gmdate('Y-m-d',time()-8*86400);
+    $historicalRegistered=gmdate('Y-m-d H:i:s',time()-16*86400);
+    $planStore=new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidLaunchPlanStore($pdo);
+    $historicalPlan=static function(array $future,string $label)use($org,$owner,$token,$planStore,$historicalFrom,$historicalTo,$historicalRegistered,$pdo):array{
+        $facts=array_intersect_key($future,array_flip(['campaign_id','campaign_revision','adset_id','adset_revision','adset_content_hash',
+            'account_id','account_revision','currency','account_timezone']));
+        $facts=[...$facts,'period_start'=>$historicalFrom,'period_end'=>$historicalTo,
+            ...\Domains\Marketing\Domain\MarketingPaidFundingPolicy::budget('12.50','USD',$historicalFrom,$historicalTo)];
+        $row=$planStore->create($org,$owner,'history-paid-'.$label.'-'.$token,hash('sha256','history-paid-'.$label.'-'.$token),$facts);
+        $pdo->prepare('UPDATE marketing_paid_launch_plans SET created_at=? WHERE organization_id=? AND id=?')
+            ->execute([$historicalRegistered,$org,$row['id']]);
+        return $row;
+    };
+    $hc=$historicalPlan($control,'control');$hv=$historicalPlan($candidate,'candidate');
+    $otherAudience=$planning->saveAudience($org,$owner,null,null,$planningPolicy->audience([
+        'name'=>'Other experimental audience','target_spec'=>['market_countries'=>['PL'],'audience_hypothesis'=>'General retail demand']
+    ]),'experiment-other-audience-'.$token);
+    $ha=$historicalPlan($makeArm('audience','Control headline','Identical body text.',$otherAudience),'audience');
+    $historicalProtocol=\Domains\Marketing\Domain\MarketingExperimentPolicy::protocol(
+        $fundPlans->experimentPins($actor,$hc['id'],'HEADLINE'),$fundPlans->experimentPins($actor,$hv['id'],'HEADLINE'),
+        'HEADLINE',substr($historicalRegistered,0,10));
+    $historicalId='mkex-'.bin2hex(random_bytes(12));$historyIds=[$hc['id'],$hv['id']];sort($historyIds,SORT_STRING);
+    $digest=\Domains\Marketing\Domain\MarketingExperimentPolicy::class;
+    $pdo->prepare('INSERT INTO marketing_experiment_protocols (organization_id,id,actor_id,idempotency_key,request_hash,pair_hash,protocol_hash,protocol_json,created_at)
+        VALUES (?,?,?,?,?,?,?,?,?)')->execute([$org,$historicalId,$owner,'history-experiment-'.$token,hash('sha256','history-experiment-'.$token),
+        $digest::digest($historyIds),$digest::digest($historicalProtocol),json_encode($historicalProtocol,JSON_THROW_ON_ERROR),$historicalRegistered]);
+    $seedTerminal=static function(array $plan,string $providerCampaign,string $providerAdset,string $providerAd)use($org,$journal):void{
+        foreach(['DEPLOY_PAUSED'=>['CREATE_CAMPAIGN','CREATE_ADSET','CREATE_AD'],'ACTIVATE'=>['ACTIVATE_AD','ACTIVATE_ADSET','ACTIVATE_CAMPAIGN'],
+            'PAUSE'=>['PAUSE_CAMPAIGN']] as $op=>$steps){
+            $action=bin2hex(random_bytes(16));$journal->beginCommand($org,$plan['id'],$op,$action,hash('sha256',$action.':'.$op));
+            foreach($steps as $step){
+                $remote=str_ends_with($step,'CAMPAIGN')?$providerCampaign:(str_ends_with($step,'ADSET')?$providerAdset:$providerAd);
+                $journal->begin($org,$plan['id'],$step,$action,hash('sha256',$action.':'.$step));
+                $journal->identify($org,$plan['id'],$step,$action,$remote);
+                $journal->finish($org,$plan['id'],$step,$action,['provider_id'=>$remote,'configured_status'=>$op==='ACTIVATE'?'ACTIVE':'PAUSED']);
+            }
+            $journal->identify($org,$plan['id'],$op,$action,$providerCampaign);
+            $journal->finish($org,$plan['id'],$op,$action,['provider_campaign_id'=>$providerCampaign,'plan_id'=>$plan['id'],
+                'operation'=>$op,'state'=>$op==='ACTIVATE'?'ACTIVE_CONFIGURED':'PAUSED','spend_confirmed'=>false]);
+        }
+    };
+    $seedTerminal($hc,'91001','91002','91003');$seedTerminal($hv,'92001','92002','92003');$seedTerminal($ha,'93001','93002','93003');
+    $accounts->importInsights($org,$account['id'],'campaign',$historicalFrom,$historicalTo,[
+        ['campaign_id'=>'91001','date_start'=>$historicalFrom,'date_stop'=>$historicalTo,'spend'=>'40.00','impressions'=>'2000','clicks'=>'50'],
+        ['campaign_id'=>'92001','date_start'=>$historicalFrom,'date_stop'=>$historicalTo,'spend'=>'40.00','impressions'=>'2000','clicks'=>'100'],
+        ['campaign_id'=>'93001','date_start'=>$historicalFrom,'date_stop'=>$historicalTo,'spend'=>'40.00','impressions'=>'2000','clicks'=>'125']]);
+    $historicalSnapshots=array_column($accounts->insights($org,$account['id'],'campaign',$historicalFrom,$historicalTo),'id','external_id');
+    $obs=$creativePreview->invoke($actor,['experiment_id'=>$historicalId,'control_snapshot_ref'=>$historicalSnapshots['91001'],
+        'candidate_snapshot_ref'=>$historicalSnapshots['92001']],'fixture','fixture');
+    $assert($obs['status']==='REVIEW_OBSERVED_DIFFERENCE'&&$obs['lower_observed_cpc_plan_id']===$hv['id']&&!$obs['randomization_verified']
+        &&!$obs['winning_creative_confirmed']&&!$obs['provider_mutation'],'Native historical creative source was not observed or overclaimed.');
+    $historyBudget=new \Domains\Marketing\Application\Service\MarketingBudgetOptimizationService($fundPlans,$read,$performance);
+    $budgetCandidate=$historyBudget->preview($actor,$hc['id'],$historicalSnapshots['91001'],$hv['id'],$historicalSnapshots['92001']);
+    $assert($budgetCandidate['status']==='REVIEW_BOUNDED_REALLOCATION'&&$budgetCandidate['shift_minor']===125&&$budgetCandidate['total_daily_minor']===2500
+        &&!$budgetCandidate['provider_mutation']&&!$budgetCandidate['financial_mutation'],'Native historical budget preview lost conservation or overclaimed execution.');
+    $audienceCandidate=$audienceComparison->invoke($actor,['first_plan_id'=>$hc['id'],'first_snapshot_ref'=>$historicalSnapshots['91001'],
+        'second_plan_id'=>$ha['id'],'second_snapshot_ref'=>$historicalSnapshots['93001']],'fixture','fixture');
+    $assert($audienceCandidate['status']==='REVIEW_OBSERVED_DIFFERENCE'&&$audienceCandidate['lower_observed_cpc_plan_id']===$ha['id']
+        &&!$audienceCandidate['actual_audience_delivery_confirmed']&&!$audienceCandidate['targeting_change_recommended'],
+        'Native historical audience preview lost same-creative pinned sources or overclaimed delivery.');
+    $deny(fn()=>$experiments->observe($actor,$historicalId,$historicalSnapshots['92001'],$historicalSnapshots['91001']),
+        'Swapped native historical snapshots accepted.');
+    $assert(count($metaTransport->writes)===$writesBefore,'Positive native observation performed a provider write.');
+    echo "Marketing M5.4 native terminal budget conservation, M5.5 pinned audience and M5.7 historical creative observation PASS.\\n";
     echo "Marketing M5.6 native immutable creative experiment registration, one-factor fences and M5.7 premature observation rejected PASS\n";
     $performanceContexts=new \Domains\Marketing\Application\Service\MarketingAnalystContextService($campaignService,
         new \Domains\Marketing\Application\Service\MarketingPlanningService($planning,$planningPolicy),
