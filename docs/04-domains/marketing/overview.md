@@ -11,7 +11,7 @@ version: 0.2.3
 
 Marketing — окремий bounded context, що володіє рекламними планами, внутрішніми кампаніями, їхніми версіями, аудиторіями, креативами та спостереженнями рекламних провайдерів.
 
-**Стан:** початкова реалізація M0/M1, очікує перевірок на staging і користувацького приймання. Домін встановлюється вимкненим за замовчуванням. Реальні платні операції заблоковано.
+**Стан:** D2, реалізовано M0–M3, основний M4 та дорадчі компоненти M5. Незалежне приймання на staging, реальні джерела і фінансові результати не підтверджено. Домен вимкнений за замовчуванням.
 
 ## Розподіл відповідальності
 
@@ -25,11 +25,11 @@ Marketing — окремий bounded context, що володіє рекламн
 
 ## Фактично додані можливості
 
-Двадцять вісім typed capabilities, включно з шістьма M2a, Product draft-check і Finance-facing source Query: `marketing.campaign.search`, `marketing.campaign.get`, `marketing.campaign.create`, `marketing.paid.account.list`, `marketing.paid.insights.query`, `marketing.paid.sync.history`. Для них діють Canonical Capability Gateway і перевірка tenant менеджера. Нових універсальних executor або CommandBus не створено.
+48 типізованих capabilities у поточному manifest, зокрема: `marketing.campaign.search`, `marketing.campaign.get`, `marketing.campaign.create`, `marketing.paid.account.list`, `marketing.paid.insights.query`, `marketing.paid.sync.history`. Для них діють Canonical Capability Gateway і перевірка tenant менеджера. Нових універсальних executor або CommandBus не створено.
 
 На UI передбачено Overview, Campaigns, Campaign Workspace, Paid Media Accounts, Performance та Action Queue. Менеджер може створити внутрішню чернетку, під'єднати read-only Meta Ad Account через opaque Vault reference, імпортувати і переглядати provider observations.
 
-Активація, створення рекламних кампаній у Meta, зміна бюджету та інші paid writes відсутні й навмисно блокуються. Для них потрібні Finance F1, незалежне погодження, canonical Workflow і провайдерний readback.
+Створення в Meta у стані PAUSED, активація та пауза мають canonical Workflow Action bindings, але потребують незалежного погодження, перевіреного профілю провайдера, Finance та readback. Довільні платні зміни й автоматичне коригування бюджету залишаються заблокованими.
 
 ## M2a: Креативи та незалежний перегляд рекомендацій
 
@@ -247,3 +247,11 @@ M4 source isolation: optional Shopify last-visit and moments reads are separate 
 ## M5.4 — Попередній розрахунок оптимізації бюджету
 
 `marketing.optimization.budget.preview` порівнює два різні завершені native paid plans одного акаунта, валюти, ревізії та UTC періоду, із підтвердженим terminal lifecycle і різними provider campaign IDs. Ціль першої моделі `TRAFFIC_CPC`, не ROAS. Мінімум 1000 impressions і 20 clicks на кожен план, позитивний spend, явний поріг гіршого CPC ≥125% кращого. Перенесення максимум 10% добового ліміту кожного плану з дорожчого у дешевший, total daily cap зберігається в integer minor units. За відсутності зіставності/доказів або при перевищенні source cap зміни не пропонуються. Результат лише hypothetical future planning candidate, нові draft, Finance reservation, Meta mutation, статистична значущість і прогноз конверсій не створюються. Новий запуск потребує чинних Product/Creative/Audience pins, Finance і незалежного Workflow approval. Thresholds are provisional engineering defaults, not learned coefficients.
+
+## M4 — Уточнення меж атрибуції та хронології
+
+Платний Lead зараховується лише в календарному періоді відповідного незмінного Paid Plan; пізніше скопійовані UTM не приймаються як нові докази залучення цим планом. На звіті попередні записи перевіряються повторно. WON Deal не враховується, якщо його закрито раніше від точного часу залучення Lead, включно з тією самою датою. Наявність пов'язаної угоди та кількість перемог дедуплікуються окремо. Не розраховуються ціни конверсій за неповної/застарілої вибірки. Це не створює нових джерел бухгалтерського доходу або наскрізної історії контактів.
+
+## M5.5 — Попереднє порівняння гіпотез аудиторії
+
+`marketing.optimization.audience.preview` порівнює два завершені native Paid Plans з однаковими account/revision, currency, attribution scope, звітним вікном, лімітами бюджету й hash креативу. Окремі Audience revisions з неперетинними наборами країн читаються через Marketing planning pins; результати є лише спостереженням campaign-grain CPC. За неповної вибірки або перевищення ліміту результат не визначає кращий план; статистична значущість, фактична доставка аудиторії та причинний ефект не підтверджуються. Немає рекомендації змінювати таргетинг, автоматичної мутації бюджету або обходу обмежень спеціальних рекламних категорій. M5.6 потребує незалежного контрольованого експерименту; цю модель не можна вважати A/B тестом.

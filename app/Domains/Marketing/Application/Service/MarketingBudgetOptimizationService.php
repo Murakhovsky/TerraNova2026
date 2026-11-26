@@ -10,9 +10,10 @@ final readonly class MarketingBudgetOptimizationService
         private MarketingAnalystPerformanceService $performance){}
     public function preview(TenantContext $actor,string $firstPlan,string $firstSnapshot,string $secondPlan,string $secondSnapshot):array
     {
-        return MarketingBudgetOptimizationPolicy::preview($this->source($actor,$firstPlan,$firstSnapshot),$this->source($actor,$secondPlan,$secondSnapshot));
+        return MarketingBudgetOptimizationPolicy::preview($this->comparisonSource($actor,$firstPlan,$firstSnapshot),$this->comparisonSource($actor,$secondPlan,$secondSnapshot));
     }
-    private function source(TenantContext $actor,string $id,string $snapshot):array
+    /** Internal exact native performance projection, not a public Capability. */
+    public function comparisonSource(TenantContext $actor,string $id,string $snapshot):array
     {
         $p=$this->plans->get($actor,$id);
         if($p['period_end']>=gmdate('Y-m-d'))throw new DomainException('Completed UTC reporting window required for budget hypothesis.');

@@ -123,6 +123,7 @@ $manifest = [
             'marketing.analytics.economics.report',
             'marketing.analytics.monitor.get',
             'marketing.optimization.budget.preview',
+            'marketing.optimization.audience.preview',
         ],
         'capability_contracts' => [],
     ],
@@ -139,6 +140,7 @@ foreach ([
     'marketing.paid.insights.query' => ['query', 'none', 'marketing/insights-query', 'cos.tenant.manage'],
     'marketing.analytics.economics.report' => ['query', 'none', 'marketing/analytics-economics', 'cos.tenant.manage'],
     'marketing.analytics.monitor.get' => ['query', 'none', 'marketing/analytics-monitor', 'cos.tenant.manage'],
+    'marketing.optimization.audience.preview' => ['query', 'none', 'marketing/optimization-audience-preview', 'cos.tenant.manage'],
     'marketing.optimization.budget.preview' => ['query', 'none', 'marketing/optimization-budget-preview', 'cos.tenant.manage'],
     'marketing.attribution.journey.get' => ['query', 'none', 'marketing/attribution-journey', 'cos.tenant.manage'],
     'marketing.attribution.discover' => ['query', 'none', 'marketing/attribution-discover', 'cos.tenant.manage'],
@@ -167,7 +169,7 @@ foreach ([
         'retry_policy' => $kind === 'command' ? ['max_attempts' => 1] : [],
         'failure_contract' => $kind === 'command' ? 'An ambiguous database outcome is inspected by stable idempotency key before any new draft is attempted.' : '',
         'lifecycle' => 'experimental',
-        'tests' => str_contains($id,'attribution')||str_contains($id,'analytics')||str_contains($id,'optimization')?['tests/unit/marketing_domain_foundation.php','tests/integration/marketing_m4_attribution_mysql.php']:['tests/unit/marketing_domain_foundation.php'],
+        'tests' => $id==='marketing.optimization.audience.preview'?['tests/unit/marketing_domain_foundation.php','tests/integration/marketing_paid_approved_goal_e2e_mysql.php']:(str_contains($id,'attribution')||str_contains($id,'analytics')||str_contains($id,'optimization')?['tests/unit/marketing_domain_foundation.php','tests/integration/marketing_m4_attribution_mysql.php']:['tests/unit/marketing_domain_foundation.php']),
         'documentation' => 'docs/04-domains/marketing/overview.md',
     ];
 }

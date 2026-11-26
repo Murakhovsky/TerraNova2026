@@ -90,6 +90,31 @@ final readonly class MarketingPaidLaunchPlanService
             'countries'=>$audience['content']['target_spec']['market_countries']];
     }
 
+    /** Historical planning identity only. Not a claim of observed targeting or delivery. */
+    public function comparisonPins(TenantContext $actor,string $id):array
+    {
+        $plan=$this->requirePlan($actor,$id);$this->assertCurrent($actor,$plan);
+        $adset=null;$audience=null;$creative=null;
+        foreach($this->planning->adsets($actor,$plan['campaign_id']) as $row){
+            if($row['id']===$plan['adset_id']&&$row['revision']===$plan['adset_revision']){$adset=$row;break;}
+        }
+        $c=$adset['content']??[];
+        if(($c['optimization']??null)!=='TRAFFIC'||($c['placements']??null)!==['AUTOMATIC']||count($c['creatives']??[])!==1
+            ||$adset['content_hash']!==$plan['adset_content_hash'])
+            throw new DomainException('Comparison requires exact single-creative traffic plan.');
+        foreach($this->planning->audiences($actor) as $row){
+            if($row['id']===$c['audience_id']&&$row['revision']===$c['audience_revision']){$audience=$row;break;}
+        }
+        $pin=$c['creatives'][0];
+        foreach($this->planning->creatives($actor,$plan['campaign_id']) as $row){
+            if($row['id']===$pin['creative_id']&&$row['revision']===$pin['revision']){$creative=$row;break;}
+        }
+        if($audience===null||$creative===null)throw new DomainException('Comparison planning source missing.');
+        $this->assertCurrent($actor,$plan);
+        return ['audience_id'=>$audience['id'],'audience_revision'=>$audience['revision'],
+            'planned_countries'=>$audience['content']['target_spec']['market_countries'],'creative_hash'=>$creative['content_hash']];
+    }
+
     private function requirePlan(TenantContext $actor,string $id):array
     {
         return $this->plans->get($this->guard($actor),MarketingPlanningPolicy::id($id,'mkpl-'))

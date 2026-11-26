@@ -220,6 +220,9 @@ try {
         new \App\Infrastructure\Marketing\FinanceFundingReadAdapter($financeRead,$modules),$modules);
     $today=gmdate('Y-m-d');$start=gmdate('Y-m-d',time()+86400);$end=gmdate('Y-m-d',time()+3*86400);
     $paidPlan=$fundPlans->create($actor,$campaign['id'],1,$adset['id'],1,$account['id'],1,$start,$end,'paid-plan-'.$token);
+    $audiencePins=$fundPlans->comparisonPins($actor,$paidPlan['id']);
+    $assert($audiencePins===['audience_id'=>$audience['id'],'audience_revision'=>1,'planned_countries'=>['UA'],'creative_hash'=>$creative['content_hash']],
+        'Paid plan historical comparison pins did not bind native audience and creative.');
     $envelope=$financeRead->createDraft($actor,['name'=>'Synthetic paid exposure','source_domain'=>'marketing','source_ref'=>$paidPlan['id'],
         'currency'=>'USD','period_start'=>$today,'period_end'=>$end,'limit_minor'=>$paidPlan['lifetime_minor']],'paid-budget-'.$token);
     $active=$financeOps->activate($org,$envelope['id'],$reviewer,bin2hex(random_bytes(16)),'fixture-finance',1,'paid-budget-activate-'.$token);
@@ -371,6 +374,14 @@ try {
         'Native Marketing settlement source readback differs from confirmed receipts.');
     $deny(fn()=>$read->settlementSource($actor,$paidPlan['id'],'mis-'.str_repeat('0',24)),'Unrelated insight accepted for settlement.');
     $performance=new \Domains\Marketing\Application\Service\MarketingAnalystPerformanceService($fundPlans,$read,$paidRead,$accounts);
+    $audienceComparison=new \App\Application\Capability\MarketingAudienceOptimizationPreviewAdapter(
+        new \Domains\Marketing\Application\Service\MarketingAudienceOptimizationService($fundPlans,
+            new \Domains\Marketing\Application\Service\MarketingBudgetOptimizationService($fundPlans,$read,$performance)));
+    $blocked=false;
+    try{$audienceComparison->invoke($actor,['first_plan_id'=>$paidPlan['id'],'first_snapshot_ref'=>'mis-'.str_repeat('a',24),
+        'second_plan_id'=>$paidPlan['id'],'second_snapshot_ref'=>'mis-'.str_repeat('b',24)],'fixture-audience-preview','fixture');}
+    catch(DomainException){$blocked=true;}
+    $assert($blocked,'Nonterminal/current-period audience comparison admitted.');
     $performanceContexts=new \Domains\Marketing\Application\Service\MarketingAnalystContextService($campaignService,
         new \Domains\Marketing\Application\Service\MarketingPlanningService($planning,$planningPolicy),
         new \Domains\Marketing\Application\Service\MarketingProductDraftCheckService($product),$performance);

@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "model": {
+      "type": "string",
+      "const": "planned-country-set-comparison-v1"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "REVIEW_OBSERVED_DIFFERENCE",
+        "NO_MATERIAL_DIFFERENCE",
+        "INSUFFICIENT_EVIDENCE"
+      ]
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "window_start": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "window_end": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "account_id": {
+      "type": "string",
+      "pattern": "^mads-[a-f0-9]{24}$"
+    },
+    "items": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "properties": {
+          "plan_id": {
+            "type": "string",
+            "pattern": "^mkpl-[a-f0-9]{24}$"
+          },
+          "campaign_id": {
+            "type": "string",
+            "pattern": "^mkt-[a-f0-9]{24}$"
+          },
+          "plan_hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "snapshot_ref": {
+            "type": "string",
+            "pattern": "^mis-[a-f0-9]{24}$"
+          },
+          "source_revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "source_hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "observed_impressions": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "observed_clicks": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "reported_spend_decimal": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,9})(\\.[0-9]{1,6})?$"
+          },
+          "observed_cpc": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "current_daily_minor": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "audience_id": {
+            "type": "string",
+            "pattern": "^mkau-[a-f0-9]{24}$"
+          },
+          "audience_revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "planned_countries": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Z]{2}$"
+            }
+          }
+        },
+        "required": [
+          "plan_id",
+          "campaign_id",
+          "plan_hash",
+          "snapshot_ref",
+          "source_revision",
+          "source_hash",
+          "observed_impressions",
+          "observed_clicks",
+          "reported_spend_decimal",
+          "observed_cpc",
+          "current_daily_minor",
+          "audience_id",
+          "audience_revision",
+          "planned_countries"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "statistical_significance_confirmed": {
+      "type": "boolean",
+      "const": false
+    },
+    "causal_attribution": {
+      "type": "boolean",
+      "const": false
+    },
+    "paid_activation_approved": {
+      "type": "boolean",
+      "const": false
+    },
+    "provider_mutation": {
+      "type": "boolean",
+      "const": false
+    },
+    "financial_mutation": {
+      "type": "boolean",
+      "const": false
+    },
+    "approval_required_for_execution": {
+      "type": "boolean",
+      "const": true
+    },
+    "creative_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "lower_observed_cpc_plan_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^mkpl-[a-f0-9]{24}$"
+    },
+    "actual_audience_delivery_confirmed": {
+      "type": "boolean",
+      "const": false
+    },
+    "randomized_experiment": {
+      "type": "boolean",
+      "const": false
+    },
+    "targeting_change_recommended": {
+      "type": "boolean",
+      "const": false
+    }
+  },
+  "required": [
+    "model",
+    "status",
+    "currency",
+    "window_start",
+    "window_end",
+    "account_id",
+    "items",
+    "statistical_significance_confirmed",
+    "causal_attribution",
+    "paid_activation_approved",
+    "provider_mutation",
+    "financial_mutation",
+    "approval_required_for_execution",
+    "creative_hash",
+    "lower_observed_cpc_plan_id",
+    "actual_audience_delivery_confirmed",
+    "randomized_experiment",
+    "targeting_change_recommended"
+  ],
+  "additionalProperties": false
+}

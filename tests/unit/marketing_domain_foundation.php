@@ -34,7 +34,7 @@ foreach($manifest['contributions']['capability_contracts'] as $raw) {
     $assert(is_file($root.'/'.$contract->outputSchema),'Output schema missing: '.$contract->id);
 }
 $validator->validate(CapabilityContract::fromArray($manifest['contributions']['capability_contracts'][2]),['name'=>'Test launch','business_objective'=>'Leads']);
-$assert(count($found)===47,'Expected 47 typed Marketing contracts including Commerce Attribution');
+$assert(count($found)===48,'Expected 48 typed Marketing contracts including Commerce Attribution');
 echo "Marketing M0 foundation PASS\n";
 
 
@@ -117,3 +117,19 @@ $assert($blocked,'Incompatible currencies accepted.');
 $blocked=false;try{$budgetPolicy::preview($budgetA,[...$budgetB,'provider_campaign_id'=>'111']);}catch(DomainException){$blocked=true;}
 $assert($blocked,'Duplicate provider campaign accepted.');
 echo "Marketing M5.4 bounded comparative budget preview, no mutation, exact cap conservation PASS\n";
+
+$audiencePolicy=\Domains\Marketing\Domain\MarketingAudienceOptimizationPolicy::class;
+$audA=[...$budgetA,'audience_id'=>'mkau-'.str_repeat('a',24),'audience_revision'=>1,'creative_hash'=>str_repeat('f',64),'planned_countries'=>['UA']];
+$audB=[...$budgetB,'audience_id'=>'mkau-'.str_repeat('b',24),'audience_revision'=>2,'creative_hash'=>str_repeat('f',64),'planned_countries'=>['PL']];
+$compare=$audiencePolicy::preview($audA,$audB);
+$assert($compare['status']==='REVIEW_OBSERVED_DIFFERENCE'&&$compare['lower_observed_cpc_plan_id']===$audB['plan_id']
+    &&!$compare['targeting_change_recommended']&&!$compare['randomized_experiment']&&!$compare['financial_mutation']
+    &&!array_key_exists('candidate_daily_minor',$compare['items'][0]),'Audience comparison invented targeting authority.');
+$assert($audiencePolicy::preview($audB,$audA)===$compare,'Audience comparison ordering not deterministic.');
+$assert($audiencePolicy::preview($audA,[...$audB,'clicks'=>null])['lower_observed_cpc_plan_id']===null,'Insufficient audience evidence ranked.');
+foreach([[...$audB,'planned_countries'=>['UA','PL']],[...$audB,'creative_hash'=>str_repeat('0',64)],
+    [...$audB,'daily_minor'=>9999],[...$audB,'currency'=>'USD']] as $bad){
+    $blocked=false;try{$audiencePolicy::preview($audA,$bad);}catch(DomainException){$blocked=true;}
+    $assert($blocked,'Non-comparable audience scope admitted.');
+}
+echo "Marketing M5.5 pinned audience comparison advisory and incompatible-scope fences PASS\n";
