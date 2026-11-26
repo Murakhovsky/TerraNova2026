@@ -71,7 +71,7 @@ try{
     $shopStore->map($org,$conn,'product','gid://shopify/Product/41',str_repeat('a',32));
     $shopStore->map($org,$conn,'variant','gid://shopify/ProductVariant/42',str_repeat('b',32));
     $http=new class implements \Domains\ProductManagement\Infrastructure\Shopify\ShopifyHttpTransportInterface {
-        public bool $returnScope=true;public bool $badReturn=false;public bool $fulfilledLifecycle=false;public bool $lifecycleCountMismatch=false;public bool $fulfillmentScope=true;public bool $fulfillmentTruncated=false;public bool $journeyReady=false;public bool $historyDenied=false;public bool $journeyDenied=false;public string $journeyCampaign='mkt-aaaaaaaaaaaaaaaaaaaaaaaa';
+        public bool $returnScope=true;public bool $badReturn=false;public bool $fulfilledLifecycle=false;public bool $lifecycleCountMismatch=false;public bool $fulfillmentScope=true;public bool $fulfillmentTruncated=false;public bool $journeyReady=false;public bool $historyDenied=false;public bool $historyPaged=false;public bool $historyDuplicate=false;public bool $historyUnstable=false;public int $historyPages=0;public bool $journeyDenied=false;public string $journeyCampaign='mkt-aaaaaaaaaaaaaaaaaaaaaaaa';
         public int $reads=0;public string $updated='2026-11-24T10:00:00Z';public string $financial='PAID';
         public string $current='120.00';public bool $edited=false;public bool $fail=false;public bool $unmapped=false;public bool $truncated=false;public bool $multi=false;public bool $revisionShift=false;public bool $pageMode=false;public bool $temporaryFailure=false;
         public function post(string $url,array $headers,string $body):array
@@ -89,7 +89,19 @@ try{
                 ||($this->journeyDenied&&str_contains($request['query'],'COSCommerceOrderJourney'))){
                 return ['status'=>200,'body'=>'{"errors":[{"message":"Protected data unavailable","extensions":{"code":"ACCESS_DENIED"}}]}'];
             }
-            if(str_contains($request['query'],'COSCommerceFulfillmentEvidence')){
+            if($this->historyPaged&&str_contains($request['query'],'COSCommerceOrderHistory')){
+                ++$this->historyPages;$after=$request['variables']['after']??null;
+                if($after!==null&&$after!=='history-2')throw new RuntimeException('Unexpected history cursor.');
+                $first=['id'=>'gid://shopify/CustomerVisit/301','occurredAt'=>'2026-11-23T08:00:00Z','utmParameters'=>null];
+                $last=['id'=>'gid://shopify/CustomerVisit/302','occurredAt'=>'2026-11-24T08:00:00Z','utmParameters'=>['source'=>'meta','medium'=>'paid_social','campaign'=>$this->journeyCampaign]];
+                $nodes=[$first];
+                for($n=0;$n<99;$n++)$nodes[]=['id'=>'gid://shopify/CustomerVisit/'.(1000+$n),'occurredAt'=>'2026-11-23T09:00:00Z','utmParameters'=>null];
+                if($after!==null)$nodes=[$this->historyDuplicate?$first:$last];
+                if($this->historyUnstable&&$after===null&&$this->historyPages>2)$nodes[1]['utmParameters']=$last['utmParameters'];
+                $data['order']=['id'=>$request['variables']['id'],'createdAt'=>'2026-11-24T09:00:00Z','customerJourneySummary'=>[
+                    'ready'=>true,'firstVisit'=>$first,'lastVisit'=>$last,'momentsCount'=>['count'=>101,'precision'=>'EXACT'],
+                    'moments'=>['nodes'=>$nodes,'pageInfo'=>['hasNextPage'=>$after===null,'hasPreviousPage'=>$after!==null,'endCursor'=>$after===null?'history-2':'history-final']]]];
+            }elseif(str_contains($request['query'],'COSCommerceFulfillmentEvidence')){
                 if($this->fulfillmentScope)foreach(['merchant_managed','third_party','assigned'] as $scope)$data['currentAppInstallation']['accessScopes'][]=['handle'=>'read_'.$scope.'_fulfillment_orders'];
                 $data['order']=['id'=>$request['variables']['id'],'updatedAt'=>$this->updated,'test'=>false,'cancelledAt'=>null,'displayFulfillmentStatus'=>$this->fulfilledLifecycle?'FULFILLED':'UNFULFILLED',
                     'fulfillmentOrders'=>['nodes'=>[['id'=>'gid://shopify/FulfillmentOrder/900','status'=>'OPEN','requestStatus'=>'UNSUBMITTED','assignedLocation'=>['location'=>['id'=>'gid://shopify/Location/88']],
@@ -462,6 +474,24 @@ try{
     $runSource($sourceInput,'journey-repeat-'.$token);
     $check($orderRepo->touchHistory($org,$externalOrderId)===$history,'History replay changed evidence.');
     $check($orderRepo->journey($org,$externalOrderId)===$j,'Journey duplicate changed evidence.');
+    // M4: complete 101-touch read with stable endpoints/count across two full traversals.
+    $db->exec('SAVEPOINT m4_paged_history');
+    try{
+    $http->historyPaged=true;$http->historyPages=0;
+    $pagedInput=[...$sourceInput,'external_order_id'=>'gid://shopify/Order/12340'];
+    $paged=$runSource($pagedInput,'journey-paged-'.$token);
+    $pagedHistory=$orderRepo->touchHistory($org,$paged['order_id']);
+    $check($paged['outcome']==='imported'&&$pagedHistory['state']==='observed'&&count($pagedHistory['touches'])===101&&$http->historyPages===4,'Stable multi-page Shopify history not recorded.');
+    $http->historyDuplicate=true;$http->historyPages=0;
+    $duplicateHistory=$runSource([...$sourceInput,'external_order_id'=>'gid://shopify/Order/12341'],'journey-page-duplicate-'.$token);
+    $check($duplicateHistory['outcome']==='imported'&&$orderRepo->journey($org,$duplicateHistory['order_id'])['state']==='observed'
+        &&$orderRepo->touchHistory($org,$duplicateHistory['order_id'])===null,'Repeated history node admitted or blocked commercial import.');
+    $http->historyDuplicate=false;$http->historyUnstable=true;$http->historyPages=0;
+    $unstableHistory=$runSource([...$sourceInput,'external_order_id'=>'gid://shopify/Order/12342'],'journey-page-drift-'.$token);
+    $check($unstableHistory['outcome']==='imported'&&$orderRepo->touchHistory($org,$unstableHistory['order_id'])===null,'Changed second-pass history treated as complete.');
+    $http->historyPaged=false;$http->historyUnstable=false;
+    echo "M4 stable 101-visit Shopify history, duplicate and two-pass drift fences PASS.\n";
+    }finally{$db->exec('ROLLBACK TO SAVEPOINT m4_paged_history');$db->exec('RELEASE SAVEPOINT m4_paged_history');}
     $http->journeyCampaign='mkpl-bbbbbbbbbbbbbbbbbbbbbbbb';
     $runSource($sourceInput,'journey-conflict-'.$token);
     $check($orderRepo->journey($org,$externalOrderId)===['state'=>'conflict'],'Conflicting journey silently reassigned.');

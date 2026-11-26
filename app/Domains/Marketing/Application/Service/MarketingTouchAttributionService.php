@@ -33,7 +33,7 @@ final readonly class MarketingTouchAttributionService
         if(!is_string($total)||!preg_match('/^(0|[1-9][0-9]{0,11})\.[0-9]{2}$/D',$total)||!in_array($currency,['USD','EUR','UAH'],true))
             throw new DomainException('Invalid placed commercial value.');
         $touches=$h['touches']??null;
-        if(!is_array($touches)||!array_is_list($touches)||count($touches)<1||count($touches)>100)throw new DomainException('Invalid native history.');
+        if(!is_array($touches)||!array_is_list($touches)||count($touches)<1||count($touches)>500)throw new DomainException('Invalid native history.');
         $ids=[];$lastTime=null;
         foreach($touches as $t){
             if(!is_array($t)||!is_string($t['touch_id']??null)||!preg_match('/^[a-f0-9]{64}$/D',$t['touch_id'])||isset($ids[$t['touch_id']])

@@ -50,6 +50,14 @@ final class MarketingEconomicsPolicy
             &&is_int($order['net_cash_received'][0]['minor']??null)&&$order['net_cash_received'][0]['minor']>=0){
             $money=$order['net_cash_received'][0]['minor'];$financeComplete=true;
         }
+        // Exact cross-domain outcome deduplication is not customer uniqueness or accounting revenue.
+        $dedup=$order['deduplication']??null;$unique=null;
+        if($leadSafe&&$orderSafe&&is_array($dedup)&&($dedup['status']??null)==='COMPLETE_CAPTURED_COHORT'
+            &&($dedup['captured_leads']??null)===$lead['leads']&&($dedup['won_deals']??null)===$lead['won_deals']
+            &&($dedup['placed_orders']??null)===$order['placed_orders']&&is_int($dedup['overlapping_won_deals']??null)
+            &&$dedup['overlapping_won_deals']>=0&&$dedup['overlapping_won_deals']<=min($lead['won_deals'],$order['placed_orders'])
+            &&($dedup['unique_outcomes']??null)===$lead['won_deals']+$order['placed_orders']-$dedup['overlapping_won_deals'])
+            $unique=$dedup['unique_outcomes'];
         $cost=static fn(int $n,bool $safe):?float=>$spend===null||$n===0||!$safe?null:round($spend/$n/100,4);
         return ['campaign_id'=>$plan['campaign_id'],'plan_id'=>$plan['id'],'window_start'=>$plan['period_start'],'window_end'=>$plan['period_end'],
             'conversion_through'=>$through,'currency'=>$currency,'coverage'=>'CAPTURED_COHORT_ONLY','spend_basis'=>$spend===null?'UNAVAILABLE':'FINANCE_SETTLED_MEDIA_BUDGET',
@@ -57,6 +65,7 @@ final class MarketingEconomicsPolicy
             'won_deals'=>$lead['won_deals'],'placed_orders'=>$order['placed_orders'],'lead_evidence_clean'=>$leadSafe,'order_evidence_clean'=>$orderSafe,
             'cost_per_captured_lead'=>$cost($lead['leads'],$leadSafe),'cost_per_captured_qualified_lead'=>$cost($lead['qualified_leads'],$leadSafe),
             'cost_per_captured_won_deal'=>$cost($lead['won_deals'],$leadSafe),'cost_per_captured_placed_order'=>$cost($order['placed_orders'],$orderSafe),
+            'captured_unique_outcomes'=>$unique,'cost_per_captured_unique_outcome'=>$unique===null?null:$cost($unique,true),
             'confirmed_collection_minor'=>$money,'collection_scope_complete'=>$financeComplete,
             'net_collected_to_settled_media_spend'=>$money===null||$spend===null||$spend===0?null:round($money/$spend,4),
             'collection_basis'=>'CURRENT_READBACK_OF_PLACEMENT_COHORT','cac'=>null,'roas'=>null,'romi'=>null,'profit'=>null,

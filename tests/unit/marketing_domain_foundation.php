@@ -78,6 +78,13 @@ $order=[...$scope,'placed_orders'=>2,'unresolved_captured_orders'=>0,'financial_
 $settlement=['state'=>'SETTLED','finance_settled'=>true,'currency'=>'EUR','reservation_id'=>'finr-'.str_repeat('c',24),'committed_minor'=>2000,'released_minor'=>8000,'reserved_minor'=>10000];
 $econ=\Domains\Marketing\Domain\MarketingEconomicsPolicy::project($economicPlan,$lead,$order,$settlement);
 $assert($econ['cost_per_captured_lead']===2.0&&$econ['cost_per_captured_placed_order']===10.0&&$econ['net_collected_to_settled_media_spend']===4.0&&$econ['roas']===null&&$econ['cac']===null,'Cohort economics fabricated or lost confirmed amounts.');
+$dedupEcon=['status'=>'COMPLETE_CAPTURED_COHORT','captured_leads'=>$lead['leads'],'won_deals'=>$lead['won_deals'],'placed_orders'=>$order['placed_orders'],
+    'overlapping_won_deals'=>1,'unique_outcomes'=>$lead['won_deals']+$order['placed_orders']-1];
+$uniqueEcon=\Domains\Marketing\Domain\MarketingEconomicsPolicy::project($economicPlan,$lead,[...$order,'deduplication'=>$dedupEcon],$settlement);
+$assert($uniqueEcon['captured_unique_outcomes']===$dedupEcon['unique_outcomes']
+    &&$uniqueEcon['cost_per_captured_unique_outcome']===round(20/$dedupEcon['unique_outcomes'],4)&&$uniqueEcon['cac']===null,'Deduplicated outcome cost differs or became CAC.');
+$invalidEcon=\Domains\Marketing\Domain\MarketingEconomicsPolicy::project($economicPlan,$lead,[...$order,'deduplication'=>[...$dedupEcon,'unique_outcomes'=>99]],$settlement);
+$assert($invalidEcon['captured_unique_outcomes']===null&&$invalidEcon['cost_per_captured_unique_outcome']===null,'Invalid deduplication promoted to economics.');
 $econ=\Domains\Marketing\Domain\MarketingEconomicsPolicy::project($economicPlan,[...$lead,'source_drift_count'=>1],[...$order,'financial_evidence_status'=>'PARTIAL'],$settlement);
 $assert($econ['cost_per_captured_lead']===null&&$econ['confirmed_collection_minor']===null&&$econ['net_collected_to_settled_media_spend']===null,'Partial cohort promoted to complete economics.');
 $econ=\Domains\Marketing\Domain\MarketingEconomicsPolicy::project($economicPlan,$lead,$order,null);
