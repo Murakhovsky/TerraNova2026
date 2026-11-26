@@ -34,7 +34,7 @@ $assert(str_contains($workflow,'"$remote" < "$fixture"')
 // The pilot audit must be read-only and pin both the imported rowset and
 // independent native Product IDs. It is safe to call after bootstrap.
 foreach ([
-    "'audit'=>$this->audit($output)",
+    '\'audit\'=>$this->audit($output)',
     'ca2613c17efed1aaf6aa9c20178a70b1',
     'a48b950feb912f4b4065cff8dcf85943c63a525453098f186e199a7c400a0d00',
     '->report(self::TENANT,self::BATCH)',
