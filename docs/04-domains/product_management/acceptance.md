@@ -20,7 +20,7 @@ readiness і не запускає deployment. Product є автономним �
   APPROVAL_REQUIRED policy для Plan і `product_management.governed.product.assemble`.
 - Канонічний Workflow rollout, HMAC configuration
   `COS_AUTOMATION_TENANT_ORGANIZATION` (цей самий tenant) та
-  `COS_AI_CAPABILITY_INTENT_SECRET`; налаштований реальний Kernel LLM
+  `COS_AI_CAPABILITY_INTENT_SECRET`, та `COS_FEDERATION_CANONICAL_ORGANIZATION` (той самий tenant); налаштований реальний Kernel LLM
   route і бюджет. Canary використовує один bounded structured request
   з 900 output tokens і budget reservation limit 0.10 USD; це не гарантія
   тарифу провайдера. Не передавати секрети у командному рядку або артефактах.
@@ -30,6 +30,19 @@ readiness і не запускає deployment. Product є автономним �
   `COS_PRODUCT_AI_ACCEPTANCE_ENVIRONMENT=staging`,
   `COS_PRODUCT_AI_ACCEPTANCE_ORGANIZATION=<isolated-tenant>`.
   Без усіх трьох параметрів команда заблокована; ніколи не вмикати у production.
+
+### Захищений GitHub workflow
+
+`COS Product P6 supervised live AI acceptance` має тільки ручний
+`workflow_dispatch` з `main` і protected environment `AWS TN2026`.
+Задати protected variable `COS_PRODUCT_AI_ACCEPTANCE_ORGANIZATION` лише
+для дозволеного staging tenant. Inputs: exact deployed SHA, tenant,
+`propose` або `inspect`; для inspect — exact intent/run. Workflow порівнює
+GitHub source SHA, deployment manifest, host code/routes і active HTTP та
+canonical worker code/routes, а тоді викликає лише наведений CLI.
+Sanitized artifact `product-p6-live-evidence/evidence.json` містить
+revision, timestamp, result та evidence URL; відсутність налаштувань
+завершується помилкою, не створенням tenant/політики і не deployment.
 
 ### Сценарій
 

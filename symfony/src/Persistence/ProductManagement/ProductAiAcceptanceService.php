@@ -27,6 +27,7 @@ final readonly class ProductAiAcceptanceService
     {
         if(!preg_match('/^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,39}$/D',$org)||$org==='default'
             ||$this->verifier->organization()!==$org
+            ||getenv('COS_FEDERATION_CANONICAL_ORGANIZATION')!==$org
             ||$this->db->fetchOne("SELECT status FROM cos_organizations WHERE id=?",[$org])!=='ACTIVE'
             ||!$this->modules->isEnabled($org,'product_management')||!$this->modules->isEnabled($org,'federation'))
             throw new DomainException('Explicit active isolated automation tenant with Product and Federation required.');
