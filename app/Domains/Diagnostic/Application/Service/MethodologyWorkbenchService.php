@@ -35,24 +35,26 @@ final readonly class MethodologyWorkbenchService
         string $scenarioId,
         string $userId,
     ): void {
-        $this->requireEditableVersion($organizationId, $packId, $version);
-        $scenario = $this->scenario($organizationId, $packId, $version, $scenarioId);
-        $this->studioRepository->deleteScenario($organizationId, $packId, $version, $scenarioId);
-        $this->studioRepository->audit($organizationId, [
-            'id' => bin2hex(random_bytes(16)),
-            'pack_id' => $packId,
-            'version' => $version,
-            'user_id' => $userId,
-            'entity_type' => 'SCENARIO',
-            'entity_id' => $scenarioId,
-            'old' => [
-                'id' => $scenario['scenario_id'],
-                'name' => $scenario['name'],
-                'input' => $scenario['input'],
-                'expected' => $scenario['expected'],
-            ],
-            'new' => null,
-        ]);
+        $this->studioRepository->withMutation($organizationId, function () use ($organizationId,$packId,$version,$scenarioId,$userId): void {
+            $this->requireEditableVersion($organizationId, $packId, $version);
+            $scenario = $this->scenario($organizationId, $packId, $version, $scenarioId);
+            $this->studioRepository->deleteScenario($organizationId, $packId, $version, $scenarioId);
+            $this->studioRepository->audit($organizationId, [
+                'id' => bin2hex(random_bytes(16)),
+                'pack_id' => $packId,
+                'version' => $version,
+                'user_id' => $userId,
+                'entity_type' => 'SCENARIO',
+                'entity_id' => $scenarioId,
+                'old' => [
+                    'id' => $scenario['scenario_id'],
+                    'name' => $scenario['name'],
+                    'input' => $scenario['input'],
+                    'expected' => $scenario['expected'],
+                ],
+                'new' => null,
+            ]);
+        });
     }
 
     /** @return array<string,mixed> */

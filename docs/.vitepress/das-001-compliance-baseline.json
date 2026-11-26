@@ -14,9 +14,9 @@
       "max_process_gaps": 0
     },
     "diagnostic": {
-      "min_typed": 5,
-      "max_descriptive_only": 5,
-      "max_process_gaps": 1
+      "min_typed": 7,
+      "max_descriptive_only": 0,
+      "max_process_gaps": 0
     },
     "documents": {
       "min_typed": 3,
@@ -29,7 +29,7 @@
       "max_process_gaps": 0
     },
     "finance": {
-      "min_typed": 9,
+      "min_typed": 17,
       "max_descriptive_only": 0,
       "max_process_gaps": 0
     },

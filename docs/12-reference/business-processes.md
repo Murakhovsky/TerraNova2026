@@ -21,7 +21,7 @@ generated: true
 | Market Source → Trusted Market State | `capital_markets` | `as-is` | `source-verified` | 5 | 0 | 5/5 | 5/5 | 5/5 | 5/5 | 0/5 | [Відкрити workflow](../02-workflows/capital-markets-market-data-to-trusted-state.md) |
 | Trusted Market State → Tokenized Equity Paper Result | `capital_markets` | `as-is` | `source-verified` | 7 | 0 | 7/7 | 7/7 | 7/7 | 7/7 | 0/7 | [Відкрити workflow](../02-workflows/capital-markets-tokenized-equity-paper-cycle.md) |
 | Лабораторія досліджень і стратегій Capital Markets | `capital_markets` | `as-is` | `source-verified` | 7 | 0 | 7/7 | 7/7 | 7/7 | 7/7 | 0/7 | [Відкрити workflow](../02-workflows/capital-markets-research-strategy-lab.md) |
-| Diagnostic Session → Recommendation | `diagnostic` | `as-is` | `source-verified` | 6 | 0 | 6/6 | 5/6 | 6/6 | 6/6 | 0/6 | [Відкрити workflow](../02-workflows/diagnostic-session-to-recommendation.md) |
+| Diagnostic Session → Recommendation | `diagnostic` | `as-is` | `source-verified` | 6 | 0 | 6/6 | 6/6 | 6/6 | 6/6 | 0/6 | [Відкрити workflow](../02-workflows/diagnostic-session-to-recommendation.md) |
 | Federation Goal Plan Approval | `federation` | `as-is` | `documented` | 1 | 0 | 1/1 | 1/1 | 0/1 | 0/0 | 0/0 | [Відкрити workflow](../02-workflows/federation-goal-plan-approval.md) |
 | Signal → Qualified Opportunity Handoff | `growth` | `to-be` | `source-verified` | 6 | 0 | 6/6 | 6/6 | 6/6 | 5/5 | 0/5 | [Відкрити workflow](../02-workflows/growth-opportunity-candidate-to-handoff.md) |
 | Campaign UTM → Native Sales Attribution | `marketing` | `as-is` | `source-verified` | 4 | 0 | 4/4 | 4/4 | 4/4 | 4/4 | 0/4 | [Відкрити workflow](../02-workflows/marketing-attribution-to-analytics.md) |
@@ -54,7 +54,7 @@ generated: true
 | Market Source → Trusted Market State | 5/5 | 5/5 | 0/5 | 0/5 | 5/5 | 5/5 | 0/5 | 5/5 | 0/5 |
 | Trusted Market State → Tokenized Equity Paper Result | 7/7 | 7/7 | 0/7 | 0/7 | 7/7 | 7/7 | 0/7 | 7/7 | 0/7 |
 | Лабораторія досліджень і стратегій Capital Markets | 7/7 | 7/7 | 0/7 | 0/7 | 7/7 | 7/7 | 0/7 | 7/7 | 0/7 |
-| Diagnostic Session → Recommendation | 6/6 | 5/6 | 1/6 | 0/6 | 6/6 | 6/6 | 0/6 | 6/6 | 0/6 |
+| Diagnostic Session → Recommendation | 6/6 | 6/6 | 0/6 | 0/6 | 6/6 | 6/6 | 0/6 | 6/6 | 0/6 |
 | Federation Goal Plan Approval | 1/1 | 1/1 | 0/1 | 0/1 | 0/1 | 0/1 | 0/1 | 0/0 | 0/0 |
 | Signal → Qualified Opportunity Handoff | 6/6 | 6/6 | 0/6 | 0/6 | 6/6 | 6/6 | 0/6 | 5/5 | 0/5 |
 | Campaign UTM → Native Sales Attribution | 4/4 | 4/4 | 0/4 | 0/4 | 4/4 | 4/4 | 0/4 | 4/4 | 0/4 |
@@ -176,7 +176,7 @@ generated: true
 - **Schema:** `v4`
 - **Domain:** `diagnostic`
 - **Бізнес-стан:** `as-is`
-- **Покриття capabilities:** 5/6 кроків
+- **Покриття capabilities:** 6/6 кроків
 - **Cross-domain кроки:** 0/6
 - **Derived verification:** `source-verified`
 - **Тригер:** A published methodology version is selected for a diagnostic target
@@ -192,7 +192,7 @@ generated: true
 
 | Крок | Owner | Domain | Capability / gap | Вид | Критичний | Executable / evidence mapping |
 | --- | --- | --- | --- | --- | --- | --- |
-| Draft and publish methodology version | methodology author | `diagnostic` | gap: `missing-domain-capability` | `operation` | так | use_case `DraftDiagnosticPack` [source]<br>use_case `PublishDiagnosticPack` [source] |
+| Validate, regress and publish prepared methodology version | methodology author | `diagnostic` | `diagnostic.methodology.publish` | `operation` | так | source `app/Domains/Diagnostic/Application/Service/MethodologyStudioService.php` · `function publish(` [source]<br>source `symfony/src/Infrastructure/Capability/DiagnosticMethodologyPublishAdapter.php` · `DiagnosticMethodologyPublishAdapter` [source] |
 | Start version-pinned session | diagnostic operator / interviewer | `diagnostic` | `diagnostic.session.start` | `operation` | так | use_case `StartDiagnosticSession` [source]<br>source `symfony/src/Infrastructure/Capability/DiagnosticSessionStartAdapter.php` · `DiagnosticSessionStartAdapter` [source] |
 | Capture evidence | diagnostic operator / interviewer | `diagnostic` | `diagnostic.evidence.capture` | `operation` | так | use_case `CaptureDiagnosticEvidence` [source]<br>source `symfony/src/Infrastructure/Capability/DiagnosticEvidenceCaptureAdapter.php` · `DiagnosticEvidenceCaptureAdapter` [source] |
 | Evaluate evidence, persist report and complete session atomically | diagnostic operator / interviewer | `diagnostic` | `diagnostic.session.complete` | `operation` | так | use_case `EvaluateDiagnosticSession` [source]<br>source `app/Domains/Diagnostic/Application/Service/DiagnosticRuntimeService.php` · `function complete(` [source]<br>use_case `CompleteDiagnosticSession` [source]<br>source `symfony/src/Infrastructure/Capability/DiagnosticSessionCompleteAdapter.php` · `DiagnosticSessionCompleteAdapter` [source] |

@@ -3051,6 +3051,13 @@ services:
   Domains\Finance\Application\Contract\MarketingSpendEvidenceReadPort:
     alias: App\Infrastructure\Finance\MarketingSpendEvidenceReadAdapter
   Domains\Finance\Application\Service\FinanceMarketingSpendReadbackService: ~
+  Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceMarketingSpendActionIntentRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Finance\Application\Contract\FinanceMarketingSpendActionIntentRepositoryInterface:
+    alias: Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceMarketingSpendActionIntentRepository
+  Domains\Finance\Application\Service\ApprovedFinanceMarketingSpendImportOperations: ~
+  Domains\Finance\Automation\Action\FinanceMarketingSpendImportActionHandler: ~
   Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceBudgetRepository:
     arguments:
       $connection: '@cos.database.pdo'
@@ -3099,6 +3106,7 @@ services:
   Domains\Finance\Automation\Action\FinancePaidSettlementHandler: ~
   App\Persistence\Finance\FinancePaidSettlementGoalProposalService: ~
   App\Persistence\Finance\FinancePaidSettlementOutcomeProvider: ~
+  App\Persistence\Finance\FinanceMarketingSpendImportOutcomeProvider: ~
   App\Persistence\Finance\FinanceOrderRunOutcomeProvider: ~
   App\Persistence\Sales\SalesOrderRunOutcomeProvider: ~
   App\Persistence\Sales\SalesBusinessRunOutcomeProvider: ~
@@ -3106,6 +3114,7 @@ services:
     arguments:
       $payments: '@Domains\Finance\Automation\Action\FinanceOrderPaymentActionHandler'
       $settlement: '@Domains\Finance\Automation\Action\FinancePaidSettlementHandler'
+      $spendImport: '@Domains\Finance\Automation\Action\FinanceMarketingSpendImportActionHandler'
   financeDomainModule:
     alias: Domains\Finance\Bootstrap\FinanceDomainModule
 
@@ -4395,6 +4404,7 @@ services:
         - '@App\Persistence\Marketing\MarketingOptimizationLearningOutcomeProvider'
         - '@App\Persistence\Marketing\MarketingPaidGoalOutcomeProvider'
         - '@App\Persistence\Finance\FinancePaidSettlementOutcomeProvider'
+        - '@App\Persistence\Finance\FinanceMarketingSpendImportOutcomeProvider'
         - '@App\Persistence\Finance\FinanceOrderRunOutcomeProvider'
         - '@App\Persistence\Sales\SalesOrderRunOutcomeProvider'
         - '@App\Persistence\Sales\SalesBusinessRunOutcomeProvider'

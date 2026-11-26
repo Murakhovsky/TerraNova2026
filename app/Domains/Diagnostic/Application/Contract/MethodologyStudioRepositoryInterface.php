@@ -3,6 +3,8 @@ declare(strict_types=1);
 namespace Domains\Diagnostic\Application\Contract;
 interface MethodologyStudioRepositoryInterface
 {
+ /** Serialize Studio mutations for the tenant; rollback the complete operation on failure. */
+ public function withMutation(string $organizationId, callable $operation): mixed;
  public function packs(string $organizationId):array;
  public function pack(string $organizationId,string $packId):?array;
  public function savePack(string $organizationId,array $pack):void;

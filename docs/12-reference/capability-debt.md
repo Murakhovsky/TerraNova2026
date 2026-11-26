@@ -16,20 +16,18 @@ Capability debt означає, що бізнес-крок реальний, а�
 
 ## Підсумок
 
-- **Відкритих debt items:** 1
-- **High severity:** 1
+- **Відкритих debt items:** 0
+- **High severity:** 0
 - **Medium severity:** 0
-- **Зачеплених Domains:** 1
+- **Зачеплених Domains:** 0
 
 | Domain | Відкрито | High | Medium | Low |
 | --- | ---: | ---: | ---: | ---: |
-| `diagnostic` | 1 | 1 | 0 | 0 |
 
 ## Пріоритетний backlog
 
 | Severity | Domain | Процес / крок | Runtime evidence | Target capability | Resolution |
 | --- | --- | --- | --- | --- | --- |
-| `high` | `diagnostic` | [Diagnostic Session → Recommendation](../02-workflows/diagnostic-session-to-recommendation.md) · `methodology` · Draft and publish methodology version | `source` | `diagnostic.methodology.manage` | `declare-domain-capability` |
 
 ## Контракт закриття боргу
 
