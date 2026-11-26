@@ -37,6 +37,8 @@ Marketing manager, незалежний approver, Federation і Platform Workflo
 
 <ProcessDiagram process-id="marketing.optimization-review-learning" view="capability" direction="LR" />
 
+Порт `MarketingOptimizationReviewEvidenceReadPort` читає вже збережені Goal/Workflow/Action докази з таблиць, власником яких є Platform, і звіряє їх із нативною квитанцією Marketing. Це read-only межа Platform, а не контракт між бізнес-доменами; вона не делегує погодження або виконання.
+
 ## Межі приймання
 
 Це процес реєстрації спостережень і погодження review, а не доказ фактичної зміни кампанії, експериментальної причинності, виручки або оптимізації витрат. RETROSPECTIVE_ONLY окремо позначає дані до review. Source verification не є production acceptance.
