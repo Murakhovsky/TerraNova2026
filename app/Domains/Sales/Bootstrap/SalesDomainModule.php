@@ -72,6 +72,7 @@ final readonly class SalesDomainModule implements
         private \Domains\Sales\Automation\Action\QueueSalesOfferDeliveryHandler $offerDelivery,
         private \Domains\Sales\Automation\Action\QueueSalesActivityReminderHandler $activityReminders,
         private ?\Domains\Sales\Automation\Action\SalesGovernedOrderHandler $governedOrders=null,
+        private ?\Kernel\Action\Contract\ActionHandlerInterface $governedBusiness=null,
     ) {
     }
 
@@ -95,6 +96,7 @@ final readonly class SalesDomainModule implements
             \Domains\Sales\Automation\Action\QueueSalesOfferDeliveryHandler::TYPE,
             \Domains\Sales\Automation\Action\QueueSalesActivityReminderHandler::TYPE,
             ...($this->governedOrders===null?[]:\Domains\Sales\Automation\Action\SalesGovernedOrderHandler::types()),
+            ...($this->governedBusiness===null?[]:\Domains\Sales\Automation\Action\SalesGovernedBusinessOperations::types()),
         ];
     }
 
@@ -104,6 +106,7 @@ final readonly class SalesDomainModule implements
             $this->offerDelivery,
             $this->activityReminders,
             ...($this->governedOrders===null?[]:[$this->governedOrders]),
+            ...($this->governedBusiness===null?[]:[$this->governedBusiness]),
             new CreateFollowupTaskHandler($this->crm),
             new CreateLeadFollowupTaskHandler($this->scheduleLeadFollowup),
             new UpdateDealHandler($this->deals),

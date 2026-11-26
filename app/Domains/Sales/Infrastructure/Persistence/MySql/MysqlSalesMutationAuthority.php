@@ -25,6 +25,7 @@ final readonly class MysqlSalesMutationAuthority implements SalesMutationAuthori
     public function entity(string $org,int $actor,string $kind,int $id):void
     {
         $this->transaction();
+        if ($kind==='person'&&$id>0) {$this->person($org,$actor,$id);return;}
         if ($id<1||!in_array($kind,['lead','deal'],true)) throw new DomainException('Sales entity unavailable.');
         $table=$kind==='lead'?'tn_leads':'tn_client_cases';
         $fields=$kind==='lead'?'assigned_user_id,client_case_id':'assigned_user_id';
@@ -85,8 +86,8 @@ final readonly class MysqlSalesMutationAuthority implements SalesMutationAuthori
 
     private function person(string $org,int $actor,int $person):void
     {
-        $q=$this->connection->prepare('SELECT id FROM tn_people WHERE organization_id=? AND id=? FOR UPDATE');
-        $q->execute([$org,$person]);
+        $q=$this->connection->prepare('SELECT id FROM tn_people WHERE organization_id=? AND BINARY organization_id=BINARY ? AND id=? FOR UPDATE');
+        $q->execute([$org,$org,$person]);
         if ($q->fetchColumn()===false) throw new \Domains\Sales\Application\Service\SalesMutationDenied('Sales mutation denied.');
         try {$this->scope->resolve($org,$actor,'tenant',null);return;} catch (DomainException) {}
         $linked=0;
@@ -95,6 +96,11 @@ final readonly class MysqlSalesMutationAuthority implements SalesMutationAuthori
                 $q=$this->connection->prepare('SELECT id FROM '.$table.' WHERE organization_id=? AND person_id=? ORDER BY id FOR UPDATE');
                 $q->execute([$org,$person]);
                 foreach ($q->fetchAll(PDO::FETCH_COLUMN) as $id) {$this->entity($org,$actor,$kind,(int)$id);$linked++;}
+            }
+            $q=$this->connection->prepare('SELECT owner_user_id FROM sales_orders WHERE organization_id=? AND customer_id=? ORDER BY order_id FOR UPDATE');
+            $q->execute([$org,$person]);
+            foreach ($q->fetchAll(PDO::FETCH_COLUMN) as $owner) {
+                $this->scope->resolve($org,$actor,'owner',(int)$owner);$linked++;
             }
         } catch (DomainException $e) {throw new \Domains\Sales\Application\Service\SalesMutationDenied('Sales mutation denied.',0,$e);}
         if ($linked===0) throw new \Domains\Sales\Application\Service\SalesMutationDenied('Sales mutation denied.');

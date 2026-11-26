@@ -12,6 +12,7 @@ final class SalesPolicyCatalog
     public function policies(string $organizationId): array
     {
         return [
+            ...array_map(fn(string $type):ActionPolicy=>new ActionPolicy($this->id($organizationId,$type.'-v1'),$organizationId,$type,[],PolicyDecision::ApprovalRequired,10),\Domains\Sales\Automation\Action\SalesGovernedBusinessOperations::types()),
             ...array_map(fn(string $type):ActionPolicy=>new ActionPolicy($this->id($organizationId,$type.'-v1'),$organizationId,$type,[],PolicyDecision::ApprovalRequired,10),\Domains\Sales\Automation\Action\SalesGovernedOrderHandler::types()),
             new ActionPolicy($this->id($organizationId, 'sales-activity-reminder-approval-v1'), $organizationId, 'sales.activity.reminder.queue', [], PolicyDecision::ApprovalRequired, 10),
             new ActionPolicy($this->id($organizationId, 'sales-offer-delivery-approval-v1'), $organizationId, 'sales.offer.delivery.queue', [], PolicyDecision::ApprovalRequired, 10),

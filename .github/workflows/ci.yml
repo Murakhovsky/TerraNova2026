@@ -74,6 +74,8 @@ jobs:
         run: php tests/architecture/cos_canonical_capability_library_contract.php
       - name: Sales inbound request typed read capability
         run: php tests/unit/sales_inbound_request_capability.php
+      - name: Sales governed business contracts
+        run: php tests/unit/sales_governed_business_contracts.php
       - name: Finance order exact money policy
         run: php tests/unit/finance_order_money.php
       - name: DAS-001 direct Capability binding source coverage

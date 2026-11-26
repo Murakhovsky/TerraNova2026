@@ -4,12 +4,16 @@ on:
     branches: [feature/shopify-series01-server-operator-20261124]
     paths:
       - '.github/workflows/cos-shopify-series01-operator-contract.yml'
+      - '.github/workflows/cos-shopify-series01-operator.yml'
       - 'bin/shopify-series01-operator.sh'
+      - 'tests/architecture/shopify_series01_deployment_guard.py'
       - 'tests/architecture/shopify_series01_operator_contract.php'
   pull_request:
     paths:
       - '.github/workflows/cos-shopify-series01-operator-contract.yml'
+      - '.github/workflows/cos-shopify-series01-operator.yml'
       - 'bin/shopify-series01-operator.sh'
+      - 'tests/architecture/shopify_series01_deployment_guard.py'
       - 'tests/architecture/shopify_series01_operator_contract.php'
 permissions:
   contents: read
@@ -22,3 +26,4 @@ jobs:
       - run: bash -n bin/shopify-series01-operator.sh
       - run: php -l tests/architecture/shopify_series01_operator_contract.php
       - run: php tests/architecture/shopify_series01_operator_contract.php
+      - run: python3 tests/architecture/shopify_series01_deployment_guard.py

@@ -10,6 +10,7 @@ use RuntimeException;
 use Domains\Sales\Application\DTO\PublicLeadResult;
 use Domains\Sales\Automation\Event\LeadCreated;
 use Domains\Sales\Model\LeadStatus;
+use Domains\Sales\Domain\Policy\PublicLeadAttribution;
 use Kernel\Event\EventBus;
 use Kernel\Event\EventMetadata;
 use Kernel\Transaction\Contract\TransactionManagerInterface;
@@ -23,6 +24,7 @@ final readonly class ReceivePublicLead
         private TransactionManagerInterface $transactions,
         private string $organizationId,
         private SalesMutationReceiptRepositoryInterface $receipts,
+        private ?\Domains\Sales\Application\Contract\InboundLeadAssignment $assignment=null,
     ) {
     }
 
@@ -65,7 +67,11 @@ final readonly class ReceivePublicLead
             'message'=>$message!==''?$message:null,'source_page'=>$sourcePage,'request_intent'=>$intent,
         ];
         $caseInput=$lead+['telegram'=>$telegram!==''?$telegram:null];
-        $fingerprint=hash('sha256',json_encode($actorId===null?$caseInput:['actor_id'=>$actorId,'lead'=>$caseInput],JSON_THROW_ON_ERROR));
+        // Preserve legacy receipt digests without tags. Public observations are immutable
+        // within a submission; operator intake has a separate trust boundary.
+        $attribution=$actorId===null?PublicLeadAttribution::observe($input):[];
+        $lead+=$attribution;
+        $fingerprint=hash('sha256',json_encode($actorId===null?$caseInput+$attribution:['actor_id'=>$actorId,'lead'=>$caseInput],JSON_THROW_ON_ERROR));
         $operation=$actorId===null?'public.lead.create':'operator.lead.intake';
 
         return $this->transactions->transactional(function()use($caseInput,$lead,$sourcePage,$key,$fingerprint,$operation,$actorId,$correlationId):PublicLeadResult{
@@ -77,6 +83,8 @@ final readonly class ReceivePublicLead
                     || !$this->leads->existsForUpdate($this->organizationId,(int)$m[2])) return PublicLeadResult::rejected('submission_conflict');
                 return PublicLeadResult::accepted((int)$m[2],true);
             }
+            $owner=$actorId===null?$this->assignment?->allocate($this->organizationId):null;
+            if($owner!==null){$caseInput['assigned_user_id']=$owner;$lead['assigned_user_id']=$owner;}
             $case=$this->cases->resolvePersonAndCase($caseInput,$actorId,$correlationId);
             $leadId=$this->leads->create($this->organizationId,[
                 'person_id'=>$case['person_id'],'client_case_id'=>$case['client_case_id'],
@@ -84,7 +92,7 @@ final readonly class ReceivePublicLead
             if ($case['client_case_id']!==null) $this->cases->attachRequest($case['client_case_id'],$leadId);
             $this->events->publish(LeadCreated::create(
                 bin2hex(random_bytes(16)),$this->organizationId,(string)$leadId,
-                ['client_case_id'=>$case['client_case_id'],'source_page'=>$sourcePage,'status'=>LeadStatus::New->value],
+                ['client_case_id'=>$case['client_case_id'],'source_page'=>$sourcePage,'status'=>LeadStatus::New->value]+($owner===null?[]:['assigned_user_id'=>$owner]),
                 new EventMetadata($correlationId??bin2hex(random_bytes(16)),null,$actorId===null?'SYSTEM':'USER',$actorId===null?'public-web':(string)$actorId),
             ));
             if (!$this->leads->existsForUpdate($this->organizationId,$leadId)

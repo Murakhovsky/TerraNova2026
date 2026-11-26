@@ -119,6 +119,10 @@
     },
     "tax_included": {
       "type": "boolean"
+    },
+    "customer_id": {
+      "type": "integer",
+      "minimum": 1
     }
   },
   "required": [

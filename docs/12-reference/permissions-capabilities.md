@@ -20,7 +20,7 @@ generated: true
 | --- | ---: | --- |
 | `both` | 48 | Capability присутня і в runtime catalogue, і в manifest. |
 | `runtime-only` | 3 | Runtime може перевіряти capability, але manifest її не декларує. |
-| `manifest-only` | 372 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
+| `manifest-only` | 400 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
 
 ## Каталог
 
@@ -392,6 +392,29 @@ generated: true
 | `sales` | `sales.deal.won.observation` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.director.view` | так | так | `both` | `app/Domains/Sales/Model/SalesCapability.php` | `app/Domains/Sales/module.php` |
 | `sales` | `sales.followup.schedule` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.governed.activity.cancel` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.governed.activity.complete` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.governed.activity.record` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.governed.activity.reschedule` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.governed.client_case.create` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.governed.crm.inbox.process` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.governed.crm.inbox.recover` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.governed.deal.commercial.set` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.governed.deal.outcome.record` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.governed.deal.owner.assign` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.governed.followup.schedule` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.governed.lead.activity.cancel` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.governed.lead.activity.complete` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.governed.lead.activity.reschedule` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.governed.lead.create` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.governed.lead.followup.schedule` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.governed.lead.intake` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.governed.lead.qualify` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.governed.lead.state.manage` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.governed.negotiation.record` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.governed.offer.create` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.governed.offer.revise` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.governed.offer.transition` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.governed.order.create` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.governed.order.lifecycle.allocate` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.governed.order.lifecycle.cancel` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
@@ -399,6 +422,11 @@ generated: true
 | `sales` | `sales.governed.order.lifecycle.fulfill` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.governed.order.lifecycle.release` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.governed.order.lifecycle.return` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.governed.order.source.reconcile` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.governed.order.source.sync.start` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.governed.pipeline.stage.manage` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.governed.property_match.record` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.governed.team.manage` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.inbound.request.read` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.lead.activity.cancel` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.lead.activity.complete` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |

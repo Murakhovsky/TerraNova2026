@@ -1,4 +1,5 @@
 parameters:
+  env(COS_SALES_ORDER_SYNC_SCHEDULES_JSON): '[]'
   env(COS_MARKETING_HERMES_PROFILES_JSON): '{}'
   env(COS_MARKETING_META_EXECUTION_PROFILES_JSON): '{}'
   env(COS_MARKETING_META_ACTIVATION_ENABLED): '0'
@@ -143,6 +144,10 @@ services:
       $aiSecret: '%env(COS_AI_CAPABILITY_INTENT_SECRET)%'
       $cronSecret: '%env(COS_CRON_CAPABILITY_INTENT_SECRET)%'
       $organizationId: '%env(COS_AUTOMATION_TENANT_ORGANIZATION)%'
+
+  App\Infrastructure\Automation\SalesGovernedBusinessHandler:
+    arguments:
+      $adapters: !tagged_iterator cos.capability.invoker
 
   App\Application\Capability\CanonicalCapabilityGateway:
     arguments:
@@ -301,10 +306,16 @@ services:
     arguments:
       $messageBus: '@command.bus'
 
+  App\Application\Sales\Service\PeriodicSalesOrderSync:
+    arguments:
+      $db: '@cos.database.pdo'
+      $profiles: '%env(COS_SALES_ORDER_SYNC_SCHEDULES_JSON)%'
+
   App\Application\Sales\Command\RunSalesAutomationCommandHandler:
     arguments:
       $automation: '@Domains\Sales\Application\Service\SalesAutomationRunner'
       $outbox: '@App\Application\System\Service\SalesOutboxDrainer'
+      $periodicSync: '@App\Application\Sales\Service\PeriodicSalesOrderSync'
 
   App\Infrastructure\Messenger\SymfonyQueryBus:
     arguments:
@@ -2062,6 +2073,9 @@ services:
 
   Domains\Sales\Domain\Policy\StageTransitionPolicy: ~
 
+  Domains\Sales\Application\Contract\SalesStageApprovalVerifier:
+    alias: App\Infrastructure\Automation\CanonicalSalesStageApprovalVerifier
+
   Domains\Sales\Application\UseCase\ChangeDealStage:
     arguments:
       $deals: '@Domains\Sales\Application\Contract\DealRepositoryInterface'
@@ -2099,6 +2113,7 @@ services:
       $offerDelivery: '@Domains\Sales\Automation\Action\QueueSalesOfferDeliveryHandler'
       $activityReminders: '@Domains\Sales\Automation\Action\QueueSalesActivityReminderHandler'
       $governedOrders: '@Domains\Sales\Automation\Action\SalesGovernedOrderHandler'
+      $governedBusiness: '@App\Infrastructure\Automation\SalesGovernedBusinessHandler'
 
   # Capital Markets CM-FOUNDATION runtime
   Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlInstrumentRepository:
@@ -3031,6 +3046,7 @@ services:
   App\Persistence\Finance\FinancePaidSettlementOutcomeProvider: ~
   App\Persistence\Finance\FinanceOrderRunOutcomeProvider: ~
   App\Persistence\Sales\SalesOrderRunOutcomeProvider: ~
+  App\Persistence\Sales\SalesBusinessRunOutcomeProvider: ~
   Domains\Finance\Bootstrap\FinanceDomainModule:
     arguments:
       $payments: '@Domains\Finance\Automation\Action\FinanceOrderPaymentActionHandler'
@@ -3080,6 +3096,8 @@ services:
     alias: Domains\ProductManagement\Infrastructure\Shopify\CurlShopifyHttpTransport
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyReadClient: ~
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyCommerceOrderSource: ~
+  Domains\ProductManagement\Application\Contract\CommerceOrderFulfillmentEvidencePort:
+    alias: Domains\ProductManagement\Infrastructure\Shopify\ShopifyCommerceOrderSource
   Domains\ProductManagement\Application\Contract\CommerceOrderSourcePort:
     alias: Domains\ProductManagement\Infrastructure\Shopify\ShopifyCommerceOrderSource
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyClientCredentials: ~
@@ -4300,6 +4318,7 @@ services:
         - '@App\Persistence\Finance\FinancePaidSettlementOutcomeProvider'
         - '@App\Persistence\Finance\FinanceOrderRunOutcomeProvider'
         - '@App\Persistence\Sales\SalesOrderRunOutcomeProvider'
+        - '@App\Persistence\Sales\SalesBusinessRunOutcomeProvider'
         - '@Domains\Growth\Application\Service\GrowthInboundResponseOutcomeEvidenceProvider'
         - '@App\Persistence\Federation\FederationGrowthRunLinkedOutcomeEvidenceProvider'
         - '@cos.federation.native_origin.research'
@@ -4573,4 +4592,5 @@ services:
   App\Persistence\Capability\CanonicalAutomationIntentStore:
     arguments:
       $productPlans: '@App\Persistence\ProductManagement\ProductGovernedPlanProposalService'
+      $salesPlans: '@App\Persistence\Sales\SalesGovernedPlanProposalService'
       $catalog: '@Kernel\Module\CanonicalCapabilityCatalog'

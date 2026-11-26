@@ -27,6 +27,7 @@ final readonly class CanonicalAutomationIntentStore
         private ?PropertyBulkIntakeService $property=null,
         private ?ProductGovernedPlanProposalService $productPlans=null,
         private ?CanonicalCapabilityCatalog $catalog=null,
+        private ?\App\Persistence\Sales\SalesGovernedPlanProposalService $salesPlans=null,
     ) {}
 
     /** @return array<string,mixed> */
@@ -151,6 +152,71 @@ final readonly class CanonicalAutomationIntentStore
         return $sort($payload);
     }
 
+    public function submitSales(string $origin,string $timestamp,string $nonce,string $signature,string $raw):array
+    {
+        $this->signatures->verify($origin,$timestamp,$nonce,$signature,$raw);
+        $org=$this->signatures->organization();
+        $planner=$this->salesPlans??throw new DomainException('Sales intent intake unavailable.');
+        $payload=$planner->normalize(json_decode($raw,true,64,JSON_THROW_ON_ERROR));
+        $encoded=json_encode($payload,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE);
+        $digest=hash('sha256',$encoded);$id='intent-'.bin2hex(random_bytes(12));
+        try{
+            $this->db->insert('cos_capability_automation_intents',[
+                'organization_id'=>$org,'intent_id'=>$id,'origin'=>$origin,'nonce'=>$nonce,
+                'request_digest'=>$digest,'payload_json'=>$encoded,'state'=>'pending_review','created_at'=>gmdate('Y-m-d H:i:s'),
+            ]);
+        }catch(UniqueConstraintViolationException){
+            $old=$this->db->fetchAssociative('SELECT intent_id,request_digest,state,payload_json FROM cos_capability_automation_intents WHERE organization_id=? AND BINARY organization_id=BINARY ? AND origin=? AND nonce=?',[$org,$org,$origin,$nonce]);
+            if(!$old||!hash_equals($old['request_digest'],$digest)
+                ||$planner->normalize(json_decode($old['payload_json'],true,64,JSON_THROW_ON_ERROR))!==$payload)
+                throw new DomainException('Reused machine nonce has conflicting Sales content.');
+            return ['intent_id'=>$old['intent_id'],'state'=>$old['state'],'origin'=>$origin,'digest'=>$digest,
+                'count'=>count($payload['operations']),'execution_authority'=>'none','replayed'=>true];
+        }
+        return ['intent_id'=>$id,'state'=>'pending_review','origin'=>$origin,'digest'=>$digest,
+            'count'=>count($payload['operations']),'execution_authority'=>'none'];
+    }
+
+    /** Separate API review prevents the legacy Property/Product template hiding Sales payloads. */
+    public function pendingSales(TenantContext $actor):array
+    {
+        $planner=$this->salesPlans??throw new DomainException('Sales intent review unavailable.');
+        $planner->assertReviewer($actor);$org=$actor->organizationId()->value();
+        return $this->db->fetchAllAssociative('SELECT intent_id,origin,request_digest,state,created_at
+            FROM cos_capability_automation_intents WHERE organization_id=? AND BINARY organization_id=BINARY ?
+            AND state="pending_review" AND JSON_UNQUOTE(JSON_EXTRACT(payload_json,"$.kind"))=? ORDER BY created_at DESC LIMIT 25',
+            [$org,$org,\App\Persistence\Sales\SalesGovernedPlanProposalService::KIND]);
+    }
+
+    public function inspectSales(TenantContext $actor,string $id):array
+    {
+        $planner=$this->salesPlans??throw new DomainException('Sales intent review unavailable.');
+        $planner->assertReviewer($actor);
+        $row=$this->find($actor->organizationId()->value(),$id);
+        if($row['organization_id']!==$actor->organizationId()->value())throw new DomainException('Foreign Sales intent.');
+        $payload=$planner->normalize(json_decode($row['payload_json'],true,64,JSON_THROW_ON_ERROR));
+        if(!hash_equals($row['request_digest'],hash('sha256',json_encode($payload,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE))))
+            throw new DomainException('Sales intent digest drift.');
+        return ['intent_id'=>$id,'origin'=>$row['origin'],'state'=>$row['state'],'digest'=>$row['request_digest'],
+            ...$payload,'execution_authority'=>'none'];
+    }
+
+    public function adoptSales(TenantContext $actor,string $id,string $reviewedDigest):array
+    {
+        $planner=$this->salesPlans??throw new DomainException('Sales intent review unavailable.');
+        $planner->assertReviewer($actor);$org=$actor->organizationId()->value();
+        return $this->db->transactional(function()use($planner,$actor,$org,$id,$reviewedDigest):array{
+            $this->db->fetchOne('SELECT intent_id FROM cos_capability_automation_intents WHERE organization_id=? AND BINARY organization_id=BINARY ? AND intent_id=? FOR UPDATE',[$org,$org,$id]);
+            $review=$this->inspectSales($actor,$id);
+            if($review['state']!=='pending_review'||!hash_equals($review['digest'],$reviewedDigest))
+                throw new DomainException('Sales intent reviewed digest changed or already adopted.');
+            $plan=$planner->propose($actor,$id,array_intersect_key($review,array_flip(['kind','description','operations'])));
+            if($this->db->executeStatement('UPDATE cos_capability_automation_intents SET state="adopted",reviewed_at=UTC_TIMESTAMP(6) WHERE organization_id=? AND BINARY organization_id=BINARY ? AND intent_id=? AND state="pending_review"',[$org,$org,$id])!==1)
+                throw new DomainException('Sales intent adoption conflict.');
+            return ['intent_id'=>$id,...$plan,'state'=>'adopted','next'=>'independent_plan_approval'];
+        });
+    }
+
     /** @return list<array<string,mixed>> */
     public function pending(TenantContext $actor):array
     {
@@ -159,7 +225,7 @@ final readonly class CanonicalAutomationIntentStore
             'SELECT intent_id,origin,request_digest,state,created_at,
                     CASE WHEN JSON_TYPE(payload_json)="OBJECT" THEN "product" ELSE "property" END AS intent_kind
              FROM cos_capability_automation_intents WHERE organization_id=:org
-              AND state=:state ORDER BY created_at DESC LIMIT 25',
+              AND state=:state AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(payload_json,"$.kind")),"") <> "sales.governed_plan.v1" ORDER BY created_at DESC LIMIT 25',
             ['org'=>$actor->organizationId()->value(),'state'=>'pending_review']);
     }
 

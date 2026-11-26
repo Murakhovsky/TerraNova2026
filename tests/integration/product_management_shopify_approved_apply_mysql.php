@@ -141,6 +141,17 @@ $assert($checkCount('pm_stock_movements')===0
     &&$checkCount('pm_base_price_history')===2,
     'Rejected owner violation changed native Stock or Price history.');
 
+// Loss of connection is not a verified provider handover.
+foreach(['disabled','error'] as $disconnected){
+    $pdo->prepare('UPDATE pm_external_connections SET status=? WHERE organization_id=? AND connection_id=?')->execute([$disconnected,$org,$connection]);
+    $reject(static fn()=>$pricing->set($org,$result['variant_ids'][0],'USD','14.00',
+        'pm-offline-price-'.$disconnected.'-'.$token,'42','pm-owned-fence'));
+    $reject(static fn()=>$products->recordMovement($org,$result['variant_ids'][0],$loc['location_id'],'1','receipt',
+        'DISCONNECTED','pm-offline-stock-'.$disconnected.'-'.$token,'42','pm-owned-fence'));
+}
+$pdo->prepare('UPDATE pm_external_connections SET status="ready" WHERE organization_id=? AND connection_id=?')->execute([$org,$connection]);
+$assert($checkCount('pm_stock_movements')===0&&$checkCount('pm_base_price_history')===2,'Disconnected provider opened native writes.');
+
 // Partial mapping recovery: a Product mapping alone must already fence
 // all its Variants, even before individual Variant GIDs are reconciled.
 $partial=$products->createProduct($org,[

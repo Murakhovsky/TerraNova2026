@@ -32,13 +32,16 @@ final readonly class ProcessCrmInbox
     ) {
     }
 
-    public function execute(string $organizationId, string $inboxId, string $workerId, ?string $expectedRevision = null): bool
+    public function execute(string $organizationId, string $inboxId, string $workerId, ?string $expectedRevision = null, ?callable $authorize = null, ?callable $recordCompletion = null): bool
     {
         $item = $this->inbox->claim($organizationId, $inboxId, $workerId, $expectedRevision);
         if ($item === null) return false;
 
         try {
-            return $this->transactions->transactional(function () use ($item): bool {
+            return $this->transactions->transactional(function () use ($item,$authorize,$recordCompletion): bool {
+                // Durable claim precedes the business transaction. Recheck live operator
+                // authority inside this transaction before applying the signed event.
+                if ($authorize !== null) $authorize();
                 if (!$this->inbox->lockClaim($item)) return false;
                 $applied = $this->applier->apply($item);
                 $eventType = trim((string) ($applied['event_type'] ?? ''));
@@ -126,6 +129,7 @@ final readonly class ProcessCrmInbox
                     ));
                 }
                 $this->inbox->complete($item);
+                if ($recordCompletion !== null) $recordCompletion();
                 return true;
             });
         } catch (Throwable $error) {
