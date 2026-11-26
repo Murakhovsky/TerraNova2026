@@ -344,8 +344,13 @@ final readonly class ProductGovernedRunOutcomeProvider implements RunScopedGoalO
     }
     public function observeRun(TenantContext $actor,string $runId,string $criterionId,DateTimeImmutable $from,DateTimeImmutable $to):array
     {
+        return $this->observeRunForAudit($actor->organizationId()->value(),$runId,$criterionId,$from,$to);
+    }
+
+    /** Internal read-only operator audit, using actual durable Run/Action provenance, not a fabricated user context. */
+    public function observeRunForAudit(string $org,string $runId,string $criterionId,DateTimeImmutable $from,DateTimeImmutable $to):array
+    {
         if(!$this->supports($criterionId)||$to<=$from)throw new DomainException('Invalid Product business criterion.');
-        $org=$actor->organizationId()->value();
         $rows=$this->db->fetchAllAssociative('SELECT w.input_digest,w.state,w.actor_id,w.definition_json,s.step_id,s.state AS step_state,s.capability_id,s.result_reference,s.idempotency_key
             FROM cos_workflow_runs w JOIN cos_workflow_steps s ON s.organization_id=w.organization_id AND s.run_id=w.run_id
             WHERE w.organization_id=? AND w.run_id=? AND w.definition_id=? ORDER BY s.ordinal_no',[$org,$runId,'federation.approved-plan']);

@@ -20,13 +20,14 @@ PY
 docker inspect cos-php-1 >/dev/null || { echo COS_PHP_CONTAINER_MISSING >&2; exit 4; }
 MARKER_DIR=/var/lib/cos
 MARKER="$MARKER_DIR/series01-tenant-default-bootstrap.done"
-if [[ -f "$MARKER" ]]; then
-  echo SERIES01_ALREADY_BOOTSTRAPPED
-  exit 0
-fi
-
 OPERATOR=(docker exec -e COS_PRODUCT_SERIES01_OPERATOR_ENABLED=1 cos-php-1 \
   php bin/console cos:product:series01)
+if [[ -f "$MARKER" ]]; then
+  echo SERIES01_ALREADY_BOOTSTRAPPED
+  # A completed bootstrap is never repeated; status inspection is read-only.
+  "${OPERATOR[@]}" audit --organization=default
+  exit 0
+fi
 "${OPERATOR[@]}" status --organization=default
 "${OPERATOR[@]}" enable --organization=default --confirm=ENABLE_PRODUCT_MANAGEMENT_DEFAULT
 "${OPERATOR[@]}" status --organization=default
@@ -61,3 +62,4 @@ printf 'deployed_sha=%s\nconnection_id=%s\n' "$EXPECTED_SHA" "$CONN" > "$MARKER"
 chmod 600 "$MARKER"
 echo SERIES01_TENANT_CONNECTION_AND_PREVIEW_READY
 echo SERIES01_AWAITING_INDEPENDENT_COS_PLAN_AND_ACTION_APPROVAL
+"${OPERATOR[@]}" audit --organization=default

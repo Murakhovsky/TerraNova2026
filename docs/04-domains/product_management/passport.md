@@ -237,6 +237,14 @@ Typed product attributes, enum axes, filters and atomic bulk editing use the exi
 
 S1: OAuth, ідентичність магазину, дозволи, валюта та фактичний Product readback. S2: перевірка дев'яти SERIES01 SKU та approved CSV Run/digest/price evidence. S3: створення/оновлення 1–10 SKU, незмінний запис кожної схваленої дії, повний readback та GID mapping. S4: verified native image upload, collection sync без неявних destructive changes, explicit resync та окремий Action для публікації активного товару. S5: перевірене webhook delivery та незалежний Commerce Order Source readback; Sales, Finance та Growth залишаються власниками своїх результатів. SERIES01 — тільки концепти; publication і writeback за замовчуванням вимкнено. Live tenant acceptance, реальна native activation/compliance та inventory policy не підтверджені.
 
+### P6–P7: перевірки приймання
+
+[Операційний протокол](./acceptance.md): окремий staging-only
+live LLM canary, immutable signed proposal, native re-attestation,
+CI artifact tested SHA та fail-closed evidence validator D3/D4/D5.
+CI mock/fixture не підмінює реальний provider usage або незалежний
+user/production sign-off. Readiness лишається UNKNOWN.
+
 ## 14. Карта джерел
 
 - Manifest: `app/Domains/ProductManagement/module.php`

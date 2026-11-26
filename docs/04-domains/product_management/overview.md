@@ -137,3 +137,14 @@ AI/CRON подає підписаний intent без execution authority. Не�
 S1: `access` підтверджує OAuth, identity магазину, currency, scope і реальний обмежений Product readback. S2: `series01 --run-id=...` перевіряє дев'ять SKU, канонічні ID, USD prices, незмінний approved CSV digest і attested Workflow Action; без Run параметра це лише перевірка native identities. S3: `product_management.shopify.draft.writeback` підтримує створення та оновлення 1–10 активних SKU, точні native prices в USD/EUR/UAH, без FX або inventory write. Оновлення тільки за verified GID; не видаляє невідомі варіанти. S4: verified Documents images через staged upload, Shopify MediaImage GID, explicit Collection GIDs, distinct approved resync і окремий `product_management.shopify.channel.publish` для active canonical Product із verified media та явним Publication GID. SERIES01 concept publication заборонена. `COS_SHOPIFY_WRITEBACK_ENABLED` і `COS_SHOPIFY_PUBLICATION_ENABLED` вимкнені за замовчуванням. S5: `order-evidence` зіставляє verified webhook delivery з CommerceOrderSource readback і повідомляє Sales observation, не створюючи замовлення, оплату або stock mutation.
 
 Усі провайдерські ефекти проходять незалежні Plan/Action approvals, tenant/shop fence, immutable request із окремим receipt на Action, незалежний provider readback і mapping. Невизначений ефект блокує наступні мутації. Рутинний sync не видаляє невідомі media/collections/variants; видалення потребує окремої процедури. Немає автоматичного перемикання ownership; live acceptance, native activation/compliance і inventory policy для публікації залишаються окремими release gates.
+
+## P6–P7: live AI та Release Acceptance
+
+Реалізовано ізольований staging canary `cos:product:ai-acceptance`:
+Kernel governed LLM → signed intent → independent Plan/Action approvals
+→ canonical Workflow → native Product/Variant/Price readback. P6 fail
+closed для відсутньої/fixture telemetry або несумісного native Outcome.
+P7 збирає exact-tested-revision engineering artifact та перевіряє
+повноту незалежного D3/D4/D5, deployment та live AI evidence.
+[Операційний протокол](./acceptance.md). Production readiness залишається
+UNKNOWN; Shopify acceptance опційне й відокремлене.

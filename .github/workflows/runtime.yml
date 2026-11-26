@@ -201,6 +201,9 @@ jobs:
           php tests/integration/product_management_governed_goal_e2e_mysql.php
           COS_TEST_PM_GOVERNED_SUITE=pricing php tests/integration/product_management_governed_goal_e2e_mysql.php
           COS_TEST_PM_GOVERNED_SUITE=media_attributes php tests/integration/product_management_governed_goal_e2e_mysql.php
+          COS_TEST_PM_GOVERNED_SUITE=ai_canary php tests/integration/product_management_governed_goal_e2e_mysql.php
+      - name: Product Management P7 fail-closed evidence gate tests
+        run: python3 tests/unit/product_management_release_acceptance.py
       - name: Product Management approved CSV Action native MySQL acceptance
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
@@ -1263,6 +1266,25 @@ jobs:
           path: ${{ runner.temp }}/cos-ci-timings.json
           if-no-files-found: ignore
           retention-days: 14
+
+  product-engineering-evidence:
+    name: Product Management P7 engineering evidence
+    needs: [runtime, federation-mysql, capital-markets-unit]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package exact tested revision evidence (not release approval)
+        env:
+          PRODUCT_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          mkdir -p tmp/product-release
+          python3 bin/ci/product-release-acceptance.py engineering > tmp/product-release/engineering.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: product-management-engineering-acceptance
+          path: tmp/product-release/engineering.json
+          if-no-files-found: error
 
   publish-runtime-images:
     name: Publish immutable COS images to GHCR
