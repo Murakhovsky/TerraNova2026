@@ -10,9 +10,10 @@ foreach($raw['contributions']['capability_contracts'] as $definition) {
     $cap=CapabilityContract::fromArray($definition);
     $contracts[$cap->id]=$cap;
 }
-if(count($contracts)!==97)throw new RuntimeException('Missing typed PM contracts.');
+if(count($contracts)!==98)throw new RuntimeException('Missing typed PM contracts.');
 $validator=new CapabilityJsonInputValidator();
 $good=[
+ 'product_management.shopify.channel.publish'=>['target_type'=>'shopify_channel_publish','target_id'=>str_repeat('a',32),'parameters'=>['connection_id'=>str_repeat('b',32),'payload_digest'=>str_repeat('c',64),'publication_gid'=>'gid://shopify/Publication/123']],
  'product_management.shopify.draft.writeback'=>['target_type'=>'shopify_draft_writeback','target_id'=>str_repeat('a',32),'parameters'=>['connection_id'=>str_repeat('b',32),'payload_digest'=>str_repeat('c',64)]],
  'product_management.governed.product.assemble'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['name'=>'QA','variants'=>[['sku'=>'QA','price'=>['currency'=>'USD','amount'=>'12.5']]]]],
  'product_management.governed.media.attach'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['product_id'=>str_repeat('a',32),'file_id'=>'FILE-QA']],

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Verified Shopify draft writeback",
+  "title": "Verified Shopify catalog revision or publication",
   "type": "object",
   "required": [
     "product_id",
@@ -39,6 +39,32 @@
     "state": {
       "type": "string",
       "const": "verified"
+    },
+    "variants": {
+      "type": "object",
+      "description": "Canonical variant ID to Shopify variant GID mapping.",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^gid://shopify/ProductVariant/[0-9]+$"
+      }
+    },
+    "media": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^gid://shopify/MediaImage/[0-9]+$"
+      }
+    },
+    "collections": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^gid://shopify/Collection/[0-9]+$"
+      }
+    },
+    "publication_gid": {
+      "type": "string",
+      "pattern": "^gid://shopify/Publication/[0-9]+$"
     }
   },
   "additionalProperties": false

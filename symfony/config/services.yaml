@@ -3089,6 +3089,10 @@ services:
   Domains\ProductManagement\Infrastructure\Shopify\ShopifySeries01NativeAudit:
     arguments:
       $connection: '@cos.database.pdo'
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyStagedImageUploader: ~
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyStagedImageUploadPort:
+    alias: Domains\ProductManagement\Infrastructure\Shopify\ShopifyStagedImageUploader
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyOutboundMedia: ~
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyDraftWritebackService:
     arguments:
       $connection: '@cos.database.pdo'

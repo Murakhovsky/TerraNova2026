@@ -43,10 +43,10 @@ final readonly class ProductGovernedPlanController
             $raw=$request->getContent();
             if(strlen($raw)>4096)throw new DomainException('Proposal too large.');
             $p=json_decode($raw,true,16,JSON_THROW_ON_ERROR);
-            if(!is_array($p)||array_diff(array_keys($p),['product_id','connection_id','payload_digest','csrf_token'])!==[]
-                ||!is_string($p['product_id']??null)||!is_string($p['connection_id']??null)||!is_string($p['payload_digest']??null))
+            if(!is_array($p)||array_diff(array_keys($p),['product_id','connection_id','payload_digest','collection_gids','publication_gid','resync_id','csrf_token'])!==[]
+                ||!is_string($p['product_id']??null)||!is_string($p['connection_id']??null)||!is_string($p['payload_digest']??null)||(isset($p['collection_gids'])&&!is_array($p['collection_gids']))||(isset($p['publication_gid'])&&!is_string($p['publication_gid']))||(isset($p['resync_id'])&&!is_string($p['resync_id'])))
                 throw new DomainException('Invalid proposal.');
-            return $this->reply($this->shopify->propose($actor,$p['connection_id'],$p['product_id'],$p['payload_digest']),201);
+            return $this->reply($this->shopify->propose($actor,$p['connection_id'],$p['product_id'],$p['payload_digest'],$p['collection_gids']??[],$p['publication_gid']??null,$p['resync_id']??null),201);
         }catch(DomainException|\JsonException|\InvalidArgumentException){return $this->reply(['error'=>'invalid_or_conflicting_shopify_proposal'],422);}
         catch(Throwable){return $this->reply(['error'=>'proposal_unavailable_or_existing'],409);}
     }

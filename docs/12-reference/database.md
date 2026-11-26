@@ -293,9 +293,6 @@ generated: true
 | `product_management` | `app/migrations/20261124_000162_product_management_shopify_order_pointer.sql` | `pm_webhook_inbox` |
 | `product_management` | `app/migrations/20261125_009007_product_order_reservation_evidence.sql` | `pm_order_reservation_operations` |
 | `product_management` | `app/migrations/20261125_009007_product_order_reservation_evidence.sql` | `pm_stock_reservations` |
-| `product_management` | `app/migrations/20261126_009100_product_attribute_lifecycle.sql` | `pm_attribute_definitions` |
-| `product_management` | `app/migrations/20261126_009101_product_shopify_outbound_receipts.sql` | `pm_external_connections` |
-| `product_management` | `app/migrations/20261126_009101_product_shopify_outbound_receipts.sql` | `pm_shopify_outbound_receipts` |
 | `product_management` | `app/migrations/20261124_000190_product_management_price_lists.sql` | `pm_price_list_entries` |
 | `product_management` | `app/migrations/20261124_000190_product_management_price_lists.sql` | `pm_price_list_history` |
 | `product_management` | `app/migrations/20261124_000190_product_management_price_lists.sql` | `pm_price_lists` |
@@ -322,6 +319,10 @@ generated: true
 | `product_management` | `app/migrations/20261124_000195_product_management_attributes.sql` | `pm_products` |
 | `product_management` | `app/migrations/20261124_000195_product_management_attributes.sql` | `pm_variant_matrix_identities` |
 | `product_management` | `app/migrations/20261124_000195_product_management_attributes.sql` | `pm_variants` |
+| `product_management` | `app/migrations/20261126_009100_product_attribute_lifecycle.sql` | `pm_attribute_definitions` |
+| `product_management` | `app/migrations/20261126_009101_product_shopify_outbound_receipts.sql` | `pm_external_connections` |
+| `product_management` | `app/migrations/20261126_009101_product_shopify_outbound_receipts.sql` | `pm_shopify_outbound_receipts` |
+| `product_management` | `app/migrations/20261126_009102_product_shopify_outbound_history.sql` | `pm_shopify_outbound_receipts` |
 | `property` | `app/migrations/20260914_000048_web_v041_property_tenancy.sql` | `tn_properties` |
 | `property` | `app/migrations/20260914_000050_property_v022_tenant_boundary.sql` | `tn_properties` |
 | `property` | `app/migrations/20260914_000050_property_v022_tenant_boundary.sql` | `tn_property_activities` |

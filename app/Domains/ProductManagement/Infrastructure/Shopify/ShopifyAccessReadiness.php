@@ -28,4 +28,19 @@ final readonly class ShopifyAccessReadiness
             'write_files'=>$has('write_files'),'write_publications'=>$has('write_publications'),
             'read_orders'=>$has('read_orders')];
     }
+    /** Authenticated sample read, not merely a declared OAuth scope. */
+    public function verifyCatalogRead(string $shop,string $token):array
+    {
+        $access=$this->inspect($shop,$token);
+        if(!$access['read_products'])throw new DomainException('Product read scope missing.');
+        $data=$this->reader->query($shop,$token,'query COSAccessReadback { products(first:1) { nodes { id } pageInfo { hasNextPage } } }')['data'];
+        $page=$data['products']??null;
+        if(!is_array($page)||!is_array($page['nodes']??null)||count($page['nodes'])>1
+            ||!is_bool($page['pageInfo']['hasNextPage']??null))throw new DomainException('Catalog readback unavailable.');
+        foreach($page['nodes'] as $row){
+            if(!is_string($row['id']??null)||!preg_match('#^gid://shopify/Product/[0-9]+$#D',$row['id']))
+                throw new DomainException('Invalid catalog readback identity.');
+        }
+        return $access+['catalog_read_verified'=>true,'sample_count'=>count($page['nodes'])];
+    }
 }

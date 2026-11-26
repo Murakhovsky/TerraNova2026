@@ -79,7 +79,8 @@ final readonly class ShopifyObservationStore
 
     public function map(string $org,string $conn,string $type,string $gid,string $canonical): void
     {
-        if (!in_array($type,['product','variant'],true)||!preg_match('#^gid://shopify/(?:Product|ProductVariant)/[0-9]+$#D',$gid)
+        $kind=match($type){'product'=>'Product','variant'=>'ProductVariant','media'=>'MediaImage',default=>null};
+        if ($kind===null||!preg_match('#^gid://shopify/'.$kind.'/[0-9]+$#D',$gid)
             ||!preg_match('/^[a-f0-9]{32}$/D',$canonical)) throw new DomainException('Invalid external mapping.');
         $this->query('INSERT INTO pm_external_mappings (organization_id,connection_id,entity_type,external_gid,canonical_id) VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE canonical_id=canonical_id',
             [$org,$conn,$type,$gid,$canonical]);
@@ -305,6 +306,17 @@ final readonly class ShopifyObservationStore
         $row=$this->query("SELECT state,resource_gid FROM pm_webhook_inbox WHERE organization_id=? AND connection_id=? AND delivery_id=? AND topic LIKE 'orders/%'",[$org,$conn,$delivery])->fetch(PDO::FETCH_ASSOC);
         if($row===false||$row['resource_gid']!==$externalId||!in_array($row['state'],['pending_reconciliation','sales_order_observed'],true))throw new DomainException('Verified order delivery unavailable.');
     }
+    /** Independently query a redacted, authenticated delivery receipt. */
+    public function orderDeliveryEvidence(string $org,string $conn,string $delivery,string $externalId):array
+    {
+        $this->connection($org,$conn);
+        $this->assertOrderDelivery($org,$conn,$delivery,$externalId);
+        $row=$this->query('SELECT topic,payload_sha256,state,received_at FROM pm_webhook_inbox WHERE organization_id=? AND connection_id=? AND delivery_id=? AND resource_gid=?',
+            [$org,$conn,$delivery,$externalId])->fetch(PDO::FETCH_ASSOC);
+        if(!is_array($row)||!preg_match('/^[a-f0-9]{64}$/D',$row['payload_sha256']))throw new DomainException('Missing signed webhook digest.');
+        return $row+['delivery_id'=>$delivery,'external_order_id'=>$externalId,'connection_id'=>$conn];
+    }
+
     /** Only acknowledges Sales observation, not payment, inventory, or lifecycle completion. */
     public function acknowledgeOrderDelivery(string $org,string $conn,string $delivery,string $externalId):void
     {

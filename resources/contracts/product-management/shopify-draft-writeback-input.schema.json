@@ -30,6 +30,19 @@
         "payload_digest": {
           "type": "string",
           "pattern": "^[a-f0-9]{64}$"
+        },
+        "collection_gids": {
+          "type": "array",
+          "maxItems": 20,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^gid://shopify/Collection/[0-9]+$"
+          }
+        },
+        "resync_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
         }
       },
       "additionalProperties": false

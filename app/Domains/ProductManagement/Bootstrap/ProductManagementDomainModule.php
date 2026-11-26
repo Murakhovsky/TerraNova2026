@@ -38,6 +38,7 @@ final readonly class ProductManagementDomainModule implements DomainModuleInterf
             $this->importHandler===null?null:ProductImportApplyHandler::TYPE,
             $this->shopifyHandler===null?null:ShopifyImportApplyHandler::TYPE,
             $this->writebackHandler===null?null:ShopifyDraftWritebackHandler::TYPE,
+            $this->writebackHandler===null?null:ShopifyDraftWritebackHandler::PUBLISH,
             $this->stockCountHandler===null?null:ProductStockCountApplyHandler::TYPE,
             $this->countSessionHandler===null?null:ProductStockCountSessionApplyHandler::TYPE,
         ])), $this->governedHandler===null?[]:ProductGovernedOperationHandler::types());
@@ -62,7 +63,9 @@ final readonly class ProductManagementDomainModule implements DomainModuleInterf
         if($this->writebackHandler!==null) {
             $policyId=substr(hash('sha256',$organizationId.':shopify-draft-writeback-approved-v1'),0,32);
             $policies[]=new ActionPolicy($policyId,$organizationId,ShopifyDraftWritebackHandler::TYPE,[],
-                PolicyDecision::ApprovalRequired,10,'Shopify draft creation requires independent approved canonical Action.');
+                PolicyDecision::ApprovalRequired,10,'Shopify draft revision requires independent approved canonical Action.');
+            $policies[]=new ActionPolicy(substr(hash('sha256',$organizationId.':shopify-publication-approved-v1'),0,32),$organizationId,ShopifyDraftWritebackHandler::PUBLISH,[],
+                PolicyDecision::ApprovalRequired,10,'Shopify publication requires independent approved canonical Action.');
         }
         if($this->stockCountHandler!==null) {
             $policyId=substr(hash('sha256',$organizationId.':product-stock-count-approved-v1'),0,32);

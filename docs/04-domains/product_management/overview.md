@@ -28,11 +28,11 @@ contract: domain-v1
 ```text
 id: product_management
 version: 0.1.0
-schema_version: 0.17.0
+schema_version: 0.18.0
 runtime: tenant-disabled by default
-persistence: 21 registered migrations; production acceptance pending
-capabilities: 97 typed contracts (31 queries, 31 direct human commands, 35 approved Actions)
-Shopify: read-only by default; supervised approved SERIES01 draft writer disabled by default
+persistence: 22 registered migrations; production acceptance pending
+capabilities: 98 typed contracts (31 queries, 31 direct human commands, 36 approved Actions)
+Shopify: read-only by default; approved catalog writeback and separate publication disabled by default
 process model: six canonical Process Registry models; independent release acceptance pending
 ```
 
@@ -124,14 +124,16 @@ AI/CRON подає підписаний intent без execution authority. Не�
 
 Докази та обмеження: [паспорт](./passport.md), [DAS-001 acceptance](../../10-operations/das-001-domain-acceptance.md).
 
-## Extended CSV import
+## Розширений імпорт CSV
 
 Підтримано legacy header та розширений `sku,name,type,uom,track_inventory,price_currency,price_amount,category_ids_json,attributes_json,media_json,variants_json`. JSON-колонки є масивами даних, а не командами. Один рядок створює атомарний draft Product через ProductAssemblyService з усіма SKU, цінами, атрибутами та verified Documents media. Staging перевіряє tenant references, усі SKU та typed values; незмінний payload доступний для review. Apply зберігає наявний approved Action, digest і карантин при помилці. Native outcome перевіряє кожен assembly receipt та його дочірні результати. CI нової схеми ще не підтверджено.
 
-## P4–P5: Attribute lifecycle
+## P4–P5: Життєвий цикл атрибутів
 
 Типізовані форми редагування, фільтрів, bulk patch і матриці SKU не потребують ручного JSON. Lifecycle command дозволяє перейменувати визначення, архівувати/відновити невикористаний атрибут, змінити або видалити прив'язку порожньої категорії. Код, тип, одиниця та enum choices незмінні; категорії з товарами вимагають окремої міграції каталогу. Потрібне CI-приймання точного SHA.
 
-## Shopify S1–S5 follow-up
+## Інтеграція Shopify S1–S5
 
-Operator `access` verifies OAuth scopes and authenticated shop currency; `series01` reports nine native identities without asserting approved import; `draft-preview` / `draft-audit` prepare and inspect a pinned provider write; `channel-readback` inspects existing media, collections and publications. Approved Action `product_management.shopify.draft.writeback` is create-only, one-shot, tenant-gated, USD SERIES01 draft pilot. New connections may be explicitly provisioned observation-only; existing ownership is never silently switched. No publication, inventory write or generic multi-variant sync. Runtime and live acceptance pending.
+S1: `access` підтверджує OAuth, identity магазину, currency, scope і реальний обмежений Product readback. S2: `series01 --run-id=...` перевіряє дев'ять SKU, канонічні ID, USD prices, незмінний approved CSV digest і attested Workflow Action; без Run параметра це лише перевірка native identities. S3: `product_management.shopify.draft.writeback` підтримує створення та оновлення 1–10 активних SKU, точні native prices в USD/EUR/UAH, без FX або inventory write. Оновлення тільки за verified GID; не видаляє невідомі варіанти. S4: verified Documents images через staged upload, Shopify MediaImage GID, explicit Collection GIDs, distinct approved resync і окремий `product_management.shopify.channel.publish` для active canonical Product із verified media та явним Publication GID. SERIES01 concept publication заборонена. `COS_SHOPIFY_WRITEBACK_ENABLED` і `COS_SHOPIFY_PUBLICATION_ENABLED` вимкнені за замовчуванням. S5: `order-evidence` зіставляє verified webhook delivery з CommerceOrderSource readback і повідомляє Sales observation, не створюючи замовлення, оплату або stock mutation.
+
+Усі провайдерські ефекти проходять незалежні Plan/Action approvals, tenant/shop fence, immutable request із окремим receipt на Action, незалежний provider readback і mapping. Невизначений ефект блокує наступні мутації. Рутинний sync не видаляє невідомі media/collections/variants; видалення потребує окремої процедури. Немає автоматичного перемикання ownership; live acceptance, native activation/compliance і inventory policy для публікації залишаються окремими release gates.

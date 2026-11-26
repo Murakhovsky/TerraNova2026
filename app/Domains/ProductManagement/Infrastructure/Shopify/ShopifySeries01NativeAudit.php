@@ -17,7 +17,7 @@ final readonly class ShopifySeries01NativeAudit
         $items=[];$seen=[];$ready=0;
         foreach($expected as $sku){
             $matches=$bySku[$sku]??[];$row=count($matches)===1?$matches[0]:null;
-            $valid=$row!==null&&$row['status']!=='archived'&&$row['variant_status']==='active'&&!isset($seen[$row['product_id']]);
+            $valid=$row!==null&&$row['status']!=='archived'&&$row['variant_status']==='active'&&is_string($row['amount'])&&preg_match('/^[0-9]+(?:\.[0-9]{1,4})?$/D',$row['amount'])&&(float)$row['amount']>=300&&!isset($seen[$row['product_id']]);
             if($valid){$seen[$row['product_id']]=true;++$ready;}
             $items[]=['sku'=>$sku,'canonical_product_id'=>$row['product_id']??null,'canonical_variant_id'=>$row['variant_id']??null,
                 'usd_price'=>$row['amount']??null,'native_identity_verified'=>$valid];

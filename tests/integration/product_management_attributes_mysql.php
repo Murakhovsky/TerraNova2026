@@ -80,7 +80,7 @@ $assert(count($products->filterAttributes($org,'notes','Bulk changed'))===2,'bot
 $lifecycle=fn(array $in,string $key)=>$products->changeAttributeLifecycle($org,$in,$key,$actor,$trace);
 $rename=['operation'=>'rename','code'=>'notes','expected_name'=>'Notes','name'=>'Product notes'];
 $receipt=$lifecycle($rename,'rename-notes');
-$assert($receipt['name']==='Product notes'&&$lifecycle($rename,'rename-notes')===$receipt,'rename and exact replay');
+$assert($receipt['name']==='Product notes'&&$lifecycle($rename,'rename-notes')==$receipt,'rename and exact replay');
 $assert(array_column($products->attributes($org),null,'code')['notes']['name']==='Product notes','rename readback');
 $deny(fn()=>$lifecycle($rename,'rename-stale'),'stale rename');
 $deny(fn()=>$lifecycle(['operation'=>'archive','code'=>'notes','expected_name'=>'Product notes'],'archive-used'),'in-use archive');

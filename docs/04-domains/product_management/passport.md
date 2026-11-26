@@ -144,6 +144,7 @@ domain_id: product_management
         "product_management.import.apply",
         "product_management.shopify.import.apply",
         "product_management.shopify.draft.writeback",
+        "product_management.shopify.channel.publish",
         "product_management.sync.status.get",
         "product_management.import.batch.get"
       ]
@@ -228,13 +229,13 @@ Read-only E5 Stock audit звіряє on_hand з ledger і reserved з акти�
 
 Native release: all CI at candidate SHA, actual browser and independent approval acceptance, live agent/LLM test, explicit operator sign-off. All 29 planned governed operation contracts plus the Product-owned assembly Action are implemented; final integrated CI and actual agent acceptance remain required. Dynamic output substitution and historical verification of successive mutable writes are not implemented. Optional Shopify: independent live OAuth/scopes canary and recovery; write-back only after separate ownership decision.
 
-### P4–P5
+### P4–P5: атрибути та життєвий цикл
 
 Typed product attributes, enum axes, filters and atomic bulk editing use the existing Gateway. Attribute lifecycle adds a human-only command for rename, archive/restore and category binding update/removal. Definition identity and semantic type are immutable. Archive requires zero bindings and values; changing/removing a binding requires an unused category. Native receipts and independent readback; existing approved Action contracts remain unchanged. New exact-head CI and browser acceptance pending.
 
-### Shopify S1–S5 follow-up
+### Інтеграція Shopify S1–S5
 
-S1 connection/scope/currency readback; S2 nine native SERIES01 identity audit (not approved-import proof); S3 one-shot approved draft creation with pinned payload digest, unique provider claim, independent live readback and canonical mappings; S4 bounded read-only media, collections and publications; S5 existing Commerce Order Source and Sales-owned reconciliation. No production activation or publication. SERIES01 remains concept-only. Existing products, multi-variant generic writeback, media upload and publication execution remain unimplemented; exact-head CI and live acceptance pending.
+S1: OAuth, ідентичність магазину, дозволи, валюта та фактичний Product readback. S2: перевірка дев'яти SERIES01 SKU та approved CSV Run/digest/price evidence. S3: створення/оновлення 1–10 SKU, незмінний запис кожної схваленої дії, повний readback та GID mapping. S4: verified native image upload, collection sync без неявних destructive changes, explicit resync та окремий Action для публікації активного товару. S5: перевірене webhook delivery та незалежний Commerce Order Source readback; Sales, Finance та Growth залишаються власниками своїх результатів. SERIES01 — тільки концепти; publication і writeback за замовчуванням вимкнено. Live tenant acceptance, реальна native activation/compliance та inventory policy не підтверджені.
 
 ## 14. Карта джерел
 
