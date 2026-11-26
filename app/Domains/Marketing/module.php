@@ -75,7 +75,7 @@ $manifest = [
                 'purpose' => 'Search current tenant-scoped Product variants and read base price facts for Marketing draft planning, without Product SQL or launch authorization.',
             ],
         ],
-        'migration_files' => ['app/migrations/20261119_000152_marketing_foundation.sql','app/migrations/20261119_000154_marketing_planning_m2.sql','app/migrations/20261124_000162_marketing_audience_adsets.sql','app/migrations/20261124_000163_marketing_analyst_execution.sql','app/migrations/20261124_000164_marketing_analyst_decisions.sql','app/migrations/20261124_000165_marketing_paid_launch_plans.sql','app/migrations/20261124_000167_marketing_paid_operation_journal.sql','app/migrations/20261124_000192_marketing_m4_attribution_intents.sql','app/migrations/20261124_000193_marketing_media_analytics.sql','app/migrations/20261126_009020_marketing_attribution_schedules.sql','app/migrations/20261126_009021_marketing_experiment_protocols.sql','app/migrations/20261126_009022_marketing_optimization_receipts.sql'],
+        'migration_files' => ['app/migrations/20261119_000152_marketing_foundation.sql','app/migrations/20261119_000154_marketing_planning_m2.sql','app/migrations/20261124_000162_marketing_audience_adsets.sql','app/migrations/20261124_000163_marketing_analyst_execution.sql','app/migrations/20261124_000164_marketing_analyst_decisions.sql','app/migrations/20261124_000165_marketing_paid_launch_plans.sql','app/migrations/20261124_000167_marketing_paid_operation_journal.sql','app/migrations/20261124_000192_marketing_m4_attribution_intents.sql','app/migrations/20261124_000193_marketing_media_analytics.sql','app/migrations/20261126_009020_marketing_attribution_schedules.sql','app/migrations/20261126_009021_marketing_experiment_protocols.sql','app/migrations/20261126_009022_marketing_optimization_receipts.sql','app/migrations/20261126_009023_marketing_optimization_schedules.sql'],
         'capabilities' => [
             'marketing.campaign.search',
             'marketing.campaign.get',
@@ -131,6 +131,7 @@ $manifest = [
             'marketing.optimization.audience.preview',
             'marketing.experiment.register',
             'marketing.experiment.get',
+            'marketing.experiment.study.inspect',
             'marketing.optimization.creative.preview',
             'marketing.optimization.rule.evaluate',
             'marketing.optimization.rule.plan.propose',
@@ -139,6 +140,8 @@ $manifest = [
             'marketing.optimization.learning.get',
             'marketing.optimization.learning.plan.propose',
             'marketing.optimization.learning.record',
+            'marketing.optimization.replacement.plan.propose',
+            'marketing.optimization.replacement.record',
         ],
         'capability_contracts' => [],
     ],
@@ -273,6 +276,7 @@ foreach ([
 foreach([
     'marketing.experiment.register'=>['command','internal','marketing/experiment-register'],
     'marketing.experiment.get'=>['query','none','marketing/experiment-get'],
+    'marketing.experiment.study.inspect'=>['query','none','marketing/experiment-study-inspect'],
     'marketing.optimization.creative.preview'=>['query','none','marketing/optimization-creative-preview'],
 ] as $id=>[$kind,$sideEffect,$schema]){
     $contracts[]=[
@@ -361,6 +365,22 @@ foreach([
         'timeout_policy'=>$kind==='command'?['seconds'=>60]:[],'retry_policy'=>$kind==='command'?['max_attempts'=>1]:[],
         'failure_contract'=>'Require persisted trusted review Outcome and exact native follow-up batch pins. Receipt is observational only; never train, alter rules, mutate provider or Finance.',
         'lifecycle'=>'experimental','tests'=>['tests/integration/marketing_analyst_approved_goal_e2e_mysql.php'],
+        'documentation'=>'docs/04-domains/marketing/overview.md',
+    ];
+}
+foreach([
+    'marketing.optimization.replacement.plan.propose'=>['command','optimization-replacement-plan-propose','conditional'],
+    'marketing.optimization.replacement.record'=>['action','optimization-replacement-record','required'],
+] as $id=>[$binding,$schema,$approval]){
+    $contracts[]=[
+        'id'=>$id,'version'=>'1.0.0','owner_domain'=>'marketing','kind'=>'command',
+        'input_schema'=>'resources/contracts/marketing/'.$schema.'-input.schema.json',
+        'output_schema'=>'resources/contracts/marketing/'.$schema.'-output.schema.json',
+        'execution_binding'=>$binding.':'.$id,'side_effect_level'=>'internal','permission'=>'cos.tenant.manage',
+        'async'=>$binding==='action','approval_policy'=>$approval,'idempotency'=>'required',
+        'timeout_policy'=>['seconds'=>60],'retry_policy'=>['max_attempts'=>1],
+        'failure_contract'=>'Atomic future replacement draft creation from exact historical native comparison. Never mutates an active provider object or Finance.',
+        'lifecycle'=>'experimental','tests'=>['tests/integration/marketing_paid_approved_goal_e2e_mysql.php'],
         'documentation'=>'docs/04-domains/marketing/overview.md',
     ];
 }

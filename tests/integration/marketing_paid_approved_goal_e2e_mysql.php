@@ -389,8 +389,9 @@ try {
     $register=new \App\Application\Capability\MarketingExperimentRegisterAdapter($experiments);
     $getExperiment=new \App\Application\Capability\MarketingExperimentGetAdapter($experiments);
     $creativePreview=new \App\Application\Capability\MarketingCreativeOptimizationPreviewAdapter($experiments);
-    $makeArm=static function(string $label,string $headline,string $primaryText)use($org,$owner,$token,$campaigns,$planning,$planningPolicy,$audience,
+    $makeArm=static function(string $label,string $headline,string $primaryText,?array $armAudience=null)use($org,$owner,$token,$campaigns,$planning,$planningPolicy,$audience,
         $fundPlans,$actor,$account,$start,$end):array{
+        if($armAudience!==null)$audience=$armAudience;
         $c=$campaigns->createDraft($org,$owner,(new \Domains\Marketing\Domain\MarketingDraftPolicy())->validate([
             'name'=>'Experiment '.$label,'business_objective'=>'Experimental traffic','brief'=>'Synthetic experimental design'
         ]),'experiment-campaign-'.$label.'-'.$token);
@@ -425,6 +426,143 @@ try {
     $deny(fn()=>$creativePreview->invoke($actor,['experiment_id'=>$experiment['id'],'control_snapshot_ref'=>$snapshotId,
         'candidate_snapshot_ref'=>$snapshotId],'fixture','fixture'),'Future experiment ranked with unrelated snapshots.');
     $assert(count($metaTransport->writes)===$writesBefore,'Experiment design or preview mutated provider.');
+    // Historical synthetic records: exercise the positive native terminal analytics path without
+    // advancing wall-clock or pretending that a provider randomized study has been verified.
+    $historicalFrom=gmdate('Y-m-d',time()-14*86400);$historicalTo=gmdate('Y-m-d',time()-8*86400);
+    $historicalRegistered=gmdate('Y-m-d H:i:s',time()-16*86400);
+    $planStore=new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidLaunchPlanStore($pdo);
+    $historicalPlan=static function(array $future,string $label)use($org,$owner,$token,$planStore,$historicalFrom,$historicalTo,$historicalRegistered,$pdo):array{
+        $facts=array_intersect_key($future,array_flip(['campaign_id','campaign_revision','adset_id','adset_revision','adset_content_hash',
+            'account_id','account_revision','currency','account_timezone']));
+        $facts=[...$facts,'period_start'=>$historicalFrom,'period_end'=>$historicalTo,
+            ...\Domains\Marketing\Domain\MarketingPaidFundingPolicy::budget('12.50','USD',$historicalFrom,$historicalTo)];
+        $row=$planStore->create($org,$owner,'history-paid-'.$label.'-'.$token,hash('sha256','history-paid-'.$label.'-'.$token),$facts);
+        $pdo->prepare('UPDATE marketing_paid_launch_plans SET created_at=? WHERE organization_id=? AND id=?')
+            ->execute([$historicalRegistered,$org,$row['id']]);
+        return $row;
+    };
+    $hc=$historicalPlan($control,'control');$hv=$historicalPlan($candidate,'candidate');
+    $otherAudience=$planning->saveAudience($org,$owner,null,null,$planningPolicy->audience([
+        'name'=>'Other experimental audience','target_spec'=>['market_countries'=>['PL'],'audience_hypothesis'=>'General retail demand']
+    ]),'experiment-other-audience-'.$token);
+    $ha=$historicalPlan($makeArm('audience','Control headline','Identical body text.',$otherAudience),'audience');
+    $historicalProtocol=\Domains\Marketing\Domain\MarketingExperimentPolicy::protocol(
+        $fundPlans->experimentPins($actor,$hc['id'],'HEADLINE'),$fundPlans->experimentPins($actor,$hv['id'],'HEADLINE'),
+        'HEADLINE',substr($historicalRegistered,0,10));
+    $historicalId='mkex-'.bin2hex(random_bytes(12));$historyIds=[$hc['id'],$hv['id']];sort($historyIds,SORT_STRING);
+    $digest=\Domains\Marketing\Domain\MarketingExperimentPolicy::class;
+    $pdo->prepare('INSERT INTO marketing_experiment_protocols (organization_id,id,actor_id,idempotency_key,request_hash,pair_hash,protocol_hash,protocol_json,created_at)
+        VALUES (?,?,?,?,?,?,?,?,?)')->execute([$org,$historicalId,$owner,'history-experiment-'.$token,hash('sha256','history-experiment-'.$token),
+        $digest::digest($historyIds),$digest::digest($historicalProtocol),json_encode($historicalProtocol,JSON_THROW_ON_ERROR),$historicalRegistered]);
+    $seedTerminal=static function(array $plan,string $providerCampaign,string $providerAdset,string $providerAd)use($org,$journal):void{
+        foreach(['DEPLOY_PAUSED'=>['CREATE_CAMPAIGN','CREATE_ADSET','CREATE_AD'],'ACTIVATE'=>['ACTIVATE_AD','ACTIVATE_ADSET','ACTIVATE_CAMPAIGN'],
+            'PAUSE'=>['PAUSE_CAMPAIGN']] as $op=>$steps){
+            $action=bin2hex(random_bytes(16));$journal->beginCommand($org,$plan['id'],$op,$action,hash('sha256',$action.':'.$op));
+            foreach($steps as $step){
+                $remote=str_ends_with($step,'CAMPAIGN')?$providerCampaign:(str_ends_with($step,'ADSET')?$providerAdset:$providerAd);
+                $journal->begin($org,$plan['id'],$step,$action,hash('sha256',$action.':'.$step));
+                $journal->identify($org,$plan['id'],$step,$action,$remote);
+                $journal->finish($org,$plan['id'],$step,$action,['provider_id'=>$remote,'configured_status'=>$op==='ACTIVATE'?'ACTIVE':'PAUSED']);
+            }
+            $journal->identify($org,$plan['id'],$op,$action,$providerCampaign);
+            $journal->finish($org,$plan['id'],$op,$action,['provider_campaign_id'=>$providerCampaign,'plan_id'=>$plan['id'],
+                'operation'=>$op,'state'=>$op==='ACTIVATE'?'ACTIVE_CONFIGURED':'PAUSED','spend_confirmed'=>false]);
+        }
+    };
+    $seedTerminal($hc,'91001','91002','91003');$seedTerminal($hv,'92001','92002','92003');$seedTerminal($ha,'93001','93002','93003');
+    $accounts->importInsights($org,$account['id'],'campaign',$historicalFrom,$historicalTo,[
+        ['campaign_id'=>'91001','date_start'=>$historicalFrom,'date_stop'=>$historicalTo,'spend'=>'40.00','impressions'=>'2000','clicks'=>'50'],
+        ['campaign_id'=>'92001','date_start'=>$historicalFrom,'date_stop'=>$historicalTo,'spend'=>'40.00','impressions'=>'2000','clicks'=>'100'],
+        ['campaign_id'=>'93001','date_start'=>$historicalFrom,'date_stop'=>$historicalTo,'spend'=>'40.00','impressions'=>'2000','clicks'=>'125']]);
+    $historicalSnapshots=array_column($accounts->insights($org,$account['id'],'campaign',$historicalFrom,$historicalTo),'id','external_id');
+    $obs=$creativePreview->invoke($actor,['experiment_id'=>$historicalId,'control_snapshot_ref'=>$historicalSnapshots['91001'],
+        'candidate_snapshot_ref'=>$historicalSnapshots['92001']],'fixture','fixture');
+    $assert($obs['status']==='REVIEW_OBSERVED_DIFFERENCE'&&$obs['lower_observed_cpc_plan_id']===$hv['id']&&!$obs['randomization_verified']
+        &&!$obs['winning_creative_confirmed']&&!$obs['provider_mutation'],'Native historical creative source was not observed or overclaimed.');
+    $historyBudget=new \Domains\Marketing\Application\Service\MarketingBudgetOptimizationService($fundPlans,$read,$performance);
+    $budgetCandidate=$historyBudget->preview($actor,$hc['id'],$historicalSnapshots['91001'],$hv['id'],$historicalSnapshots['92001']);
+    $assert($budgetCandidate['status']==='REVIEW_BOUNDED_REALLOCATION'&&$budgetCandidate['shift_minor']===125&&$budgetCandidate['total_daily_minor']===2500
+        &&!$budgetCandidate['provider_mutation']&&!$budgetCandidate['financial_mutation'],'Native historical budget preview lost conservation or overclaimed execution.');
+    $audienceCandidate=$audienceComparison->invoke($actor,['first_plan_id'=>$hc['id'],'first_snapshot_ref'=>$historicalSnapshots['91001'],
+        'second_plan_id'=>$ha['id'],'second_snapshot_ref'=>$historicalSnapshots['93001']],'fixture','fixture');
+    $assert($audienceCandidate['status']==='REVIEW_OBSERVED_DIFFERENCE'&&$audienceCandidate['lower_observed_cpc_plan_id']===$ha['id']
+        &&!$audienceCandidate['actual_audience_delivery_confirmed']&&!$audienceCandidate['targeting_change_recommended'],
+        'Native historical audience preview lost same-creative pinned sources or overclaimed delivery.');
+    $deny(fn()=>$experiments->observe($actor,$historicalId,$historicalSnapshots['92001'],$historicalSnapshots['91001']),
+        'Swapped native historical snapshots accepted.');
+    $assert(count($metaTransport->writes)===$writesBefore,'Positive native observation performed a provider write.');
+    echo "Marketing M5.4 native terminal budget conservation, M5.5 pinned audience and M5.7 historical creative observation PASS.\\n";
+
+    // Governed creation from actual terminal native evidence; approval does not fund or deploy.
+    $replacementReceipts=new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingOptimizationReceiptStore($pdo);
+    $replacementService=new \Domains\Marketing\Application\Service\MarketingOptimizationReplacementService($historyBudget,
+        new \Domains\Marketing\Application\Service\MarketingAudienceOptimizationService($fundPlans,$historyBudget),
+        $fundPlans,new \Domains\Marketing\Application\Service\MarketingPlanningService($planning,$planningPolicy),$planningPolicy,$planning,$replacementReceipts,$modules);
+    $replacementHandler=new \Domains\Marketing\Automation\Action\MarketingOptimizationReplacementHandler($replacementService,$worker,$identityResolver,$tenantFactory,$modules,$capabilities);
+    $replacementDomains=new DomainModuleRegistry([new \Domains\Marketing\Bootstrap\MarketingDomainModule($handler,$paidHandler,replacement:$replacementHandler)]);
+    $replacementBindings=new FederationCapabilityBindingResolver($capabilities,$replacementDomains,$modules);
+    $replacementGate=new ModuleActionExecutionGate($replacementDomains,$modules,null,$worker);
+    $replacementActions=new ActionService(new MysqlActionRepository($pdo),new ActionExecutor([$handler,$paidHandler,$replacementHandler],$replacementGate));
+    $replacementContexts=new PolicyContextBuilder($replacementDomains);
+    $replacementPolicies=new ActionPolicyService($replacementActions,$policies,new MysqlPolicyEvaluationRepository($pdo),$approvalRepo,$engine,
+        $transactions,null,$replacementDomains,$modules,$replacementContexts);
+    $replacementOutcome=new \App\Persistence\Marketing\MarketingOptimizationReplacementOutcomeProvider($db,$replacementReceipts,$receipts,$replacementService);
+    $replacementGoals=new FederationGoalStore($db,$replacementBindings,new GoalPlanValidator($capabilities),new GoalOutcomeEvaluator(),
+        new FederationTrustedOutcomeEvidenceResolver($modules,[$replacementOutcome]),$planReader);
+    $replacementBridge=new FederationCanonicalWorkflowBridge($db,$store,$scheduler,$replacementGoals,$planEvidence,$receipts,
+        new FailClosedWorkflowNonActionReceiptEvidence(),$planReader,$capabilities,$replacementDomains,$modules,$policies,$engine,$replacementContexts,$replacementPolicies,
+        new DoctrineWorkflowExecutionCoordinator($db,$store,$scheduler,$planEvidence,$receipts));
+    $replacementProposal=new \App\Persistence\Marketing\MarketingOptimizationReplacementPlanProposalService($db,$replacementGoals,$replacementBridge,$replacementService);
+    $replacementCap=\Domains\Marketing\Automation\Action\MarketingOptimizationReplacementHandler::TYPE;
+    $pdo->prepare('INSERT INTO cos_policies (id,organization_id,code,name,action_type,conditions,decision,priority,version,status)
+        VALUES (?,?,?,?,?,?,"APPROVAL_REQUIRED",1,1,"ACTIVE")')->execute([bin2hex(random_bytes(16)),$org,'replacement-approval','Independent replacement approval',$replacementCap,'[]']);
+    $replacementStart=gmdate('Y-m-d',time()+14*86400);$replacementEnd=gmdate('Y-m-d',time()+20*86400);
+    $countPaidPlans=static fn()=>(int)$db->fetchOne('SELECT COUNT(*) FROM marketing_paid_launch_plans WHERE organization_id=?',[$org]);
+    $noExternal=count($metaTransport->writes);
+    foreach(['BUDGET'=>[$hv,'92001'],'AUDIENCE'=>[$ha,'93001']] as $mode=>[$other,$remote]){
+        $p=['mode'=>$mode,'first_plan_id'=>$hc['id'],'first_snapshot_ref'=>$historicalSnapshots['91001'],
+            'second_plan_id'=>$other['id'],'second_snapshot_ref'=>$historicalSnapshots[$remote],'future_start'=>$replacementStart,'future_end'=>$replacementEnd];
+        $input=['target_type'=>'marketing_paid_account','target_id'=>$account['id'],'parameters'=>$p];
+        $before=$countPaidPlans();$draft=$replacementService->prepare($actor,$account['id'],$p);
+        $deny(fn()=>$replacementService->record($actor,$account['id'],[...$p,'decision_hash'=>str_repeat('0',64)],'wf:'.str_repeat('1',64),str_repeat('1',32)),
+            'Unpinned replacement recorded.');
+        $assert($countPaidPlans()===$before,'Stale replacement created a paid plan.');
+        $prop=$replacementProposal->propose($actor,$input,'replacement-'.$mode.'-'.$token);
+        $assert($prop['decision_hash']===$draft['decision_hash']&&$countPaidPlans()===$before,'Proposal created paid candidates before approval.');
+        $gid=$prop['goal_id'];$pid=$prop['plan_id'];$pa=bin2hex(random_bytes(16));$rid='run-replacement-'.strtolower($mode).'-'.$token;
+        $deny(fn()=>$replacementBridge->start($actor,$rid,$pid,$pa),'Unapproved replacement Plan started.');
+        $db->executeStatement('UPDATE cos_federation_plans SET state=:state WHERE organization_id=:org AND plan_id=:plan',['state'=>'approved','org'=>$org,'plan'=>$pid]);
+        $stored=(string)$db->fetchOne('SELECT plan_json FROM cos_federation_plans WHERE organization_id=:org AND plan_id=:plan',['org'=>$org,'plan'=>$pid]);
+        $db->insert('cos_actions',['id'=>$pa,'organization_id'=>$org,'type'=>'cos.federation.plan.approval',
+            'target_type'=>'cos_federation_plan','target_id'=>$pid,'parameters'=>json_encode(['goal_id'=>$gid,'plan_id'=>$pid,'specification_version'=>1,
+                'plan_hash'=>hash('sha256',$stored)],JSON_THROW_ON_ERROR),'source_type'=>'USER','source_id'=>$owner,'status'=>'COMPLETED',
+            'execution_mode'=>'APPROVAL_REQUIRED','risk_level'=>'HIGH','idempotency_key'=>'plan:replacement:'.$mode.':'.$token,'correlation_id'=>'replacement-'.$mode.'-'.$token]);
+        $db->insert('cos_policy_evaluations',['id'=>bin2hex(random_bytes(16)),'organization_id'=>$org,'action_id'=>$pa,'decision'=>'APPROVAL_REQUIRED',
+            'correlation_id'=>'replacement-'.$mode.'-'.$token,'evaluated_at'=>gmdate('Y-m-d H:i:s.u')]);
+        $db->insert('cos_approvals',['id'=>bin2hex(random_bytes(16)),'organization_id'=>$org,'action_id'=>$pa,'status'=>'APPROVED','approver_type'=>'USER',
+            'approver_id'=>$reviewer,'requested_by_type'=>'USER','requested_by_id'=>$owner,'decided_by_type'=>'USER','decided_by_id'=>$reviewer,
+            'decided_at'=>gmdate('Y-m-d H:i:s.u'),'expires_at'=>(new DateTimeImmutable('+1 day'))->format('Y-m-d H:i:s.u')]);
+        $replacementBridge->start($actor,$rid,$pid,$pa);$replacementBridge->advance($actor,$rid,$pa);
+        $pending=$replacementBridge->advance($actor,$rid,$pa);
+        $assert($pending['state']==='awaiting_human_approval'&&$countPaidPlans()===$before,'Replacement bypassed Action approval.');
+        $act=$pending['action_id'];$assert($replacementActions->execute($org,$act,'replacement-premature')===null,'Unapproved replacement executed.');
+        $ap=(string)$db->fetchOne('SELECT id FROM cos_approvals WHERE organization_id=? AND action_id=?',[$org,$act]);
+        $assert($approvalRepo->decide($org,$ap,ApprovalStatus::Approved,$reviewer,'Independent replacement fixture'),'Replacement approval failed.');
+        $replacementActions->queue($org,$act);
+        $assert($replacementActions->execute($org,$act,'replacement-approved')?->status===ActionStatus::Completed,'Approved replacement failed.');
+        $assert($replacementBridge->advance($actor,$rid,$pa)['state']==='step_completed'&&$replacementBridge->advance($actor,$rid,$pa)['state']==='completed',
+            'Replacement workflow did not record a verified receipt.');
+        $ev=$replacementGoals->recordEvaluation($actor,'replacement-eval-'.strtolower($mode).'-'.$token,$rid);
+        $assert(($ev['result']??null)==='satisfied','Replacement Outcome not independently verified.');
+        $r=$replacementOutcome->verifiedReceipt($actor,$rid);
+        $assert($r['drafts_recorded']&&!$r['financial_mutation']&&!$r['provider_mutation']&&!$r['paid_activation_approved']
+            &&$countPaidPlans()===$before+($mode==='BUDGET'?2:1)&&count($metaTransport->writes)===$noExternal,'Replacement mutated provider or did not create exact candidates.');
+        if($mode==='BUDGET')$assert(array_sum(array_column($r['plans'],'daily_minor'))===2500&&array_sum(array_column($r['plans'],'lifetime_minor'))===17500,
+            'Budget replacement did not conserve total funding.');
+        else $assert($r['plans'][0]['source_plan_id']===$hc['id']&&$r['plans'][0]['audience_id']===$otherAudience['id']&&$r['plans'][0]['daily_minor']===1250,
+            'Audience replacement changed the wrong target or funding.');
+    }
+    echo "Marketing M5.4/M5.5 canonical Plan and Action approvals, atomic native replacement drafts and trusted Outcome PASS.\n";
     echo "Marketing M5.6 native immutable creative experiment registration, one-factor fences and M5.7 premature observation rejected PASS\n";
     $performanceContexts=new \Domains\Marketing\Application\Service\MarketingAnalystContextService($campaignService,
         new \Domains\Marketing\Application\Service\MarketingPlanningService($planning,$planningPolicy),

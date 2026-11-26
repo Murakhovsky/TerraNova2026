@@ -9,7 +9,7 @@ final class SalesOrderTouchHistoryEvidence
     public static function normalize(array $e,string $placed):array
     {
         if(count($e)!==4||($e['model']??null)!=='shopify-journey-moments-v1'||!is_array($e['touches']??null)
-            ||!array_is_list($e['touches'])||count($e['touches'])<1||count($e['touches'])>100)
+            ||!array_is_list($e['touches'])||count($e['touches'])<1||count($e['touches'])>500)
             throw new DomainException('Invalid touch history model.');
         $end=self::time($placed);$touches=[];$ids=[];
         foreach($e['touches'] as $v){

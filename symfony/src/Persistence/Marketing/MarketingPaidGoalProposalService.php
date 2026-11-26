@@ -9,6 +9,9 @@ use DomainException;
 use Domains\Marketing\Application\Service\MarketingPaidLaunchPlanService;
 use Domains\Marketing\Application\Service\MarketingPaidOperationsReadService;
 use Domains\Marketing\Domain\MarketingPlanningPolicy;
+use Domains\Marketing\Domain\MarketingOptimizationPausePolicy;
+use Domains\Marketing\Application\Service\MarketingOptimizationPauseGuard;
+use Domains\Marketing\Domain\MarketingExperimentPolicy;
 use Kernel\Tenant\Model\TenantContext;
 use Platform\Orchestration\Goal\GoalSpecification;
 
@@ -18,14 +21,18 @@ final readonly class MarketingPaidGoalProposalService
     public const CRITERION='marketing.paid.command_recorded';
     public const OPERATIONS=['create_paused'=>'DEPLOY_PAUSED','activate'=>'ACTIVATE','pause'=>'PAUSE'];
     public function __construct(private Connection $db,private FederationGoalStore $goals,private FederationCanonicalWorkflowBridge $workflow,
-        private MarketingPaidLaunchPlanService $plans,private MarketingPaidOperationsReadService $read){}
-    public function propose(TenantContext $actor,string $id,string $operation,string $key,?string $envelope=null,?string $reservation=null):array
+        private MarketingPaidLaunchPlanService $plans,private MarketingPaidOperationsReadService $read,private ?MarketingOptimizationPauseGuard $optimization=null){}
+    public function propose(TenantContext $actor,string $id,string $operation,string $key,?string $envelope=null,?string $reservation=null,?array $review=null):array
     {
         MarketingPlanningPolicy::key($key);
         if(!isset(self::OPERATIONS[$operation])||!$this->workflow->newRunsEnabled($actor))throw new DomainException('Paid canonical planning disabled.');
         $plan=$this->plans->get($actor,$id);$status=$this->read->status($actor,$id);
         if(!$status['profile_configured']||$status['manual_reconciliation_required'])throw new DomainException('Paid deployment profile or journal unavailable.');
         $params=['plan_hash'=>$plan['plan_hash'],'configuration_hash'=>$status['configuration_hash']];
+        if($review!==null){
+            if($operation!=='pause'||$this->optimization===null)throw new DomainException('Review binding only belongs to optimization pause.');
+            MarketingOptimizationPausePolicy::pin($review);ksort($review,SORT_STRING);$params['optimization_review']=$review;
+        }
         if($operation!=='pause')$this->plans->deploymentContext($actor,$id);
         if($operation==='activate'){
             if(!$status['activation_configured']||$envelope===null||$reservation===null)throw new DomainException('Activation not configured or funding references missing.');
@@ -38,7 +45,7 @@ final readonly class MarketingPaidGoalProposalService
         $goal='goal-'.$suffix;$proposal='plan-'.$suffix;
         $cap='marketing.paid.meta.campaign.'.$operation;
         $input=['target_type'=>'marketing_paid_launch_plan','target_id'=>$id,'parameters'=>$params];
-        return $this->db->transactional(function()use($actor,$org,$goal,$proposal,$cap,$input,$id,$operation,$status):array{
+        return $this->db->transactional(function()use($actor,$org,$goal,$proposal,$cap,$input,$id,$operation,$status,$review):array{
             $existing=$this->db->fetchOne('SELECT plan_json FROM cos_federation_plans WHERE organization_id=:org AND plan_id=:plan AND goal_id=:goal FOR UPDATE',
                 ['org'=>$org,'plan'=>$proposal,'goal'=>$goal]);
             if(is_string($existing)){
@@ -47,9 +54,10 @@ final readonly class MarketingPaidGoalProposalService
                 if(count($steps)!==1||($steps[0]['capability_id']??null)!==$cap||($old['target_type']??null)!==$input['target_type']
                     ||($old['target_id']??null)!==$input['target_id']||!is_array($old['parameters']??null)
                     ||count($old['parameters'])!==count($input['parameters']))throw new DomainException('Paid proposal key conflict.');
-                foreach($input['parameters'] as $field=>$value){if(($old['parameters'][$field]??null)!==$value)throw new DomainException('Paid proposal key conflict.');}
+                foreach($input['parameters'] as $field=>$value){if(is_array($value)?(!is_array($old['parameters'][$field]??null)||MarketingExperimentPolicy::digest($old['parameters'][$field])!==MarketingExperimentPolicy::digest($value)):(($old['parameters'][$field]??null)!==$value))throw new DomainException('Paid proposal key conflict.');}
                 return ['goal_id'=>$goal,'plan_id'=>$proposal,'state'=>'existing'];
             }
+            if($review!==null)$this->optimization?->verify($actor,$id,$review);
             $states=array_column($status['operations'],'state','operation');
             if(isset($states[self::OPERATIONS[$operation]])||($operation!=='create_paused'&&($states['DEPLOY_PAUSED']??null)!=='CONFIRMED')
                 ||($operation==='activate'&&isset($states['PAUSE'])))throw new DomainException('Paid operation is not a valid next command.');

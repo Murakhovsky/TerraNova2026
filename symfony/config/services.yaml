@@ -4,8 +4,11 @@ parameters:
   env(COS_MARKETING_META_EXECUTION_PROFILES_JSON): '{}'
   env(COS_MARKETING_META_ACTIVATION_ENABLED): '0'
   env(COS_MARKETING_ATTRIBUTION_SCHEDULER_ENABLED): '0'
+  env(COS_MARKETING_OPTIMIZATION_SCHEDULER_ENABLED): '0'
   env(COS_MARKETING_ATTRIBUTION_SCHEDULER_INTERVAL_MINUTES): '15'
+  env(COS_MARKETING_OPTIMIZATION_SCHEDULER_INTERVAL_MINUTES): '15'
   env(COS_MARKETING_ATTRIBUTION_SCHEDULER_TARGETS_JSON): '[]'
+  env(COS_MARKETING_OPTIMIZATION_SCHEDULER_TARGETS_JSON): '[]'
   env(COS_WORKFLOW_ACTION_WORKER_ORGANIZATION): ''
   env(COS_AI_CAPABILITY_INTENT_SECRET): ''
   env(COS_CRON_CAPABILITY_INTENT_SECRET): ''
@@ -478,7 +481,9 @@ services:
   App\Scheduler\CosScheduleProvider:
     arguments:
       $marketingAttributionEnabled: '%env(bool:COS_MARKETING_ATTRIBUTION_SCHEDULER_ENABLED)%'
+      $marketingOptimizationEnabled: '%env(bool:COS_MARKETING_OPTIMIZATION_SCHEDULER_ENABLED)%'
       $marketingAttributionIntervalMinutes: '%env(int:COS_MARKETING_ATTRIBUTION_SCHEDULER_INTERVAL_MINUTES)%'
+      $marketingOptimizationIntervalMinutes: '%env(int:COS_MARKETING_OPTIMIZATION_SCHEDULER_INTERVAL_MINUTES)%'
       $salesAutomationEnabled: '%env(bool:COS_SALES_AUTOMATION_SCHEDULER_ENABLED)%'
       $growthCollectorPollingEnabled: '%env(bool:COS_GROWTH_COLLECTOR_SCHEDULER_ENABLED)%'
       $growthCollectorPollingIntervalMinutes: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_INTERVAL_MINUTES)%'
@@ -2793,6 +2798,8 @@ services:
       $connection: '@cos.database.pdo'
   Domains\Marketing\Application\Contract\MarketingPlanningRepository:
     alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPlanningRepository
+  Domains\Marketing\Application\Contract\MarketingOptimizationDraftRepository:
+    alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPlanningRepository
   Domains\Marketing\Application\Service\MarketingPlanningService: ~
   Domains\Marketing\Application\Service\MarketingAnalystContextService: ~
   Domains\Marketing\Application\Service\MarketingAnalystPerformanceService: ~
@@ -2800,7 +2807,11 @@ services:
   Domains\Marketing\Application\Service\MarketingAudienceOptimizationService: ~
   Domains\Marketing\Application\Service\MarketingExperimentService: ~
   Domains\Marketing\Application\Service\MarketingOptimizationRuleService: ~
+  Domains\Marketing\Application\Service\MarketingOptimizationPauseGuard: ~
   Domains\Marketing\Application\Service\MarketingOptimizationReviewService: ~
+  Domains\Marketing\Application\Service\MarketingOptimizationReplacementService: ~
+  Domains\Marketing\Automation\Action\MarketingOptimizationReplacementHandler: ~
+  App\Persistence\Marketing\MarketingOptimizationReplacementOutcomeProvider: ~
   Domains\Marketing\Application\Service\MarketingOptimizationLearningService: ~
   Domains\Marketing\Automation\Action\MarketingOptimizationLearningHandler: ~
   App\Persistence\Federation\FederationTrustedActionOutcomeReader: ~
@@ -2835,6 +2846,7 @@ services:
       $sweep: '@Domains\Marketing\Automation\Action\MarketingAttributionSweepHandler'
       $review: '@Domains\Marketing\Automation\Action\MarketingOptimizationReviewHandler'
       $learning: '@Domains\Marketing\Automation\Action\MarketingOptimizationLearningHandler'
+      $replacement: '@Domains\Marketing\Automation\Action\MarketingOptimizationReplacementHandler'
   Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesAttributionCandidateReadModel:
     arguments:
       $connection: '@cos.database.pdo'
@@ -2871,6 +2883,8 @@ services:
   Domains\Marketing\Infrastructure\Meta\MetaHttpTransport:
     alias: Domains\Marketing\Infrastructure\Meta\CurlMetaHttpTransport
   Domains\Marketing\Infrastructure\Meta\MetaGraphReadAdapter: ~
+  Domains\Marketing\Application\Contract\MarketingExperimentStudyReadPort:
+    alias: Domains\Marketing\Infrastructure\Meta\MetaGraphReadAdapter
   Domains\Marketing\Application\Contract\PaidMediaProviderInterface:
     alias: Domains\Marketing\Infrastructure\Meta\MetaGraphReadAdapter
   Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidReadRepository:
@@ -2891,6 +2905,11 @@ services:
     arguments:
       $enabled: '%env(bool:COS_MARKETING_ATTRIBUTION_SCHEDULER_ENABLED)%'
       $targetsJson: '%env(COS_MARKETING_ATTRIBUTION_SCHEDULER_TARGETS_JSON)%'
+  App\Persistence\Marketing\MarketingOptimizationScheduleService: ~
+  App\Application\Marketing\Handler\ContinueMarketingOptimizationSchedulesHandler:
+    arguments:
+      $enabled: '%env(bool:COS_MARKETING_OPTIMIZATION_SCHEDULER_ENABLED)%'
+      $targetsJson: '%env(COS_MARKETING_OPTIMIZATION_SCHEDULER_TARGETS_JSON)%'
   App\Infrastructure\Marketing\SalesAttributionReadAdapter: ~
   Domains\Marketing\Application\Contract\MarketingSalesAttributionReadPort:
     alias: App\Infrastructure\Marketing\SalesAttributionReadAdapter
@@ -4402,6 +4421,7 @@ services:
         - '@App\Persistence\Marketing\MarketingAttributionSweepOutcomeProvider'
         - '@App\Persistence\Marketing\MarketingOptimizationReviewOutcomeProvider'
         - '@App\Persistence\Marketing\MarketingOptimizationLearningOutcomeProvider'
+        - '@App\Persistence\Marketing\MarketingOptimizationReplacementOutcomeProvider'
         - '@App\Persistence\Marketing\MarketingPaidGoalOutcomeProvider'
         - '@App\Persistence\Finance\FinancePaidSettlementOutcomeProvider'
         - '@App\Persistence\Finance\FinanceMarketingSpendImportOutcomeProvider'

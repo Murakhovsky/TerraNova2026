@@ -4,6 +4,8 @@ namespace Domains\Marketing\Application\Service;
 
 use DomainException;
 use Domains\Marketing\Application\Contract\MarketingExperimentStore;
+use Domains\Marketing\Application\Contract\MarketingExperimentStudyReadPort;
+use Domains\Marketing\Application\Contract\MarketingPaidReadRepository;
 use Domains\Marketing\Domain\MarketingExperimentPolicy;
 use Domains\Marketing\Domain\MarketingPlanningPolicy;
 use Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidOperationJournal;
@@ -14,7 +16,8 @@ use Kernel\Tenant\Model\TenantPermissions;
 final readonly class MarketingExperimentService
 {
     public function __construct(private MarketingExperimentStore $store,private MarketingPaidLaunchPlanService $plans,
-        private MysqlMarketingPaidOperationJournal $journal,private MarketingBudgetOptimizationService $performance,private ActiveModuleResolver $modules){}
+        private MysqlMarketingPaidOperationJournal $journal,private MarketingBudgetOptimizationService $performance,private ActiveModuleResolver $modules,
+        private ?MarketingExperimentStudyReadPort $studies=null,private ?MarketingPaidReadRepository $accounts=null){}
 
     public function register(TenantContext $actor,string $control,string $candidate,string $factor,string $key):array
     {
@@ -50,6 +53,31 @@ final readonly class MarketingExperimentService
         $candidate=$this->performance->comparisonSource($actor,$protocol['candidate']['plan_id'],$candidateSnapshot);
         $this->assertPins($actor,$protocol);
         return ['experiment_id'=>$id,'protocol_hash'=>$row['protocol_hash'],...MarketingExperimentPolicy::observe($protocol,$control,$candidate)];
+    }
+
+    public function observeStudy(TenantContext $actor,string $id,string $studyId,string $controlSnapshot,string $candidateSnapshot):array
+    {
+        $row=$this->row($actor,$id);$protocol=$row['protocol'];
+        $org=$this->guard($actor);
+        if($this->studies===null||$this->accounts===null)throw new DomainException('Provider study read unavailable.');
+        $before=$this->observe($actor,$id,$controlSnapshot,$candidateSnapshot);
+        $a=$this->performance->comparisonSource($actor,$protocol['control']['plan_id'],$controlSnapshot);
+        $b=$this->performance->comparisonSource($actor,$protocol['candidate']['plan_id'],$candidateSnapshot);
+        $account=$this->accounts->account($org,$a['account_id']);
+        if($account===null||$account['provider']!=='meta'||$account['connection_status']!=='READ_ONLY'
+            ||!in_array('ads_read',$account['capability_scope'],true)||$account['revision']!==$a['account_revision']
+            ||$account['timezone']!=='UTC'||$account['currency']!==$a['currency'])
+            throw new DomainException('Registered Meta account revision unavailable.');
+        $study=$this->studies->inspectSplitStudy($org,$account['ad_account_id'],$account['credential_ref'],$studyId,
+            $a['provider_campaign_id'],$b['provider_campaign_id'],$a['window_start'],$a['window_end']);
+        $after=$this->observe($actor,$id,$controlSnapshot,$candidateSnapshot);
+        $freshA=$this->performance->comparisonSource($actor,$protocol['control']['plan_id'],$controlSnapshot);
+        $freshB=$this->performance->comparisonSource($actor,$protocol['candidate']['plan_id'],$candidateSnapshot);
+        $freshAccount=$this->accounts->account($org,$a['account_id']);
+        if(MarketingExperimentPolicy::digest([$before,$a,$b])!==MarketingExperimentPolicy::digest([$after,$freshA,$freshB])
+            ||$freshAccount===null||$freshAccount['revision']!==$account['revision'])
+            throw new DomainException('Experiment sources changed during provider read.');
+        return [...$after,'study'=>$study,'study_evidence_hash'=>MarketingExperimentPolicy::digest([$after,$study,$a,$b])];
     }
 
     private function row(TenantContext $actor,string $id):array

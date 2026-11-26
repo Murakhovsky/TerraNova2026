@@ -144,6 +144,20 @@
     "conversion_through": {
       "type": "string",
       "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "captured_unique_outcomes": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "cost_per_captured_unique_outcome": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0
     }
   },
   "required": [
@@ -177,7 +191,9 @@
     "recognized_revenue",
     "causal_attribution",
     "complete_coverage",
-    "conversion_through"
+    "conversion_through",
+    "captured_unique_outcomes",
+    "cost_per_captured_unique_outcome"
   ],
   "additionalProperties": false
 }

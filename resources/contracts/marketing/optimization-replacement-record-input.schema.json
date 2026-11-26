@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "target_type": {
+      "type": "string",
+      "const": "marketing_paid_account"
+    },
+    "target_id": {
+      "type": "string",
+      "pattern": "^mads-[a-f0-9]{24}$"
+    },
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "first_plan_id": {
+          "type": "string",
+          "pattern": "^mkpl-[a-f0-9]{24}$"
+        },
+        "first_snapshot_ref": {
+          "type": "string",
+          "pattern": "^mis-[a-f0-9]{24}$"
+        },
+        "second_plan_id": {
+          "type": "string",
+          "pattern": "^mkpl-[a-f0-9]{24}$"
+        },
+        "second_snapshot_ref": {
+          "type": "string",
+          "pattern": "^mis-[a-f0-9]{24}$"
+        },
+        "future_start": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "future_end": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "BUDGET",
+            "AUDIENCE"
+          ]
+        },
+        "decision_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "first_plan_id",
+        "first_snapshot_ref",
+        "second_plan_id",
+        "second_snapshot_ref",
+        "future_start",
+        "future_end",
+        "mode",
+        "decision_hash"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "target_type",
+    "target_id",
+    "parameters"
+  ],
+  "additionalProperties": false
+}

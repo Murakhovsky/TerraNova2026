@@ -83,7 +83,7 @@ domain_id: marketing
     },
     {
       "id": "optimization_planning",
-      "capability_ids": ["marketing.optimization.budget.preview", "marketing.optimization.audience.preview", "marketing.experiment.register", "marketing.experiment.get", "marketing.optimization.creative.preview", "marketing.optimization.rule.evaluate", "marketing.optimization.rule.plan.propose", "marketing.optimization.rule.review.record", "marketing.optimization.learning.preview", "marketing.optimization.learning.get", "marketing.optimization.learning.plan.propose", "marketing.optimization.learning.record"]
+      "capability_ids": ["marketing.optimization.budget.preview", "marketing.optimization.audience.preview", "marketing.experiment.register", "marketing.experiment.get", "marketing.experiment.study.inspect", "marketing.optimization.creative.preview", "marketing.optimization.rule.evaluate", "marketing.optimization.rule.plan.propose", "marketing.optimization.rule.review.record", "marketing.optimization.learning.preview", "marketing.optimization.learning.get", "marketing.optimization.learning.plan.propose", "marketing.optimization.learning.record", "marketing.optimization.replacement.plan.propose", "marketing.optimization.replacement.record"]
     },
     {
       "id": "product_evidence",
@@ -146,7 +146,7 @@ Product є власником товару, Finance власником бюдж�
 
 ## 8. Процеси та результати
 
-Process Registry містить два M4 процеси `marketing.attribution-to-analytics` і `marketing.media-import-to-report`. Marketing exemption знято. Source-verified topology не означає D3/D4 або повне приймання M3/M4.
+Process Registry містить три процеси: `marketing.attribution-to-analytics`, `marketing.media-import-to-report` та `marketing.optimization-review-learning`. Marketing exemption знято. Source-verified topology не означає D3/D4 або повне приймання M3/M4.
 
 ## 9. Tenant, Policy та Security
 

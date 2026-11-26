@@ -34,7 +34,7 @@ foreach($manifest['contributions']['capability_contracts'] as $raw) {
     $assert(is_file($root.'/'.$contract->outputSchema),'Output schema missing: '.$contract->id);
 }
 $validator->validate(CapabilityContract::fromArray($manifest['contributions']['capability_contracts'][2]),['name'=>'Test launch','business_objective'=>'Leads']);
-$assert(count($found)===58,'Expected 52 typed Marketing contracts including experiment and rule evaluation');
+$assert(count($found)===61,'Expected 61 typed Marketing contracts including experiment study readback');
 echo "Marketing M0 foundation PASS\n";
 
 
@@ -78,6 +78,13 @@ $order=[...$scope,'placed_orders'=>2,'unresolved_captured_orders'=>0,'financial_
 $settlement=['state'=>'SETTLED','finance_settled'=>true,'currency'=>'EUR','reservation_id'=>'finr-'.str_repeat('c',24),'committed_minor'=>2000,'released_minor'=>8000,'reserved_minor'=>10000];
 $econ=\Domains\Marketing\Domain\MarketingEconomicsPolicy::project($economicPlan,$lead,$order,$settlement);
 $assert($econ['cost_per_captured_lead']===2.0&&$econ['cost_per_captured_placed_order']===10.0&&$econ['net_collected_to_settled_media_spend']===4.0&&$econ['roas']===null&&$econ['cac']===null,'Cohort economics fabricated or lost confirmed amounts.');
+$dedupEcon=['status'=>'COMPLETE_CAPTURED_COHORT','captured_leads'=>$lead['leads'],'won_deals'=>$lead['won_deals'],'placed_orders'=>$order['placed_orders'],
+    'overlapping_won_deals'=>1,'unique_outcomes'=>$lead['won_deals']+$order['placed_orders']-1];
+$uniqueEcon=\Domains\Marketing\Domain\MarketingEconomicsPolicy::project($economicPlan,$lead,[...$order,'deduplication'=>$dedupEcon],$settlement);
+$assert($uniqueEcon['captured_unique_outcomes']===$dedupEcon['unique_outcomes']
+    &&$uniqueEcon['cost_per_captured_unique_outcome']===round(20/$dedupEcon['unique_outcomes'],4)&&$uniqueEcon['cac']===null,'Deduplicated outcome cost differs or became CAC.');
+$invalidEcon=\Domains\Marketing\Domain\MarketingEconomicsPolicy::project($economicPlan,$lead,[...$order,'deduplication'=>[...$dedupEcon,'unique_outcomes'=>99]],$settlement);
+$assert($invalidEcon['captured_unique_outcomes']===null&&$invalidEcon['cost_per_captured_unique_outcome']===null,'Invalid deduplication promoted to economics.');
 $econ=\Domains\Marketing\Domain\MarketingEconomicsPolicy::project($economicPlan,[...$lead,'source_drift_count'=>1],[...$order,'financial_evidence_status'=>'PARTIAL'],$settlement);
 $assert($econ['cost_per_captured_lead']===null&&$econ['confirmed_collection_minor']===null&&$econ['net_collected_to_settled_media_spend']===null,'Partial cohort promoted to complete economics.');
 $econ=\Domains\Marketing\Domain\MarketingEconomicsPolicy::project($economicPlan,$lead,$order,null);
@@ -198,3 +205,61 @@ $assert($rulePolicy::evaluate($currentBatch,$baselineBatch,'90001','CTR_DECLINE'
 $blocked=false;try{$rulePolicy::evaluate($currentBatch,$baselineBatch,'90001','CTR_DECLINE',19);}catch(DomainException){$blocked=true;}
 $assert($blocked,'Unsafe threshold admitted.');
 echo "Marketing M5.8 bounded optimization rule evaluation with exact native evidence and no action authority PASS\n";
+
+$monitorPolicy=\Domains\Marketing\Domain\MarketingOptimizationSchedulePolicy::class;
+$monitorProfile=['profile_id'=>'monitor-fixture','organization_id'=>'tenant-a','actor_id'=>'42','account_id'=>'mads-'.str_repeat('a',24),
+    'external_id'=>'90001','rule'=>'CTR_DECLINE','threshold_percent'=>20,'lookback_days'=>7];
+$assert(count($monitorPolicy::parse(json_encode([$monitorProfile],JSON_THROW_ON_ERROR)))===1,'Monitoring profile missing.');
+$mw=$monitorPolicy::windows(new DateTimeImmutable('2026-02-15T00:00:00Z'),7);
+$assert($mw===['cycle_date'=>'2026-02-15','window_start'=>'2026-02-08','window_end'=>'2026-02-14',
+    'baseline_start'=>'2026-02-01','baseline_end'=>'2026-02-07'],'Monitoring windows not equal UTC completed periods.');
+foreach([[$monitorProfile,[...$monitorProfile,'profile_id'=>'duplicate']],[[...$monitorProfile,'threshold_percent'=>19]],[[...$monitorProfile,'lookback_days'=>31]]] as $bad){
+    $blocked=false;try{$monitorPolicy::parse(json_encode($bad,JSON_THROW_ON_ERROR));}catch(DomainException){$blocked=true;}
+    $assert($blocked,'Invalid scheduled monitor profile accepted.');
+}
+echo "Marketing M5 scheduler explicit bounded profile and UTC windows PASS.\n";
+
+$pausePolicy=\Domains\Marketing\Domain\MarketingOptimizationPausePolicy::class;
+$reviewPin=['review_evaluation_id'=>'evaluation-fixture','review_id'=>'mkor-'.str_repeat('a',24),'review_receipt_hash'=>str_repeat('b',64),'review_run_id'=>'run-fixture'];
+$pausePolicy::pin($reviewPin);
+$pausePlan=['id'=>'mkpl-'.str_repeat('f',24),'account_id'=>$ruleEval['account_id'],'account_revision'=>1,
+    'currency'=>'EUR','account_timezone'=>'UTC','period_start'=>'2026-02-01','period_end'=>'2026-02-28'];
+$pauseRows=[];
+foreach(['DEPLOY_PAUSED'=>'PAUSED','ACTIVATE'=>'ACTIVE_CONFIGURED'] as $op=>$state){
+    $pauseRows[$op]=['state'=>'CONFIRMED','provider_id'=>'90001','action_id'=>str_repeat($op==='ACTIVATE'?'a':'b',32),
+        'receipt'=>['provider_campaign_id'=>'90001','plan_id'=>$pausePlan['id'],'operation'=>$op,'state'=>$state]];
+}
+foreach(['CAMPAIGN'=>'90001','ADSET'=>'90002','AD'=>'90003'] as $kind=>$providerId){
+    foreach(['CREATE_'=>'DEPLOY_PAUSED','ACTIVATE_'=>'ACTIVATE'] as $prefix=>$command){
+        $pauseRows[$prefix.$kind]=['state'=>'CONFIRMED','provider_id'=>$providerId,'action_id'=>$pauseRows[$command]['action_id'],
+            'receipt'=>['provider_id'=>$providerId,'configured_status'=>$command==='ACTIVATE'?'ACTIVE':'PAUSED']];
+    }
+}
+$pausePolicy::verify($pausePlan,$ruleEval,$pauseRows,'2026-02-15');
+foreach([
+    [$pausePlan,$ruleEval,$pauseRows,'2026-02-22'],
+    [$pausePlan,[...$ruleEval,'external_id'=>'90002'],$pauseRows,'2026-02-15'],
+    [$pausePlan,[...$ruleEval,'account_revision'=>2],$pauseRows,'2026-02-15'],
+    [$pausePlan,[...$ruleEval,'status'=>'NOT_TRIGGERED'],$pauseRows,'2026-02-15'],
+    [$pausePlan,$ruleEval,[...$pauseRows,'PAUSE'=>['state'=>'STARTED']],'2026-02-15'],
+    [$pausePlan,$ruleEval,[...$pauseRows,'ACTIVATE_AD'=>[...$pauseRows['ACTIVATE_AD'],'state'=>'UNCERTAIN']],'2026-02-15'],
+] as $args){
+    $blocked=false;try{$pausePolicy::verify(...$args);}catch(DomainException){$blocked=true;}
+    $assert($blocked,'Invalid optimization pause evidence admitted.');
+}
+$blocked=false;try{$pausePolicy::pin([...$reviewPin,'unknown'=>true]);}catch(DomainException){$blocked=true;}
+$assert($blocked,'Unexpected review pin admitted.');
+$commandHash=\Domains\Marketing\Infrastructure\Meta\ApprovedMetaPaidLifecycle::class;
+$params=['plan_hash'=>str_repeat('a',64),'configuration_hash'=>str_repeat('b',64),'optimization_review'=>$reviewPin];
+$assert($commandHash::commandHash('marketing.paid.meta.campaign.pause',$params)===$commandHash::commandHash('marketing.paid.meta.campaign.pause',[...$params,'optimization_review'=>array_reverse($reviewPin,true)])
+    &&$commandHash::commandHash('marketing.paid.meta.campaign.pause',$params)!==$commandHash::commandHash('marketing.paid.meta.campaign.pause',[...$params,'optimization_review'=>[...$reviewPin,'review_receipt_hash'=>str_repeat('c',64)]]),
+    'Review is not deterministically bound to paid command receipt.');
+echo "Marketing M5 optimization pause exact account, campaign, current evidence, native lifecycle and command digest PASS.\n";
+
+$fw=$monitorPolicy::followupWindow('2026-02-15 22:30:00.123456',7);
+$assert($fw===['window_start'=>'2026-02-16','window_end'=>'2026-02-22'],'Learning window must be complete and strictly after review day.');
+$assert($monitorPolicy::parse(json_encode([[...$monitorProfile,'followup_enabled'=>true]],JSON_THROW_ON_ERROR))[0]['followup_enabled']===true,
+    'Explicit prospective learning flag rejected.');
+$blocked=false;try{$monitorPolicy::parse(json_encode([[...$monitorProfile,'followup_enabled'=>1]],JSON_THROW_ON_ERROR));}catch(DomainException){$blocked=true;}
+$assert($blocked,'Ambiguous learning flag admitted.');
+echo "Marketing M5 prospective learning schedule UTC and opt-in policy PASS.\n";
