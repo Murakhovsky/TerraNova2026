@@ -34,7 +34,7 @@ foreach($manifest['contributions']['capability_contracts'] as $raw) {
     $assert(is_file($root.'/'.$contract->outputSchema),'Output schema missing: '.$contract->id);
 }
 $validator->validate(CapabilityContract::fromArray($manifest['contributions']['capability_contracts'][2]),['name'=>'Test launch','business_objective'=>'Leads']);
-$assert(count($found)===51,'Expected 51 typed Marketing contracts including immutable experiment protocol');
+$assert(count($found)===52,'Expected 52 typed Marketing contracts including experiment and rule evaluation');
 echo "Marketing M0 foundation PASS\n";
 
 
@@ -177,3 +177,24 @@ $assert($blocked,'Swapped arm observations accepted.');
 $blocked=false;try{$experimentPolicy::observe($protocol,$budgetA,[...$budgetB,'plan_hash'=>str_repeat('0',64)]);}catch(DomainException){$blocked=true;}
 $assert($blocked,'Changed plan hash accepted.');
 echo "Marketing M5.6 immutable single-factor experiment protocol and M5.7 non-causal creative observation PASS\n";
+
+$rulePolicy=\Domains\Marketing\Domain\MarketingOptimizationRulePolicy::class;
+$previousRow=['external_id'=>'90001','reported_spend_decimal'=>'100.00','impressions'=>2000,'clicks'=>100,
+    'source_snapshot_ref'=>'mis-'.str_repeat('1',24),'source_revision'=>1,'source_hash'=>str_repeat('1',64)];
+$baselineBatch=['id'=>'mkar-'.str_repeat('a',24),'account_id'=>$budgetA['account_id'],'account_revision'=>1,'account_revision_current'=>true,
+    'grain'=>'campaign','currency'=>'EUR','timezone'=>'UTC','attribution_hash'=>str_repeat('a',64),
+    'window_start'=>'2026-02-01','window_end'=>'2026-02-07','rows'=>[$previousRow]];
+$currentRow=[...$previousRow,'reported_spend_decimal'=>'150.00','clicks'=>40,'source_snapshot_ref'=>'mis-'.str_repeat('2',24),'source_hash'=>str_repeat('2',64)];
+$currentBatch=[...$baselineBatch,'id'=>'mkar-'.str_repeat('b',24),'window_start'=>'2026-02-08','window_end'=>'2026-02-14','rows'=>[$currentRow]];
+$ruleEval=$rulePolicy::evaluate($currentBatch,$baselineBatch,'90001','CTR_DECLINE',50);
+$assert($ruleEval['status']==='TRIGGERED_REVIEW_REQUIRED'&&$ruleEval['change_percent']===-60.0&&$ruleEval['review_recommended']&&!$ruleEval['action_created']
+    &&$ruleEval['current_source']['source_hash']===$currentRow['source_hash'],'Optimization rule lost exact source evidence or created action.');
+$assert($rulePolicy::evaluate($currentBatch,$baselineBatch,'90001','CTR_DECLINE',60)['status']==='TRIGGERED_REVIEW_REQUIRED','Rule equality fence failed.');
+$assert($rulePolicy::evaluate($currentBatch,$baselineBatch,'90001','CTR_DECLINE',80)['status']==='NOT_TRIGGERED','Rule threshold ignored.');
+$assert($rulePolicy::evaluate($currentBatch,$baselineBatch,'90001','CPC_INCREASE',100)['status']==='TRIGGERED_REVIEW_REQUIRED','CPC threshold not applied.');
+$assert($rulePolicy::evaluate($currentBatch,$baselineBatch,'90002','CPM_INCREASE',25)['status']==='INSUFFICIENT_EVIDENCE','Missing source treated as zero.');
+$assert($rulePolicy::evaluate([...$currentBatch,'rows'=>[[...$currentRow,'clicks'=>19]]],$baselineBatch,'90001','CPC_INCREASE',25)['status']==='INSUFFICIENT_EVIDENCE','Insufficient CPC sample accepted.');
+$assert($rulePolicy::evaluate($currentBatch,$baselineBatch,'90001','CTR_DECLINE',50)===$ruleEval,'Evaluation is not deterministic.');
+$blocked=false;try{$rulePolicy::evaluate($currentBatch,$baselineBatch,'90001','CTR_DECLINE',19);}catch(DomainException){$blocked=true;}
+$assert($blocked,'Unsafe threshold admitted.');
+echo "Marketing M5.8 bounded optimization rule evaluation with exact native evidence and no action authority PASS\n";

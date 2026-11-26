@@ -354,6 +354,7 @@ Manifest capabilities не задекларовані.
 - `marketing.optimization.audience.preview`;
 - `marketing.optimization.budget.preview`;
 - `marketing.optimization.creative.preview`;
+- `marketing.optimization.rule.evaluate`;
 - `marketing.paid.account.list`;
 - `marketing.paid.change.request`;
 - `marketing.paid.funding.check`;

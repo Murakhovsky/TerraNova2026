@@ -361,3 +361,20 @@ $states=array_column($mon['items'],'state','external_id');
 $assert($mon['alert_count']===1&&$mon['insufficient_count']===2&&$states['90001']==='REVIEW_REQUIRED'&&$states['90003']==='NO_BASELINE'&&$states['90004']==='NO_CURRENT_OBSERVATION'
     &&count($mon['items'][0]['flags'])===4&&!$mon['provider_mutation'],'M5 source comparison missed anomalies or inferred missing delivery.');
 echo "Marketing M5 native media batch monitoring, matched anomalies and unavailable scopes PASS\n";
+
+$ruleService=new \Domains\Marketing\Application\Service\MarketingOptimizationRuleService(
+    new \Domains\Marketing\Application\Service\MarketingMediaAnalyticsService($accounts,$provider,$mediaStore,$modules));
+$ruleAdapter=new \App\Application\Capability\MarketingOptimizationRuleEvaluateAdapter($ruleService);
+$ruleInput=['account_id'=>$account['id'],'external_id'=>'90001','rule'=>'CTR_DECLINE','threshold_percent'=>60,
+    'current_run_id'=>$monCurrent['id'],'baseline_run_id'=>$monBaseline['id'],'window_start'=>'2026-02-08',
+    'window_end'=>'2026-02-14','baseline_start'=>'2026-02-01','baseline_end'=>'2026-02-07'];
+$ev=$ruleAdapter->invoke($actor,$ruleInput,'fixture-rule','fixture');
+$assert($ev['status']==='TRIGGERED_REVIEW_REQUIRED'&&$ev['change_percent']===-60.0&&$ev['current_source']['source_hash']===$monCurrent['rows'][0]['source_hash']
+    &&$ev['baseline_source']['source_hash']===$monBaseline['rows'][0]['source_hash']&&!$ev['action_created']&&!$ev['financial_mutation'],
+    'M5 rule did not bind persisted source snapshots or fenced review.');
+$assert($ruleAdapter->invoke($actor,$ruleInput,'fixture-rule','fixture')===$ev,'M5 rule fingerprint not deterministic.');
+$missing=$ruleAdapter->invoke($actor,[...$ruleInput,'external_id'=>'90003'],'fixture-rule','fixture');
+$assert($missing['status']==='INSUFFICIENT_EVIDENCE'&&$missing['baseline_source']===null&&!$missing['review_recommended'],'Rule inferred zero from absent baseline.');
+$blocked=false;try{$ruleAdapter->invoke($actor,[...$ruleInput,'current_run_id'=>'mkar-'.str_repeat('0',24)],'fixture-rule','fixture');}catch(DomainException){$blocked=true;}
+$assert($blocked,'M5 rule accepted changed source pin.');
+echo "Marketing M5.8 native exact scope rule evaluation, deterministic evidence, threshold and missing-source fences PASS\n";

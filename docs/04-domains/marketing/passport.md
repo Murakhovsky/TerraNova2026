@@ -83,7 +83,7 @@ domain_id: marketing
     },
     {
       "id": "optimization_planning",
-      "capability_ids": ["marketing.optimization.budget.preview", "marketing.optimization.audience.preview", "marketing.experiment.register", "marketing.experiment.get", "marketing.optimization.creative.preview"]
+      "capability_ids": ["marketing.optimization.budget.preview", "marketing.optimization.audience.preview", "marketing.experiment.register", "marketing.experiment.get", "marketing.optimization.creative.preview", "marketing.optimization.rule.evaluate"]
     },
     {
       "id": "product_evidence",
@@ -123,7 +123,7 @@ Marketing володіє Campaign Draft, Meta Ad Account binding, provider Campa
 | `audience_planning` | Версії Audience і AdSet Draft, revision pins, планова потреба бюджету та Workspace editor | Backend CI green; Workspace CI/staging очікуються; без Finance reservation або Meta write |
 | `paid_funding` | Immutable funding candidate і Finance readback | D2 candidate; Finance execution claim, Meta write lifecycle, journal, Goal proposals, source comparison та Workspace; CI/live acceptance очікуються |
 | `attribution_analytics` | Exact UTM, Sales readback, джерельні медіаметрики та Finance квитанції | D2, native MySQL fixture acceptance пройдено; незалежне live acceptance очікується |
-| `optimization_planning` | Порівняння ефективності, бюджету, аудиторії та креативу; незмінний протокол A/B без дозволу витрат або запуску | D2 implementation, source acceptance pending |
+| `optimization_planning` | Порівняння ефективності, бюджету, аудиторії та креативу; незмінний протокол A/B і контрольовані правила review без дозволу витрат або запуску | D2 implementation, source acceptance pending |
 | `product_evidence` | Пошук Product/SKU, Product/Variant/Price та stock-by-location readback через Product Management read port | D2, без складу/URL/Meta policy acceptance |
 
 Компоненти не є незалежними installable modules.

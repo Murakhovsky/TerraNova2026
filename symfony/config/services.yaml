@@ -2784,6 +2784,7 @@ services:
   Domains\Marketing\Application\Service\MarketingBudgetOptimizationService: ~
   Domains\Marketing\Application\Service\MarketingAudienceOptimizationService: ~
   Domains\Marketing\Application\Service\MarketingExperimentService: ~
+  Domains\Marketing\Application\Service\MarketingOptimizationRuleService: ~
   Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingExperimentStore:
     arguments:
       $connection: '@cos.database.pdo'
