@@ -94,12 +94,16 @@ final readonly class SalesGovernedPlanProposalService
         $payload=$this->normalize($payload);
         $org=$actor->organizationId()->value();$owner=$actor->userId()->value();
         $ids=self::identities($org,$intent);$goalId=$ids['goal_id'];$planId=$ids['plan_id'];
-        $steps=[];$allowed=[];$counts=[];
+        $steps=[];$allowed=[];$counts=[];$previous=null;
         foreach($payload['operations'] as $op){
             $cap=$this->bindings->requireExecutable($actor,$op['capability_id']);
             $input=self::input($cap->id,$op['parameters'],substr(hash('sha256',$ids['digest'].':'.$op['id']),0,32));
             (new CapabilityJsonInputValidator())->validate($cap,$input);
-            $steps[]=['id'=>$op['id'],'capability_id'=>$cap->id,'capability_version'=>$cap->version,'input'=>$input];
+            // The signed array is ordered. Persist explicit predecessor edges so
+            // later business operations cannot be claimed before the prior receipt.
+            $steps[]=['id'=>$op['id'],'capability_id'=>$cap->id,'capability_version'=>$cap->version,'input'=>$input,
+                'depends_on'=>$previous===null?[]:[$previous]];
+            $previous=$op['id'];
             $allowed[$cap->id]=true;
             $criterion=in_array($cap->id,SalesGovernedOrderHandler::types(),true)?SalesOrderRunOutcomeProvider::CRITERION:SalesBusinessRunOutcomeProvider::CRITERION;
             $counts[$criterion]=($counts[$criterion]??0)+1;
@@ -112,7 +116,7 @@ final readonly class SalesGovernedPlanProposalService
             if($old){
                 $stored=$this->goals->specification($actor,$goalId);
                 $plan=json_decode($old['plan_json'],true,64,JSON_THROW_ON_ERROR);
-                $actual=[];foreach($plan['steps']??[] as $step)$actual[]=array_intersect_key($step,array_flip(['id','capability_id','capability_version','input']));
+                $actual=[];foreach($plan['steps']??[] as $step)$actual[]=array_intersect_key($step,array_flip(['id','capability_id','capability_version','input','depends_on']));
                 if($old['goal_id']!==$goalId||$stored===null||$stored->ownerId!==$owner
                     ||self::sort($stored->toArray())!==self::sort($spec->toArray())||self::sort($actual)!==self::sort($steps))
                     throw new DomainException('Sales proposal conflicts with existing Goal/Plan.');

@@ -5,13 +5,13 @@ set -Eeuo pipefail
 umask 077
 
 usage() {
-  echo "Usage: shopify-series01-operator.sh ORGANIZATION preflight|provision|status|pull|candidates [CONNECTION_ID] | order|order-sandbox CONNECTION_ID ORDER_GID" >&2
+  echo "Usage: shopify-series01-operator.sh ORGANIZATION preflight|provision|status|pull|candidates [CONNECTION_ID] | order|order-sandbox|order-lifecycle-sandbox CONNECTION_ID ORDER_GID" >&2
   exit 2
 }
 [[ "$(id -u)" == 0 && "$#" -ge 2 ]] || usage
 ORG="$1"; ACTION="$2"; shift 2
 [[ "$ORG" =~ ^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,39}$ ]] || usage
-[[ "$ACTION" =~ ^(preflight|provision|status|pull|candidates|order|order-sandbox)$ ]] || usage
+[[ "$ACTION" =~ ^(preflight|provision|status|pull|candidates|order|order-sandbox|order-lifecycle-sandbox)$ ]] || usage
 
 CONTAINER='cos-php-1'
 docker inspect "$CONTAINER" >/dev/null || { echo 'COS_PHP_CONTAINER_MISSING' >&2; exit 3; }
@@ -27,10 +27,11 @@ case "$ACTION" in
     ARGS+=("--connection=$1")
     if [[ "$ACTION" == pull ]]; then ARGS+=("--pages=1" "--confirm=PULL_READ_ONLY"); fi
     if [[ "$ACTION" == candidates ]]; then ARGS+=("--limit=20"); fi ;;
-  order|order-sandbox)
+  order|order-sandbox|order-lifecycle-sandbox)
     [[ "$#" -eq 2 && "$1" =~ ^[a-f0-9]{32}$ && "$2" =~ ^gid://shopify/Order/[1-9][0-9]{0,18}$ ]] || usage
     ARGS+=("--connection=$1" "--order-gid=$2")
-    if [[ "$ACTION" == order-sandbox ]]; then ARGS+=("--confirm=VERIFY_TEST_ORDER_READ_ONLY"); fi ;;
+    if [[ "$ACTION" == order-sandbox ]]; then ARGS+=("--confirm=VERIFY_TEST_ORDER_READ_ONLY"); fi
+    if [[ "$ACTION" == order-lifecycle-sandbox ]]; then ARGS+=("--confirm=VERIFY_TEST_LIFECYCLE_READ_ONLY"); fi ;;
 esac
 
 # Preflight performs no Shopify calls, no secret reads, no DB changes.

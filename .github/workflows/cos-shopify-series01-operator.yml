@@ -8,11 +8,11 @@ on:
         type: string
         default: default
       operation:
-        description: 'preflight/provision/pull/status/candidates/order/order-sandbox'
+        description: 'preflight/provision/pull/status/candidates/order/order-sandbox/order-lifecycle-sandbox'
         required: true
         type: choice
         default: preflight
-        options: [preflight, provision, status, pull, candidates, order, order-sandbox]
+        options: [preflight, provision, status, pull, candidates, order, order-sandbox, order-lifecycle-sandbox]
       connection_id:
         description: '32-char connection ID for pull/status/candidates/order'
         type: string
@@ -50,7 +50,7 @@ jobs:
           case "$ACTION" in
             preflight|provision) [[ -z "$CONNECTION" && -z "$ORDER_GID" ]] || exit 2 ;;
             pull|status|candidates) [[ "$CONNECTION" =~ ^[a-f0-9]{32}$ && -z "$ORDER_GID" ]] || exit 2 ;;
-            order|order-sandbox) [[ "$CONNECTION" =~ ^[a-f0-9]{32}$ && "$ORDER_GID" =~ ^gid://shopify/Order/[1-9][0-9]{0,18}$ ]] || exit 2 ;;
+            order|order-sandbox|order-lifecycle-sandbox) [[ "$CONNECTION" =~ ^[a-f0-9]{32}$ && "$ORDER_GID" =~ ^gid://shopify/Order/[1-9][0-9]{0,18}$ ]] || exit 2 ;;
             *) exit 2 ;;
           esac
           for n in DEV_HOST DEV_USER DEV_PORT DEV_SSH_KEY; do

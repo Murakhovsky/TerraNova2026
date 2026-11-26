@@ -311,6 +311,12 @@ $executeWorkflow=static function(string $type,array $p,string $initiator,string 
         $check($adopted['state']==='adopted'&&$adopted['approval_required']===true&&$adopted['execution_started']===false
             &&$businessCounts()===$before,'Human review improperly executed an Action.');
         $deny(fn()=>$intents->adoptSales($actor,$submitted['intent_id'],$review['digest']));
+        $pinned=json_decode((string)$wfDb->fetchOne('SELECT plan_json FROM cos_federation_plans WHERE organization_id=? AND plan_id=?',[$org,$plan]),true,64,JSON_THROW_ON_ERROR);
+        $prior=null;
+        foreach($pinned['steps'] as $i=>$step){
+            $check($step['id']===$steps[$i]['id']&&($step['depends_on']??null)===($prior===null?[]:[$prior]),'Signed Sales plan lost predecessor ordering.');
+            $prior=$step['id'];
+        }
     }else{
         $goals->createGoal($actor,new \Platform\Orchestration\Goal\GoalSpecification($goal,$org,$initiator,'Verify native order operations',
             $specCriteria,array_values(array_unique($allowed)),1,null,null,'',[],['independent_plan','independent_action'],'always'));
@@ -904,8 +910,14 @@ echo "Sales R1 canonical team member configuration and Deal assignment PASS.\n";
 $grant->execute([$org,(int)$requester,'sales.admin.agents.manage',$requester]);
 $grant->execute([$org,(int)$requester,'sales.director.view',$requester]);
 $aiLead=$runBusiness('lead.create',['full_name'=>'AI signed lead','email'=>'ai-signed-'.$nonce.'@example.test'],
-    'sales_intent',bin2hex(random_bytes(16)),['intent_origin'=>'ai']);
-$check((int)$businessRead->lead($org,$aiLead['lead_id'])['assigned_user_id']===(int)$requester,'AI reviewed lead native state mismatch.');
+    'sales_intent',bin2hex(random_bytes(16)),['intent_origin'=>'ai','extra_steps'=>[[
+        'id'=>'next-lead','capability_id'=>'sales.governed.lead.create','capability_version'=>'1.0.0',
+        'input'=>['target_type'=>'sales_intent','target_id'=>bin2hex(random_bytes(16)),
+            'parameters'=>['full_name'=>'AI signed next lead','email'=>'ai-next-'.$nonce.'@example.test']]
+    ]]]);
+$check($aiLead['payment']['lead_id']!==$aiLead['next-lead']['lead_id']&&
+    (int)$businessRead->lead($org,$aiLead['payment']['lead_id'])['assigned_user_id']===(int)$requester&&
+    (int)$businessRead->lead($org,$aiLead['next-lead']['lead_id'])['assigned_user_id']===(int)$requester,'Ordered AI reviewed lead native states differ.');
 $cronRun=$runBusiness('order.source.sync.start',['channel'=>'shopify','connection_id'=>$connectionId,'mode'=>'webhooks'],
     'sales_order_connection',$connectionId,['intent_origin'=>'cron']);
 $check($businessSync->status($org,(int)$requester,$cronRun['run_id'],null)['counts']['discovery_pending']===1,'CRON reviewed sync not admitted.');
