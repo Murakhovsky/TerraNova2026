@@ -232,6 +232,10 @@ jobs:
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
         run: php tests/integration/marketing_paid_approved_goal_e2e_mysql.php
+      - name: Diagnostic Studio atomic publication and two-connection lock
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/integration/diagnostic_methodology_publication_mysql.php
       - name: Marketing Meta real MySQL atomic sync and rollback acceptance
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php

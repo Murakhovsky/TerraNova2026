@@ -6,14 +6,50 @@ use PDO;
 final readonly class MysqlMethodologyStudioRepository implements MethodologyStudioRepositoryInterface
 {
  public function __construct(private PDO $db){}
+ public function withMutation(string $organizationId, callable $operation): mixed
+ {
+     // Stable existing tenant row serializes Studio writes including first-pack creation.
+     // Do not use a non-transactional advisory lock or an absent version row.
+     $ownsTransaction = !$this->db->inTransaction();
+     if ($ownsTransaction) $this->db->beginTransaction();
+     try {
+         $lock = $this->db->prepare('SELECT id FROM cos_organizations WHERE id=:o FOR UPDATE');
+         $lock->execute(['o'=>$organizationId]);
+         if ($lock->fetchColumn() === false) throw new \DomainException('Methodology tenant does not exist.');
+         $result = $operation();
+         if ($ownsTransaction) $this->db->commit();
+         return $result;
+     } catch (\Throwable $e) {
+         if ($ownsTransaction && $this->db->inTransaction()) $this->db->rollBack();
+         throw $e;
+     }
+ }
  public function activate(string $o,string $p,string $mv,int $v):void{$s=$this->db->prepare('UPDATE diagnostic_packs SET active_version=:v,active_methodology_version=:mv WHERE organization_id=:o AND pack_id=:p');$s->execute(['o'=>$o,'p'=>$p,'v'=>$v,'mv'=>$mv]);}
  public function packs(string $o):array{$s=$this->db->prepare('SELECT pack_id,MAX(name) name,MAX(target_domain) domain,MAX(active_version) active_version,MAX(active_methodology_version) active_methodology_version,MAX(updated_at) updated_at FROM diagnostic_packs WHERE organization_id=:o GROUP BY pack_id ORDER BY updated_at DESC');$s->execute(['o'=>$o]);return $s->fetchAll(PDO::FETCH_ASSOC);}
  public function pack(string $o,string $p):?array{$s=$this->db->prepare('SELECT pack_id,MAX(name) name,MAX(target_domain) domain,MAX(active_version) active_version,MAX(active_methodology_version) active_methodology_version,MAX(updated_at) updated_at FROM diagnostic_packs WHERE organization_id=:o AND pack_id=:p GROUP BY pack_id');$s->execute(['o'=>$o,'p'=>$p]);return $s->fetch(PDO::FETCH_ASSOC)?:null;}
- public function savePack(string $o,array $p):void{$s=$this->db->prepare("INSERT INTO diagnostic_packs(organization_id,pack_id,version,name,target_domain,status,methodology_json,content_hash,lock_version) VALUES(:o,:p,1,:n,:d,'draft',JSON_OBJECT(),:h,0) ON DUPLICATE KEY UPDATE name=VALUES(name),target_domain=VALUES(target_domain)");$s->execute(['o'=>$o,'p'=>$p['id'],'n'=>$p['name'],'d'=>$p['domain'],'h'=>str_repeat('0',64)]);}
+ public function savePack(string $o,array $p):void{$s=$this->db->prepare("INSERT INTO diagnostic_packs(organization_id,pack_id,version,name,target_domain,status,methodology_json,content_hash,lock_version) VALUES(:o,:p,1,:n,:d,'draft',JSON_OBJECT(),:h,0)");$s->execute(['o'=>$o,'p'=>$p['id'],'n'=>$p['name'],'d'=>$p['domain'],'h'=>str_repeat('0',64)]);}
  public function versions(string $o,string $p):array{$s=$this->db->prepare('SELECT * FROM diagnostic_pack_versions WHERE organization_id=:o AND pack_id=:p ORDER BY created_at DESC');$s->execute(['o'=>$o,'p'=>$p]);return $s->fetchAll(PDO::FETCH_ASSOC);}
  public function version(string $o,string $p,string $v):?array{$s=$this->db->prepare('SELECT * FROM diagnostic_pack_versions WHERE organization_id=:o AND pack_id=:p AND methodology_version=:v');$s->execute(['o'=>$o,'p'=>$p,'v'=>$v]);return $s->fetch(PDO::FETCH_ASSOC)?:null;}
  public function saveVersion(string $o,array $v):void{$s=$this->db->prepare("INSERT INTO diagnostic_pack_versions(organization_id,pack_id,methodology_version,schema_version,status,description,created_by,based_on_version,content_hash,published_at,created_at,updated_at) VALUES(:o,:p,:v,:sv,:st,:d,:u,:b,:h,:pa,NOW(6),NOW(6)) ON DUPLICATE KEY UPDATE status=VALUES(status),description=VALUES(description),content_hash=VALUES(content_hash),published_at=VALUES(published_at),updated_at=NOW(6)");$s->execute(['o'=>$o,'p'=>$v['pack_id'],'v'=>$v['methodology_version'],'sv'=>$v['schema_version'],'st'=>$v['status'],'d'=>$v['description']??'','u'=>$v['created_by'],'b'=>$v['based_on_version']??null,'h'=>$v['content_hash']??str_repeat('0',64),'pa'=>$v['published_at']??null]);}
- public function publishCompiled(string $o,array $p,int $rv,string $json,string $hash):void{$s=$this->db->prepare("INSERT INTO diagnostic_packs(organization_id,pack_id,version,name,target_domain,status,methodology_json,content_hash,lock_version,published_at,active_version,active_methodology_version) VALUES(:o,:p,:v,:n,:d,'published',CAST(:j AS JSON),:h,0,NOW(6),:v,:mv) ON DUPLICATE KEY UPDATE name=VALUES(name),target_domain=VALUES(target_domain),status='published',methodology_json=VALUES(methodology_json),content_hash=VALUES(content_hash),published_at=NOW(6),active_version=VALUES(active_version),active_methodology_version=VALUES(active_methodology_version)");$s->execute(['o'=>$o,'p'=>$p['pack_id'],'v'=>$rv,'n'=>$p['name'],'d'=>$p['domain'],'j'=>$json,'h'=>$hash,'mv'=>$p['methodology_version']]);}
+ public function publishCompiled(string $o,array $p,int $rv,string $json,string $hash):void
+ {
+     if (!$this->db->inTransaction()) throw new \DomainException('Publication requires the Studio mutation transaction.');
+     $s=$this->db->prepare('SELECT status,content_hash FROM diagnostic_packs WHERE organization_id=:o AND pack_id=:p AND version=:v FOR UPDATE');
+     $s->execute(['o'=>$o,'p'=>$p['pack_id'],'v'=>$rv]);
+     $existing=$s->fetch(PDO::FETCH_ASSOC);
+     // Version 1 may be the empty draft placeholder created by savePack. Never overwrite a real native revision.
+     if ($existing!==false && ($rv!==1 || $existing['status']!=='draft' || $existing['content_hash']!==str_repeat('0',64))) {
+         throw new \DomainException('Native methodology version already exists; published content is immutable.');
+     }
+     if ($existing!==false) {
+         $s=$this->db->prepare("UPDATE diagnostic_packs SET name=:n,target_domain=:d,status='published',methodology_json=CAST(:j AS JSON),content_hash=:h,published_at=NOW(6) WHERE organization_id=:o AND pack_id=:p AND version=:v AND status='draft' AND content_hash=:empty");
+         $s->execute(['o'=>$o,'p'=>$p['pack_id'],'v'=>$rv,'n'=>$p['name'],'d'=>$p['domain'],'j'=>$json,'h'=>$hash,'empty'=>str_repeat('0',64)]);
+         if($s->rowCount()!==1)throw new \DomainException('Native draft placeholder changed.');
+     } else {
+         $s=$this->db->prepare("INSERT INTO diagnostic_packs(organization_id,pack_id,version,name,target_domain,status,methodology_json,content_hash,lock_version,published_at) VALUES(:o,:p,:v,:n,:d,'published',CAST(:j AS JSON),:h,0,NOW(6))");
+         $s->execute(['o'=>$o,'p'=>$p['pack_id'],'v'=>$rv,'n'=>$p['name'],'d'=>$p['domain'],'j'=>$json,'h'=>$hash]);
+     }
+ }
  public function entities(string $o,string $p,string $v):array{$s=$this->db->prepare('SELECT entity_type,entity_id,position,enabled,payload_json FROM diagnostic_methodology_entities WHERE organization_id=:o AND pack_id=:p AND methodology_version=:v ORDER BY entity_type,position,entity_id');$s->execute(['o'=>$o,'p'=>$p,'v'=>$v]);$rows=$s->fetchAll(PDO::FETCH_ASSOC);foreach($rows as &$r)$r['payload']=json_decode($r['payload_json'],true,512,JSON_THROW_ON_ERROR);return $rows;}
  public function saveEntity(string $o,string $p,string $v,string $t,string $id,array $payload,int $position,bool $enabled):void{$s=$this->db->prepare('INSERT INTO diagnostic_methodology_entities(organization_id,pack_id,methodology_version,entity_type,entity_id,position,enabled,payload_json,updated_at) VALUES(:o,:p,:v,:t,:id,:pos,:en,:json,NOW(6)) ON DUPLICATE KEY UPDATE position=VALUES(position),enabled=VALUES(enabled),payload_json=VALUES(payload_json),updated_at=NOW(6)');$s->execute(['o'=>$o,'p'=>$p,'v'=>$v,'t'=>$t,'id'=>$id,'pos'=>$position,'en'=>$enabled?1:0,'json'=>json_encode($payload,JSON_THROW_ON_ERROR)]);}
  public function entity(string $o,string $p,string $v,string $t,string $id):?array{foreach($this->entities($o,$p,$v) as $row)if($row['entity_type']===$t&&$row['entity_id']===$id)return $row;return null;}
