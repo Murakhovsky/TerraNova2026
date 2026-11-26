@@ -152,6 +152,118 @@ final readonly class ShopifyObservationStore
             'blocking_reasons'=>array_keys($reasons),'local_stock_write_allowed'=>false,'ownership_changed'=>false];
     }
 
+    /**
+     * Connection-wide LOCAL inventory census, including variants inherited
+     * from product-level authority. One consistent read, fixed-size aggregate
+     * output; no provider request, credential, write or cutover authorization.
+     * Disabled/error connections still carry authority and must be reviewed.
+     */
+    public function inventoryCutoverCensus(string $org,string $conn):array
+    {
+        $sql=<<<'SQL'
+WITH connection_scope AS (
+    SELECT organization_id,connection_id,mode,status FROM pm_external_connections
+    WHERE organization_id=? AND BINARY organization_id=BINARY ?
+      AND connection_id=? AND BINARY connection_id=BINARY ? AND provider='shopify'
+), mapped AS (
+    SELECT m.* FROM pm_external_mappings m JOIN connection_scope c
+      ON m.organization_id=c.organization_id AND BINARY m.organization_id=BINARY c.organization_id
+      AND m.connection_id=c.connection_id
+), owned_variants AS (
+    SELECT v.organization_id,v.variant_id,v.product_id,v.track_inventory,v.status,p.status AS product_status
+    FROM pm_variants v JOIN connection_scope c
+      ON v.organization_id=c.organization_id AND BINARY v.organization_id=BINARY c.organization_id
+    JOIN pm_products p ON p.organization_id=v.organization_id AND BINARY p.organization_id=BINARY v.organization_id
+      AND p.product_id=v.product_id
+    WHERE EXISTS (SELECT 1 FROM mapped m WHERE
+        (m.entity_type='variant' AND m.canonical_id=v.variant_id)
+        OR (m.entity_type='product' AND m.canonical_id=v.product_id))
+), observed AS (
+    SELECT o.* FROM pm_external_stock_observations o JOIN connection_scope c
+      ON o.organization_id=c.organization_id AND BINARY o.organization_id=BINARY c.organization_id
+      AND o.connection_id=c.connection_id
+), observation_quality AS (
+    SELECT o.*,
+        (o.observed_at>=DATE_SUB(UTC_TIMESTAMP(6),INTERVAL 24 HOUR) AND o.observed_at<=UTC_TIMESTAMP(6)
+            AND o.on_hand IS NOT NULL AND o.available IS NOT NULL
+            AND REGEXP_LIKE(o.inventory_gid,'^gid://shopify/InventoryItem/[0-9]+$','c')) AS complete_fresh,
+        EXISTS (SELECT 1 FROM mapped m WHERE m.entity_type='variant' AND BINARY m.external_gid=BINARY o.variant_gid
+            AND REGEXP_LIKE(m.external_gid,'^gid://shopify/ProductVariant/[0-9]+$','c')) AS variant_mapped,
+        EXISTS (SELECT 1 FROM mapped m JOIN pm_locations l ON l.organization_id=m.organization_id
+            AND BINARY l.organization_id=BINARY m.organization_id AND l.location_id=m.canonical_id AND l.status='active'
+            WHERE m.entity_type='location' AND BINARY m.external_gid=BINARY o.location_gid
+              AND REGEXP_LIKE(m.external_gid,'^gid://shopify/Location/[0-9]+$','c')) AS location_mapped
+    FROM observed o
+)
+SELECT /*+ MAX_EXECUTION_TIME(10000) */ c.mode,c.status,UTC_TIMESTAMP(6) AS observed_at,
+    (SELECT COUNT(*) FROM mapped WHERE entity_type='product') AS product_mappings,
+    (SELECT COUNT(*) FROM mapped WHERE entity_type='variant') AS variant_mappings,
+    (SELECT COUNT(*) FROM mapped WHERE entity_type='location') AS location_mappings,
+    (SELECT COUNT(*) FROM owned_variants) AS native_variants,
+    (SELECT COUNT(*) FROM owned_variants WHERE track_inventory=1) AS tracked_native_variants,
+    (SELECT COUNT(*) FROM mapped m WHERE
+        CASE m.entity_type
+          WHEN 'product' THEN NOT REGEXP_LIKE(m.external_gid,'^gid://shopify/Product/[0-9]+$','c')
+            OR NOT EXISTS (SELECT 1 FROM pm_products p WHERE p.organization_id=m.organization_id
+              AND BINARY p.organization_id=BINARY m.organization_id AND p.product_id=m.canonical_id AND p.status='active')
+          WHEN 'variant' THEN NOT REGEXP_LIKE(m.external_gid,'^gid://shopify/ProductVariant/[0-9]+$','c')
+            OR NOT EXISTS (SELECT 1 FROM owned_variants v WHERE v.variant_id=m.canonical_id AND v.status='active' AND v.product_status='active')
+          WHEN 'location' THEN NOT REGEXP_LIKE(m.external_gid,'^gid://shopify/Location/[0-9]+$','c')
+            OR NOT EXISTS (SELECT 1 FROM pm_locations l WHERE l.organization_id=m.organization_id
+              AND BINARY l.organization_id=BINARY m.organization_id AND l.location_id=m.canonical_id AND l.status='active')
+          ELSE TRUE END) AS invalid_mappings,
+    (SELECT COUNT(*) FROM owned_variants v WHERE v.status<>'active' OR v.product_status<>'active') AS inactive_native_variants,
+    (SELECT COUNT(*) FROM owned_variants v WHERE v.track_inventory=1 AND NOT EXISTS
+        (SELECT 1 FROM mapped m WHERE m.entity_type='variant' AND m.canonical_id=v.variant_id
+          AND REGEXP_LIKE(m.external_gid,'^gid://shopify/ProductVariant/[0-9]+$','c'))) AS tracked_variants_without_mapping,
+    (SELECT COUNT(*) FROM observation_quality) AS stock_observations,
+    (SELECT COUNT(*) FROM observation_quality WHERE NOT complete_fresh) AS stale_or_incomplete_observations,
+    (SELECT COUNT(*) FROM observation_quality WHERE NOT variant_mapped OR NOT location_mapped) AS unmapped_observations,
+    (SELECT COUNT(*) FROM owned_variants v JOIN mapped m ON m.entity_type='variant' AND m.canonical_id=v.variant_id
+        WHERE v.track_inventory=1 AND NOT EXISTS (SELECT 1 FROM observation_quality o
+            WHERE BINARY o.variant_gid=BINARY m.external_gid AND o.complete_fresh AND o.variant_mapped AND o.location_mapped)) AS tracked_variants_without_fresh_observation,
+    (SELECT COUNT(*) FROM (SELECT variant_gid FROM observed GROUP BY variant_gid HAVING COUNT(DISTINCT BINARY inventory_gid)>1) x) AS inconsistent_inventory_variants,
+    (SELECT COUNT(*) FROM pm_stock_balances b JOIN owned_variants v ON b.organization_id=v.organization_id
+        AND BINARY b.organization_id=BINARY v.organization_id AND b.variant_id=v.variant_id
+        WHERE b.on_hand<>0 OR b.reserved<>0) AS nonzero_native_balances,
+    (SELECT COUNT(*) FROM pm_stock_reservations r JOIN owned_variants v ON r.organization_id=v.organization_id
+        AND BINARY r.organization_id=BINARY v.organization_id AND r.variant_id=v.variant_id WHERE r.status='active') AS active_native_reservations,
+    (SELECT COUNT(DISTINCT other_c.connection_id) FROM pm_external_connections other_c
+        JOIN pm_external_mappings other_m ON other_m.organization_id=other_c.organization_id
+          AND BINARY other_m.organization_id=BINARY other_c.organization_id AND other_m.connection_id=other_c.connection_id
+        WHERE other_c.organization_id=c.organization_id AND BINARY other_c.organization_id=BINARY c.organization_id
+          AND other_c.connection_id<>c.connection_id AND other_c.provider='shopify' AND other_c.mode='shopify_authoritative'
+          AND (EXISTS (SELECT 1 FROM mapped m WHERE m.entity_type IN ('product','variant')
+                 AND m.entity_type=other_m.entity_type AND m.canonical_id=other_m.canonical_id)
+            OR EXISTS (SELECT 1 FROM owned_variants v WHERE (other_m.entity_type='variant' AND other_m.canonical_id=v.variant_id)
+                 OR (other_m.entity_type='product' AND other_m.canonical_id=v.product_id)))) AS other_authoritative_connections,
+    (SELECT COUNT(*) FROM pm_sync_conflicts f WHERE f.organization_id=c.organization_id
+        AND BINARY f.organization_id=BINARY c.organization_id AND f.connection_id=c.connection_id AND f.state='open') AS open_sync_conflicts
+FROM connection_scope c
+SQL;
+        $row=$this->query($sql,[$org,$org,$conn,$conn])->fetch(PDO::FETCH_ASSOC);
+        if($row===false)throw new DomainException('Unknown Shopify connection scope.');
+        $mode=$row['mode'];$status=$row['status'];$at=$row['observed_at'];
+        unset($row['mode'],$row['status'],$row['observed_at']);
+        $counts=array_map(static fn($n):int=>(int)$n,$row);
+        $reasons=['provider_global_write_fence_unverified','provider_inventory_census_unverified','independent_cutover_approval_required'];
+        if($mode!=='shopify_authoritative')$reasons[]='connection_not_provider_authoritative';
+        if($status!=='ready')$reasons[]='connection_not_ready';
+        if($counts['native_variants']===0)$reasons[]='no_native_inventory_scope';
+        if($counts['stock_observations']===0)$reasons[]='no_stock_observations';
+        foreach(['invalid_mappings','inactive_native_variants','tracked_variants_without_mapping',
+            'stale_or_incomplete_observations','unmapped_observations','tracked_variants_without_fresh_observation',
+            'inconsistent_inventory_variants','nonzero_native_balances','active_native_reservations',
+            'other_authoritative_connections','open_sync_conflicts'] as $key){
+            if($counts[$key]>0)$reasons[]=$key;
+        }
+        sort($reasons,SORT_STRING);
+        return ['status'=>'CUTOVER_BLOCKED','organization_id'=>$org,'connection_id'=>$conn,
+            'configured_inventory_mode'=>$mode,'connection_status'=>$status,'observed_at'=>$at,
+            'local_counts'=>$counts,'provider_census_complete'=>false,'blocking_reasons'=>$reasons,
+            'local_stock_write_allowed'=>false,'ownership_changed'=>false];
+    }
+
     /** @param array<string,mixed> $snapshot */
     public function observeProduct(string $org,string $conn,string $gid,array $snapshot,bool $complete=false): void
     {

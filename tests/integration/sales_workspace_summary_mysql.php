@@ -802,6 +802,46 @@ try{
     $reject(fn()=>$shopStore->inventoryCutoverReview('foreign-'.$token,$conn,$source->fulfillmentEvidence($org,'shopify',$conn,$providerOrder,true)));
     echo "Sales R3.3 full provider lifecycle, partial quantity, return processing, cancellation, immutable line binding, replay and no stock effect PASS.\n";
     echo "Sales R3.4 provider ownership preflight blocks unauthenticated global handover PASS.\n";
+    // A mapped product can own a native variant even without a variant mapping.
+    // Create unrelated native stock and reserve it BEFORE external authority binds.
+    $censusProduct=$productStore->createProduct($org,['name'=>'Census stock','type'=>'stock','sku'=>'CENSUS-'.strtoupper($token),'uom'=>'pcs','track_inventory'=>true],'census-product-'.$token,(string)$owner,'r3-census');
+    $db->prepare("UPDATE pm_products SET status='active' WHERE organization_id=? AND product_id=?")->execute([$org,$censusProduct['product_id']]);
+    $cv=$censusProduct['variant_id'];$cp=$censusProduct['product_id'];
+    $productStore->postMovement($org,$cv,$locA,'5','receipt','manual:census-opening','census-opening-'.$token,(string)$owner,'r3-census');
+    $productStore->reserveForOrder($org,$cp,$cv,$censusProduct['sku'],$locA,2,'sales-order:'.str_repeat('d',32).':1:'.str_repeat('c',32),'census-reserve-'.$token,(string)$owner,'r3-census');
+    $censusBalance=$productStore->stockBalance($org,$cv,$locA);
+    $shopStore->map($org,$conn,'product','gid://shopify/Product/401',$cp);
+    $otherConn=$shopStore->provision($org,'census-'.$token.'.myshopify.com','shopify_env_primary');
+    $shopStore->map($org,$otherConn,'variant','gid://shopify/ProductVariant/402',$cv);
+    $db->prepare("UPDATE pm_external_connections SET status='disabled' WHERE organization_id=? AND connection_id=?")->execute([$org,$otherConn]);
+    $censusBeforeReads=$http->reads;
+    $census=$shopStore->inventoryCutoverCensus($org,$conn);
+    $cc=$census['local_counts'];
+    $check($census['status']==='CUTOVER_BLOCKED'&&!$census['provider_census_complete']&&!$census['local_stock_write_allowed']&&!$census['ownership_changed']
+        &&$cc['native_variants']===1&&$cc['tracked_native_variants']===1&&$cc['tracked_variants_without_mapping']===1
+        &&$cc['invalid_mappings']>=3&&$cc['active_native_reservations']===1&&$cc['nonzero_native_balances']===1
+        &&$cc['other_authoritative_connections']===1,'Connection census missed inherited scope, orphan mapping, native stock/reservation or disabled authority.');
+    $shopStore->map($org,$conn,'variant','gid://shopify/ProductVariant/402',$cv);
+    $db->prepare("INSERT INTO pm_external_stock_observations(organization_id,connection_id,variant_gid,location_gid,inventory_gid,on_hand,available,observed_at) VALUES (?,?,?,?,?,5,NULL,DATE_SUB(UTC_TIMESTAMP(6),INTERVAL 2 DAY))")
+        ->execute([$org,$conn,'gid://shopify/ProductVariant/402','gid://shopify/Location/999','gid://shopify/InventoryItem/402']);
+    $census=$shopStore->inventoryCutoverCensus($org,$conn);$cc=$census['local_counts'];
+    $check($cc['tracked_variants_without_mapping']===0&&$cc['tracked_variants_without_fresh_observation']===1
+        &&$cc['stale_or_incomplete_observations']===1&&$cc['unmapped_observations']===1,'Connection census accepted stale, incomplete or unmapped stock observation.');
+    $db->prepare("INSERT INTO pm_external_stock_observations(organization_id,connection_id,variant_gid,location_gid,inventory_gid,on_hand,available,observed_at) VALUES (?,?,?,?,?,5,3,UTC_TIMESTAMP(6))")
+        ->execute([$org,$conn,'gid://shopify/ProductVariant/402','gid://shopify/Location/88','gid://shopify/InventoryItem/403']);
+    $db->prepare("UPDATE pm_external_connections SET status='error' WHERE organization_id=? AND connection_id=?")->execute([$org,$conn]);
+    $census=$shopStore->inventoryCutoverCensus($org,$conn);$cc=$census['local_counts'];
+    $check($cc['tracked_variants_without_fresh_observation']===0&&$cc['inconsistent_inventory_variants']===1
+        &&$census['connection_status']==='error'&&$census['configured_inventory_mode']==='shopify_authoritative'&&in_array('connection_not_ready',$census['blocking_reasons'],true)
+        &&in_array('provider_global_write_fence_unverified',$census['blocking_reasons'],true)
+        &&$shopStore->inventoryCutoverCensus($org,$otherConn)['connection_status']==='disabled'
+        &&$productStore->stockBalance($org,$cv,$locA)===$censusBalance&&$orderRepo->get($org,$externalOrderId)===$beforeR3
+        &&$http->reads===$censusBeforeReads,'Census changed native stock/order, contacted provider or ignored conflicting inventory identity/error state.');
+    $reject(fn()=>$shopStore->inventoryCutoverCensus('foreign-'.$token,$conn));
+    if(strtoupper($conn)!==$conn)$reject(fn()=>$shopStore->inventoryCutoverCensus($org,strtoupper($conn)));
+    if(strtoupper($org)!==$org)$reject(fn()=>$shopStore->inventoryCutoverCensus(strtoupper($org),$conn));
+    $db->prepare("UPDATE pm_external_connections SET status='ready' WHERE organization_id=? AND connection_id=?")->execute([$org,$conn]);
+    echo "Sales R3.8 connection-wide local inventory census, inherited product authority, stale observations, disabled overlap, tenant and no-write fences PASS.\n";
     echo "Sales R3 Product-owned fulfillment assignment readback, location mapping, scope/pagination fences, durable evidence and no stock effect PASS.\n";
     echo "Sales S5 scoped exact summary, redacted lists and timeline PASS.\n";
 }finally{$db->rollBack();}
