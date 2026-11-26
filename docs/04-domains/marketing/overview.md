@@ -244,6 +244,6 @@ Scheduler COS за замовчуванням вимкнено (`COS_MARKETING_A
 
 M4 source isolation: optional Shopify last-visit and moments reads are separate from commercial order import; protected-data errors leave attribution unavailable, not Sales placement blocked. Exact store/order identity and createdAt are revalidated. Full history is admitted only when its last-touch projection agrees with the separate last-visit observation. Tests cover optional scope denial without losing native Order or prior evidence.
 
-## M5.4 — Budget Optimization Preview
+## M5.4 — Попередній розрахунок оптимізації бюджету
 
 `marketing.optimization.budget.preview` порівнює два різні завершені native paid plans одного акаунта, валюти, ревізії та UTC періоду, із підтвердженим terminal lifecycle і різними provider campaign IDs. Ціль першої моделі `TRAFFIC_CPC`, не ROAS. Мінімум 1000 impressions і 20 clicks на кожен план, позитивний spend, явний поріг гіршого CPC ≥125% кращого. Перенесення максимум 10% добового ліміту кожного плану з дорожчого у дешевший, total daily cap зберігається в integer minor units. За відсутності зіставності/доказів або при перевищенні source cap зміни не пропонуються. Результат лише hypothetical future planning candidate, нові draft, Finance reservation, Meta mutation, статистична значущість і прогноз конверсій не створюються. Новий запуск потребує чинних Product/Creative/Audience pins, Finance і незалежного Workflow approval. Thresholds are provisional engineering defaults, not learned coefficients.
