@@ -299,3 +299,12 @@ A read-only Product-owned `inventory-cutover-review` operator action (`--confirm
 ## R3.5 — Наскрізне приймання Sales і Product
 
 The canonical Goal/Plan/Approval/Action/Outcome fixture includes external lifecycle observation, mismatched provider line denial and rollback, independent Product quantity and Finance evidence readback. Outcome verification checks the exact immutable journal row and its digest, not the latest provider status alone. Provider transport/port fixtures do not establish production provider acceptance. R3.4 actual local ownership transfer remains gated by independently accepted provider-wide write fence and operational cutover; no production or release promotion.
+
+
+## O5/O7 — Нативна атрибуція та зв'язок Lead, Deal і Order
+
+Public Sales intake now persists only a complete bounded UTM source/medium/campaign tuple as untrusted source observations. The four existing public forms carry these non-visual inputs from their landing-page query; no new workspace or tracking cookies. Tags are bound to the native submission receipt, while untagged legacy receipt hashes stay compatible. Malformed or incomplete tuples do not prevent legitimate enquiries and remain unknown. Human operator and provider-origin intake keep distinct trust boundaries. Marketing alone assigns a campaign through its exact approved policy; a public tag is not provider verification.
+
+Native Order placement readback checks the immutable Deal relationship against the native Order in the same tenant. Evidence mismatch invalidates the captured order rather than inflating a combined conversion count. The existing Marketing captured-cohort deduplication is exercised end-to-end from public intake through independently approved Deal/WON and Order Actions and native Marketing capture/report. This is a bounded campaign/date cohort, not exhaustive cross-campaign attribution or recognized revenue. Provider-wide inventory takeover, actual provider execution, Finance accounting-backed revenue and D3–D5 independent release evidence remain gated.
+
+Prior exact head `f7c9a839cfcee07046b5380c2be997551106e687` passed all seven PR workflows (CI, Runtime, Documentation, Frontend, L2 Recovery Smoke, authenticated CSV route and SERIES01 bootstrap); this O5 increment requires its own exact-head acceptance.

@@ -912,6 +912,80 @@ $check($businessSync->status($org,(int)$requester,$cronRun['run_id'],null)['coun
 $missingR1=array_values(array_diff(\Domains\Sales\Automation\Action\SalesGovernedBusinessOperations::types(),array_keys($verifiedR1)));
 $check($missingR1===[],'Missing canonical R1 native outcome cases: '.implode(', ',$missingR1));
 echo "Sales R1 all 28 governed commands + signed AI/CRON review and real independent Plan/Action/Outcome PASS\n";
+
+/* O5/O7 native public Lead -> governed Deal/WON -> governed Order -> Marketing.
+   Use the real Sales placement and Lead/Deal read adapters, not a provider or alias fixture. */
+$linkedCampaign=$mktCampaigns->createDraft($org,$requester,$mktPolicy->validate([
+    'name'=>'O7 linked native conversion','business_objective'=>'Deduplicated captured commercial outcome'
+]),'o7-linked-'.$nonce)['id'];
+$linkedTags=['utm_source'=>'google','utm_medium'=>'organic','utm_campaign'=>$linkedCampaign];
+$linkedPublic=['submission_id'=>bin2hex(random_bytes(16)),'full_name'=>'O7 linked enquiry',
+    'email'=>'o7-linked-'.$nonce.'@example.test',...$linkedTags];
+$submitted=$businessBus->dispatch(new \App\Application\Sales\Command\ReceivePublicLeadCommand(
+    \Kernel\Shared\Domain\OrganizationId::fromString($org),$linkedPublic,'/contacts'));
+$check($submitted->ok&&is_int($submitted->data['lead_id']??null),'Native campaign enquiry rejected.');
+$linkedLead=$submitted->data['lead_id'];
+$linkedNative=$businessRead->lead($org,$linkedLead);
+$linkedDeal=(int)$linkedNative['client_case_id'];
+$check($linkedDeal>0&&array_intersect_key($linkedNative,$linkedTags)===$linkedTags,'Exact native UTM or Deal linkage missing.');
+$linkedSnapshot=static fn()=>\Domains\Sales\Application\Support\DealStateSnapshot::fromNative($businessDeals->getForStageChange($org,(string)$linkedDeal),$org,$linkedDeal);
+$runBusiness('deal.owner.assign',['deal_id'=>$linkedDeal,'expected_revision'=>$linkedSnapshot()['revision'],'owner_id'=>(int)$reviewer],'deal',(string)$linkedDeal);
+$runBusiness('deal.commercial.set',['deal_id'=>$linkedDeal,'expected_revision'=>$linkedSnapshot()['revision'],'deal_value'=>'50.00','currency'=>'EUR'],'deal',(string)$linkedDeal);
+$check($linkedSnapshot()['stage_id']===$from,'Public Deal did not enter the configured initial pipeline.');
+$runBusiness('pipeline.stage.manage',['deal_id'=>$linkedDeal,'expected_revision'=>$linkedSnapshot()['revision'],'target_stage_id'=>$to],'deal',(string)$linkedDeal);
+$runBusiness('deal.outcome.record',['deal_id'=>$linkedDeal,'expected_revision'=>$linkedSnapshot()['revision'],'target_stage_id'=>$wonStage,'outcome'=>'won'],'deal',(string)$linkedDeal);
+$mktSalesSource=new \App\Infrastructure\Marketing\SalesAttributionReadAdapter($businessRead,$active);
+$leadFact=$mktSalesSource->lead($mktActor,(string)$linkedLead);
+$check($leadFact['deal']['deal_id']===(string)$linkedDeal&&$leadFact['deal']['won']===true,'Native captured Lead/Deal outcome is not linked.');
+$mktLeadStore=new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingAttributionStore($db);
+$mktPaidProvider=new class implements \Domains\Marketing\Application\Contract\PaidMediaProviderInterface {
+    public function inspectAccount(string $organizationId,string $providerAccountId,string $credentialRef):array{throw new DomainException('No external calls.');}
+    public function hierarchy(string $organizationId,string $providerAccountId,string $credentialRef):array{throw new DomainException('No external calls.');}
+    public function insights(string $organizationId,string $providerAccountId,string $credentialRef,string $from,string $to,string $grain):array{throw new DomainException('No external calls.');}
+};
+$mktPaid=new \Domains\Marketing\Application\Service\MarketingPaidReadService($mktAccounts,$mktPaidProvider);
+$mktOps=new \Domains\Marketing\Application\Service\MarketingPaidOperationsReadService($mktPlans,
+    new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidOperationJournal($db),
+    new \Domains\Marketing\Infrastructure\Meta\MetaPaidExecutionProfiles('{}',false),$mktPaid);
+$mktFinanceAnalytics=new \App\Infrastructure\Marketing\FinanceAnalyticsReadAdapter(
+    new \Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceBudgetRepository($db),
+    new \Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinancePaidSettlementRepository($db,new \Domains\Finance\Domain\FinancePaidSettlementPolicy()),$active);
+$mktLeadAnalytics=new \Domains\Marketing\Application\Service\MarketingAnalyticsService($mktService,$mktPlans,$mktOps,$mktPaid,$mktLeadStore,$mktSalesSource,$mktFinanceAnalytics,$active);
+$leadReceipt=$mktLeadAnalytics->capture($mktActor,$linkedCampaign,null,[(string)$linkedLead],'o7-linked-lead-'.$nonce);
+$check($leadReceipt['results'][0]['state']==='RECORDED'&&$mktLeadAnalytics->capture($mktActor,$linkedCampaign,null,[(string)$linkedLead],'o7-linked-lead-'.$nonce)===$leadReceipt,
+    'Native Marketing lead capture or replay failed.');
+$linkedOrder=$executeWorkflow($prefix.'create',[
+    'deal_id'=>$linkedDeal,'currency'=>'EUR','lines'=>[['sku'=>'O7-LINKED','title'=>'Linked service','quantity'=>1,'unit_price'=>'50.00']],
+    'total'=>'50.00','attribution'=>$linkedTags
+],$requester,$reviewer,[...$config,'target_type'=>'sales_order_intent','target'=>bin2hex(random_bytes(16))])['order']['order_id'];
+$check($sales->placement($org,$linkedOrder)['deal_id']===$linkedDeal,'Native immutable placement did not retain the Deal link.');
+$linkedCommerce=new \Domains\Marketing\Application\Service\MarketingCommerceAttributionService($mktService,$mktPlans,
+    new \App\Infrastructure\Marketing\CommerceOrderReadAdapter($active,$sales,$sales,$sales),
+    new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingCommerceAttributionStore($db),$mktLeadStore,$active,
+    new \App\Infrastructure\Marketing\CommerceFinancialReadAdapter($active,$realStore),$mktSalesSource);
+$linkedReceipt=$linkedCommerce->capture($mktActor,$linkedCampaign,null,[$linkedOrder],'o7-linked-order-'.$nonce);
+$check($linkedReceipt['results'][0]['state']==='RECORDED'&&$linkedCommerce->capture($mktActor,$linkedCampaign,null,[$linkedOrder],'o7-linked-order-'.$nonce)===$linkedReceipt,
+    'Native linked order attribution or replay failed.');
+$linkedFrom=substr($leadFact['created_at'],0,10);
+$linkedTo=max($linkedFrom,substr($sales->placement($org,$linkedOrder)['occurred_at'],0,10),substr($leadFact['deal']['closed_at'],0,10));
+$linkedReport=static fn()=>$linkedCommerce->report($mktActor,$linkedCampaign,null,$linkedFrom,$linkedTo);
+$r=$linkedReport();
+$check($r['deduplicated_against_deals']&&$r['deduplication']['captured_leads']===1&&$r['deduplication']['won_deals']===1&&
+    $r['deduplication']['placed_orders']===1&&$r['deduplication']['overlapping_won_deals']===1&&$r['deduplication']['unique_outcomes']===1&&
+    $r['recognized_revenue']===null&&$r['roas']===null&&$r['net_cash_received']===null,'Real Lead/Deal/Order duplicated or fabricated revenue.');
+// Fault injection only: mismatched native immutable relationship must quarantine the order.
+$db->prepare('UPDATE sales_orders SET deal_id=NULL WHERE organization_id=? AND order_id=?')->execute([$org,$linkedOrder]);
+try {
+    $bad=$linkedReport();
+    $check(!$bad['deduplicated_against_deals']&&$bad['deduplication']['unique_outcomes']===null&&$bad['unresolved_captured_orders']===1,
+        'Divergent placement relationship produced a combined conversion count.');
+} finally {
+    $db->prepare('UPDATE sales_orders SET deal_id=? WHERE organization_id=? AND order_id=?')->execute([$linkedDeal,$org,$linkedOrder]);
+}
+$check($linkedReport()===$r&&$sales->placement('foreign-'.$org,$linkedOrder)===null,'Native linked evidence did not recover or leaked across tenants.');
+$check(!str_contains(json_encode($r,JSON_THROW_ON_ERROR),$linkedPublic['email']),'Customer contact leaked into Marketing report.');
+echo "O5/O7 exact native public UTM -> canonical Deal/WON -> canonical Order -> captured-cohort Marketing dedup, replay, relationship drift and no false revenue PASS\n";
+
 $executeWorkflow('sales.governed.team.manage',['operation'=>'create','code'=>'DENY_'.strtoupper($nonce),'name'=>'Revoked authority'],
     $requester,$reviewer,[...$businessConfig,'target_type'=>'sales_team_intent','target'=>bin2hex(random_bytes(16)),'expect_denied'=>true,
     'after_approval'=>static fn()=>$db->prepare('DELETE FROM sales_user_capabilities WHERE organization_id=? AND user_id=? AND capability="sales.approval.any_team"')->execute([$org,(int)$reviewer])]);

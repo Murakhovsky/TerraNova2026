@@ -75,4 +75,16 @@ if($useCase->execute(array_diff_key($input,['submission_id'=>true]),'/property/d
 if($useCase->execute([...$input,'property_id'=>'12.2'],'/property/demo')->ok)throw new RuntimeException('Malformed property accepted.');
 if($useCase->execute([...$input,'submission_id'=>str_repeat('b',32)],'/property/demo')->leadId!==43)throw new RuntimeException('Independent enquiry suppressed.');
 if(($created[0][1]['request_intent']??null)!=='viewing')throw new RuntimeException('Intent not persisted.');
-echo "Public lead application, submission identity and idempotency PASS.\n";
+$tags=['utm_source'=>'google','utm_medium'=>'organic','utm_campaign'=>'mkt-'.str_repeat('a',24)];
+$tagged=[...$input,...$tags,'submission_id'=>str_repeat('c',32)];
+if($useCase->execute($tagged,'/property/demo')->leadId!==44 ||
+    array_intersect_key($created[2][1],$tags)!==$tags)throw new RuntimeException('Exact UTM observations not persisted.');
+if($useCase->execute(array_reverse($tagged,true),'/property/demo')->leadId!==44 ||
+    $useCase->execute([...$tagged,'utm_medium'=>'email'],'/property/demo')->ok ||
+    count($created)!==3)throw new RuntimeException('UTM receipt replay or conflict invalid.');
+$malformed=[...$tagged,'submission_id'=>str_repeat('d',32),'utm_source'=>['google']];
+if($useCase->execute($malformed,'/property/demo')->leadId!==45 ||
+    array_intersect_key($created[3][1],$tags)!==[])throw new RuntimeException('Malformed UTM rejected an enquiry or became evidence.');
+if($useCase->execute([...$input,'submission_id'=>str_repeat('e',32),'utm_source'=>'google'],'/property/demo')->leadId!==46 ||
+    array_intersect_key($created[4][1],$tags)!==[])throw new RuntimeException('Partial UTM became evidence.');
+echo "Public lead application, exact UTM, submission identity and idempotency PASS.\n";

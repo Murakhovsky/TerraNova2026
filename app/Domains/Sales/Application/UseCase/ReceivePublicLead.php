@@ -10,6 +10,7 @@ use RuntimeException;
 use Domains\Sales\Application\DTO\PublicLeadResult;
 use Domains\Sales\Automation\Event\LeadCreated;
 use Domains\Sales\Model\LeadStatus;
+use Domains\Sales\Domain\Policy\PublicLeadAttribution;
 use Kernel\Event\EventBus;
 use Kernel\Event\EventMetadata;
 use Kernel\Transaction\Contract\TransactionManagerInterface;
@@ -66,7 +67,11 @@ final readonly class ReceivePublicLead
             'message'=>$message!==''?$message:null,'source_page'=>$sourcePage,'request_intent'=>$intent,
         ];
         $caseInput=$lead+['telegram'=>$telegram!==''?$telegram:null];
-        $fingerprint=hash('sha256',json_encode($actorId===null?$caseInput:['actor_id'=>$actorId,'lead'=>$caseInput],JSON_THROW_ON_ERROR));
+        // Preserve legacy receipt digests without tags. Public observations are immutable
+        // within a submission; operator intake has a separate trust boundary.
+        $attribution=$actorId===null?PublicLeadAttribution::observe($input):[];
+        $lead+=$attribution;
+        $fingerprint=hash('sha256',json_encode($actorId===null?$caseInput+$attribution:['actor_id'=>$actorId,'lead'=>$caseInput],JSON_THROW_ON_ERROR));
         $operation=$actorId===null?'public.lead.create':'operator.lead.intake';
 
         return $this->transactions->transactional(function()use($caseInput,$lead,$sourcePage,$key,$fingerprint,$operation,$actorId,$correlationId):PublicLeadResult{

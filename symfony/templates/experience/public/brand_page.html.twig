@@ -51,6 +51,9 @@
     {% if brand.hasForm %}
         <form id="request" class="cos-form" action="/contacts#request" method="post">
             <input type="hidden" name="submission_id" value="{{ leadSubmissionId }}">
+            {% for name, value in leadAttribution|default({}) %}
+                <input type="hidden" name="{{ name }}" value="{{ value }}">
+            {% endfor %}
             <input type="hidden" name="request_intent" value="general_contact">
             <input type="hidden" name="role" value="buyer">
             <input type="hidden" name="deal_type" value="consultation">

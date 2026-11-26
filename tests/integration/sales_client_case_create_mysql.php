@@ -204,7 +204,8 @@ try {
     $legacyKey='legacy-'.$token;
     $db->prepare('INSERT INTO sales_operation_receipts(organization_id,operation_type,idempotency_key,mutation_id) VALUES(?,?,?,?)')->execute([$org,'api.lead.create',$legacyKey,(string)$newId]);
     $reject(fn()=>$gateway->invoke($manager,'sales.lead.create',$intake,'human_api',$legacyKey,'trace-legacy'));
-    $public=['submission_id'=>bin2hex(random_bytes(16)),'full_name'=>'Public '.$token,'email'=>'public-'.$token.'@example.test','request_intent'=>'viewing'];
+    $public=['submission_id'=>bin2hex(random_bytes(16)),'full_name'=>'Public '.$token,'email'=>'public-'.$token.'@example.test','request_intent'=>'viewing',
+        'utm_source'=>'google','utm_medium'=>'organic','utm_campaign'=>'mkt-'.str_repeat('b',24)];
     $submit=static fn(array $data)=>$bus->dispatch(new ReceivePublicLeadCommand(OrganizationId::fromString($org),$data,'/contacts'));
     $accepted=$submit($public);
     $check($accepted->ok && (int)$accepted->data['lead_id']>0,'Public intake failed.');
@@ -212,9 +213,11 @@ try {
     $again=$submit(array_reverse($public,true));
     $check($again->ok && (int)$again->data['lead_id']===$publicId,'Public replay created a different lead.');
     $check(!$submit([...$public,'full_name'=>'Different'])->ok,'Conflicting public submission accepted.');
+    $check(!$submit([...$public,'utm_medium'=>'email'])->ok,'Conflicting public attribution accepted.');
     $check(!$submit(array_diff_key($public,['submission_id'=>true]))->ok,'Missing public submission identity accepted.');
     $row=$read->lead($org,$publicId);
     $check($row['request_intent']==='viewing' && (int)$row['client_case_id']>0,'Public intent or case link missing.');
+    $check($row['utm_source']===$public['utm_source']&&$row['utm_medium']===$public['utm_medium']&&$row['utm_campaign']===$public['utm_campaign'],'Public UTM native readback differs.');
     $q=$db->prepare('SELECT COUNT(*) FROM tn_leads WHERE organization_id=? AND email=?');$q->execute([$org,$public['email']]);
     $check((int)$q->fetchColumn()===1,'Public replay duplicated the native lead.');
     $q=$db->prepare('SELECT COUNT(*) FROM tn_client_cases WHERE organization_id=? AND person_id=?');$q->execute([$org,(int)$row['person_id']]);

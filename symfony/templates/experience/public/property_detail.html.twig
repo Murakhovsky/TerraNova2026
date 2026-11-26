@@ -239,6 +239,9 @@
                     <input type="hidden" name="role" value="buyer">
                     <input type="hidden" name="deal_type" value="{{ detail.dealType ?: 'consultation' }}">
                     <input type="hidden" name="submission_id" value="{{ leadSubmissionId }}">
+                    {% for name, value in leadAttribution|default({}) %}
+                        <input type="hidden" name="{{ name }}" value="{{ value }}">
+                    {% endfor %}
                     <input type="hidden" name="request_intent" value="general_contact" data-public-property-target="intent">
                     <label class="cos-visually-hidden" aria-hidden="true">
                         <span>Website</span>
