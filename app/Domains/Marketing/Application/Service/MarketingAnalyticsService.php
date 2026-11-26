@@ -74,10 +74,16 @@ final readonly class MarketingAnalyticsService
         return ['model'=>Policy::VERSION,'matches'=>$matches,'scanned'=>count($rows),
             'next_offset'=>count($rows)===50&&$offset<99900?$offset+50:null,'complete_coverage'=>false];
     }
-    public function report(TenantContext $actor,string $campaign,?string $plan,string $from,string $to,?string $snapshot,?string $reservation):array
+    public function report(TenantContext $actor,string $campaign,?string $plan,string $from,string $to,?string $snapshot,?string $reservation,?string $outcomeThrough=null):array
     {
         Policy::window($from,$to);$p=$this->scope($actor,$campaign,$plan);
         $org=$actor->organizationId()->value();
+        $cutoff=$to;
+        if($outcomeThrough!==null){
+            if($p===null||$from!==$p['period_start']||$to!==$p['period_end'])
+                throw new DomainException('Extended conversion cutoff requires exact paid acquisition window.');
+            $cutoff=\Domains\Marketing\Domain\MarketingEconomicsPolicy::conversionThrough($p,$outcomeThrough);
+        }
         if($p===null&&($snapshot!==null||$reservation!==null))throw new DomainException('Paid plan required for provider or Finance facts.');
         $rows=$this->store->list($org,$campaign,$from,$to,501,0);
         if(count($rows)>500)throw new DomainException('Analytics cohort exceeds 500 evidence records; narrow window.');
@@ -99,7 +105,7 @@ final readonly class MarketingAnalyticsService
             if(strtolower($l['status'])==='qualified'){$qualified++;$channels[$key]['qualified_leads']++;}
             $d=$l['deal'];if(!is_array($d))continue;
             if(!isset($deals[$d['deal_id']])){$deals[$d['deal_id']]=true;$linked++;}
-            if(isset($wonIds[$d['deal_id']])||!Policy::wonWithin($d,$r['created_at'],$to))continue;
+            if(isset($wonIds[$d['deal_id']])||!Policy::wonWithin($d,$r['created_at'],$cutoff))continue;
             $wonIds[$d['deal_id']]=true;$won++;$channels[$key]['won_deals']++;
             $c=$d['currency'];$v=Policy::minor($d['deal_value']);
             if(!in_array($c,['USD','EUR','UAH','PLN'],true)||$v===null){$unknownValue++;continue;}
@@ -127,7 +133,7 @@ final readonly class MarketingAnalyticsService
         // Media and native Sales are separate observation systems; captured cohort is not exhaustive.
         // No ROAS/CAC claim, because no complete attribution coverage or recognized revenue proof.
         return ['campaign_id'=>$campaign,'plan_id'=>$plan,'window_start'=>$from,'window_end'=>$to,'model'=>Policy::VERSION,
-            'coverage'=>'CAPTURED_NATIVE_LEADS_ONLY','sales_calendar'=>'NATIVE_STORED_CALENDAR','sales_cutoff'=>$to,
+            'coverage'=>'CAPTURED_NATIVE_LEADS_ONLY','sales_calendar'=>'NATIVE_STORED_CALENDAR','sales_cutoff'=>$cutoff,
             'leads'=>$leads,'qualified_leads'=>$qualified,'linked_deals'=>$linked,'won_deals'=>$won,
             'lead_to_won_percent'=>Policy::ratio($won,$leads,100),'won_deal_value'=>$values,'unknown_value_count'=>$unknownValue,
             'missing_source_count'=>$missing,'source_drift_count'=>$drift,'channels'=>array_values($channels),'media'=>$media,'settlement'=>$settlement,

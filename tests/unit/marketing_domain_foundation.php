@@ -73,7 +73,7 @@ echo "Marketing M4 complete media batch validation and exact aggregate PASS\n";
 
 $economicPlan=['id'=>'mkpl-'.str_repeat('a',24),'campaign_id'=>'mkt-'.str_repeat('b',24),'period_start'=>'2026-01-01','period_end'=>'2026-01-07','currency'=>'EUR','lifetime_minor'=>10000];
 $scope=['plan_id'=>$economicPlan['id'],'campaign_id'=>$economicPlan['campaign_id'],'window_start'=>$economicPlan['period_start'],'window_end'=>$economicPlan['period_end']];
-$lead=[...$scope,'leads'=>10,'qualified_leads'=>5,'won_deals'=>2,'missing_source_count'=>0,'source_drift_count'=>0];
+$lead=[...$scope,'sales_cutoff'=>$scope['window_end'],'leads'=>10,'qualified_leads'=>5,'won_deals'=>2,'missing_source_count'=>0,'source_drift_count'=>0];
 $order=[...$scope,'placed_orders'=>2,'unresolved_captured_orders'=>0,'financial_evidence_status'=>'COMPLETE_CAPTURED_COHORT','financial_evidence_count'=>2,'financial_evidence_invalid_count'=>0,'net_cash_received'=>[['currency'=>'EUR','minor'=>8000]]];
 $settlement=['state'=>'SETTLED','finance_settled'=>true,'currency'=>'EUR','reservation_id'=>'finr-'.str_repeat('c',24),'committed_minor'=>2000,'released_minor'=>8000,'reserved_minor'=>10000];
 $econ=\Domains\Marketing\Domain\MarketingEconomicsPolicy::project($economicPlan,$lead,$order,$settlement);
@@ -82,7 +82,17 @@ $econ=\Domains\Marketing\Domain\MarketingEconomicsPolicy::project($economicPlan,
 $assert($econ['cost_per_captured_lead']===null&&$econ['confirmed_collection_minor']===null&&$econ['net_collected_to_settled_media_spend']===null,'Partial cohort promoted to complete economics.');
 $econ=\Domains\Marketing\Domain\MarketingEconomicsPolicy::project($economicPlan,$lead,$order,null);
 $assert($econ['settled_media_minor']===null&&$econ['cost_per_captured_lead']===null,'Missing settlement represented as zero spend.');
-echo "Marketing M4 exact scoped cohort economics and unknown financial metrics PASS\n";
+$late='2026-02-06';
+$econ=\Domains\Marketing\Domain\MarketingEconomicsPolicy::project($economicPlan,[...$lead,'sales_cutoff'=>$late,'won_deals'=>3],[...$order,'window_end'=>$late,'placed_orders'=>3,'financial_evidence_count'=>3],$settlement,$late);
+$assert($econ['conversion_through']===$late&&$econ['window_end']===$economicPlan['period_end']&&$econ['won_deals']===3
+    &&$econ['placed_orders']===3&&$econ['settled_media_minor']===2000&&$econ['roas']===null,'Late conversion window corrupted acquisition/spend scope.');
+foreach(['2026-01-06','2026-02-07'] as $badCutoff){
+    $blocked=false;try{\Domains\Marketing\Domain\MarketingEconomicsPolicy::conversionThrough($economicPlan,$badCutoff);}catch(DomainException){$blocked=true;}
+    $assert($blocked,'Out-of-policy conversion cutoff admitted.');
+}
+$blocked=false;try{\Domains\Marketing\Domain\MarketingEconomicsPolicy::project($economicPlan,$lead,[...$order,'window_end'=>$late],$settlement,$late);}catch(DomainException){$blocked=true;}
+$assert($blocked,'Mixed Sales and commerce cutoffs accepted.');
+echo "Marketing M4 exact scoped cohort economics, bounded late conversions and unknown financial metrics PASS\n";
 
 $schedulePolicy=\Domains\Marketing\Domain\MarketingAttributionSchedulePolicy::class;
 $profile=['profile_id'=>'fixture','organization_id'=>'tenant-a','actor_id'=>'42','campaign_id'=>'mkt-'.str_repeat('a',24),'plan_id'=>null,'source_kind'=>'order','lookback_days'=>30,'max_pages'=>5];

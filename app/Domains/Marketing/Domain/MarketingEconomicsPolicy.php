@@ -5,10 +5,24 @@ use DomainException;
 /** Source-bound cohort economics, not accounting revenue or profitability. */
 final class MarketingEconomicsPolicy
 {
-    public static function project(array $plan,array $lead,array $order,?array $settlement):array
+    /** Keep acquisition/spend windows immutable, with a separate bounded conversion cutoff. */
+    public static function conversionThrough(array $plan,?string $through):string
     {
-        foreach([$lead,$order] as $r)foreach(['campaign_id'=>'campaign_id','plan_id'=>'id','window_start'=>'period_start','window_end'=>'period_end'] as $key=>$pin)
+        $through??=$plan['period_end'];
+        MarketingAttributionPolicy::window($plan['period_start'],$through);
+        $end=MarketingAttributionPolicy::date($plan['period_end']);
+        $cutoff=MarketingAttributionPolicy::date($through);
+        if($cutoff<$end||$cutoff>$end->modify('+30 days'))
+            throw new DomainException('Conversion cutoff must be within 30 days after the paid plan.');
+        return $through;
+    }
+    public static function project(array $plan,array $lead,array $order,?array $settlement,?string $through=null):array
+    {
+        $through=self::conversionThrough($plan,$through);
+        foreach([$lead,$order] as $r)foreach(['campaign_id'=>'campaign_id','plan_id'=>'id','window_start'=>'period_start'] as $key=>$pin)
             if(($r[$key]??null)!==($plan[$pin]??null))throw new DomainException('Economic cohort scope differs from paid plan.');
+        if(($lead['window_end']??null)!==$plan['period_end']||($lead['sales_cutoff']??null)!==$through
+            ||($order['window_end']??null)!==$through)throw new DomainException('Economic conversion cutoff differs from pinned scope.');
         $currency=$plan['currency']??null;
         if(!in_array($currency,['USD','EUR','UAH','PLN'],true))throw new DomainException('Unsupported economic currency.');
         $spend=null;$settlementRef=null;
@@ -38,7 +52,7 @@ final class MarketingEconomicsPolicy
         }
         $cost=static fn(int $n,bool $safe):?float=>$spend===null||$n===0||!$safe?null:round($spend/$n/100,4);
         return ['campaign_id'=>$plan['campaign_id'],'plan_id'=>$plan['id'],'window_start'=>$plan['period_start'],'window_end'=>$plan['period_end'],
-            'currency'=>$currency,'coverage'=>'CAPTURED_COHORT_ONLY','spend_basis'=>$spend===null?'UNAVAILABLE':'FINANCE_SETTLED_MEDIA_BUDGET',
+            'conversion_through'=>$through,'currency'=>$currency,'coverage'=>'CAPTURED_COHORT_ONLY','spend_basis'=>$spend===null?'UNAVAILABLE':'FINANCE_SETTLED_MEDIA_BUDGET',
             'settlement_ref'=>$settlementRef,'settled_media_minor'=>$spend,'captured_leads'=>$lead['leads'],'qualified_leads'=>$lead['qualified_leads'],
             'won_deals'=>$lead['won_deals'],'placed_orders'=>$order['placed_orders'],'lead_evidence_clean'=>$leadSafe,'order_evidence_clean'=>$orderSafe,
             'cost_per_captured_lead'=>$cost($lead['leads'],$leadSafe),'cost_per_captured_qualified_lead'=>$cost($lead['qualified_leads'],$leadSafe),

@@ -140,6 +140,10 @@
     "complete_coverage": {
       "type": "boolean",
       "const": false
+    },
+    "conversion_through": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
     }
   },
   "required": [
@@ -172,7 +176,8 @@
     "profit",
     "recognized_revenue",
     "causal_attribution",
-    "complete_coverage"
+    "complete_coverage",
+    "conversion_through"
   ],
   "additionalProperties": false
 }
