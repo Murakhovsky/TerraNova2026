@@ -620,11 +620,12 @@ try {
     echo "Marketing M5.9 real canonical Plan and Action approvals, native optimization review, stale and duplicate fences and independent Outcome PASS.\n";
 
     // M5.1–M5.2 scheduled monitor: exact native batches, automatic proposal, independent approvals and Outcome.
-    $batch('schedule-baseline','2026-05-01','2026-05-07','100.00','100');
-    $batch('schedule-current','2026-05-08','2026-05-14','100.00','40');
+    $monitorClock=new DateTimeImmutable('today',new DateTimeZone('UTC'));
+    $monitorWindows=\Domains\Marketing\Domain\MarketingOptimizationSchedulePolicy::windows($monitorClock,7);
+    $batch('schedule-baseline',$monitorWindows['baseline_start'],$monitorWindows['baseline_end'],'100.00','100');
+    $batch('schedule-current',$monitorWindows['window_start'],$monitorWindows['window_end'],'100.00','40');
     $monitorProfile=['profile_id'=>'monitor-e2e','organization_id'=>$org,'actor_id'=>$owner,'account_id'=>$optAccount['id'],
         'external_id'=>'90001','rule'=>'CTR_DECLINE','threshold_percent'=>60,'lookback_days'=>7,'followup_enabled'=>true];
-    $monitorClock=new DateTimeImmutable('2026-05-15T00:00:00Z');
     $monitorScheduler=new \App\Persistence\Marketing\MarketingOptimizationScheduleService($db,$goals,$bridge,$coordinator,$optPlanner,$optMedia,$ruleService,$modules,$optReviewOutcome,$learningService,$learnPlanner);
     $tickMonitor=static fn()=>$monitorScheduler->tick($actor,$monitorProfile,$monitorClock);
     $monitorRow=static fn()=>$db->fetchAssociative('SELECT * FROM marketing_optimization_schedules WHERE organization_id=? AND profile_id=?',[$org,$monitorProfile['profile_id']]);
@@ -649,6 +650,45 @@ try {
     $deny(fn()=>$monitorScheduler->tick($actor,[...$monitorProfile,'threshold_percent'=>50],$monitorClock),'Changed monitor configuration reused checkpoint.');
     $quiet=[...$monitorProfile,'profile_id'=>'monitor-quiet','rule'=>'CPM_INCREASE','threshold_percent'=>25,'followup_enabled'=>false];
     $assert($monitorScheduler->tick($actor,$quiet,$monitorClock)==='NOT_TRIGGERED'&&$monitorScheduler->tick($actor,$quiet,$monitorClock)==='CURRENT_CYCLE_OBSERVED','Quiet monitor proposed an unnecessary Action.');
+    // Native trusted scheduled review is eligible for a separately approved pause only for the
+    // exact current activated paid plan; no provider call is made by this eligibility check.
+    $pauseAudience=$planning->saveAudience($org,$owner,null,null,$planningPolicy->audience([
+        'name'=>'Optimization pause fixture','target_spec'=>['market_countries'=>['UA'],'audience_hypothesis'=>'Fixture review']
+    ]),'pause-fixture-audience-'.$token);
+    $pauseAdset=$planning->saveAdset($org,$campaignId,1,$owner,null,null,$planningPolicy->adset([
+        'name'=>'Optimization pause fixture','audience_id'=>$pauseAudience['id'],'audience_revision'=>1,
+        'creatives'=>[['creative_id'=>$creativeId,'revision'=>1]],'placements'=>['AUTOMATIC'],'optimization'=>'TRAFFIC',
+        'planned_daily_budget'=>'12.50','currency'=>'USD'
+    ]),'pause-fixture-adset-'.$token);
+    $pauseFrom=$monitorWindows['baseline_start'];$pauseTo=$monitorClock->modify('+7 days')->format('Y-m-d');
+    $pauseStore=new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidLaunchPlanStore($pdo);
+    $pausePlan=$pauseStore->create($org,$owner,'pause-fixture-plan-'.$token,hash('sha256','pause-fixture-plan-'.$token),[
+        'campaign_id'=>$campaignId,'campaign_revision'=>1,'adset_id'=>$pauseAdset['id'],'adset_revision'=>1,'adset_content_hash'=>$pauseAdset['content_hash'],
+        'account_id'=>$optAccount['id'],'account_revision'=>1,'currency'=>'USD','account_timezone'=>'UTC','period_start'=>$pauseFrom,'period_end'=>$pauseTo,
+        ...\Domains\Marketing\Domain\MarketingPaidFundingPolicy::budget('12.50','USD',$pauseFrom,$pauseTo)]);
+    $pauseJournal=new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidOperationJournal($pdo);
+    foreach(['DEPLOY_PAUSED'=>['CREATE_CAMPAIGN','CREATE_ADSET','CREATE_AD'],'ACTIVATE'=>['ACTIVATE_AD','ACTIVATE_ADSET','ACTIVATE_CAMPAIGN']] as $op=>$steps){
+        $action=bin2hex(random_bytes(16));$pauseJournal->beginCommand($org,$pausePlan['id'],$op,$action,hash('sha256',$action.':'.$op));
+        foreach($steps as $step){
+            $remote=str_ends_with($step,'CAMPAIGN')?'90001':(str_ends_with($step,'ADSET')?'90002':'90003');
+            $pauseJournal->begin($org,$pausePlan['id'],$step,$action,hash('sha256',$action.':'.$step));
+            $pauseJournal->identify($org,$pausePlan['id'],$step,$action,$remote);
+            $pauseJournal->finish($org,$pausePlan['id'],$step,$action,['provider_id'=>$remote,'configured_status'=>$op==='ACTIVATE'?'ACTIVE':'PAUSED']);
+        }
+        $pauseJournal->identify($org,$pausePlan['id'],$op,$action,'90001');
+        $pauseJournal->finish($org,$pausePlan['id'],$op,$action,['plan_id'=>$pausePlan['id'],'operation'=>$op,
+            'provider_campaign_id'=>'90001','state'=>$op==='ACTIVATE'?'ACTIVE_CONFIGURED':'PAUSED','spend_confirmed'=>false]);
+    }
+    $nativeReview=$optReviewOutcome->verifiedReceipt($actor,$mr['run_id']);
+    $reviewPin=['review_run_id'=>$mr['run_id'],'review_evaluation_id'=>$mr['evaluation_id'],
+        'review_id'=>$nativeReview['review_id'],'review_receipt_hash'=>$nativeReview['receipt_hash']];
+    $pauseGuard=new \Domains\Marketing\Application\Service\MarketingOptimizationPauseGuard($optHistory,$ruleService,$sweepPlans,$pauseJournal);
+    $pauseGuard->verify($actor,$pausePlan['id'],$reviewPin);
+    $deny(fn()=>$pauseGuard->verify($actor,$pausePlan['id'],[...$reviewPin,'review_receipt_hash'=>str_repeat('0',64)]),'Changed trusted review pin accepted for pause.');
+    $batch('schedule-revised',$monitorWindows['window_start'],$monitorWindows['window_end'],'100.00','90');
+    $deny(fn()=>$pauseGuard->verify($actor,$pausePlan['id'],$reviewPin),'Stale review remained eligible after native provider batch revision.');
+    $assert($pauseJournal->get($org,$pausePlan['id'],'PAUSE')===null,'Review eligibility caused a provider operation.');
+    echo "Marketing M5 native trusted review to current activated paid-plan pause eligibility and stale-source fence PASS.\n";
     // Missing batches exercise actual provider-read import before checkpoint transaction.
     $freshProvider=new class implements \Domains\Marketing\Application\Contract\PaidMediaProviderInterface{
         public int $calls=0;
