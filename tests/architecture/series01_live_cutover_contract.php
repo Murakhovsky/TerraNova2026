@@ -31,6 +31,20 @@ $assert(str_contains($workflow,'"$remote" < "$fixture"')
     &&str_contains($workflow,'sha256sum "$fixture"'),
     'Workflow must pipe pinned source-controlled CSV over SSH');
 
+// The pilot audit must be read-only and pin both the imported rowset and
+// independent native Product IDs. It is safe to call after bootstrap.
+foreach ([
+    '\'audit\'=>$this->audit($output)',
+    'ca2613c17efed1aaf6aa9c20178a70b1',
+    'a48b950feb912f4b4065cff8dcf85943c63a525453098f186e199a7c400a0d00',
+    '->report(self::TENANT,self::BATCH)',
+    '->getProduct(self::TENANT,$id)',
+    'cos_federation_plans',
+    'cos_workflow_runs',
+    'workflow_receipt_independently_attested',
+] as $item) $assert(str_contains($cmd,$item),'read-only native audit missing '.$item);
+$assert(substr_count($script,'audit --organization=default')===2,
+    'both first and repeat bootstrap must inspect native batch without mutations');
 $assert(!str_contains($cmd,'applyApproved(')
     &&!str_contains($cmd,'ProductImportApplyHandler')
     &&!str_contains($cmd,'createProduct('),
