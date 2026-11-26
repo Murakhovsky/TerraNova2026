@@ -28,6 +28,11 @@ $manifest = [
         ],
         'cross_domain_contracts' => [
             [
+                'contract' => 'Domains\\Marketing\\Application\\Contract\\MarketingOptimizationReviewEvidenceReadPort',
+                'role'=>'requires','counterpart'=>'federation','kind'=>'synchronous_port',
+                'purpose'=>'Read exact persisted trusted review Outcome for learning; no new approval or execution authority.',
+            ],
+            [
                 'contract' => 'Domains\\Marketing\\Application\\Contract\\MarketingAttributionCandidateReadPort',
                 'role'=>'requires','counterpart'=>'sales','kind'=>'synchronous_port',
                 'purpose'=>'Bounded tenant-scoped native lead and order ID discovery; no customer data or Sales mutation.',
@@ -130,6 +135,10 @@ $manifest = [
             'marketing.optimization.rule.evaluate',
             'marketing.optimization.rule.plan.propose',
             'marketing.optimization.rule.review.record',
+            'marketing.optimization.learning.preview',
+            'marketing.optimization.learning.get',
+            'marketing.optimization.learning.plan.propose',
+            'marketing.optimization.learning.record',
         ],
         'capability_contracts' => [],
     ],
@@ -337,5 +346,23 @@ $contracts[]=[
     'lifecycle'=>'experimental','tests'=>['tests/integration/marketing_analyst_approved_goal_e2e_mysql.php'],
     'documentation'=>'docs/04-domains/marketing/overview.md',
 ];
+foreach([
+    'marketing.optimization.learning.preview'=>['query','none','query','optimization-learning-preview','none'],
+    'marketing.optimization.learning.get'=>['query','none','query','optimization-learning-get','none'],
+    'marketing.optimization.learning.plan.propose'=>['command','internal','command','optimization-learning-plan-propose','conditional'],
+    'marketing.optimization.learning.record'=>['command','internal','action','optimization-learning-record','required'],
+] as $id=>[$kind,$effect,$binding,$schema,$approval]){
+    $contracts[]=[
+        'id'=>$id,'version'=>'1.0.0','owner_domain'=>'marketing','kind'=>$kind,
+        'input_schema'=>'resources/contracts/marketing/'.$schema.'-input.schema.json',
+        'output_schema'=>'resources/contracts/marketing/'.$schema.'-output.schema.json',
+        'execution_binding'=>$binding.':'.$id,'side_effect_level'=>$effect,'permission'=>'cos.tenant.manage',
+        'async'=>$binding==='action','approval_policy'=>$approval,'idempotency'=>$kind==='command'?'required':'none',
+        'timeout_policy'=>$kind==='command'?['seconds'=>60]:[],'retry_policy'=>$kind==='command'?['max_attempts'=>1]:[],
+        'failure_contract'=>'Require persisted trusted review Outcome and exact native follow-up batch pins. Receipt is observational only; never train, alter rules, mutate provider or Finance.',
+        'lifecycle'=>'experimental','tests'=>['tests/integration/marketing_analyst_approved_goal_e2e_mysql.php'],
+        'documentation'=>'docs/04-domains/marketing/overview.md',
+    ];
+}
 $manifest['contributions']['capability_contracts'] = $contracts;
 return $manifest;

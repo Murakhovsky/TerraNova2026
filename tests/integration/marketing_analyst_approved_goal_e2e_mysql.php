@@ -207,11 +207,15 @@ try {
     $optReviewService=new \Domains\Marketing\Application\Service\MarketingOptimizationReviewService($ruleService,$optReceipts,$modules);
     $optReviewHandler=new \Domains\Marketing\Automation\Action\MarketingOptimizationReviewHandler($optReviewService,$worker,$identityResolver,$tenantFactory,$modules,$capabilities);
     $optReviewOutcome=new \App\Persistence\Marketing\MarketingOptimizationReviewOutcomeProvider($db,$optReceipts,$receipts);
+    $optHistory=new \App\Persistence\Marketing\MarketingOptimizationReviewEvidenceReader($db,$optReceipts);
+    $learningService=new \Domains\Marketing\Application\Service\MarketingOptimizationLearningService($optHistory,$ruleService,$optReceipts,$modules);
+    $learningHandler=new \Domains\Marketing\Automation\Action\MarketingOptimizationLearningHandler($learningService,$worker,$identityResolver,$tenantFactory,$modules,$capabilities);
+    $learningOutcome=new \App\Persistence\Marketing\MarketingOptimizationLearningOutcomeProvider($db,$optReceipts,$receipts);
     $planHandler=new \App\Persistence\Federation\FederationPlanApproveHandler($db,$planReader);
-    $domains=new DomainModuleRegistry([new \Domains\Marketing\Bootstrap\MarketingDomainModule($handler,null,$sweepHandler,$optReviewHandler),new \Domains\Federation\Bootstrap\FederationDomainModule($planHandler)]);
+    $domains=new DomainModuleRegistry([new \Domains\Marketing\Bootstrap\MarketingDomainModule($handler,null,$sweepHandler,$optReviewHandler,$learningHandler),new \Domains\Federation\Bootstrap\FederationDomainModule($planHandler)]);
     $bindings=new FederationCapabilityBindingResolver($capabilities,$domains,$modules);
     $gate=new ModuleActionExecutionGate($domains,$modules,null,$worker);
-    $actionService=new ActionService(new MysqlActionRepository($pdo),new ActionExecutor([$handler,$sweepHandler,$optReviewHandler,$planHandler],$gate));
+    $actionService=new ActionService(new MysqlActionRepository($pdo),new ActionExecutor([$handler,$sweepHandler,$optReviewHandler,$learningHandler,$planHandler],$gate));
     $approvalRepo=new MysqlApprovalRepository($pdo);
     $policies=new MysqlPolicyRepository($pdo);
     $engine=new PolicyEngine(new ConditionEvaluator());
@@ -221,7 +225,7 @@ try {
     $outcome=new MarketingAnalystRunOutcomeProvider($db,$runs,$receipts);
     $sweepOutcome=new \App\Persistence\Marketing\MarketingAttributionSweepOutcomeProvider($db,$captureStore,$receipts);
     $goals=new FederationGoalStore($db,$bindings,new GoalPlanValidator($capabilities),new GoalOutcomeEvaluator(),
-        new FederationTrustedOutcomeEvidenceResolver($modules,[$outcome,$sweepOutcome,$optReviewOutcome]),$planReader);
+        new FederationTrustedOutcomeEvidenceResolver($modules,[$outcome,$sweepOutcome,$optReviewOutcome,$learningOutcome]),$planReader);
     $scheduler=new WorkflowStepScheduler();
     $bridge=new FederationCanonicalWorkflowBridge($db,$store,$scheduler,$goals,$planEvidence,$receipts,
         new FailClosedWorkflowNonActionReceiptEvidence(),$planReader,$capabilities,$domains,$modules,$policies,$engine,$policyContexts,$policyService,
@@ -545,6 +549,71 @@ try {
     $batch('stale-revision','2026-04-08','2026-04-14','150.00','95');
     $assert($actionService->execute($org,$staleAction,'opt-stale-action')?->status===ActionStatus::Failed&&$countReviews()===1,
         'Stale optimization signal passed worker recheck.');
+
+    // M5.10: independent subsequent observation. Historical approved review does not imply causal lift.
+    $learnCap=\Domains\Marketing\Automation\Action\MarketingOptimizationLearningHandler::TYPE;
+    $learnCriterion=\App\Persistence\Marketing\MarketingOptimizationLearningOutcomeProvider::CRITERION;
+    $pdo->prepare('INSERT INTO cos_policies
+        (id,organization_id,code,name,action_type,conditions,decision,priority,version,status)
+        VALUES (?,?,"mkt-opt-learn-e2e","Independent optimization learning approval",?,?,"APPROVAL_REQUIRED",1,1,"ACTIVE")')
+        ->execute([bin2hex(random_bytes(16)),$org,$learnCap,'[]']);
+    $follow=$batch('followup','2026-03-15','2026-03-21','150.00','80');
+    $learnParameters=['review_run_id'=>$optRun,'review_evaluation_id'=>'opt-eval-'.$token,'review_id'=>$optReceiptId,
+        'followup_run_id'=>$follow['id'],'followup_window_start'=>'2026-03-15','followup_window_end'=>'2026-03-21'];
+    $learnInput=['target_type'=>'marketing_paid_account','target_id'=>$optAccount['id'],'parameters'=>$learnParameters];
+    $learnPreview=new \App\Application\Capability\MarketingOptimizationLearningPreviewAdapter($learningService);
+    $learnPlanner=new \App\Persistence\Marketing\MarketingOptimizationLearningPlanProposalService($db,$goals,$bridge,$learningService);
+    $learnAdapter=new \App\Application\Capability\MarketingOptimizationLearningPlanProposeAdapter($learnPlanner);
+    $learnGet=new \App\Application\Capability\MarketingOptimizationLearningGetAdapter($learningService);
+    $deniedEval=[...$learnInput,'parameters'=>[...$learnParameters,'review_evaluation_id'=>'forged-'.$token]];
+    $deny(fn()=>$learnPreview->invoke($actor,$deniedEval,'fixture','fixture'),'Learning without trusted recorded review outcome admitted.');
+    $deny(fn()=>$learnPreview->invoke($actor,[...$learnInput,'target_id'=>'mads-'.str_repeat('0',24)],'fixture','fixture'),'Learning foreign account admitted.');
+    $deny(fn()=>$learnPreview->invoke($actor,[...$learnInput,'parameters'=>[...$learnParameters,'followup_run_id'=>$optCurrent['id'],
+        'followup_window_start'=>'2026-03-08','followup_window_end'=>'2026-03-14']],'fixture','fixture'),'Overlapping learning window admitted.');
+    // An absent follow-up row is never a successful learning record.
+    $empty=$optMediaStore->commit($org,$owner,'opt-empty-'.$token,hash('sha256','empty'),$optAccount,'campaign','2026-03-29','2026-04-04',[]);
+    $unavailable=$learnPreview->invoke($actor,[...$learnInput,'parameters'=>[...$learnParameters,'followup_run_id'=>$empty['id'],
+        'followup_window_start'=>'2026-03-29','followup_window_end'=>'2026-04-04']],'fixture','fixture');
+    // Use non-overlapping exact windows even when other imported scopes exist.
+    $assert($unavailable['status']==='INSUFFICIENT_EVIDENCE'&&$unavailable['next_step']==='COLLECT_EVIDENCE'&&!$unavailable['effect_confirmed'],
+        'Absent follow-up promoted to learning effect.');
+    // Review approvals may expire after an independently recorded outcome; that history is not live execution authority.
+    $oldExpiry=$db->fetchAllAssociative('SELECT id,expires_at FROM cos_approvals WHERE organization_id=? AND action_id IN (?,?)',[$org,$optAction,$optPlanAction]);
+    $db->executeStatement("UPDATE cos_approvals SET expires_at='2020-01-01 00:00:00' WHERE organization_id=? AND action_id IN (?,?)",[$org,$optAction,$optPlanAction]);
+    $learn=$learnPreview->invoke($actor,$learnInput,'fixture','fixture');
+    $assert($learn['status']==='IMPROVED_OBSERVED'&&$learn['window_relation']==='RETROSPECTIVE_ONLY'
+        &&(float)$learn['followup_evaluation']['change_percent']===100.0&&!$learn['causal_attribution']&&!$learn['rule_change_authorized'],
+        'Follow-up learning overclaimed causality or lost direction.');
+    $learnActionInput=[...$learnInput,'parameters'=>[...$learnParameters,'learning_hash'=>$learn['learning_hash']]];
+    $learnKey='opt-learning-'.$token;$lproposal=$learnAdapter->invoke($actor,$learnActionInput,$learnKey,'fixture');
+    $assert($lproposal['state']==='proposed'&&$learnAdapter->invoke($actor,$learnActionInput,$learnKey,'fixture')['state']==='existing'&&$countReviews()===1,
+        'Learning proposal replay or premature write.');
+    $lplan=$lproposal['plan_id'];$lrun='run-opt-learn-'.$token;
+    $lplanAction=$coordinator->requestApproval($actor,$lplan,'opt-learning-'.$token)['action_id'];
+    $assert($actionService->execute($org,$lplanAction,'learning-plan-unapproved')===null,'Learning Plan bypassed approval.');
+    $approve($lplanAction);
+    $assert($actionService->execute($org,$lplanAction,'learning-plan-approved')?->status===ActionStatus::Completed,'Learning Plan approval failed.');
+    $bridge->start($actor,$lrun,$lplan,$lplanAction);$bridge->advance($actor,$lrun,$lplanAction);
+    $lpending=$bridge->advance($actor,$lrun,$lplanAction);
+    $assert($lpending['state']==='awaiting_human_approval'&&$countReviews()===1,'Learning skipped independent Action approval.');
+    $laction=$lpending['action_id'];
+    $assert($actionService->execute($org,$laction,'learning-unapproved')===null,'Unapproved learning Action executed.');
+    $approve($laction);$lresult=$actionService->executeOutcome($org,$laction,'learning-approved');
+    $assert($lresult!==null&&$lresult->result->successful&&$lresult->result->data['learning_recorded']&&$countReviews()===2
+        &&!$lresult->result->data['effect_confirmed']&&!$lresult->result->data['rule_change_authorized'],'Approved learning native readback failed.');
+    $lid=$lresult->result->data['learning_id'];
+    $readback=$learnGet->invoke($actor,['learning_id'=>$lid],'fixture','fixture');
+    $assert($readback===$lresult->result->data&&$actionService->execute($org,$laction,'learning-replay')===null,'Learning replay or receipt lookup failed.');
+    $assert($bridge->advance($actor,$lrun,$lplanAction)['state']==='step_completed'&&$bridge->advance($actor,$lrun,$lplan,$lplanAction)['state']==='completed',
+        'Learning canonical Run did not complete.');
+    $lout=$goals->recordEvaluation($actor,'opt-learn-eval-'.$token,$lrun);
+    $assert(($lout['result']??null)==='satisfied'&&($lout['criteria'][0]['observed']??null)===1
+        &&$learningOutcome->verifiedReceipt($actor,$lrun)===$readback,'Learning Goal not independently satisfied.');
+    foreach($oldExpiry as $approvalRow)$db->executeStatement('UPDATE cos_approvals SET expires_at=? WHERE organization_id=? AND id=?',[$approvalRow['expires_at'],$org,$approvalRow['id']]);
+    $db->executeStatement('UPDATE marketing_optimization_receipts SET request_hash=? WHERE organization_id=? AND id=?',[str_repeat('0',64),$org,$lid]);
+    $deny(fn()=>$learningOutcome->observeRun($actor,$lrun,$learnCriterion,new DateTimeImmutable('-1 day'),new DateTimeImmutable('+1 day')),
+        'Tampered learning receipt accepted as outcome.');
+    echo "Marketing M5.10 historical trusted review, pinned retrospective follow-up, independent Plan and Action, native learning receipt and Outcome PASS.\n";
     $db->executeStatement('UPDATE marketing_optimization_receipts SET request_hash=? WHERE organization_id=? AND id=?',[str_repeat('0',64),$org,$optReceiptId]);
     $deny(fn()=>$optReviewOutcome->observeRun($actor,$optRun,$optCriterion,new DateTimeImmutable('-1 day'),new DateTimeImmutable('+1 day')),
         'Tampered optimization receipt accepted as trusted outcome.');

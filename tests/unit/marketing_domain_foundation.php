@@ -34,7 +34,7 @@ foreach($manifest['contributions']['capability_contracts'] as $raw) {
     $assert(is_file($root.'/'.$contract->outputSchema),'Output schema missing: '.$contract->id);
 }
 $validator->validate(CapabilityContract::fromArray($manifest['contributions']['capability_contracts'][2]),['name'=>'Test launch','business_objective'=>'Leads']);
-$assert(count($found)===54,'Expected 52 typed Marketing contracts including experiment and rule evaluation');
+$assert(count($found)===58,'Expected 52 typed Marketing contracts including experiment and rule evaluation');
 echo "Marketing M0 foundation PASS\n";
 
 

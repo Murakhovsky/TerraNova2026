@@ -1,0 +1,175 @@
+{
+  "schema_version": 4,
+  "id": "marketing.optimization-review-learning",
+  "title": "Optimization Rule → Approved Review → Learning",
+  "domain": "marketing",
+  "state": "as-is",
+  "workflow": "02-workflows/marketing-optimization-review-learning.md",
+  "trigger": "Tenant manager submits a triggered rule with exact native comparison evidence",
+  "outcomes": [
+    "Independent Plan and Action approvals precede a native immutable review receipt and trusted Outcome",
+    "Follow-up exact native evidence is compared against the reviewed window and classified without causal or financial claims",
+    "Separately approved native learning receipt is independently readable and never authorizes rule or provider mutation"
+  ],
+  "actors": [
+    "Marketing manager",
+    "Independent approver",
+    "Federation and Platform Workflow",
+    "Marketing"
+  ],
+  "steps": [
+    {
+      "id": "evaluate",
+      "label": "Evaluate rule against pinned batches",
+      "kind": "operation",
+      "owner": "Marketing",
+      "domain": "marketing",
+      "capability": "marketing.optimization.rule.evaluate",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/Marketing/Application/Service/MarketingOptimizationRuleService.php",
+          "symbol": "public function evaluate("
+        }
+      ]
+    },
+    {
+      "id": "review-plan",
+      "label": "Propose the canonical review Plan",
+      "kind": "operation",
+      "owner": "Marketing",
+      "domain": "marketing",
+      "capability": "marketing.optimization.rule.plan.propose",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "symfony/src/Persistence/Marketing/MarketingOptimizationReviewPlanProposalService.php",
+          "symbol": "public function propose("
+        }
+      ]
+    },
+    {
+      "id": "review",
+      "label": "Record independently approved review and attest Outcome",
+      "kind": "state",
+      "owner": "Marketing",
+      "domain": "marketing",
+      "capability": "marketing.optimization.rule.review.record",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/Marketing/Automation/Action/MarketingOptimizationReviewHandler.php",
+          "symbol": "public function execute("
+        },
+        {
+          "type": "source",
+          "path": "symfony/src/Persistence/Marketing/MarketingOptimizationReviewOutcomeProvider.php",
+          "symbol": "public function observeRun("
+        }
+      ]
+    },
+    {
+      "id": "followup",
+      "label": "Evaluate follow-up from trusted review Outcome",
+      "kind": "operation",
+      "owner": "Marketing",
+      "domain": "marketing",
+      "capability": "marketing.optimization.learning.preview",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/Marketing/Application/Service/MarketingOptimizationLearningService.php",
+          "symbol": "public function preview("
+        },
+        {
+          "type": "source",
+          "path": "symfony/src/Persistence/Marketing/MarketingOptimizationReviewEvidenceReader.php",
+          "symbol": "public function review("
+        }
+      ]
+    },
+    {
+      "id": "learning-plan",
+      "label": "Propose independent learning Plan",
+      "kind": "operation",
+      "owner": "Marketing",
+      "domain": "marketing",
+      "capability": "marketing.optimization.learning.plan.propose",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "symfony/src/Persistence/Marketing/MarketingOptimizationLearningPlanProposalService.php",
+          "symbol": "public function propose("
+        }
+      ]
+    },
+    {
+      "id": "record-learning",
+      "label": "Record approved learning observation and attest Outcome",
+      "kind": "state",
+      "owner": "Marketing",
+      "domain": "marketing",
+      "capability": "marketing.optimization.learning.record",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/Marketing/Automation/Action/MarketingOptimizationLearningHandler.php",
+          "symbol": "public function execute("
+        },
+        {
+          "type": "source",
+          "path": "symfony/src/Persistence/Marketing/MarketingOptimizationLearningOutcomeProvider.php",
+          "symbol": "public function observeRun("
+        }
+      ]
+    },
+    {
+      "id": "readback",
+      "label": "Read immutable learning receipt",
+      "kind": "outcome",
+      "owner": "Marketing",
+      "domain": "marketing",
+      "capability": "marketing.optimization.learning.get",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/Marketing/Application/Service/MarketingOptimizationLearningService.php",
+          "symbol": "public function get("
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "evaluate",
+      "to": "review-plan"
+    },
+    {
+      "from": "review-plan",
+      "to": "review"
+    },
+    {
+      "from": "review",
+      "to": "followup"
+    },
+    {
+      "from": "followup",
+      "to": "learning-plan"
+    },
+    {
+      "from": "learning-plan",
+      "to": "record-learning"
+    },
+    {
+      "from": "record-learning",
+      "to": "readback"
+    }
+  ]
+}
