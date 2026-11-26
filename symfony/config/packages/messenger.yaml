@@ -68,6 +68,7 @@ framework:
 
     routing:
       'App\Application\Marketing\Command\ContinueMarketingAttributionSchedules': async
+      'App\Application\Marketing\Command\ContinueMarketingOptimizationSchedules': async
       'App\Application\Engineering\Command\ContinueEngineeringWorkflowsCommand': engineering
       'App\Application\Engineering\Command\RunEngineeringFeatureCommand': engineering_immediate
       'App\Application\Engineering\Command\RunEngineeringSecurityRecoveryCommand': engineering_immediate

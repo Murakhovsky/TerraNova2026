@@ -619,6 +619,39 @@ try {
         'Tampered optimization receipt accepted as trusted outcome.');
     echo "Marketing M5.9 real canonical Plan and Action approvals, native optimization review, stale and duplicate fences and independent Outcome PASS.\n";
 
+    // M5.1–M5.2 scheduled monitor: exact native batches, automatic proposal, independent approvals and Outcome.
+    $batch('schedule-baseline','2026-05-01','2026-05-07','100.00','100');
+    $batch('schedule-current','2026-05-08','2026-05-14','100.00','40');
+    $monitorProfile=['profile_id'=>'monitor-e2e','organization_id'=>$org,'actor_id'=>$owner,'account_id'=>$optAccount['id'],
+        'external_id'=>'90001','rule'=>'CTR_DECLINE','threshold_percent'=>60,'lookback_days'=>7];
+    $monitorClock=new DateTimeImmutable('2026-05-15T00:00:00Z');
+    $monitorScheduler=new \App\Persistence\Marketing\MarketingOptimizationScheduleService($db,$goals,$bridge,$coordinator,$optPlanner,$optMedia,$ruleService,$modules);
+    $tickMonitor=static fn()=>$monitorScheduler->tick($actor,$monitorProfile,$monitorClock);
+    $monitorRow=static fn()=>$db->fetchAssociative('SELECT * FROM marketing_optimization_schedules WHERE organization_id=? AND profile_id=?',[$org,$monitorProfile['profile_id']]);
+    $beforeMonitor=$countReviews();
+    $assert($tickMonitor()==='PLAN_PROPOSED'&&$countReviews()===$beforeMonitor,'Monitor failed to propose or wrote without approval.');
+    $mpid=$monitorRow()['plan_id'];
+    $assert($tickMonitor()==='PLAN_APPROVAL_REQUESTED'&&$tickMonitor()==='WAIT_PLAN_APPROVAL','Monitoring skipped Plan approval.');
+    $mapproval=$goals->planApprovalAction($actor,$mpid)['id'];
+    $assert($actionService->execute($org,$mapproval,'monitor-unapproved-plan')===null,'Unapproved monitor Plan executed.');
+    $approve($mapproval);
+    $assert($actionService->execute($org,$mapproval,'monitor-plan-approved')?->status===ActionStatus::Completed,'Monitoring Plan approval failed.');
+    $assert($tickMonitor()==='RUN_STARTED'&&$tickMonitor()==='RUN_ADVANCED'&&$tickMonitor()==='RUN_ADVANCED','Monitor did not submit canonical review Action.');
+    $mkey=(string)$db->fetchOne('SELECT s.idempotency_key FROM cos_workflow_steps s JOIN cos_workflow_runs w ON w.organization_id=s.organization_id AND w.run_id=s.run_id WHERE w.organization_id=? AND w.source_plan_id=?',[$org,$mpid]);
+    $maction=(string)$db->fetchOne('SELECT id FROM cos_actions WHERE organization_id=? AND idempotency_key=?',[$org,'wf:'.$mkey]);
+    $assert($maction!==''&&$actionService->execute($org,$maction,'monitor-unapproved-action')===null&&$countReviews()===$beforeMonitor,'Monitoring bypassed Action approval.');
+    $approve($maction);
+    $assert($actionService->execute($org,$maction,'monitor-action-approved')?->status===ActionStatus::Completed,'Monitor review Action failed.');
+    $assert($tickMonitor()==='RUN_ADVANCED'&&$tickMonitor()==='RUN_ADVANCED'&&$tickMonitor()==='REVIEW_RECORDED','Monitor did not reach trusted Outcome.');
+    $mr=$monitorRow();
+    $assert($mr['state']==='REVIEW_RECORDED'&&$mr['evaluation_id']!==null&&$countReviews()===$beforeMonitor+1
+        &&$tickMonitor()==='CURRENT_CYCLE_OBSERVED','Monitor receipt checkpoint/replay failed.');
+    $deny(fn()=>$monitorScheduler->tick($actor,[...$monitorProfile,'threshold_percent'=>50],$monitorClock),'Changed monitor configuration reused checkpoint.');
+    $quiet=[...$monitorProfile,'profile_id'=>'monitor-quiet','rule'=>'CPM_INCREASE','threshold_percent'=>25];
+    $assert($monitorScheduler->tick($actor,$quiet,$monitorClock)==='NOT_TRIGGERED'&&$monitorScheduler->tick($actor,$quiet,$monitorClock)==='CURRENT_CYCLE_OBSERVED','Quiet monitor proposed an unnecessary Action.');
+    echo "Marketing M5 scheduled native monitoring, one UTC cycle, independent canonical Plan and Action, Outcome and quiet signals PASS.\n";
+
+
 } finally {
     if($oldRollout===false)putenv('COS_FEDERATION_CANONICAL_ORGANIZATION');
     else putenv('COS_FEDERATION_CANONICAL_ORGANIZATION='.$oldRollout);

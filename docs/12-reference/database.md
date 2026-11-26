@@ -256,6 +256,7 @@ generated: true
 | `marketing` | `app/migrations/20261126_009020_marketing_attribution_schedules.sql` | `marketing_attribution_schedules` |
 | `marketing` | `app/migrations/20261126_009021_marketing_experiment_protocols.sql` | `marketing_experiment_protocols` |
 | `marketing` | `app/migrations/20261126_009022_marketing_optimization_receipts.sql` | `marketing_optimization_receipts` |
+| `marketing` | `app/migrations/20261126_009023_marketing_optimization_schedules.sql` | `marketing_optimization_schedules` |
 | `product_management` | `app/migrations/20261118_000152_product_management_catalog.sql` | `pm_categories` |
 | `product_management` | `app/migrations/20261118_000152_product_management_catalog.sql` | `pm_media_refs` |
 | `product_management` | `app/migrations/20261118_000152_product_management_catalog.sql` | `pm_operation_receipts` |

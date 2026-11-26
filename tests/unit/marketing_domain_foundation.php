@@ -205,3 +205,16 @@ $assert($rulePolicy::evaluate($currentBatch,$baselineBatch,'90001','CTR_DECLINE'
 $blocked=false;try{$rulePolicy::evaluate($currentBatch,$baselineBatch,'90001','CTR_DECLINE',19);}catch(DomainException){$blocked=true;}
 $assert($blocked,'Unsafe threshold admitted.');
 echo "Marketing M5.8 bounded optimization rule evaluation with exact native evidence and no action authority PASS\n";
+
+$monitorPolicy=\Domains\Marketing\Domain\MarketingOptimizationSchedulePolicy::class;
+$monitorProfile=['profile_id'=>'monitor-fixture','organization_id'=>'tenant-a','actor_id'=>'42','account_id'=>'mads-'.str_repeat('a',24),
+    'external_id'=>'90001','rule'=>'CTR_DECLINE','threshold_percent'=>20,'lookback_days'=>7];
+$assert(count($monitorPolicy::parse(json_encode([$monitorProfile],JSON_THROW_ON_ERROR)))===1,'Monitoring profile missing.');
+$mw=$monitorPolicy::windows(new DateTimeImmutable('2026-02-15T00:00:00Z'),7);
+$assert($mw===['cycle_date'=>'2026-02-15','window_start'=>'2026-02-08','window_end'=>'2026-02-14',
+    'baseline_start'=>'2026-02-01','baseline_end'=>'2026-02-07'],'Monitoring windows not equal UTC completed periods.');
+foreach([[$monitorProfile,[...$monitorProfile,'profile_id'=>'duplicate']],[[...$monitorProfile,'threshold_percent'=>19]],[[...$monitorProfile,'lookback_days'=>31]]] as $bad){
+    $blocked=false;try{$monitorPolicy::parse(json_encode($bad,JSON_THROW_ON_ERROR));}catch(DomainException){$blocked=true;}
+    $assert($blocked,'Invalid scheduled monitor profile accepted.');
+}
+echo "Marketing M5 scheduler explicit bounded profile and UTC windows PASS.\n";
