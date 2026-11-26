@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "experiment_id": {
+      "type": "string",
+      "pattern": "^mkex-[a-f0-9]{24}$"
+    }
+  },
+  "required": [
+    "experiment_id"
+  ],
+  "additionalProperties": false
+}

@@ -378,9 +378,34 @@ final readonly class ProductManagementService
     {
         if(!preg_match('/^[a-f0-9]{32}$/D',$id))throw new DomainException('Invalid catalog identity.');
     }
-    public function attributes(string $org,int $limit=30,int $offset=0):array
+    public function attributes(string $org,int $limit=30,int $offset=0,string $status='active'):array
     {
-        $this->attributePage($org,$limit,$offset);return $this->store->attributes($org,$limit,$offset);
+        $this->attributePage($org,$limit,$offset);
+        if(!in_array($status,['active','archived'],true))throw new DomainException('Invalid attribute lifecycle status.');
+        return $this->store->attributes($org,$limit,$offset,$status);
+    }
+    public function changeAttributeLifecycle(string $org,array $in,string $key,string $actor,string $trace):array
+    {
+        $this->scope($org,$key,$actor,$trace);
+        $op=$in['operation']??null;
+        $fields=match($op){
+            'rename'=>['operation','code','expected_name','name'],
+            'archive','restore'=>['operation','code','expected_name'],
+            'binding.update'=>['operation','code','category_id','expected_is_required','expected_is_axis','is_required','is_axis'],
+            'binding.remove'=>['operation','code','category_id','expected_is_required','expected_is_axis'],
+            default=>throw new DomainException('Unknown attribute lifecycle operation.')
+        };
+        if(array_diff($fields,array_keys($in))!==[]||array_diff(array_keys($in),$fields)!==[])throw new DomainException('Invalid attribute lifecycle fields.');
+        $in['code']=AttributeRules::code((string)$in['code']);
+        foreach(['expected_name','name'] as $field)if(isset($in[$field])){
+            if(!is_string($in[$field])||trim($in[$field])===''||mb_strlen($in[$field])>190)throw new DomainException('Invalid attribute name.');
+            if($field==='name')$in[$field]=trim($in[$field]);
+        }
+        if(isset($in['category_id']))$this->attributeId((string)$in['category_id']);
+        foreach(['expected_is_required','expected_is_axis','is_required','is_axis'] as $field)
+            if(array_key_exists($field,$in)&&!is_bool($in[$field]))throw new DomainException('Invalid binding flag.');
+        ksort($in,SORT_STRING);
+        return $this->store->changeAttributeLifecycle($org,$in,$key,$actor,$trace);
     }
     public function bindAttribute(string $org,string $category,string $code,bool $required,bool $axis,string $key,string $actor,string $trace):array
     {

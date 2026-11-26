@@ -24,7 +24,7 @@ mutation COSProductSet($identifier: ProductSetIdentifiers, $input: ProductSetInp
       id
       handle
       status
-      variants(first: 5) { nodes { id sku price } }
+      variants(first: 10) { nodes { id sku price } }
     }
     userErrors { field message code }
   }
@@ -35,7 +35,7 @@ GRAPHQL;
 query COSProductReadback($id: ID!) {
   product(id: $id) {
     id handle status title
-    variants(first: 5) { nodes { id sku price } }
+    variants(first: 10) { nodes { id sku price } }
   }
 }
 GRAPHQL;
@@ -120,6 +120,110 @@ GRAPHQL;
     }
 
     /**
+     * Compile the complete native variant list. Shopify productSet treats list
+     * fields as authoritative; never silently omit an archived/missing variant.
+     * Inventory quantities and policies remain exclusively outside this contract.
+     */
+    public static function catalogDraft(string $org,string $conn,array $native,array $prices,string $currency,bool $publish=false):array
+    {
+        self::scope($org,$conn);
+        $id=$native['product_id']??null;
+        if(!is_string($id)||!preg_match('/^[a-f0-9]{32}$/D',$id)||!in_array($currency,['USD','EUR','UAH'],true)
+            ||($native['status']??null)!==($publish?'active':'draft'))throw new DomainException('Canonical draft and authenticated currency required.');
+        $source=$native['variants']??[];
+        if(!is_array($source)||count($source)<1||count($source)>10)throw new DomainException('Expected 1–10 canonical variants.');
+        $variants=[];$identities=[];$options=[];$names=null;$tuples=[];$skus=[];
+        $series=false;
+        foreach($source as $row){
+            $vid=$row['variant_id']??null;
+            if(!is_string($vid)||!preg_match('/^[a-f0-9]{32}$/D',$vid)||($row['status']??null)!=='active')
+                throw new DomainException('All variants must be active and identified.');
+            $sku=ProductRules::sku((string)($row['sku']??''));
+            if(isset($skus[strtolower($sku)]))throw new DomainException('Duplicate variant SKU.');
+            $skus[strtolower($sku)]=true;
+            $base=$prices[$vid]??null;
+            if(!is_array($base)||($base['currency']??null)!==$currency||($base['revision']??0)<1
+                ||!is_string($base['price']??null)||!preg_match('/^[0-9]+(?:\.[0-9]{1,4})?$/D',$base['price']))
+                throw new DomainException('Exact canonical shop-currency base price required for every variant.');
+            [$whole,$fraction]=array_pad(explode('.',$base['price'],2),2,'');
+            if(trim(substr($fraction,2),'0')!=='')throw new DomainException('Unsupported sub-cent price.');
+            $amount=$whole.'.'.str_pad(substr($fraction,0,2),2,'0');
+            if(str_starts_with($sku,'SERIES01-')){
+                $series=true;
+                if($currency!=='USD'||!preg_match('/^SERIES01-[LFA]0[1-3]$/D',$sku)||(float)$amount<300)
+                    throw new DomainException('SERIES01 requires USD and the pinned minimum price.');
+            }
+            $fields=isset($row['options_json'])?json_decode($row['options_json'],true,flags:JSON_THROW_ON_ERROR):[];
+            if(!is_array($fields))throw new DomainException('Invalid canonical variant options.');
+            if($fields===[])$fields=count($source)===1?['Finish'=>'Standard']:['SKU'=>$sku];
+            ksort($fields,SORT_STRING);
+            if(count($fields)>3||($names!==null&&$names!==array_keys($fields)))throw new DomainException('Shopify requires a consistent option set of 1–3 dimensions.');
+            $names=array_keys($fields);
+            $tuple=json_encode(array_values($fields),JSON_THROW_ON_ERROR);
+            if(isset($tuples[$tuple]))throw new DomainException('Duplicate option combination.');
+            $tuples[$tuple]=true;
+            $values=[];
+            foreach($fields as $name=>$value){
+                if(!is_string($name)||!is_string($value)||trim($value)===''||mb_strlen($value)>190)
+                    throw new DomainException('Invalid option name or value.');
+                $options[$name][$value]=$value;
+                $values[]=['optionName'=>$name,'name'=>$value];
+            }
+            $variants[]=['optionValues'=>$values,'sku'=>$sku,'price'=>$amount];
+            $identities[$vid]=['sku'=>$sku,'price'=>$amount,'variant_revision'=>(int)$row['revision'],'price_revision'=>$base['revision']];
+        }
+        $productOptions=[];foreach($options as $name=>$values)$productOptions[]=['name'=>$name,'position'=>count($productOptions)+1,
+            'values'=>array_map(static fn($value)=>['name'=>$value],array_values($values))];
+        $handle='cos-'.substr(hash('sha256',$org.':'.$conn),0,12).'-'.$id;
+        $description=trim((string)($native['description']??''));
+        if(mb_strlen($description)>20000)throw new DomainException('Product description exceeds preview bound.');
+        $input=['title'=>ProductRules::name((string)$native['name']),'handle'=>$handle,
+            'descriptionHtml'=>'<p>'.htmlspecialchars($description,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8').'</p>',
+            'status'=>$publish?'ACTIVE':'DRAFT','productOptions'=>$productOptions,'variants'=>$variants];
+        if($series){
+            if($publish)throw new DomainException('Concept products may never publish.');
+            $input['productType']='SERIES01';
+            $input['tags']=['cos-managed','series01','concept-not-for-sale'];
+        }
+        return ['kind'=>'product_set_draft','organization_id'=>$org,'connection_id'=>$conn,'product_id'=>$id,
+            'canonical_currency'=>$currency,'native_revision'=>(int)$native['revision'],'native_variants'=>$identities,
+            'query'=>self::PRODUCT_SET,'variables'=>['input'=>$input],'requires_approved_action'=>true,'publishable'=>$publish];
+    }
+
+    /** Exact complete independent readback, not the mutation response. */
+    public static function verifyCatalogReadback(array $remote,array $plan):array
+    {
+        $input=$plan['variables']['input'];$nodes=$remote['variants']['nodes']??null;
+        $gid=$remote['id']??null;
+        if(!is_string($gid)||!preg_match('#^gid://shopify/Product/[0-9]+$#D',$gid)
+            ||($remote['handle']??null)!==$input['handle']||($remote['status']??null)!==$input['status']
+            ||($remote['title']??null)!==$input['title']||($remote['descriptionHtml']??null)!==$input['descriptionHtml']||!is_array($nodes)
+            ||($remote['variants']['pageInfo']['hasNextPage']??null)!==false
+            ||count($nodes)!==count($plan['native_variants']))throw new DomainException('Incomplete or nonmatching Product readback.');
+        $bySku=[];$gids=[];
+        foreach($nodes as $row){
+            $sku=$row['sku']??null;$vgid=$row['id']??null;
+            if(!is_string($sku)||isset($bySku[$sku])||!is_string($vgid)||isset($gids[$vgid])
+                ||!preg_match('#^gid://shopify/ProductVariant/[0-9]+$#D',$vgid))throw new DomainException('Invalid readback variant identity.');
+            $bySku[$sku]=$row;$gids[$vgid]=true;
+        }
+        $mapping=[];$i=0;
+        foreach($plan['native_variants'] as $id=>$row){
+            $observed=$bySku[$row['sku']]??null;
+            if(!is_array($observed)||self::decimal((string)($observed['price']??''))!==self::decimal($row['price']))
+                throw new DomainException('Readback SKU or price mismatch.');
+            $actualOptions=$observed['selectedOptions']??null;
+            if(!is_array($actualOptions))throw new DomainException('Selected variant options missing.');
+            $actual=array_column($actualOptions,'value','name');
+            $expected=array_column($input['variants'][$i]['optionValues'],'name','optionName');
+            ksort($actual,SORT_STRING);ksort($expected,SORT_STRING);
+            if($actual!==$expected||count($actualOptions)!==count($expected))throw new DomainException('Selected variant options differ.');
+            $mapping[$id]=$observed['id'];++$i;
+        }
+        return ['product_gid'=>$gid,'variants'=>$mapping];
+    }
+
+    /**
      * Shapes an explicit publication request but does not authorize execution.
      * A future Action Handler must independently validate approved Product
      * readiness, compliant media, Shopify GID, publication ownership, and
@@ -157,10 +261,17 @@ GRAPHQL;
             ||!is_array($product['variants']['nodes']??null)
             ||count($product['variants']['nodes'])!==1
             ||($product['variants']['nodes'][0]['sku']??null)!==$expectedSku
-            ||(string)($product['variants']['nodes'][0]['price']??'')!==$expectedPriceUsd) {
+            ||self::decimal((string)($product['variants']['nodes'][0]['price']??''))!==self::decimal($expectedPriceUsd)) {
             throw new DomainException('Shopify returned nonmatching product; quarantine instead of remapping.');
         }
         return $gid;
+    }
+
+    private static function decimal(string $value):string
+    {
+        if(!preg_match('/^[0-9]+(?:\.[0-9]{1,6})?$/D',$value))throw new DomainException('Invalid provider price.');
+        [$whole,$fraction]=array_pad(explode('.',$value,2),2,'');
+        return (ltrim($whole,'0')?:'0').'.'.rtrim($fraction,'0');
     }
 
     private static function scope(string $org,string $conn):void

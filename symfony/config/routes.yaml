@@ -1,3 +1,9 @@
+# Shopify outbound proposal only; approval and execution remain canonical.
+cos_product_management_shopify_draft_propose:
+  path: /product-management/shopify/draft/propose
+  controller: App\Web\ProductManagement\ProductGovernedPlanController::proposeShopifyDraft
+  methods: [POST]
+
 # Product Management: authenticated manager proposal only, never approval/Action.
 cos_product_management_import_plan_propose:
   path: /api/v1/product-management/imports/{batchId}/propose
@@ -154,6 +160,18 @@ cos_product_management_variant_archive:
   controller: App\Web\ProductManagement\ProductManagementPageController::archiveVariant
   methods: [POST]
   requirements: { id: '[a-f0-9]{32}', variantId: '[a-f0-9]{32}' }
+
+cos_product_management_image_preview:
+  path: /product-management/media/images/{fileId}
+  controller: App\Web\ProductManagement\ProductManagementPageController::imagePreview
+  methods: [GET]
+  requirements: { fileId: '[A-Za-z0-9_-]{1,80}' }
+
+cos_product_management_product_media_upload:
+  path: /product-management/products/{id}/media/upload
+  controller: App\Web\ProductManagement\ProductManagementPageController::uploadMedia
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
 
 cos_product_management_product_media_attach:
   path: /product-management/products/{id}/media

@@ -10,9 +10,12 @@ foreach($raw['contributions']['capability_contracts'] as $definition) {
     $cap=CapabilityContract::fromArray($definition);
     $contracts[$cap->id]=$cap;
 }
-if(count($contracts)!==94)throw new RuntimeException('Missing typed PM contracts.');
+if(count($contracts)!==98)throw new RuntimeException('Missing typed PM contracts.');
 $validator=new CapabilityJsonInputValidator();
 $good=[
+ 'product_management.shopify.channel.publish'=>['target_type'=>'shopify_channel_publish','target_id'=>str_repeat('a',32),'parameters'=>['connection_id'=>str_repeat('b',32),'payload_digest'=>str_repeat('c',64),'publication_gid'=>'gid://shopify/Publication/123']],
+ 'product_management.shopify.draft.writeback'=>['target_type'=>'shopify_draft_writeback','target_id'=>str_repeat('a',32),'parameters'=>['connection_id'=>str_repeat('b',32),'payload_digest'=>str_repeat('c',64)]],
+ 'product_management.governed.product.assemble'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['name'=>'QA','variants'=>[['sku'=>'QA','price'=>['currency'=>'USD','amount'=>'12.5']]]]],
  'product_management.governed.media.attach'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['product_id'=>str_repeat('a',32),'file_id'=>'FILE-QA']],
  'product_management.governed.media.detach'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['media_id'=>str_repeat('a',32)]],
  'product_management.governed.attribute.define'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['code'=>'notes','name'=>'Notes','value_type'=>'text']],
@@ -48,6 +51,7 @@ $good=[
  'product_management.analytics.quality.search'=>['currency'=>'EUR','kind'=>'missing_required'],
  'product_management.analytics.reconciliation.get'=>['limit'=>500],
  'product_management.attribute.product.bulk_set'=>['products'=>[['product_id'=>str_repeat('a',32),'expected_revision'=>1]],'values'=>[['code'=>'outdoor','value'=>false]]],
+ 'product_management.attribute.lifecycle.change'=>['operation'=>'rename','code'=>'material','expected_name'=>'Material','name'=>'Material name'],
  'product_management.attribute.define'=>['code'=>'material','name'=>'Material','value_type'=>'enum','choices'=>['oak','walnut']],
  'product_management.attribute.search'=>['limit'=>30],
  'product_management.attribute.category.bind'=>['category_id'=>str_repeat('a',32),'code'=>'material','is_required'=>true,'is_axis'=>true],
@@ -112,6 +116,7 @@ $bad=[
  'product_management.analytics.quality.search'=>[['currency'=>'USD','kind'=>'unknown']],
  'product_management.analytics.reconciliation.get'=>[['limit'=>501],['repair'=>true]],
  'product_management.attribute.product.bulk_set'=>[['products'=>[],'values'=>[['code'=>'outdoor','value'=>false]]]],
+ 'product_management.attribute.lifecycle.change'=>[['operation'=>'delete','code'=>'material'],['operation'=>'archive','code'=>'material','organization_id'=>'foreign']],
  'product_management.attribute.define'=>[['code'=>'MATERIAL','name'=>'Material','value_type'=>'enum'],['code'=>'material','name'=>'Material','value_type'=>'unknown']],
  'product_management.attribute.product.set'=>[['product_id'=>str_repeat('a',32),'expected_revision'=>0,'values'=>[['code'=>'material','value'=>'oak']]],['product_id'=>str_repeat('a',32),'expected_revision'=>1,'values'=>[['code'=>'material','value'=>['oak']]]]],
  'product_management.variant.matrix.preview'=>[['product_id'=>str_repeat('a',32),'sku_prefix'=>'SKU','axes'=>[]]],

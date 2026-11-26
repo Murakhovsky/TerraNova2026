@@ -43,11 +43,13 @@ final readonly class MarketingAnalystRunHandler implements IdempotentExternalAct
                 throw new DomainException('Canonical Marketing Action identity required.');
             }
             $p=$action->parameters;
-            $allowed=['campaign_revision','creative_id','creative_revision','configuration_hash','context_hash','adset_id','adset_revision'];
+            $allowed=['campaign_revision','creative_id','creative_revision','configuration_hash','context_hash','adset_id','adset_revision','paid_plan_id','snapshot_ref'];
             if(array_diff(array_keys($p),$allowed)!==[]||!is_int($p['campaign_revision']??null)
                 ||!is_string($p['creative_id']??null)||!is_int($p['creative_revision']??null)
                 ||!is_string($p['configuration_hash']??null)||!preg_match('/^[a-f0-9]{64}$/D',$p['configuration_hash'])
                 ||!is_string($p['context_hash']??null)||!preg_match('/^[a-f0-9]{64}$/D',$p['context_hash'])
+                ||array_key_exists('paid_plan_id',$p)!==array_key_exists('snapshot_ref',$p)
+                ||(array_key_exists('paid_plan_id',$p)&&(!is_string($p['paid_plan_id'])||!is_string($p['snapshot_ref'])))
                 ||array_key_exists('adset_id',$p)!==array_key_exists('adset_revision',$p)
                 ||(array_key_exists('adset_id',$p)&&(!is_string($p['adset_id'])||!is_int($p['adset_revision'])))){
                 throw new DomainException('Malformed pinned Marketing Action.');
@@ -63,7 +65,7 @@ final readonly class MarketingAnalystRunHandler implements IdempotentExternalAct
             }
             $execution=$this->factory->create($action->organizationId,$p['configuration_hash']);
             $run=$execution->request($actor,$action->targetId,$p['campaign_revision'],$p['creative_id'],$p['creative_revision'],
-                $p['adset_id']??null,$p['adset_revision']??null,$this->idempotencyKey($action),$p['context_hash']);
+                $p['adset_id']??null,$p['adset_revision']??null,$this->idempotencyKey($action),$p['context_hash'],$p['paid_plan_id']??null,$p['snapshot_ref']??null);
             if($run['state']!=='SUCCEEDED'||!hash_equals($p['context_hash'],$run['context_hash'])
                 ||$run['advice']===null||$run['paid_activation_approved']!==false){
                 return ExecutionResult::failure('Marketing advisory turn unresolved; reconcile native receipt before any new request.',

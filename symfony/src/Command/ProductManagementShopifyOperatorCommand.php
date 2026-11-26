@@ -8,6 +8,10 @@ use Domains\ProductManagement\Infrastructure\Shopify\ShopifyCatalogPullService;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyClientCredentials;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyObservationStore;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyReadClient;
+use Domains\ProductManagement\Infrastructure\Shopify\ShopifyAccessReadiness;
+use Domains\ProductManagement\Infrastructure\Shopify\ShopifySeries01NativeAudit;
+use Domains\ProductManagement\Infrastructure\Shopify\ShopifyDraftWritebackService;
+use Domains\ProductManagement\Infrastructure\Shopify\ShopifyChannelReadback;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyImportPreviewService;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyImportRecoveryAudit;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyOrderReadbackService;
@@ -39,20 +43,31 @@ final class ProductManagementShopifyOperatorCommand extends Command
         private readonly ShopifyImportRecoveryAudit $recoveryAudit,
         private readonly ShopifyOrderReadbackService $orderReadback,
         private readonly CommerceOrderSourcePort $commerceOrders,
+        private readonly ShopifyAccessReadiness $access,
+        private readonly ShopifySeries01NativeAudit $series01,
+        private readonly ShopifyDraftWritebackService $writeback,
+        private readonly ShopifyChannelReadback $channels,
+        private readonly \App\Persistence\ProductManagement\ShopifySeries01RunAcceptance $seriesAcceptance,
     ) {
         parent::__construct();
     }
 
     protected function configure(): void
     {
-        $this->addArgument('action',InputArgument::REQUIRED,'preflight|provision|status|pull|candidates|inspect|stage|audit|order|order-sandbox|order-lifecycle-sandbox|order-fulfillment|inventory-cutover-review|inventory-cutover-census|map-location')
+        $this->addArgument('action',InputArgument::REQUIRED,'preflight|provision|status|pull|candidates|inspect|stage|audit|order|order-sandbox|order-lifecycle-sandbox|order-fulfillment|inventory-cutover-review|inventory-cutover-census|map-location|order-evidence|access|series01|draft-preview|draft-audit|channel-readback')
             ->addOption('organization',null,InputOption::VALUE_REQUIRED,'Explicit tenant organization')
             ->addOption('shop',null,InputOption::VALUE_REQUIRED,'Existing <shop>.myshopify.com name')
             ->addOption('secret-ref',null,InputOption::VALUE_REQUIRED,'Vault ref env://COS_SHOPIFY_* or pilot legacy','shopify_env_primary')
             ->addOption('connection',null,InputOption::VALUE_REQUIRED,'Existing 32-character connection ID')
             ->addOption('pages',null,InputOption::VALUE_REQUIRED,'Maximum 1..20 product pages','1')
             ->addOption('limit',null,InputOption::VALUE_REQUIRED,'Maximum 1..50 snapshot candidates','20')
+            ->addOption('run-id',null,InputOption::VALUE_REQUIRED,'Exact completed canonical CSV Workflow Run for SERIES01 approval evidence')
+            ->addOption('product-id',null,InputOption::VALUE_REQUIRED,'Canonical Product ID for read-only writeback preview or audit')
+            ->addOption('resync-id',null,InputOption::VALUE_REQUIRED,'Explicit distinct approval identity for mapped Product resync')
+            ->addOption('publication-gid',null,InputOption::VALUE_REQUIRED,'Explicit publication for active Products only')
+            ->addOption('collection-gid',null,InputOption::VALUE_REQUIRED|InputOption::VALUE_IS_ARRAY,'Explicit Shopify Collection GIDs for approved draft sync')
             ->addOption('product-gid',null,InputOption::VALUE_REQUIRED,'Observed Shopify Product GID')
+            ->addOption('delivery-id',null,InputOption::VALUE_REQUIRED,'Exact HMAC-verified Shopify order delivery for read-only evidence')
             ->addOption('order-gid',null,InputOption::VALUE_REQUIRED,'Verified Shopify Order GID for read-only Order evidence')
             ->addOption('location-gid',null,InputOption::VALUE_REQUIRED,'Observed Shopify Location GID')
             ->addOption('location-id',null,InputOption::VALUE_REQUIRED,'Canonical active Product warehouse ID')
@@ -74,7 +89,7 @@ final class ProductManagementShopifyOperatorCommand extends Command
             return $this->result($output,['status'=>'INVALID_TENANT'],Command::INVALID);
         }
         try {
-            if (!in_array($action,['preflight','provision','status','pull','candidates','inspect','stage','audit','order','order-sandbox','order-lifecycle-sandbox','order-fulfillment','inventory-cutover-review','inventory-cutover-census','map-location'],true)) {
+            if (!in_array($action,['preflight','provision','status','pull','candidates','inspect','stage','audit','order','order-sandbox','order-lifecycle-sandbox','order-fulfillment','inventory-cutover-review','inventory-cutover-census','map-location','order-evidence','access','series01','draft-preview','draft-audit','channel-readback'],true)) {
                 return $this->result($output,['status'=>'INVALID_ACTION'],Command::INVALID);
             }
             // Supervised, read-only diagnostics are available even before tenant
@@ -99,7 +114,7 @@ final class ProductManagementShopifyOperatorCommand extends Command
                 throw new DomainException('Product Management module not activated for tenant.');
             }
             if ($action==='provision') {
-                if ($input->getOption('confirm')!=='PROVISION_READ_ONLY') {
+                if (!in_array($input->getOption('confirm'),['PROVISION_READ_ONLY','PROVISION_OBSERVATION_ONLY'],true)) {
                     return $this->result($output,['status'=>'CONFIRMATION_REQUIRED'],Command::INVALID);
                 }
                 $shop=strtolower(trim((string)$input->getOption('shop')));
@@ -108,15 +123,41 @@ final class ProductManagementShopifyOperatorCommand extends Command
                 // selected shop before persisting any ready connection.
                 $ref=trim((string)$input->getOption('secret-ref'));
                 ShopifyClientCredentials::assertSecretReference($ref);
-                $this->credentials->accessToken($shop,$ref,$org,'shopify-provision-preflight');
-                $connection=$this->observations->provision($org,$shop,$ref);
+                $token=$this->credentials->accessToken($shop,$ref,$org,'shopify-provision-preflight');
+                $this->access->verifyCatalogRead($shop,$token);
+                $mode=$input->getOption('confirm')==='PROVISION_OBSERVATION_ONLY'?'observation_only':null;
+                $connection=$this->observations->provision($org,$shop,$ref,$mode);
                 return $this->result($output,
                     ['status'=>'PROVISIONED_READ_ONLY','organization_id'=>$org,'connection_id'=>$connection],
                     Command::SUCCESS);
             }
+            if($action==='series01'){
+                $run=$input->getOption('run-id');
+                $audit=$run===null?$this->series01->inspect($org):$this->seriesAcceptance->inspect($org,$run);
+                return $this->result($output,$audit,$audit['all_nine_present']?Command::SUCCESS:Command::FAILURE);
+            }
             $connection=trim((string)$input->getOption('connection'));
             if (!preg_match('/^[a-f0-9]{32}$/D',$connection)) {
                 return $this->result($output,['status'=>'INVALID_CONNECTION'],Command::INVALID);
+            }
+            if($action==='access'){
+                $row=$this->observations->connection($org,$connection);
+                $token=$this->credentials->accessToken($row['shop_domain'],$row['secret_ref'],$org,$connection);
+                $access=$this->access->verifyCatalogRead($row['shop_domain'],$token);
+                $access['connection_id']=$connection;
+                return $this->result($output,$access,$access['read_products']?Command::SUCCESS:Command::FAILURE);
+            }
+            if(in_array($action,['draft-preview','draft-audit'],true)){
+                $product=trim((string)$input->getOption('product-id'));
+                if(!preg_match('/^[a-f0-9]{32}$/D',$product))throw new DomainException('Canonical Product ID required.');
+                if($action==='draft-audit')return $this->result($output,$this->writeback->audit($org,$connection,$product),Command::SUCCESS);
+                $plan=$this->writeback->preview($org,$connection,$product,$input->getOption('collection-gid'),$input->getOption('publication-gid'),$input->getOption('resync-id'));
+                return $this->result($output,['state'=>'preview','product_id'=>$product,'connection_id'=>$connection,
+                    'payload_digest'=>ShopifyDraftWritebackService::digest($plan),'variables'=>$plan['variables'],'collection_gids'=>$plan['collections'],'media_manifest'=>$plan['media'],'publication_gid'=>$plan['publication'],'resync_id'=>$plan['resync_id'],
+                    'requires_independent_approval'=>true],Command::SUCCESS);
+            }
+            if($action==='channel-readback'){
+                return $this->result($output,$this->channels->inspect($org,$connection,trim((string)$input->getOption('product-gid'))),Command::SUCCESS);
             }
             if ($action==='status') {
                 return $this->result($output,$this->observations->status($org,$connection),Command::SUCCESS);
@@ -130,6 +171,19 @@ final class ProductManagementShopifyOperatorCommand extends Command
                 return $this->result($output,
                     ['status'=>'SNAPSHOT_CANDIDATES','connection_id'=>$connection,
                         'count'=>count($items),'candidates'=>$items],Command::SUCCESS);
+            }
+            if($action==='order-evidence'){
+                $gid=trim((string)$input->getOption('order-gid'));
+                $delivery=trim((string)$input->getOption('delivery-id'));
+                $receipt=$this->observations->orderDeliveryEvidence($org,$connection,$delivery,$gid);
+                $observed=$this->commerceOrders->order($org,'shopify',$connection,$gid);
+                if(($observed['external_order_id']??null)!==$gid||($observed['store_reference']??null)!==$connection
+                    ||!is_string($observed['provider_hash']??null)||!preg_match('/^[a-f0-9]{64}$/D',$observed['provider_hash']))
+                    throw new DomainException('Order source readback differs from verified delivery.');
+                return $this->result($output,['status'=>'VERIFIED_ORDER_SOURCE','receipt'=>$receipt,
+                    'provider_hash'=>$observed['provider_hash'],'test'=>$observed['test'],'blocked_reason'=>$observed['blocked_reason'],
+                    'sales_observed'=>$receipt['state']==='sales_order_observed','native_terms_available'=>$observed['terms']!==null,
+                    'finance_or_growth_settlement_proven'=>false,'provider_mutated'=>false],Command::SUCCESS);
             }
             if ($action==='map-location') {
                 if($input->getOption('confirm')!=='MAP_LOCATION_NO_STOCK_WRITES')

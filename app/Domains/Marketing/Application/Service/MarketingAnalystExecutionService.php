@@ -22,7 +22,7 @@ final readonly class MarketingAnalystExecutionService
 
     /** @return array<string,mixed> */
     public function request(TenantContext $actor,string $campaignId,int $campaignRevision,string $creativeId,int $creativeRevision,
-        ?string $adsetId,?int $adsetRevision,string $key,?string $approvedContextHash=null):array
+        ?string $adsetId,?int $adsetRevision,string $key,?string $approvedContextHash=null,?string $paidPlanId=null,?string $snapshotRef=null):array
     {
         $org=$actor->organizationId()->value();
         if(!$actor->isManager()||!$actor->allows(TenantPermissions::ACCESS)||!$actor->allows(TenantPermissions::MANAGE)
@@ -38,13 +38,16 @@ final readonly class MarketingAnalystExecutionService
         $identity=[$actorId,$campaignId,$campaignRevision,$creativeId,$creativeRevision,$adsetId,$adsetRevision,$this->admission->profileRef];
         // Preserve pre-cutover receipt identity when no approved hash was supplied.
         if($approvedContextHash!==null)$identity[]=$approvedContextHash;
+        if(($paidPlanId===null)!==($snapshotRef===null)||($paidPlanId!==null&&$approvedContextHash===null))
+            throw new DomainException('Performance advice requires an approved context and paired pins.');
+        if($paidPlanId!==null)$identity[]=[$paidPlanId,$snapshotRef];
         $hash=hash('sha256',json_encode($identity,JSON_THROW_ON_ERROR));
         $existing=$this->runs->byKey($org,$key);
         if($existing!==null){
             if(!hash_equals($existing['request_hash'],$hash))throw new DomainException('Analyst idempotency conflict.');
             return $this->publicReceipt($existing);
         }
-        $envelope=$this->contexts->build($actor,$campaignId,$campaignRevision,$creativeId,$creativeRevision,$adsetId,$adsetRevision);
+        $envelope=$this->contexts->build($actor,$campaignId,$campaignRevision,$creativeId,$creativeRevision,$adsetId,$adsetRevision,$paidPlanId,$snapshotRef);
         if($approvedContextHash!==null&&!hash_equals($approvedContextHash,$envelope['context_hash']))throw new DomainException('Approved analyst context changed.');
         $claim=$this->runs->claim($org,$key,[
             'request_hash'=>$hash,'requested_by'=>$actorId,'profile_ref'=>$this->admission->profileRef,
@@ -57,7 +60,7 @@ final readonly class MarketingAnalystExecutionService
             // Unique durable receipt is the stable remote correlation. No automatic retry.
             $response=$this->runtime->recommend($actor,$envelope,$run['id']);
             $advice=$this->validate($envelope,$response);
-            $fresh=$this->contexts->build($actor,$campaignId,$campaignRevision,$creativeId,$creativeRevision,$adsetId,$adsetRevision);
+            $fresh=$this->contexts->build($actor,$campaignId,$campaignRevision,$creativeId,$creativeRevision,$adsetId,$adsetRevision,$paidPlanId,$snapshotRef);
             if(!hash_equals($envelope['context_hash'],$fresh['context_hash']))throw new DomainException('Analyst context changed.');
         }catch(Throwable){
             // A timeout, malformed response or stale data can still have incurred external cost.

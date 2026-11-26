@@ -253,6 +253,9 @@ generated: true
 | `marketing` | `app/migrations/20261124_000192_marketing_m4_attribution_intents.sql` | `marketing_attribution_evidence` |
 | `marketing` | `app/migrations/20261124_000193_marketing_media_analytics.sql` | `marketing_media_analytics_runs` |
 | `marketing` | `app/migrations/20261124_000193_marketing_media_analytics.sql` | `marketing_paid_accounts` |
+| `marketing` | `app/migrations/20261126_009020_marketing_attribution_schedules.sql` | `marketing_attribution_schedules` |
+| `marketing` | `app/migrations/20261126_009021_marketing_experiment_protocols.sql` | `marketing_experiment_protocols` |
+| `marketing` | `app/migrations/20261126_009022_marketing_optimization_receipts.sql` | `marketing_optimization_receipts` |
 | `product_management` | `app/migrations/20261118_000152_product_management_catalog.sql` | `pm_categories` |
 | `product_management` | `app/migrations/20261118_000152_product_management_catalog.sql` | `pm_media_refs` |
 | `product_management` | `app/migrations/20261118_000152_product_management_catalog.sql` | `pm_operation_receipts` |
@@ -319,6 +322,10 @@ generated: true
 | `product_management` | `app/migrations/20261124_000195_product_management_attributes.sql` | `pm_products` |
 | `product_management` | `app/migrations/20261124_000195_product_management_attributes.sql` | `pm_variant_matrix_identities` |
 | `product_management` | `app/migrations/20261124_000195_product_management_attributes.sql` | `pm_variants` |
+| `product_management` | `app/migrations/20261126_009100_product_attribute_lifecycle.sql` | `pm_attribute_definitions` |
+| `product_management` | `app/migrations/20261126_009101_product_shopify_outbound_receipts.sql` | `pm_external_connections` |
+| `product_management` | `app/migrations/20261126_009101_product_shopify_outbound_receipts.sql` | `pm_shopify_outbound_receipts` |
+| `product_management` | `app/migrations/20261126_009102_product_shopify_outbound_history.sql` | `pm_shopify_outbound_receipts` |
 | `property` | `app/migrations/20260914_000048_web_v041_property_tenancy.sql` | `tn_properties` |
 | `property` | `app/migrations/20260914_000050_property_v022_tenant_boundary.sql` | `tn_properties` |
 | `property` | `app/migrations/20260914_000050_property_v022_tenant_boundary.sql` | `tn_property_activities` |

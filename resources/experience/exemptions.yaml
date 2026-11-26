@@ -16,3 +16,8 @@ exemptions:
     path: "/capital-markets/export/{dataset}.{format}"
     reason: data_export
     description: "Authenticated CSV/JSON export endpoint; it returns data rather than an HTML page surface."
+
+  - route: cos_product_management_image_preview
+    path: "/product-management/media/images/{fileId}"
+    reason: data_export
+    description: "Authenticated tenant-scoped verified raster image response; never renders an HTML page."

@@ -41,7 +41,8 @@ final readonly class PricingService
         $identity=[$variantId,$currency,$amount];
         if ($expectedRevision!==null) $identity[]=$expectedRevision;
         $hash=hash('sha256',json_encode($identity,JSON_THROW_ON_ERROR));
-        $this->connection->beginTransaction();
+        $outer=$this->connection->inTransaction();$savepoint='pm_price_'.bin2hex(random_bytes(8));
+        if($outer)$this->connection->exec('SAVEPOINT '.$savepoint);else $this->connection->beginTransaction();
         try {
             try {
                 $this->query('INSERT INTO pm_operation_receipts (organization_id,idempotency_key,operation,payload_hash) VALUES (?,?,?,?)',
@@ -50,7 +51,7 @@ final readonly class PricingService
                 if ($e->getCode()!=='23000') throw $e;
                 $existing=$this->query('SELECT payload_hash,result_json FROM pm_operation_receipts WHERE organization_id=? AND idempotency_key=?',[$org,$key])->fetch(PDO::FETCH_ASSOC);
                 if ($existing===false||!hash_equals($existing['payload_hash'],$hash)||$existing['result_json']===null) throw new DomainException('Idempotency conflict.');
-                $this->connection->commit();
+                if($outer)$this->connection->exec('RELEASE SAVEPOINT '.$savepoint);else $this->connection->commit();
                 return json_decode($existing['result_json'],true,flags:JSON_THROW_ON_ERROR);
             }
             $this->lockPriceableVariant($org,$variantId);
@@ -73,10 +74,13 @@ final readonly class PricingService
                 new \DateTimeImmutable('now',new \DateTimeZone('UTC'))));
             $this->query('UPDATE pm_operation_receipts SET result_json=? WHERE organization_id=? AND idempotency_key=?',
                 [json_encode($result,JSON_THROW_ON_ERROR),$org,$key]);
-            $this->connection->commit();
+            if($outer)$this->connection->exec('RELEASE SAVEPOINT '.$savepoint);else $this->connection->commit();
             return $result;
         } catch (Throwable $e) {
-            if ($this->connection->inTransaction()) $this->connection->rollBack();
+            if($this->connection->inTransaction()){
+                if($outer){$this->connection->exec('ROLLBACK TO SAVEPOINT '.$savepoint);$this->connection->exec('RELEASE SAVEPOINT '.$savepoint);}
+                else $this->connection->rollBack();
+            }
             throw $e;
         }
     }

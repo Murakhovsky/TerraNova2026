@@ -220,6 +220,9 @@ try {
         new \App\Infrastructure\Marketing\FinanceFundingReadAdapter($financeRead,$modules),$modules);
     $today=gmdate('Y-m-d');$start=gmdate('Y-m-d',time()+86400);$end=gmdate('Y-m-d',time()+3*86400);
     $paidPlan=$fundPlans->create($actor,$campaign['id'],1,$adset['id'],1,$account['id'],1,$start,$end,'paid-plan-'.$token);
+    $audiencePins=$fundPlans->comparisonPins($actor,$paidPlan['id']);
+    $assert($audiencePins===['audience_id'=>$audience['id'],'audience_revision'=>1,'planned_countries'=>['UA'],'creative_hash'=>$creative['content_hash']],
+        'Paid plan historical comparison pins did not bind native audience and creative.');
     $envelope=$financeRead->createDraft($actor,['name'=>'Synthetic paid exposure','source_domain'=>'marketing','source_ref'=>$paidPlan['id'],
         'currency'=>'USD','period_start'=>$today,'period_end'=>$end,'limit_minor'=>$paidPlan['lifetime_minor']],'paid-budget-'.$token);
     $active=$financeOps->activate($org,$envelope['id'],$reviewer,bin2hex(random_bytes(16)),'fixture-finance',1,'paid-budget-activate-'.$token);
@@ -370,6 +373,71 @@ try {
         &&$native['observation']['source_snapshot_ref']===$snapshotId&&$native['observation']['reported_spend_decimal']==='12.500000',
         'Native Marketing settlement source readback differs from confirmed receipts.');
     $deny(fn()=>$read->settlementSource($actor,$paidPlan['id'],'mis-'.str_repeat('0',24)),'Unrelated insight accepted for settlement.');
+    $performance=new \Domains\Marketing\Application\Service\MarketingAnalystPerformanceService($fundPlans,$read,$paidRead,$accounts);
+    $audienceComparison=new \App\Application\Capability\MarketingAudienceOptimizationPreviewAdapter(
+        new \Domains\Marketing\Application\Service\MarketingAudienceOptimizationService($fundPlans,
+            new \Domains\Marketing\Application\Service\MarketingBudgetOptimizationService($fundPlans,$read,$performance)));
+    $blocked=false;
+    try{$audienceComparison->invoke($actor,['first_plan_id'=>$paidPlan['id'],'first_snapshot_ref'=>'mis-'.str_repeat('a',24),
+        'second_plan_id'=>$paidPlan['id'],'second_snapshot_ref'=>'mis-'.str_repeat('b',24)],'fixture-audience-preview','fixture');}
+    catch(DomainException){$blocked=true;}
+    $assert($blocked,'Nonterminal/current-period audience comparison admitted.');
+    // Register a new controlled creative hypothesis; neither arm has any paid operation.
+    $experimentStore=new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingExperimentStore($pdo);
+    $experiments=new \Domains\Marketing\Application\Service\MarketingExperimentService($experimentStore,$fundPlans,$journal,
+        new \Domains\Marketing\Application\Service\MarketingBudgetOptimizationService($fundPlans,$read,$performance),$modules);
+    $register=new \App\Application\Capability\MarketingExperimentRegisterAdapter($experiments);
+    $getExperiment=new \App\Application\Capability\MarketingExperimentGetAdapter($experiments);
+    $creativePreview=new \App\Application\Capability\MarketingCreativeOptimizationPreviewAdapter($experiments);
+    $makeArm=static function(string $label,string $headline,string $primaryText)use($org,$owner,$token,$campaigns,$planning,$planningPolicy,$audience,
+        $fundPlans,$actor,$account,$start,$end):array{
+        $c=$campaigns->createDraft($org,$owner,(new \Domains\Marketing\Domain\MarketingDraftPolicy())->validate([
+            'name'=>'Experiment '.$label,'business_objective'=>'Experimental traffic','brief'=>'Synthetic experimental design'
+        ]),'experiment-campaign-'.$label.'-'.$token);
+        $cr=$planning->createCreative($org,$c['id'],$owner,$planningPolicy->creative([
+            'headline'=>$headline,'primary_text'=>$primaryText,'call_to_action'=>'Read more','destination_url'=>'https://example.com/catalog','language'=>'uk'
+        ]),'experiment-creative-'.$label.'-'.$token);
+        $as=$planning->saveAdset($org,$c['id'],1,$owner,null,null,$planningPolicy->adset([
+            'name'=>'Experiment traffic','audience_id'=>$audience['id'],'audience_revision'=>1,'creatives'=>[['creative_id'=>$cr['id'],'revision'=>1]],
+            'placements'=>['AUTOMATIC'],'optimization'=>'TRAFFIC','planned_daily_budget'=>'12.50','currency'=>'USD'
+        ]),'experiment-adset-'.$label.'-'.$token);
+        return $fundPlans->create($actor,$c['id'],1,$as['id'],1,$account['id'],1,$start,$end,'experiment-paid-plan-'.$label.'-'.$token);
+    };
+    $control=$makeArm('control','Control headline','Identical body text.');
+    $candidate=$makeArm('candidate','Candidate headline','Identical body text.');
+    $confounded=$makeArm('confounded','Third headline','Changed body text.');
+    $experimentInput=['control_plan_id'=>$control['id'],'candidate_plan_id'=>$candidate['id'],'factor'=>'HEADLINE'];
+    $experimentKey='experiment-register-'.$token;
+    $writesBefore=count($metaTransport->writes);
+    $experiment=$register->invoke($actor,$experimentInput,$experimentKey,'fixture');
+    $assert($experiment['state']==='REGISTERED_PROTOCOL_ONLY'&&$experiment['source_pins_current']
+        &&$experiment['protocol']['control']['plan_id']===$control['id']&&$experiment['protocol']['candidate']['plan_id']===$candidate['id']
+        &&$experiment['protocol']['target_allocation_percent']===50&&!$experiment['randomization_verified']
+        &&!$experiment['experiment_execution_authorized'],'Experiment native readback did not preserve protocol and fences.');
+    $assert($register->invoke($actor,$experimentInput,$experimentKey,'fixture')===$experiment
+        &&$getExperiment->invoke($actor,['experiment_id'=>$experiment['id']],'fixture','fixture')===$experiment,'Experiment idempotency or native readback failed.');
+    $deny(fn()=>$register->invoke($actor,[...$experimentInput,'candidate_plan_id'=>$confounded['id']],$experimentKey,'fixture'),'Changed idempotent registration admitted.');
+    $deny(fn()=>$register->invoke($actor,[...$experimentInput,'candidate_plan_id'=>$confounded['id']],'confounded-'.$token,'fixture'),'Two-factor change admitted.');
+    $deny(fn()=>$register->invoke($actor,['control_plan_id'=>$candidate['id'],'candidate_plan_id'=>$control['id'],'factor'=>'HEADLINE'],'reverse-'.$token,'fixture'),'Duplicate arm pair admitted.');
+    $outsider=new TenantContext(UserId::fromString($owner),OrganizationId::fromString('foreign-'.$token),
+        OrganizationRole::fromString('manager'),[Permission::fromString(TenantPermissions::ACCESS),Permission::fromString(TenantPermissions::MANAGE)]);
+    $deny(fn()=>$getExperiment->invoke($outsider,['experiment_id'=>$experiment['id']],'fixture','fixture'),'Cross-tenant protocol leaked.');
+    $deny(fn()=>$creativePreview->invoke($actor,['experiment_id'=>$experiment['id'],'control_snapshot_ref'=>$snapshotId,
+        'candidate_snapshot_ref'=>$snapshotId],'fixture','fixture'),'Future experiment ranked with unrelated snapshots.');
+    $assert(count($metaTransport->writes)===$writesBefore,'Experiment design or preview mutated provider.');
+    echo "Marketing M5.6 native immutable creative experiment registration, one-factor fences and M5.7 premature observation rejected PASS\n";
+    $performanceContexts=new \Domains\Marketing\Application\Service\MarketingAnalystContextService($campaignService,
+        new \Domains\Marketing\Application\Service\MarketingPlanningService($planning,$planningPolicy),
+        new \Domains\Marketing\Application\Service\MarketingProductDraftCheckService($product),$performance);
+    $performanceContext=$performanceContexts->build($actor,$campaign['id'],1,$creative['id'],1,$adset['id'],1,$paidPlan['id'],$snapshotId);
+    $perf=$performanceContext['context']['facts']['performance'];
+    $assert($perf['status']==='NATIVE_BOUND_PROVIDER_REPORT'&&$perf['reported_spend_decimal']==='12.500000'&&$perf['recognized_revenue']===null
+        &&$perf['payment_confirmed']===false&&!$performanceContext['context']['constraints']['provider_evidence_verified'],'M5 context promoted media facts into financial proof.');
+    $pins=array_column($performanceContext['context']['sources'],null,'alias');
+    $assert($pins['paid_plan']['content_hash']===$paidPlan['plan_hash']&&$pins['media_snapshot']['record_id']===$snapshotId,'M5 evidence pins missing.');
+    $assert($performanceContexts->build($actor,$campaign['id'],1,$creative['id'],1,$adset['id'],1,$paidPlan['id'],$snapshotId)['context_hash']===$performanceContext['context_hash'],'M5 context unstable.');
+    $deny(fn()=>$performanceContexts->build($actor,$campaign['id'],1,$creative['id'],1,$adset['id'],1,$paidPlan['id'],'mis-'.str_repeat('0',24)),'Foreign media snapshot accepted by analyst.');
+    echo "Marketing M5 native bound paid campaign analytics context and immutable evidence pins PASS\n";
     $assert($transport->posts===0,'Hermes unexpectedly invoked by paid lifecycle.');
     $deny(fn()=>$planner->propose($actor,$paidPlan['id'],'activate','reactivation-'.$token,$envelope['id'],$reservation['id']),'Paused plan reactivated.');
 

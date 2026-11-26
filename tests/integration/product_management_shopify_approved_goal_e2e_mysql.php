@@ -28,6 +28,8 @@ use App\Persistence\Federation\FederationPlanApprovalEvidenceReader;
 use App\Persistence\Federation\FederationTrustedOutcomeEvidenceResolver;
 use App\Persistence\ProductManagement\ShopifyImportPlanProposalService;
 use App\Persistence\ProductManagement\ShopifyImportRunOutcomeProvider;
+use App\Persistence\ProductManagement\ShopifyDraftPlanProposalService;
+use App\Persistence\ProductManagement\ShopifyDraftRunOutcomeProvider;
 use App\Persistence\Workflow\DoctrineWorkflowActionClaimAdmission;
 use App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier;
 use App\Persistence\Workflow\DoctrineWorkflowActionWorkerAdmission;
@@ -43,6 +45,8 @@ use Domains\ProductManagement\Infrastructure\Shopify\ShopifyImportPreviewService
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyImportApplyService;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyObservationStore;
 use Domains\ProductManagement\Automation\Action\ShopifyImportApplyHandler;
+use Domains\ProductManagement\Automation\Action\ShopifyDraftWritebackHandler;
+use Domains\ProductManagement\Infrastructure\Shopify\{ShopifyDraftWritebackService,ShopifyHttpTransportInterface,ShopifyReadClient,ShopifyClientCredentials,ShopifyAccessReadiness};
 use Domains\ProductManagement\Bootstrap\ProductManagementDomainModule;
 use Domains\ProductManagement\Infrastructure\Persistence\MySqlProductManagementStore;
 use Infrastructure\Platform\Persistence\MySql\Event\MysqlEventStore;
@@ -99,7 +103,7 @@ $deny=static function(callable $fn,string $why):void{
 };
 $actor=new TenantContext(UserId::fromString($owner),
     OrganizationId::fromString($org),OrganizationRole::fromString('manager'),
-    [Permission::fromString(TenantPermissions::MANAGE)]);
+    [Permission::fromString(TenantPermissions::MANAGE),Permission::fromString(TenantPermissions::ACCESS)]);
 $oldRollout=getenv('COS_FEDERATION_CANONICAL_ORGANIZATION');
 putenv('COS_FEDERATION_CANONICAL_ORGANIZATION='.$org);
 
@@ -138,7 +142,40 @@ try {
     $staging=new ShopifyImportPreviewService($pdo,$observations,$modules);
     $writer=new ShopifyImportApplyService($pdo,$products,$pricing,$observations);
     $handler=new ShopifyImportApplyHandler($writer,$modules);
-    $domains=new DomainModuleRegistry([new ProductManagementDomainModule(null,$handler)]);
+    // Entire outbound transport is isolated; no real Shopify write.
+    $outboundShop='pm-outbound-'.$token.'.myshopify.com';
+    putenv('SHOPIFY_SHOP_DOMAIN='.$outboundShop);
+    putenv('SHOPIFY_CLIENT_ID=mock-id');putenv('SHOPIFY_CLIENT_SECRET=mock-secret');
+    putenv('COS_SHOPIFY_WRITEBACK_ENABLED=1');
+    $transport=new class($outboundShop) implements ShopifyHttpTransportInterface {
+        public int $writes=0;
+        public ?array $product=null;
+        public function __construct(private string $shop){}
+        public function post(string $url,array $headers,string $body):array{
+            if($url==='https://'.$this->shop.'/admin/oauth/access_token')return ['status'=>200,'body'=>'{"access_token":"mock-token"}'];
+            if($url!=='https://'.$this->shop.'/admin/api/2026-10/graphql.json'||($headers['X-Shopify-Access-Token']??null)!=='mock-token')
+                throw new RuntimeException('Unexpected provider request.');
+            $r=json_decode($body,true,flags:JSON_THROW_ON_ERROR);$q=$r['query'];$v=$r['variables'];
+            if(str_contains($q,'COSAccess'))$d=['shop'=>['myshopifyDomain'=>$this->shop,'currencyCode'=>'USD'],'currentAppInstallation'=>['accessScopes'=>[['handle'=>'write_products']]]];
+            elseif(str_contains($q,'COSDraftLookup')||str_contains($q,'COSDraftById'))$d=['product'=>$this->product];
+            elseif(str_contains($q,'COSSkuLookup'))$d=['productVariants'=>['nodes'=>[],'pageInfo'=>['hasNextPage'=>false]]];
+            elseif(str_contains($q,'mutation COSProductSet')){
+                if($this->product!==null||isset($v['identifier']))throw new RuntimeException('Writeback repeated or unapproved upsert.');
+                ++$this->writes;$i=$v['input'];$nodes=[];
+                foreach($i['variants'] as $n=>$item)$nodes[]=['id'=>'gid://shopify/ProductVariant/'.(92000+$n),'price'=>$item['price'],'sku'=>$item['sku'],
+                    'selectedOptions'=>array_map(static fn($o)=>['name'=>$o['optionName'],'value'=>$o['name']],$item['optionValues'])];
+                $this->product=['id'=>'gid://shopify/Product/92001','status'=>'DRAFT','title'=>$i['title'],'handle'=>$i['handle'],'descriptionHtml'=>$i['descriptionHtml'],
+                    'variants'=>['nodes'=>$nodes,'pageInfo'=>['hasNextPage'=>false]]];
+                $d=['productSet'=>['userErrors'=>[],'product'=>['id'=>$this->product['id']]]];
+            }else throw new RuntimeException('Unexpected GraphQL operation.');
+            return ['status'=>200,'body'=>json_encode(['data'=>$d],JSON_THROW_ON_ERROR)];
+        }
+    };
+    $reader=new ShopifyReadClient($transport);
+    $outboundWriter=new ShopifyDraftWritebackService($pdo,$observations,new ShopifyClientCredentials($transport),$reader,
+        new ShopifyAccessReadiness($reader),$transport,$products,$pricing);
+    $outboundHandler=new ShopifyDraftWritebackHandler($outboundWriter,$modules);
+    $domains=new DomainModuleRegistry([new ProductManagementDomainModule(null,$handler,null,null,null,$outboundHandler)]);
     $capabilities=new CanonicalCapabilityCatalog($catalog);
     $bindings=new FederationCapabilityBindingResolver($capabilities,$domains,$modules);
     $planReader=new FederationPlanApprovalEvidenceReader($db);
@@ -150,7 +187,7 @@ try {
         new WorkflowPredecessorReceiptVerifier($receipts,new FailClosedWorkflowNonActionReceiptEvidence()));
     $gate=new ModuleActionExecutionGate($domains,$modules,null,$worker);
     $actionService=new ActionService(new MysqlActionRepository($pdo),
-        new ActionExecutor([$handler],$gate));
+        new ActionExecutor([$handler,$outboundHandler],$gate));
     $approvalRepo=new MysqlApprovalRepository($pdo);
     $policies=new MysqlPolicyRepository($pdo);
     $engine=new PolicyEngine(new ConditionEvaluator());
@@ -161,7 +198,7 @@ try {
     $outcome=new ShopifyImportRunOutcomeProvider($db,$writer,$receipts);
     $goals=new FederationGoalStore($db,$bindings,new GoalPlanValidator($capabilities),
         new GoalOutcomeEvaluator(),
-        new FederationTrustedOutcomeEvidenceResolver($modules,[$outcome]),$planReader);
+        new FederationTrustedOutcomeEvidenceResolver($modules,[$outcome,new ShopifyDraftRunOutcomeProvider($db,$outboundWriter,$receipts)]),$planReader);
     $scheduler=new WorkflowStepScheduler();
     $bridge=new FederationCanonicalWorkflowBridge($db,$store,$scheduler,$goals,
         $planEvidence,$receipts,new FailClosedWorkflowNonActionReceiptEvidence(),
@@ -293,7 +330,55 @@ try {
     $deny(fn()=>$goals->recordEvaluation($actor,'pm-eval-tampered-'.$token,$runId),
         'forged Shopify Variant receipt satisfied Goal again.');
     echo "Shopify approved Goal/Plan/Action/Outcome FULL native MySQL E2E PASS.\n";
+    // S3 outbound is a distinct approved workflow, not an import or direct CLI write.
+    $outConn=$observations->provision($org,$outboundShop,'shopify_env_primary','observation_only');
+    $nativeDraft=$products->createProduct($org,['name'=>'Canonical outbound QA','sku'=>'OUT-A-'.$token,'track_inventory'=>false],'out-product',$owner,'out-e2e');
+    $other=$products->createVariant($org,$nativeDraft['product_id'],'OUT-B-'.$token,'pcs',false,'out-variant',$owner,'out-e2e');
+    $pricing->set($org,$nativeDraft['variant_id'],'USD','360.00','out-price-a',$owner,'out-e2e');
+    $pricing->set($org,$other['variant_id'],'USD','450.15','out-price-b',$owner,'out-e2e');
+    $outDigest=ShopifyDraftWritebackService::digest($outboundWriter->preview($org,$outConn,$nativeDraft['product_id']));
+    $outPlanner=new ShopifyDraftPlanProposalService($db,$goals,$bindings,$outboundWriter);
+    $outProposal=$outPlanner->propose($actor,$outConn,$nativeDraft['product_id'],$outDigest);
+    $outGoal=$outProposal['goal_id'];$outPlan=$outProposal['plan_id'];$outRun='run-out-'.$token;$outApproval=bin2hex(random_bytes(16));
+    $assert($transport->writes===0,'Outbound proposal caused provider mutation.');
+    $pdo->prepare('INSERT INTO cos_policies
+        (id,organization_id,code,name,action_type,conditions,decision,priority,version,status)
+        VALUES (?,?,"pm-outbound-e2e","Product outbound independent approval","product_management.shopify.draft.writeback",?,"APPROVAL_REQUIRED",1,1,"ACTIVE")')
+        ->execute(['out-policy-'.$token,$org,'[]']);
+    // Same independent Plan approval evidence fixture as inbound scenario.
+    $db->executeStatement('UPDATE cos_federation_plans SET state=? WHERE organization_id=? AND plan_id=?',['approved',$org,$outPlan]);
+    $stored=(string)$db->fetchOne('SELECT plan_json FROM cos_federation_plans WHERE organization_id=? AND plan_id=?',[$org,$outPlan]);
+    $db->insert('cos_actions',[
+        'id'=>$outApproval,'organization_id'=>$org,'type'=>'cos.federation.plan.approval',
+        'target_type'=>'cos_federation_plan','target_id'=>$outPlan,
+        'parameters'=>json_encode(['goal_id'=>$outGoal,'plan_id'=>$outPlan,'specification_version'=>1,'plan_hash'=>hash('sha256',$stored)],JSON_THROW_ON_ERROR),
+        'source_type'=>'USER','source_id'=>$owner,'status'=>'COMPLETED','execution_mode'=>'APPROVAL_REQUIRED','risk_level'=>'HIGH',
+        'idempotency_key'=>'plan-out:'.$token,'correlation_id'=>'pm-out-plan-'.$token,
+    ]);
+    $db->insert('cos_policy_evaluations',['id'=>bin2hex(random_bytes(16)),'organization_id'=>$org,'action_id'=>$outApproval,'decision'=>'APPROVAL_REQUIRED',
+        'correlation_id'=>'pm-out-plan-'.$token,'evaluated_at'=>gmdate('Y-m-d H:i:s.u')]);
+    $db->insert('cos_approvals',['id'=>bin2hex(random_bytes(16)),'organization_id'=>$org,'action_id'=>$outApproval,'status'=>'APPROVED',
+        'approver_type'=>'USER','approver_id'=>$reviewer,'requested_by_type'=>'USER','requested_by_id'=>$owner,'decided_by_type'=>'USER','decided_by_id'=>$reviewer,
+        'decided_at'=>gmdate('Y-m-d H:i:s.u'),'expires_at'=>(new DateTimeImmutable('+1 day'))->format('Y-m-d H:i:s.u')]);
+    $assert($bridge->start($actor,$outRun,$outPlan,$outApproval)['execution_authority']==='platform_workflow','Outbound not canonical Workflow.');
+    $assert($bridge->advance($actor,$outRun,$outApproval)['state']==='running','Outbound run not running.');
+    $outPending=$bridge->advance($actor,$outRun,$outApproval);
+    $assert($outPending['state']==='awaiting_human_approval'&&$transport->writes===0,'Outbound did not await Action approval.');
+    $outAction=$outPending['action_id'];
+    $assert($actionService->execute($org,$outAction,'out-before-approval')===null&&$transport->writes===0,'Unapproved Shopify write occurred.');
+    $actionApproval=(string)$db->fetchOne('SELECT id FROM cos_approvals WHERE organization_id=? AND action_id=?',[$org,$outAction]);
+    $assert($approvalRepo->decide($org,$actionApproval,ApprovalStatus::Approved,$reviewer,'QA approved outbound'),'Independent outbound approval failed.');
+    $actionService->queue($org,$outAction);
+    $assert($actionService->execute($org,$outAction,'out-approved')?->status===ActionStatus::Completed,'Outbound approved Action failed.');
+    $assert($transport->writes===1&&$actionService->execute($org,$outAction,'out-replay')===null,'Outbound Action replay.');
+    $assert($bridge->advance($actor,$outRun,$outApproval)['state']==='step_completed','Outbound receipt not independently attested.');
+    $assert($bridge->advance($actor,$outRun,$outApproval)['state']==='completed','Outbound Workflow not complete.');
+    $verified=$goals->recordEvaluation($actor,'out-eval-'.$token,$outRun);
+    $assert($verified['result']==='satisfied'&&$verified['criteria'][0]['observed']===1,'Outbound run-linked provider/native outcome not verified.');
+    $assert($observations->mapping($org,$outConn,'product','gid://shopify/Product/92001')['canonical_id']===$nativeDraft['product_id'],'Outbound mappings missing.');
+    echo "Shopify outbound canonical Goal/Plan/Action/Outcome E2E PASS (mock provider, real MySQL).\n";
 } finally {
+    putenv('COS_SHOPIFY_WRITEBACK_ENABLED');
     if($oldRollout===false)putenv('COS_FEDERATION_CANONICAL_ORGANIZATION');
     else putenv('COS_FEDERATION_CANONICAL_ORGANIZATION='.$oldRollout);
 }

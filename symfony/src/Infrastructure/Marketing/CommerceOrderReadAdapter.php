@@ -41,6 +41,8 @@ final readonly class CommerceOrderReadAdapter implements MarketingCommerceOrderR
             'revision','occurred_at','channel','deal_id','currency','order_total','financial_evidence_reference','realized_revenue','attribution_status','provenance','attribution_observations']));
         $tags=(array)($p['attribution_observations']??[]);
         $p['attribution_observations']=array_intersect_key($tags,array_flip(['utm_source','utm_medium','utm_campaign','campaign_id']));
-        return ['placement'=>$p,'journey'=>$j];
+        $history=$p['channel']==='shopify'&&$this->journeys instanceof \Domains\Sales\Application\Contract\SalesCommerceOrderTouchHistoryReadPort
+            ?$this->journeys->touchHistory($org,$orderId):null;
+        return ['placement'=>$p,'journey'=>$j,'touch_history'=>$history];
     }
 }

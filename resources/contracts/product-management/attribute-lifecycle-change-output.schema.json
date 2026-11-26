@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Attribute lifecycle change output",
+  "type": "object",
+  "required": [
+    "operation",
+    "code"
+  ],
+  "properties": {
+    "operation": {
+      "type": "string",
+      "enum": [
+        "rename",
+        "archive",
+        "restore",
+        "binding.update",
+        "binding.remove"
+      ]
+    },
+    "code": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,39}$"
+    },
+    "name": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "archived"
+      ]
+    },
+    "category_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "bound": {
+      "type": "boolean"
+    },
+    "is_required": {
+      "type": "boolean"
+    },
+    "is_axis": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false
+}

@@ -14,6 +14,7 @@ use Domains\ProductManagement\Automation\Action\ProductStockCountApplyHandler;
 use Domains\ProductManagement\Automation\Action\ProductStockCountSessionApplyHandler;
 use Domains\ProductManagement\Automation\Action\ProductGovernedOperationHandler;
 use Domains\ProductManagement\Automation\Action\ShopifyImportApplyHandler;
+use Domains\ProductManagement\Automation\Action\ShopifyDraftWritebackHandler;
 use Kernel\Module\Contract\EventOwningModuleInterface;
 use Kernel\Rule\Contract\RuleContextProviderInterface;
 use Domains\ProductManagement\Rule\ProductManagementRuleContextProvider;
@@ -28,6 +29,7 @@ final readonly class ProductManagementDomainModule implements DomainModuleInterf
         private ?ProductStockCountApplyHandler $stockCountHandler = null,
         private ?ProductStockCountSessionApplyHandler $countSessionHandler = null,
         private ?ProductGovernedOperationHandler $governedHandler = null,
+        private ?ShopifyDraftWritebackHandler $writebackHandler = null,
     ) {}
 
     public function name(): string { return 'product_management'; }
@@ -35,13 +37,15 @@ final readonly class ProductManagementDomainModule implements DomainModuleInterf
         return array_merge(array_values(array_filter([
             $this->importHandler===null?null:ProductImportApplyHandler::TYPE,
             $this->shopifyHandler===null?null:ShopifyImportApplyHandler::TYPE,
+            $this->writebackHandler===null?null:ShopifyDraftWritebackHandler::TYPE,
+            $this->writebackHandler===null?null:ShopifyDraftWritebackHandler::PUBLISH,
             $this->stockCountHandler===null?null:ProductStockCountApplyHandler::TYPE,
             $this->countSessionHandler===null?null:ProductStockCountSessionApplyHandler::TYPE,
         ])), $this->governedHandler===null?[]:ProductGovernedOperationHandler::types());
     }
 
     public function actionHandlers():array {
-        return array_values(array_filter([$this->importHandler,$this->shopifyHandler,$this->stockCountHandler,$this->countSessionHandler,$this->governedHandler]));
+        return array_values(array_filter([$this->importHandler,$this->shopifyHandler,$this->stockCountHandler,$this->countSessionHandler,$this->governedHandler,$this->writebackHandler]));
     }
 
     public function policies(string $organizationId):array {
@@ -55,6 +59,13 @@ final readonly class ProductManagementDomainModule implements DomainModuleInterf
             $policyId=substr(hash('sha256',$organizationId.':shopify-import-approved-v1'),0,32);
             $policies[]=new ActionPolicy($policyId,$organizationId,ShopifyImportApplyHandler::TYPE,[],
                 PolicyDecision::ApprovalRequired,10,'Shopify import requires independently approved canonical Action.');
+        }
+        if($this->writebackHandler!==null) {
+            $policyId=substr(hash('sha256',$organizationId.':shopify-draft-writeback-approved-v1'),0,32);
+            $policies[]=new ActionPolicy($policyId,$organizationId,ShopifyDraftWritebackHandler::TYPE,[],
+                PolicyDecision::ApprovalRequired,10,'Shopify draft revision requires independent approved canonical Action.');
+            $policies[]=new ActionPolicy(substr(hash('sha256',$organizationId.':shopify-publication-approved-v1'),0,32),$organizationId,ShopifyDraftWritebackHandler::PUBLISH,[],
+                PolicyDecision::ApprovalRequired,10,'Shopify publication requires independent approved canonical Action.');
         }
         if($this->stockCountHandler!==null) {
             $policyId=substr(hash('sha256',$organizationId.':product-stock-count-approved-v1'),0,32);
@@ -85,12 +96,14 @@ final readonly class ProductManagementDomainModule implements DomainModuleInterf
     {
         return [
             'product_management.product.created',
+            'product_management.product.assembled',
             'product_management.translation.upserted',
             'product_management.media.attached',
             'product_management.media.detached',
             'product_management.variant.created',
             'product_management.variant.updated',
             'product_management.attribute.defined',
+            'product_management.attribute.lifecycle_changed',
             'product_management.attribute.category_bound',
             'product_management.attribute.product_set',
             'product_management.attribute.bulk_set',

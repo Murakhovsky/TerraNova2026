@@ -9,6 +9,9 @@ use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Shell\ShellBreadcrumb;
 use App\Web\Experience\Shell\WorkspaceShellFactory;
 use DomainException;
+use Domains\ProductManagement\Application\Contract\ProductMediaBrowserPort;
+use App\Application\ProductManagement\ProductMediaDocumentUpload;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Observability\CorrelationId;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
@@ -33,6 +36,8 @@ final readonly class ProductManagementPageController
         private CanonicalCapabilityGateway $gateway,
         private SessionCsrfValidator $csrf,
         private WorkspaceShellFactory $shells,
+        private ProductMediaBrowserPort $imageBrowser,
+        private ProductMediaDocumentUpload $documents,
     ) {}
 
     public function dashboard(Request $request):Response
@@ -154,7 +159,14 @@ final readonly class ProductManagementPageController
                 $quote=$this->read($actor,'price.resolve',$scope+['currency'=>$list['currency'],'quantity'=>$quoteQty]);
                 $listHistory=$this->read($actor,'price.list.history.search',['list_id'=>$list['list_id'],'variant_id'=>$listVariantId,'limit'=>30,'offset'=>($listHistoryPage-1)*30]);
             }
+            $mediaQuery=trim((string)$request->query->get('media_q',''));
+            $mediaPage=filter_var($request->query->get('media_page','1'),FILTER_VALIDATE_INT);
+            $selectedImage=(string)$request->query->get('media_file','');
+            if(mb_strlen($mediaQuery)>100||$mediaPage===false||$mediaPage<1||$mediaPage>1001
+                ||($selectedImage!==''&&!preg_match('/^[A-Za-z0-9_-]{1,80}$/D',$selectedImage)))return new Response('Invalid image filters.',422);
+            $imageCandidates=$this->imageBrowser->candidates($actor->organizationId()->value(),$mediaQuery,30,($mediaPage-1)*30);
             return $this->render($request,$actor,'product',[
+                'imageCandidates'=>$imageCandidates,'mediaQuery'=>$mediaQuery,'mediaPage'=>$mediaPage,'selectedImage'=>$selectedImage,
                 'product'=>$product,'categories'=>$categories['items']??[], 'prices'=>$prices,
                 'priceCurrency'=>$currency,'pricePage'=>$pricePage,
                 'priceHasNext'=>count($product['variants']??[])>$pricePage*30,
@@ -174,15 +186,31 @@ final readonly class ProductManagementPageController
             $category=trim((string)$request->query->get('category',''));
             $page=filter_var($request->query->get('page','1'),FILTER_VALIDATE_INT);
             if($page===false||$page<1||$page>100001)return new Response('Invalid page.',422);
+            $dictionaryStatus=(string)$request->query->get('dictionary_status','active');
+            if(!in_array($dictionaryStatus,['active','archived'],true))throw new DomainException('Invalid dictionary status.');
             $defs=$this->read($actor,'attribute.search',['limit'=>100,'offset'=>($page-1)*100])['items'];
+            $dictionary=$dictionaryStatus==='active'?$defs:$this->read($actor,'attribute.search',['limit'=>100,'offset'=>($page-1)*100,'status'=>'archived'])['items'];
             $categories=$this->read($actor,'category.search',['limit'=>100])['items'];
             $bindings=$category===''?[]:$this->read($actor,'attribute.category.get',['category_id'=>$category])['items'];
             $filterCode=trim((string)$request->query->get('filter_code',''));$filterValue=(string)$request->query->get('filter_value','');$matches=[];
+            $filterDefinition=null;$filterApplied=false;
             if($filterCode!==''){
-                $value=json_decode($filterValue,true,8,JSON_THROW_ON_ERROR);
-                $matches=$this->read($actor,'attribute.product.filter',['code'=>$filterCode,'value'=>$value,'limit'=>100,'offset'=>($page-1)*100])['items'];
+                // Resolve the selected definition independently of the result page.
+                for($offset=0;$offset<10000;$offset+=100){
+                    $rows=$this->read($actor,'attribute.search',['limit'=>100,'offset'=>$offset])['items'];
+                    foreach($rows as $row)if($row['code']===$filterCode){$filterDefinition=$row;break 2;}
+                    if(count($rows)<100)break;
+                }
+                if($filterDefinition===null)throw new DomainException('Unknown attribute.');
+                if($request->query->has('filter_value')){
+                    $value=$this->typedAttributeValue($filterDefinition,$filterValue);
+                    $matches=$this->read($actor,'attribute.product.filter',['code'=>$filterCode,'value'=>$value,'limit'=>100,'offset'=>($page-1)*100])['items'];
+                    $filterApplied=true;
+                }
             }
-            return $this->render($request,$actor,'attributes',compact('defs','categories','category','bindings','page','filterCode','filterValue','matches'));
+            $bulkDefinitions=array_column($defs,null,'code');
+            if($filterDefinition!==null)$bulkDefinitions[$filterCode]=$filterDefinition;
+            return $this->render($request,$actor,'attributes',compact('defs','categories','category','bindings','page','filterCode','filterValue','filterDefinition','filterApplied','matches','bulkDefinitions','dictionary','dictionaryStatus'));
         }catch(DomainException|\JsonException|\InvalidArgumentException){return new Response('Invalid attribute query.',422);}
         catch(Throwable){return new Response('Attribute Workspace unavailable.',503);}
     }
@@ -205,6 +233,41 @@ final readonly class ProductManagementPageController
                     if($offset>=9900)break; // bounded verification, uncertain rather than blind success
                 }
                 if(!$found)return new Response('Definition receipt unverified. Reload before retrying.',503);
+            }elseif($action==='lifecycle'){
+                $op=(string)$request->request->get('operation','');
+                $input=['operation'=>$op,'code'=>$code];
+                if(in_array($op,['rename','archive','restore'],true)){
+                    $input['expected_name']=(string)$request->request->get('expected_name','');
+                    if($op==='rename')$input['name']=(string)$request->request->get('name','');
+                }elseif(in_array($op,['binding.update','binding.remove'],true)){
+                    $category=(string)$request->request->get('category_id','');
+                    $input+=['category_id'=>$category,
+                        'expected_is_required'=>$request->request->get('expected_is_required')==='1',
+                        'expected_is_axis'=>$request->request->get('expected_is_axis')==='1'];
+                    if($op==='binding.update')$input+=['is_required'=>$request->request->get('is_required')==='1','is_axis'=>$request->request->get('is_axis')==='1'];
+                }else throw new DomainException('Unknown lifecycle operation.');
+                if($op!=='rename'&&$request->request->get('confirm_lifecycle')!=='yes')throw new DomainException('Explicit confirmation required.');
+                $receipt=$this->write($actor,'attribute.lifecycle.change',$input,$request);
+                if(($receipt['operation']??null)!==$op||($receipt['code']??null)!==$code)return new Response('Lifecycle receipt unverified.',503);
+                if($category!==''){
+                    if(($receipt['category_id']??null)!==$category)return new Response('Binding identity unverified.',503);
+                    $rows=array_column($this->read($actor,'attribute.category.get',['category_id'=>$category])['items'],null,'code');
+                    if($op==='binding.remove'){
+                        if(($receipt['bound']??null)!==false||isset($rows[$code]))return new Response('Binding removal unverified.',503);
+                    }elseif(($receipt['bound']??null)!==true||!isset($rows[$code])||
+                        $rows[$code]['is_required']!==$input['is_required']||$rows[$code]['is_axis']!==$input['is_axis']||
+                        $receipt['is_required']!==$input['is_required']||$receipt['is_axis']!==$input['is_axis'])return new Response('Binding update unverified.',503);
+                }else{
+                    $status=$op==='archive'?'archived':'active';
+                    $name=$op==='rename'?trim($input['name']):$input['expected_name'];
+                    $found=false;
+                    for($offset=0;$offset<10000;$offset+=100){
+                        $rows=$this->read($actor,'attribute.search',['limit'=>100,'offset'=>$offset,'status'=>$status])['items'];
+                        foreach($rows as $row)if($row['code']===$code){$found=$row['name']===$name;break 2;}
+                        if(count($rows)<100)break;
+                    }
+                    if(!$found||($receipt['status']??null)!==$status||($receipt['name']??null)!==$name)return new Response('Lifecycle readback unverified.',503);
+                }
             }elseif($action==='bind'){
                 $category=(string)$request->request->get('category_id','');
                 $input=['category_id'=>$category,'code'=>$code,'is_required'=>$request->request->get('is_required')==='1','is_axis'=>$request->request->get('is_axis')==='1'];
@@ -221,7 +284,18 @@ final readonly class ProductManagementPageController
                     if($rev===false||$rev<1)throw new DomainException('Invalid product revision.');
                     $targets[]=['product_id'=>$id,'expected_revision'=>$rev];
                 }
-                $values=json_decode((string)$request->request->get('values',''),true,32,JSON_THROW_ON_ERROR);
+                if(count($targets)<1||count($targets)>20)throw new DomainException('Select 1–20 products.');
+                $common=null;
+                foreach($targets as $target){
+                    $state=$this->read($actor,'attribute.product.get',['product_id'=>$target['product_id']]);
+                    if(!$state['found']||$state['revision']!==$target['expected_revision'])throw new DomainException('Stale or unavailable product.');
+                    $defs=array_column($state['items'],null,'code');
+                    if($common===null){$common=$defs;continue;}
+                    $common=array_intersect_key($common,$defs);
+                    foreach($common as $code=>&$def)$def['is_required']=$def['is_required']||$defs[$code]['is_required'];
+                    unset($def);
+                }
+                $values=$this->typedAttributePatch($request,$common??[],10);
                 $receipt=$this->write($actor,'attribute.product.bulk_set',['products'=>$targets,'values'=>$values],$request);
                 if(count($receipt['items']??[])!==count($targets))return new Response('Bulk receipt incomplete.',503);
                 $expected=array_column($targets,'expected_revision','product_id');
@@ -241,6 +315,39 @@ final readonly class ProductManagementPageController
         }catch(DomainException|\InvalidArgumentException){return new Response('Attribute mutation rejected.',422);}
         catch(Throwable){return new Response('Attribute outcome uncertain. Reload before retrying.',503);}
     }
+    private function typedAttributeValue(array $definition,mixed $raw):mixed
+    {
+        if(!is_string($raw))throw new DomainException('Invalid attribute value.');
+        $value=match($definition['value_type']){
+            'boolean'=>match($raw){'true'=>true,'false'=>false,default=>throw new DomainException('Invalid boolean.')},
+            'text','decimal','enum'=>$raw,
+            default=>throw new DomainException('Unsupported attribute type.')
+        };
+        return \Domains\ProductManagement\Domain\AttributeRules::value($definition,$value);
+    }
+
+    private function typedAttributePatch(Request $request,array $byCode,int $limit):array
+    {
+        $modes=$request->request->all('attribute_mode');
+        $submitted=$request->request->all('attribute_value');
+        $values=[];
+        foreach($modes as $code=>$mode){
+            if(!is_string($mode)||!in_array($mode,['keep','set','clear'],true))throw new DomainException('Invalid attribute selection.');
+            if($mode==='keep')continue;
+            if(!isset($byCode[$code]))throw new DomainException('Attribute not applicable to all selected products.');
+            $definition=$byCode[$code];
+            if($mode==='clear'){
+                if($definition['is_required'])throw new DomainException('Required attribute cannot be cleared.');
+                $value=null;
+            }else{
+                $value=$this->typedAttributeValue($definition,$submitted[$code]??null);
+            }
+            $values[]=['code'=>$code,'value'=>$value];
+        }
+        if($values===[]||count($values)>$limit)throw new DomainException('Invalid attribute patch size.');
+        return $values;
+    }
+
     public function productAttributes(Request $request,string $id):Response
     {
         $actor=$this->manager();if($actor instanceof Response)return $actor;
@@ -257,11 +364,28 @@ final readonly class ProductManagementPageController
             $product=$this->checkedProduct($actor,$id);if($product instanceof Response)return $product;
             $action=(string)$request->request->get('action','');
             if($action==='set'){
-                $values=json_decode((string)$request->request->get('values',''),true,32,JSON_THROW_ON_ERROR);
+                $definitions=$this->read($actor,'attribute.product.get',['product_id'=>$id]);
+                $values=$this->typedAttributePatch($request,array_column($definitions['items'],null,'code'),50);
                 $receipt=$this->write($actor,'attribute.product.set',['product_id'=>$id,'values'=>$values,'expected_revision'=>(int)$request->request->get('expected_revision',0)],$request);
                 if($receipt!=$this->read($actor,'attribute.product.get',['product_id'=>$id]))return new Response('Attribute readback uncertain.',503);
             }elseif(in_array($action,['preview','matrix'],true)){
-                $axes=json_decode((string)$request->request->get('axes',''),true,32,JSON_THROW_ON_ERROR);
+                if($action==='preview'){
+                    $definitions=$this->read($actor,'attribute.product.get',['product_id'=>$id]);
+                    $byCode=array_column($definitions['items'],null,'code');
+                    $axes=[];
+                    foreach($request->request->all('axis_choices') as $code=>$choices){
+                        $definition=$byCode[$code]??null;
+                        if($definition===null||!$definition['is_axis']||$definition['value_type']!=='enum'||!is_array($choices)||$choices===[])
+                            throw new DomainException('Invalid variant axis.');
+                        foreach($choices as $choice)if(!is_string($choice)||!in_array($choice,$definition['choices'],true))
+                            throw new DomainException('Invalid axis choice.');
+                        if(count(array_unique($choices))!==count($choices))throw new DomainException('Duplicate axis choice.');
+                        $axes[]=['code'=>$code,'choices'=>array_values($choices)];
+                    }
+                    if(count($axes)<1||count($axes)>4)throw new DomainException('Select 1–4 variant axes.');
+                }else{
+                    $axes=json_decode((string)$request->request->get('axes',''),true,32,JSON_THROW_ON_ERROR);
+                }
                 $input=['product_id'=>$id,'axes'=>$axes,'sku_prefix'=>trim((string)$request->request->get('sku_prefix',''))];
                 if($action==='preview'){
                     $preview=$this->read($actor,'variant.matrix.preview',$input);
@@ -651,6 +775,45 @@ final readonly class ProductManagementPageController
             error_log('product_management.workspace.price_readback_uncertain '.$e::class);
             return new Response('Price receipt obtained; current state unverified. Reload before retrying.',503);
         }
+    }
+
+    public function imagePreview(string $fileId):Response
+    {
+        $actor=$this->manager();if($actor instanceof Response)return $actor;
+        try{
+            $image=$this->imageBrowser->preview($actor->organizationId()->value(),$fileId);
+            return new Response($image['bytes'],200,['Content-Type'=>$image['mime_type'],'Cache-Control'=>'private, no-store',
+                'X-Content-Type-Options'=>'nosniff','Content-Security-Policy'=>"default-src 'none'; sandbox",'X-Robots-Tag'=>'noindex, nofollow']);
+        }catch(DomainException){return new Response('Image unavailable.',404);}
+        catch(Throwable){return new Response('Image unavailable.',503);}
+    }
+
+    /** Upload only: the subsequent Product attachment is a separate canonical command. */
+    public function uploadMedia(Request $request,string $id):Response
+    {
+        $actor=$this->guardWrite($request);if($actor instanceof Response)return $actor;
+        $product=$this->checkedProduct($actor,$id);if($product instanceof Response)return $product;
+        if(($product['status']??null)==='archived')return new Response('Archived product cannot acquire media.',422);
+        $file=$request->files->get('image');
+        $key=(string)$request->request->get('idempotency_key','');
+        $user=$actor->userId()->value();
+        if(!$file instanceof UploadedFile||!$file->isValid()||!preg_match('/^[a-f0-9]{32}$/D',$key)
+            ||!ctype_digit($user)||(int)$user<1||$file->getSize()<1||$file->getSize()>10485760)
+            return new Response('Valid image and operation key required (max 10 MiB).',422);
+        try{
+            $bytes=$file->getContent();
+            if(strlen($bytes)<1||strlen($bytes)>10485760)throw new DomainException('Invalid image size.');
+            $mime=(new \finfo(FILEINFO_MIME_TYPE))->buffer($bytes);
+            if(!in_array($mime,['image/jpeg','image/png','image/webp','image/gif'],true)||@getimagesizefromstring($bytes)===false)
+                throw new DomainException('Invalid image.');
+            $name=mb_substr($file->getClientOriginalName(),0,180);
+            $document=$this->documents->upload($actor,$key,CorrelationId::generate()->value(),$name,$mime,$bytes);
+            $fileId=$document['current_file_id']??null;
+            if(!is_string($fileId)||!preg_match('/^[A-Za-z0-9_-]{1,80}$/D',$fileId))throw new DomainException('Documents receipt missing.');
+            $this->imageBrowser->preview($actor->organizationId()->value(),$fileId);
+            return $this->go('/product-management/products/'.$id.'?media_file='.rawurlencode($fileId).'&notice=image_uploaded#product-media');
+        }catch(DomainException|\InvalidArgumentException){return new Response('Image upload blocked. No Product attachment made.',422);}
+        catch(Throwable){return new Response('Upload outcome uncertain. Inspect Documents before retrying. No Product attachment attempted.',503);}
     }
 
     public function attachMedia(Request $request,string $id):Response

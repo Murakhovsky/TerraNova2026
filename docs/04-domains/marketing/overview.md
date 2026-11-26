@@ -11,7 +11,7 @@ version: 0.2.3
 
 Marketing — окремий bounded context, що володіє рекламними планами, внутрішніми кампаніями, їхніми версіями, аудиторіями, креативами та спостереженнями рекламних провайдерів.
 
-**Стан:** початкова реалізація M0/M1, очікує перевірок на staging і користувацького приймання. Домін встановлюється вимкненим за замовчуванням. Реальні платні операції заблоковано.
+**Стан:** D2, реалізовано M0–M3, основний M4 та дорадчі компоненти M5. Незалежне приймання на staging, реальні джерела і фінансові результати не підтверджено. Домен вимкнений за замовчуванням.
 
 ## Розподіл відповідальності
 
@@ -25,11 +25,11 @@ Marketing — окремий bounded context, що володіє рекламн
 
 ## Фактично додані можливості
 
-Двадцять вісім typed capabilities, включно з шістьма M2a, Product draft-check і Finance-facing source Query: `marketing.campaign.search`, `marketing.campaign.get`, `marketing.campaign.create`, `marketing.paid.account.list`, `marketing.paid.insights.query`, `marketing.paid.sync.history`. Для них діють Canonical Capability Gateway і перевірка tenant менеджера. Нових універсальних executor або CommandBus не створено.
+48 типізованих capabilities у поточному manifest, зокрема: `marketing.campaign.search`, `marketing.campaign.get`, `marketing.campaign.create`, `marketing.paid.account.list`, `marketing.paid.insights.query`, `marketing.paid.sync.history`. Для них діють Canonical Capability Gateway і перевірка tenant менеджера. Нових універсальних executor або CommandBus не створено.
 
 На UI передбачено Overview, Campaigns, Campaign Workspace, Paid Media Accounts, Performance та Action Queue. Менеджер може створити внутрішню чернетку, під'єднати read-only Meta Ad Account через opaque Vault reference, імпортувати і переглядати provider observations.
 
-Активація, створення рекламних кампаній у Meta, зміна бюджету та інші paid writes відсутні й навмисно блокуються. Для них потрібні Finance F1, незалежне погодження, canonical Workflow і провайдерний readback.
+Створення в Meta у стані PAUSED, активація та пауза мають canonical Workflow Action bindings, але потребують незалежного погодження, перевіреного профілю провайдера, Finance та readback. Довільні платні зміни й автоматичне коригування бюджету залишаються заблокованими.
 
 ## M2a: Креативи та незалежний перегляд рекомендацій
 
@@ -213,3 +213,80 @@ Workspace Performance дозволяє виконати read-only імпорт �
 Sales-owned placement v1 and optional Shopify last-visit UTM journey are read through `MarketingCommerceOrderReadPort`. Source absent => unavailable (not zero orders). The `commerce-utm-v1` model accepts exact canonical campaign/plan tags; paid plans require `meta/paid_social` and visit within the plan dates. Shopify visit precedes placement by no more than 30 days; native operator tags remain operator evidence. One assignment per native order, immutable capture and exact tenant source readback. Changed or conflicting evidence is excluded, not reassigned. Report totals are placed commercial order values per currency, not paid or recognized revenue; Deal and Order results remain separate until cross-entity deduplication is established. Finance O4 payment/refund evidence is required for cash/revenue reporting. No Shopify-specific coupling inside Marketing. Human batch capture 1–50, report max 500; automated capture and cross-branch acceptance are pending.
 
 Finance boundary: optional `CommerceOrderFinancialEvidenceReadPort` is used only for independently confirmed collection facts. Currency, order/tenant identity, source revision and exact capture/refund/chargeback arithmetic are checked. Partial coverage is explicit; net collected total is provided only for the complete captured cohort, not the whole store. Accounting revenue, profit and ROAS remain unknown. No caller-supplied finance evidence or provider `PAID` inference.
+
+## M4 — Контрольований збір конверсій
+
+`marketing.attribution.sweep` є canonical internal Action з незалежним погодженням та live tenant identity. За один запуск сканує 1–5 сторінок по 50 нативних Lead або Order ID (до 250 записів) у заданому вікні (1–91 день), використовуючи exclusive keyset cursor і Sales-owned read port. Marketing повторно перевіряє точні UTM, source identity та вікно; запис і незмінна квитанція атомарні через існуючий attribution store. Повтор того самого Workflow key не повторює читання. Невідповідні, відсутні або суперечливі докази не зараховуються. `recorded_or_already_present` не означає нових конверсій. Вичерпання сторінки не є повним census: нові записи або пізні Shopify journeys вимагають повторного sweep. Paid plan scope задається явно; null означає exact campaign UTM, не всі paid plans. Рекламні й фінансові мутації відсутні. Наступні сторінки в межах погодженого бюджету обробляються автоматично; квитанція містить кількість сторінок і exclusive continuation cursor. За межами бюджету необхідний новий погоджений Action. Постійний scheduler, multi-touch та незалежне приймання ще потрібні.
+
+Критерій `marketing.attribution.sweep_recorded` призначений для незалежного readback точного завершеного canonical Run та його native capture receipt. Він вимірює виконання bounded scan, а не кількість нових конверсій, повноту покриття чи фінансовий результат.
+
+Інтеграційний тест `tests/integration/marketing_analyst_approved_goal_e2e_mysql.php` додатково перевіряє canonical Plan (approval evidence fixture), незалежне погодження Action, 51 нативний Lead на двох сторінках, відсутність мутації до погодження, повторний worker, native outcome readback та відмову при підміненому request hash. Це не доказ live approval або production scheduler.
+
+## M4.11 — Моделі атрибуції історії контактів
+
+`marketing.attribution.journey.get` читає окрему Sales-owned immutable history `shopify-journey-moments-v1` (не змінює last-visit evidence). Shopify readback приймає лише ready, точний momentsCount, повністю отриману сторінку до 100 унікальних CustomerVisit, узгоджені first/last pins; обмеження 30 днів. Невідомі UTM зберігаються як null без сирих ідентифікаторів, URL чи PII. First-touch, Last-touch і Linear розподіляють розміщену вартість в exact minor units; невідомий контакт зберігає свою частку, вона не перерозподіляється. Теги paid plan перевіряються за поточним нативним планом і датою контакту. Результат моделювання не є revenue, cash, causal inference або новим записом продажу. Відсутність або конфлікт історії означає unavailable. Історії понад 100 контактів потребують подальшого paginated import; native Lead/Order не мають повної джерельної історії. Live Shopify acceptance не виконано.
+
+## M4 — Економічні показники підтвердженої когорти
+
+`marketing.analytics.economics.report` читає exact paid plan, native Sales/Commerce cohorts і Finance settlement. Finance committed minor є незалежно підтвердженим бюджетним settlement, не оплатою або бухгалтерською витратою. Доступні cost per captured lead, cost per qualified lead, cost per won deal, cost per placed order та net collected / settled media spend для повної фінансової когорти в одній валюті. Поточний net collected може включати пізні повернення та chargeback; це не cashflow за календарний період. CAC, ROAS, ROMI, profit залишаються null до джерела унікального покупця, визнаної виручки, собівартості та повноти атрибуції. Не змішуються Deal і Order values. Відсутність settlement не є нульовою витратою.
+
+## M5.1–M5.2 — Моніторинг та виявлення аномалій
+
+`marketing.analytics.monitor.get` порівнює дві native complete source batches, рівної тривалості, non-overlap, same account revision/currency/timezone/grain/attribution scope. Перевірка на рівні однакових external IDs; відсутність рядка або недостатній обсяг не означає нульову доставку. `monitor-v1` використовує мінімум 1000 impressions і 20 clicks для CPC, падіння CTR ≥20%, зростання CPC/CPM ≥25% та зростання spend ≥25% при падінні clicks ≥20%. Це детерміновані сигнали для незалежного перегляду, не статистична значущість, не причинний висновок, не provider write або бюджетна рекомендація. Live provider acceptance, scheduled monitoring, experiments and Learning Loop pending.
+
+## M4 — Плановий збір та продовження
+
+Scheduler COS за замовчуванням вимкнено (`COS_MARKETING_ATTRIBUTION_SCHEDULER_ENABLED=0`). `COS_MARKETING_ATTRIBUTION_SCHEDULER_TARGETS_JSON` задає до 20 явних профілів: `profile_id`, `organization_id`, `actor_id` (string), `campaign_id`, `plan_id` (null або canonical ID), `source_kind`, `lookback_days` (1–30), `max_pages` (1–5). Інтервал tick 5–1440 хв, default 15. Live identity, modules Marketing/Sales та canonical rollout перевіряються кожного tick. Один native schedule row per tenant/profile, конфігурація pinned; зміна scope вимагає нового профілю та операторської звірки. Щоденний UTC rolling window завершується вчора, щоб повторно збирати пізні докази; paid plan обмежується затвердженим періодом, source kind order включає до 30 днів після завершення plan для пізніх конверсій. Незавершений цикл не скидається. Scheduler створює один immutable Goal/Plan, запитує незалежне Plan approval через Federation, запускає та просуває лише approved canonical Run. Незалежне Action approval не обходиться, бізнес-операцію виконує наявний worker. Наступний cursor читається виключно з attested native receipt. При terminal failure, rejected approval, revoked actor або scope drift Scheduler не створює новий Action автоматично. Після завершення поточного циклу наступний UTC day починається з null cursor, без заяви повного census. No provider or financial mutation. Live activation and scheduler E2E pending.
+
+## M5.3 — Analyst із performance evidence
+
+Існуючий `marketing.analyst.context.get` та approved `marketing.analyst.run.request` приймають опційні парні `paid_plan_id`, `snapshot_ref` з exact campaign/AdSet revision. Перевіряється нативний підтверджений deployment journal, campaign-grain snapshot, незмінний paid plan і поточна ревізія account, точний UTC період та валюта. У Hermes передаються лише агреговані impressions, clicks, CTR/CPC/CPM, reported spend і плановий cap. Native plan hash та snapshot revision/hash є частиною approved context; зміна даних до, під час або при review блокує advice. Без парних pins legacy planning context не змінюється. Advice не authorizes launch, Finance, budget mutation або provider write. Реальний Hermes acceptance і автоматичний performance plan initiation потребують окремої перевірки.
+
+M4 source isolation: optional Shopify last-visit and moments reads are separate from commercial order import; protected-data errors leave attribution unavailable, not Sales placement blocked. Exact store/order identity and createdAt are revalidated. Full history is admitted only when its last-touch projection agrees with the separate last-visit observation. Tests cover optional scope denial without losing native Order or prior evidence.
+
+## M5.4 — Попередній розрахунок оптимізації бюджету
+
+`marketing.optimization.budget.preview` порівнює два різні завершені native paid plans одного акаунта, валюти, ревізії та UTC періоду, із підтвердженим terminal lifecycle і різними provider campaign IDs. Ціль першої моделі `TRAFFIC_CPC`, не ROAS. Мінімум 1000 impressions і 20 clicks на кожен план, позитивний spend, явний поріг гіршого CPC ≥125% кращого. Перенесення максимум 10% добового ліміту кожного плану з дорожчого у дешевший, total daily cap зберігається в integer minor units. За відсутності зіставності/доказів або при перевищенні source cap зміни не пропонуються. Результат лише hypothetical future planning candidate, нові draft, Finance reservation, Meta mutation, статистична значущість і прогноз конверсій не створюються. Новий запуск потребує чинних Product/Creative/Audience pins, Finance і незалежного Workflow approval. Thresholds are provisional engineering defaults, not learned coefficients.
+
+## M4 — Уточнення меж атрибуції та хронології
+
+Платний Lead зараховується лише в календарному періоді відповідного незмінного Paid Plan; пізніше скопійовані UTM не приймаються як нові докази залучення цим планом. На звіті попередні записи перевіряються повторно. WON Deal не враховується, якщо його закрито раніше від точного часу залучення Lead, включно з тією самою датою. Наявність пов'язаної угоди та кількість перемог дедуплікуються окремо. Не розраховуються ціни конверсій за неповної/застарілої вибірки. Це не створює нових джерел бухгалтерського доходу або наскрізної історії контактів.
+
+## M5.5 — Попереднє порівняння гіпотез аудиторії
+
+`marketing.optimization.audience.preview` порівнює два завершені native Paid Plans з однаковими account/revision, currency, attribution scope, звітним вікном, лімітами бюджету й hash креативу. Окремі Audience revisions з неперетинними наборами країн читаються через Marketing planning pins; результати є лише спостереженням campaign-grain CPC. За неповної вибірки або перевищення ліміту результат не визначає кращий план; статистична значущість, фактична доставка аудиторії та причинний ефект не підтверджуються. Немає рекомендації змінювати таргетинг, автоматичної мутації бюджету або обходу обмежень спеціальних рекламних категорій. M5.6 потребує незалежного контрольованого експерименту; цю модель не можна вважати A/B тестом.
+
+## M4 — Пізні конверсії в економіці кампанії
+
+Опційний `conversion_through` у `marketing.analytics.economics.report` продовжує лише часову межу закритих Deal і створених Order (від кінця Paid Plan до +30 днів, не в майбутньому). Початковий період залучення Lead і Finance settlement не розширюється. Звіт повертає окремі `window_end` і `conversion_through`; всі джерельні межі перевіряються. Shopify last-visit залишається обмеженим 30 днями від візиту до замовлення, а cash collection — поточний readback когорти, не обліковий дохід на вибрану дату. Немає повного census або заяви ROAS/CAC.
+
+## M4 — Контрольна точка інженерного приймання
+
+На SHA `a04b5a466654d7ba05e519cd87c521dc8bb320e8` усі п'ять workflow (CI, Runtime, Documentation, Frontend, L2 Recovery Smoke) завершилися успішно. Native MySQL fixtures підтвердили exact acquisition window, пізній WON Deal і Shopify Order в обмежений conversion cutoff, незалежні Plan/Action approvals, scheduler continuation та Finance settlement readback. Це D2, не live приймання Meta/Shopify або доказ повного census, історії контактів та визнаної виручки; CAC/ROAS/ROMI залишаються null до відповідних незалежних джерел.
+
+## M5.6–M5.7 — Реєстрація експерименту та спостереження за креативом
+
+`marketing.experiment.register` — internal idempotent command для immutable tenant-owned protocol із двома різними Paid Plans до початку їхнього UTC вікна і без записаних paid operation journal entries. Однакові account revision, currency, UTC період, daily/lifetime cap, audience revision, campaign objective/brief/Product refs та всі поля креативу, крім рівно одного фактора HEADLINE або PRIMARY_TEXT. Protocol pins та hash зберігаються в Marketing; унікальна невпорядкована пара планів забороняє повторну реєстрацію зі зміненими ролями. `marketing.experiment.get` повертає immutable readback і окремий прапорець актуальності джерел. Планове розподілення 50/50 не означає фактичний randomized split; protocol не створює Meta Experiment, не запускає кампанії, не змінює кошти і не є доказом pre-launch provider isolation.
+
+`marketing.optimization.creative.preview` приймає тільки ID зареєстрованого протоколу та два exact snapshots у відповідних ролях. Після закінчення обох вікон читаються terminal paid lifecycle, revision/hash native source batch, спільний attribution scope та незмінні planning pins. Модель TRAFFIC_CPC використовує зафіксовані пороги 1000 impressions/20 clicks і ≥125% відношення CPC, без оцінки за overspend або неповних доказів. Підказка lower observed CPC не є переможцем A/B, statistical significance, причинним ефектом або рекомендацією активації. Необхідний незалежний readback provider randomization, mutually exclusive assignment та exposure/unique outcomes для контрольованого тесту. Позитивний policy fixture і native registration/replay/tenant/confounding fences покривають D2; реальне randomized acceptance і незалежне native спостереження двох завершених кампаній ще потрібні.
+
+На SHA `631d7026fdbebbe30dab4b659f3f18c0eb64b4b0` Federation MySQL job 139746354586 пройшов native registration/replay, one-factor fences та відмову оцінювати майбутні плани за чужим snapshot. Це не підтвердження randomized experiment або спостереження двох завершених кампаній.
+
+## M5.8 — Контрольовані правила оптимізації
+
+`marketing.optimization.rule.evaluate` — read-only versioned rule evaluation для одного provider campaign, exact latest native batch IDs та двох завершених UTC вікон рівної тривалості без перетину. Підтримуються CTR_DECLINE (поріг 20–90%), CPC_INCREASE і CPM_INCREASE (25–200%). Потрібні minimum 1000 impressions в обох вікнах, CPC — 20 clicks; нульовий baseline denominator або відсутній рядок означає недостатні докази. Відносна зміна округлюється до шести знаків перед включним threshold comparison. Результат містить scope, rule, threshold, native source revision/hash, фактичну зміну, deterministic evaluation hash, status та review recommendation. Підміна batch ID, account revision drift або зміна evidence під час readback блокується. Немає довільних виразів, окремого executor, створення Action, Meta/Finance mutation або автоматичної зупинки бюджету. Наступний крок — canonical Goal/Plan propagation із незалежним approval, повторним evidence readback і Learning Loop.
+
+## M5.9 — Ціль, погоджений запис перегляду та незалежний результат
+
+`marketing.optimization.rule.plan.propose` створює immutable canonical Goal/Plan для одного exact triggered rule hash, Marketing account та provider campaign. До створення Plan перевіряється актуальність batch IDs та порогу, не виконується Action, не змінюються provider/Finance. Незалежний Plan approval та окремий Action approval належать Federation, Kernel і Platform Workflow. `marketing.optimization.rule.review.record` приймає тільки RUNNING canonical Action з активним tenant, live actor identity, workflow admission, exact schema і idempotency key. Повторне читання правила після approval має збігтися з погодженим evaluation hash, інакше Action відхиляється. Native immutable receipt прив'язаний до actor, Action id, evaluation, exact parameters, часу та receipt hash; один review per tenant/evaluation hash. `marketing.optimization.review_recorded` незалежно перевіряє завершений canonical Run і native receipt. Це підтвердження погодженого review, не виконаної оптимізації, provider change, uplift чи витрат. Live-provider acceptance, автоматичні тригери, реальні дії та довгостроковий learning залишаються окремими межами.
+
+Попередня точка `382c03cd346d4a5933c7b8bb8196c2814932c534` пройшла всі п'ять workflow (CI, Runtime, Documentation, Frontend, L2 Recovery Smoke).
+
+На SHA `3e47d92ef127f18185ad9d06b68b240473b6cbfb` Federation MySQL job 139759188421 пройшов реальні незалежні Plan та Action approvals, immutable review, stale evidence та duplicate fences і native Outcome.
+
+## M5.10 — Цикл навчального спостереження
+
+`marketing.optimization.learning.preview` читає історичний trusted Federation evaluation з точними Run, evaluation і receipt ID, критерієм та receipt hash. Минуле незалежне приймання review залишається історичним доказом після expiry старих approvals; воно не дає дозволу на нову дію. Наступний повний provider campaign batch мусить мати той самий account/revision, currency, attribution scope та тривалість UTC вікна; baseline — саме поточне вікно попереднього review. Source drift або підміна evidence відхиляється. Відсутні дані дають INSUFFICIENT_EVIDENCE, а не нуль. Розрізняються IMPROVED_OBSERVED, DEGRADED_OBSERVED і UNCHANGED_OBSERVED. Окремо позначається AFTER_REVIEW або RETROSPECTIVE_ONLY; спостереження не доводить causal effect, actual campaign change, experiment winner або training.
+
+`marketing.optimization.learning.plan.propose` створює новий canonical Goal/Plan з exact learning hash; `marketing.optimization.learning.record` вимагає нові незалежні Plan та Action approvals і повторний native evidence readback. Immutable native receipt має one-per-observation fence, actor/action provenance і receipt hash. `marketing.optimization.learning.get` читає tenant-scoped native learning receipt, а `marketing.optimization.learning_recorded` засвідчує завершений canonical Run та receipt independently. Наступний крок — KEEP_OBSERVING, REVIEW_AGAIN або COLLECT_EVIDENCE; навчальна модель не змінює правила, provider, Finance або бюджет автоматично. Process Registry: `marketing.optimization-review-learning`. Реальне provider-backed prospective вікно та причинний ефект потребують окремих доказів.
+

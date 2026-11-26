@@ -28,11 +28,11 @@ contract: domain-v1
 ```text
 id: product_management
 version: 0.1.0
-schema_version: 0.15.0
+schema_version: 0.18.0
 runtime: tenant-disabled by default
-persistence: 17 registered migrations; production acceptance pending
-capabilities: 94 typed contracts (31 queries, 30 direct human commands, 33 approved Actions)
-Shopify: read-only; no outbound writes
+persistence: 22 registered migrations; production acceptance pending
+capabilities: 98 typed contracts (31 queries, 31 direct human commands, 36 approved Actions)
+Shopify: read-only by default; approved catalog writeback and separate publication disabled by default
 process model: six canonical Process Registry models; independent release acceptance pending
 ```
 
@@ -114,14 +114,37 @@ COS Documents/Storage; `media.detach` видаляє тільки активне
 CSRF, окремі idempotency keys і native readback.
 
 Це UX для media references, **не** окреме файлове сховище: завантаження
-файлів і генерація thumbnails залишаються в Documents. Візуальний
-file-picker, previews, масштабна галерея та повне E7 UX acceptance
-ще потребують реалізації.
+файлів і генерація thumbnails залишаються в Documents. Візуальний tenant-scoped file-picker, пошук, пагінація, перевірені previews і завантаження через існуючу Documents command bus додані. Завантаження та прив'язка є двома окремими діями; від'єднання не видаляє файл. Browser acceptance нового UX ще потребує CI.
 
 ## Розширений нативний функціонал та приймання
 
 Прайс-листи retail/wholesale/partner, історія, quantity tiers та explicit quote resolution доступні через нативні контракти. Типізовані атрибути, категорійні набори, bulk patches і матриці SKU використовують ревізії, перевірку ownership та незалежний readback. Dashboard читає асортимент, склад, рухи, якість і reconciliation без Shopify.
 
-AI/CRON подає підписаний intent без execution authority. Незалежне review та Plan/Action Approval передують канонічному Workflow. Двадцять дев'ять спеціальних governed operations і чотири інші approved Actions не покривають усіх 30 human commands. Динамічна підстановка вихідних даних між кроками не підтримана. Наявність контрактів не підтверджує live AI acceptance.
+AI/CRON подає підписаний intent без execution authority. Незалежне review та Plan/Action Approval передують канонічному Workflow. Тридцять спеціальних governed operations і чотири інші approved Actions не покривають усіх 30 human commands. Динамічна підстановка вихідних даних між кроками не підтримана. Наявність контрактів не підтверджує live AI acceptance.
 
 Докази та обмеження: [паспорт](./passport.md), [DAS-001 acceptance](../../10-operations/das-001-domain-acceptance.md).
+
+## Розширений імпорт CSV
+
+Підтримано legacy header та розширений `sku,name,type,uom,track_inventory,price_currency,price_amount,category_ids_json,attributes_json,media_json,variants_json`. JSON-колонки є масивами даних, а не командами. Один рядок створює атомарний draft Product через ProductAssemblyService з усіма SKU, цінами, атрибутами та verified Documents media. Staging перевіряє tenant references, усі SKU та typed values; незмінний payload доступний для review. Apply зберігає наявний approved Action, digest і карантин при помилці. Native outcome перевіряє кожен assembly receipt та його дочірні результати. CI нової схеми ще не підтверджено.
+
+## P4–P5: Життєвий цикл атрибутів
+
+Типізовані форми редагування, фільтрів, bulk patch і матриці SKU не потребують ручного JSON. Lifecycle command дозволяє перейменувати визначення, архівувати/відновити невикористаний атрибут, змінити або видалити прив'язку порожньої категорії. Код, тип, одиниця та enum choices незмінні; категорії з товарами вимагають окремої міграції каталогу. Потрібне CI-приймання точного SHA.
+
+## Інтеграція Shopify S1–S5
+
+S1: `access` підтверджує OAuth, identity магазину, currency, scope і реальний обмежений Product readback. S2: `series01 --run-id=...` перевіряє дев'ять SKU, канонічні ID, USD prices, незмінний approved CSV digest і attested Workflow Action; без Run параметра це лише перевірка native identities. S3: `product_management.shopify.draft.writeback` підтримує створення та оновлення 1–10 активних SKU, точні native prices в USD/EUR/UAH, без FX або inventory write. Оновлення тільки за verified GID; не видаляє невідомі варіанти. S4: verified Documents images через staged upload, Shopify MediaImage GID, explicit Collection GIDs, distinct approved resync і окремий `product_management.shopify.channel.publish` для active canonical Product із verified media та явним Publication GID. SERIES01 concept publication заборонена. `COS_SHOPIFY_WRITEBACK_ENABLED` і `COS_SHOPIFY_PUBLICATION_ENABLED` вимкнені за замовчуванням. S5: `order-evidence` зіставляє verified webhook delivery з CommerceOrderSource readback і повідомляє Sales observation, не створюючи замовлення, оплату або stock mutation.
+
+Усі провайдерські ефекти проходять незалежні Plan/Action approvals, tenant/shop fence, immutable request із окремим receipt на Action, незалежний provider readback і mapping. Невизначений ефект блокує наступні мутації. Рутинний sync не видаляє невідомі media/collections/variants; видалення потребує окремої процедури. Немає автоматичного перемикання ownership; live acceptance, native activation/compliance і inventory policy для публікації залишаються окремими release gates.
+
+## P6–P7: live AI та Release Acceptance
+
+Реалізовано ізольований staging canary `cos:product:ai-acceptance`:
+Kernel governed LLM → signed intent → independent Plan/Action approvals
+→ canonical Workflow → native Product/Variant/Price readback. P6 fail
+closed для відсутньої/fixture telemetry або несумісного native Outcome.
+P7 збирає exact-tested-revision engineering artifact та перевіряє
+повноту незалежного D3/D4/D5, deployment та live AI evidence.
+[Операційний протокол](./acceptance.md). Production readiness залишається
+UNKNOWN; Shopify acceptance опційне й відокремлене.

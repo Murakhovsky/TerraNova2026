@@ -1,0 +1,340 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^mkex-[a-f0-9]{24}$"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 190
+    },
+    "protocol_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "created_at": {
+      "type": "string",
+      "minLength": 19,
+      "maxLength": 26
+    },
+    "protocol": {
+      "type": "object",
+      "properties": {
+        "model": {
+          "type": "string",
+          "const": "creative-ab-protocol-v1"
+        },
+        "factor": {
+          "type": "string",
+          "enum": [
+            "HEADLINE",
+            "PRIMARY_TEXT"
+          ]
+        },
+        "metric": {
+          "type": "string",
+          "const": "TRAFFIC_CPC"
+        },
+        "target_allocation_percent": {
+          "type": "integer",
+          "const": 50
+        },
+        "minimum_impressions_per_arm": {
+          "type": "integer",
+          "const": 1000
+        },
+        "minimum_clicks_per_arm": {
+          "type": "integer",
+          "const": 20
+        },
+        "material_cpc_ratio_percent": {
+          "type": "integer",
+          "const": 125
+        },
+        "control": {
+          "type": "object",
+          "properties": {
+            "plan_id": {
+              "type": "string",
+              "pattern": "^mkpl-[a-f0-9]{24}$"
+            },
+            "plan_hash": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "campaign_id": {
+              "type": "string",
+              "pattern": "^mkt-[a-f0-9]{24}$"
+            },
+            "campaign_revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "account_id": {
+              "type": "string",
+              "pattern": "^mads-[a-f0-9]{24}$"
+            },
+            "account_revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "currency": {
+              "type": "string",
+              "pattern": "^[A-Z]{3}$"
+            },
+            "account_timezone": {
+              "type": "string",
+              "const": "UTC"
+            },
+            "period_start": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "period_end": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "daily_minor": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "lifetime_minor": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "audience_id": {
+              "type": "string",
+              "pattern": "^mkau-[a-f0-9]{24}$"
+            },
+            "audience_revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "creative_id": {
+              "type": "string",
+              "pattern": "^mkcr-[a-f0-9]{24}$"
+            },
+            "creative_revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "creative_hash": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "campaign_scope_hash": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "creative_controls_hash": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "treatment_hash": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          },
+          "required": [
+            "plan_id",
+            "plan_hash",
+            "campaign_id",
+            "campaign_revision",
+            "account_id",
+            "account_revision",
+            "currency",
+            "account_timezone",
+            "period_start",
+            "period_end",
+            "daily_minor",
+            "lifetime_minor",
+            "audience_id",
+            "audience_revision",
+            "creative_id",
+            "creative_revision",
+            "creative_hash",
+            "campaign_scope_hash",
+            "creative_controls_hash",
+            "treatment_hash"
+          ],
+          "additionalProperties": false
+        },
+        "candidate": {
+          "type": "object",
+          "properties": {
+            "plan_id": {
+              "type": "string",
+              "pattern": "^mkpl-[a-f0-9]{24}$"
+            },
+            "plan_hash": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "campaign_id": {
+              "type": "string",
+              "pattern": "^mkt-[a-f0-9]{24}$"
+            },
+            "campaign_revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "account_id": {
+              "type": "string",
+              "pattern": "^mads-[a-f0-9]{24}$"
+            },
+            "account_revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "currency": {
+              "type": "string",
+              "pattern": "^[A-Z]{3}$"
+            },
+            "account_timezone": {
+              "type": "string",
+              "const": "UTC"
+            },
+            "period_start": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "period_end": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "daily_minor": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "lifetime_minor": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "audience_id": {
+              "type": "string",
+              "pattern": "^mkau-[a-f0-9]{24}$"
+            },
+            "audience_revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "creative_id": {
+              "type": "string",
+              "pattern": "^mkcr-[a-f0-9]{24}$"
+            },
+            "creative_revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "creative_hash": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "campaign_scope_hash": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "creative_controls_hash": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "treatment_hash": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          },
+          "required": [
+            "plan_id",
+            "plan_hash",
+            "campaign_id",
+            "campaign_revision",
+            "account_id",
+            "account_revision",
+            "currency",
+            "account_timezone",
+            "period_start",
+            "period_end",
+            "daily_minor",
+            "lifetime_minor",
+            "audience_id",
+            "audience_revision",
+            "creative_id",
+            "creative_revision",
+            "creative_hash",
+            "campaign_scope_hash",
+            "creative_controls_hash",
+            "treatment_hash"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "model",
+        "factor",
+        "metric",
+        "target_allocation_percent",
+        "minimum_impressions_per_arm",
+        "minimum_clicks_per_arm",
+        "material_cpc_ratio_percent",
+        "control",
+        "candidate"
+      ],
+      "additionalProperties": false
+    },
+    "state": {
+      "type": "string",
+      "const": "REGISTERED_PROTOCOL_ONLY"
+    },
+    "source_pins_current": {
+      "type": "boolean"
+    },
+    "randomization_required": {
+      "type": "boolean",
+      "const": true
+    },
+    "randomization_verified": {
+      "type": "boolean",
+      "const": false
+    },
+    "experiment_execution_authorized": {
+      "type": "boolean",
+      "const": false
+    },
+    "provider_mutation": {
+      "type": "boolean",
+      "const": false
+    },
+    "financial_mutation": {
+      "type": "boolean",
+      "const": false
+    },
+    "paid_activation_approved": {
+      "type": "boolean",
+      "const": false
+    },
+    "approval_required_for_execution": {
+      "type": "boolean",
+      "const": true
+    }
+  },
+  "required": [
+    "id",
+    "actor_id",
+    "protocol_hash",
+    "created_at",
+    "protocol",
+    "state",
+    "source_pins_current",
+    "randomization_required",
+    "randomization_verified",
+    "experiment_execution_authorized",
+    "provider_mutation",
+    "financial_mutation",
+    "paid_activation_approved",
+    "approval_required_for_execution"
+  ],
+  "additionalProperties": false
+}

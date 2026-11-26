@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Scheduler;
 
 use App\Application\Integration\Command\SweepCrmInboxCommand;
+use App\Application\Marketing\Command\ContinueMarketingAttributionSchedules;
 use App\Application\Sales\Command\RunSalesAutomationCommand;
 use App\Application\Growth\Command\RunGrowthSignalPollingCommand;
 use App\Application\Growth\Command\RunGrowthAutonomousOutreachCommand;
@@ -77,7 +78,10 @@ final class CosScheduleProvider implements ScheduleProviderInterface
         private readonly string $capitalMarketsPoolSubscriptionsOrganizationId = '',
         private readonly int $capitalMarketsPoolSubscriptionsActorId = 0,
         private readonly int $capitalMarketsPoolSubscriptionsIntervalMinutes = 15,
+        private readonly bool $marketingAttributionEnabled = false,
+        private readonly int $marketingAttributionIntervalMinutes = 15,
     ) {
+        if($this->marketingAttributionIntervalMinutes<5||$this->marketingAttributionIntervalMinutes>1440)throw new InvalidArgumentException('Marketing attribution schedule interval must be 5..1440.');
         if($this->growthCollectorPollingIntervalMinutes<1||$this->growthCollectorPollingIntervalMinutes>1440){
             throw new InvalidArgumentException('Growth collector polling interval must be between 1 and 1440 minutes.');
         }
@@ -272,6 +276,11 @@ final class CosScheduleProvider implements ScheduleProviderInterface
                     'async',
                 ),
             );
+        }
+
+        if($this->marketingAttributionEnabled){
+            $messages[]=RecurringMessage::every($this->marketingAttributionIntervalMinutes.' minutes',
+                new RedispatchMessage(new ContinueMarketingAttributionSchedules(),'async'));
         }
 
         if($this->capitalMarketsInstrumentPoolScheduledEnabled){

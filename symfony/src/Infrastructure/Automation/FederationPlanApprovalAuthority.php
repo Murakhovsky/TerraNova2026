@@ -27,7 +27,7 @@ final readonly class FederationPlanApprovalAuthority implements \Kernel\Approval
         // membership and self-approval fence as their Plan.
         if ($action->type !== 'cos.federation.plan.approval'
             && !in_array($action->type, \Domains\ProductManagement\Automation\Action\ProductGovernedOperationHandler::types(),true)
-            && !in_array($action->type,['product_management.stock.count.apply','product_management.stock.count.session.apply','product_management.import.apply','product_management.shopify.import.apply'],true)) return;
+            && !in_array($action->type,['product_management.stock.count.apply','product_management.stock.count.session.apply','product_management.import.apply','product_management.shopify.import.apply','product_management.shopify.draft.writeback','product_management.shopify.channel.publish'],true)) return;
 
         if ($action->sourceType !== 'USER'
             || $action->sourceId === $userId

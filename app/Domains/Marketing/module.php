@@ -28,6 +28,16 @@ $manifest = [
         ],
         'cross_domain_contracts' => [
             [
+                'contract' => 'Domains\\Marketing\\Application\\Contract\\MarketingOptimizationReviewEvidenceReadPort',
+                'role'=>'requires','counterpart'=>'federation','kind'=>'synchronous_port',
+                'purpose'=>'Read exact persisted trusted review Outcome for learning; no new approval or execution authority.',
+            ],
+            [
+                'contract' => 'Domains\\Marketing\\Application\\Contract\\MarketingAttributionCandidateReadPort',
+                'role'=>'requires','counterpart'=>'sales','kind'=>'synchronous_port',
+                'purpose'=>'Bounded tenant-scoped native lead and order ID discovery; no customer data or Sales mutation.',
+            ],
+            [
                 'contract' => 'Domains\\Marketing\\Application\\Contract\\MarketingCommerceFinancialReadPort',
                 'role' => 'requires', 'counterpart' => 'finance', 'kind' => 'synchronous_port',
                 'purpose' => 'Read independently confirmed order collection evidence, without payment authority or revenue inference.',
@@ -65,7 +75,7 @@ $manifest = [
                 'purpose' => 'Search current tenant-scoped Product variants and read base price facts for Marketing draft planning, without Product SQL or launch authorization.',
             ],
         ],
-        'migration_files' => ['app/migrations/20261119_000152_marketing_foundation.sql','app/migrations/20261119_000154_marketing_planning_m2.sql','app/migrations/20261124_000162_marketing_audience_adsets.sql','app/migrations/20261124_000163_marketing_analyst_execution.sql','app/migrations/20261124_000164_marketing_analyst_decisions.sql','app/migrations/20261124_000165_marketing_paid_launch_plans.sql','app/migrations/20261124_000167_marketing_paid_operation_journal.sql','app/migrations/20261124_000192_marketing_m4_attribution_intents.sql','app/migrations/20261124_000193_marketing_media_analytics.sql'],
+        'migration_files' => ['app/migrations/20261119_000152_marketing_foundation.sql','app/migrations/20261119_000154_marketing_planning_m2.sql','app/migrations/20261124_000162_marketing_audience_adsets.sql','app/migrations/20261124_000163_marketing_analyst_execution.sql','app/migrations/20261124_000164_marketing_analyst_decisions.sql','app/migrations/20261124_000165_marketing_paid_launch_plans.sql','app/migrations/20261124_000167_marketing_paid_operation_journal.sql','app/migrations/20261124_000192_marketing_m4_attribution_intents.sql','app/migrations/20261124_000193_marketing_media_analytics.sql','app/migrations/20261126_009020_marketing_attribution_schedules.sql','app/migrations/20261126_009021_marketing_experiment_protocols.sql','app/migrations/20261126_009022_marketing_optimization_receipts.sql'],
         'capabilities' => [
             'marketing.campaign.search',
             'marketing.campaign.get',
@@ -113,6 +123,22 @@ $manifest = [
             'marketing.attribution.commerce.inspect',
             'marketing.attribution.commerce.capture',
             'marketing.analytics.commerce.report',
+            'marketing.attribution.sweep',
+            'marketing.attribution.journey.get',
+            'marketing.analytics.economics.report',
+            'marketing.analytics.monitor.get',
+            'marketing.optimization.budget.preview',
+            'marketing.optimization.audience.preview',
+            'marketing.experiment.register',
+            'marketing.experiment.get',
+            'marketing.optimization.creative.preview',
+            'marketing.optimization.rule.evaluate',
+            'marketing.optimization.rule.plan.propose',
+            'marketing.optimization.rule.review.record',
+            'marketing.optimization.learning.preview',
+            'marketing.optimization.learning.get',
+            'marketing.optimization.learning.plan.propose',
+            'marketing.optimization.learning.record',
         ],
         'capability_contracts' => [],
     ],
@@ -127,6 +153,12 @@ foreach ([
     'marketing.paid.sync.history' => ['query', 'none', 'marketing/sync-history', 'cos.tenant.manage'],
     'marketing.paid.spend.evidence.get' => ['query', 'none', 'marketing/spend-evidence-get', 'cos.tenant.manage'],
     'marketing.paid.insights.query' => ['query', 'none', 'marketing/insights-query', 'cos.tenant.manage'],
+    'marketing.analytics.economics.report' => ['query', 'none', 'marketing/analytics-economics', 'cos.tenant.manage'],
+    'marketing.analytics.monitor.get' => ['query', 'none', 'marketing/analytics-monitor', 'cos.tenant.manage'],
+    'marketing.optimization.audience.preview' => ['query', 'none', 'marketing/optimization-audience-preview', 'cos.tenant.manage'],
+    'marketing.optimization.rule.evaluate' => ['query', 'none', 'marketing/optimization-rule-evaluate', 'cos.tenant.manage'],
+    'marketing.optimization.budget.preview' => ['query', 'none', 'marketing/optimization-budget-preview', 'cos.tenant.manage'],
+    'marketing.attribution.journey.get' => ['query', 'none', 'marketing/attribution-journey', 'cos.tenant.manage'],
     'marketing.attribution.discover' => ['query', 'none', 'marketing/attribution-discover', 'cos.tenant.manage'],
     'marketing.attribution.capture' => ['command', 'internal', 'marketing/attribution-capture', 'cos.tenant.manage'],
     'marketing.attribution.tracking.get' => ['query', 'none', 'marketing/attribution-tracking', 'cos.tenant.manage'],
@@ -153,7 +185,7 @@ foreach ([
         'retry_policy' => $kind === 'command' ? ['max_attempts' => 1] : [],
         'failure_contract' => $kind === 'command' ? 'An ambiguous database outcome is inspected by stable idempotency key before any new draft is attempted.' : '',
         'lifecycle' => 'experimental',
-        'tests' => str_contains($id,'attribution')||str_contains($id,'analytics')?['tests/unit/marketing_domain_foundation.php','tests/integration/marketing_m4_attribution_mysql.php']:['tests/unit/marketing_domain_foundation.php'],
+        'tests' => $id==='marketing.optimization.audience.preview'?['tests/unit/marketing_domain_foundation.php','tests/integration/marketing_paid_approved_goal_e2e_mysql.php']:(str_contains($id,'attribution')||str_contains($id,'analytics')||str_contains($id,'optimization')?['tests/unit/marketing_domain_foundation.php','tests/integration/marketing_m4_attribution_mysql.php']:['tests/unit/marketing_domain_foundation.php']),
         'documentation' => 'docs/04-domains/marketing/overview.md',
     ];
 }
@@ -237,6 +269,24 @@ foreach ([
     ];
 }
 
+// Immutable internal experiment plan; observation is advisory and requires native terminal sources.
+foreach([
+    'marketing.experiment.register'=>['command','internal','marketing/experiment-register'],
+    'marketing.experiment.get'=>['query','none','marketing/experiment-get'],
+    'marketing.optimization.creative.preview'=>['query','none','marketing/optimization-creative-preview'],
+] as $id=>[$kind,$sideEffect,$schema]){
+    $contracts[]=[
+        'id'=>$id,'version'=>'1.0.0','owner_domain'=>'marketing','kind'=>$kind,
+        'input_schema'=>'resources/contracts/'.$schema.'-input.schema.json','output_schema'=>'resources/contracts/'.$schema.'-output.schema.json',
+        'execution_binding'=>$kind.':'.$id,'side_effect_level'=>$sideEffect,'permission'=>'cos.tenant.manage',
+        'approval_policy'=>$kind==='command'?'conditional':'none','idempotency'=>$kind==='command'?'required':'none',
+        'timeout_policy'=>$kind==='command'?['seconds'=>30]:[],'retry_policy'=>$kind==='command'?['max_attempts'=>1]:[],
+        'failure_contract'=>'Immutable protocol only; read back exact registration and source pins. No randomized evidence, provider writes, budget or activation authority.',
+        'lifecycle'=>'experimental','tests'=>['tests/unit/marketing_domain_foundation.php','tests/integration/marketing_paid_approved_goal_e2e_mysql.php'],
+        'documentation'=>'docs/04-domains/marketing/overview.md',
+    ];
+}
+
 // External advice is executable only through an approved canonical Workflow Action.
 $contracts[] = [
     'id'=>'marketing.analyst.run.request','version'=>'1.0.0','owner_domain'=>'marketing','kind'=>'command',
@@ -260,6 +310,58 @@ foreach(['create_paused','activate','pause'] as $operation){
         'approval_policy'=>'required','idempotency'=>'required','timeout_policy'=>['seconds'=>600],'retry_policy'=>['max_attempts'=>1],
         'failure_contract'=>'Provider operation may be uncertain; hold exposure, inspect native journal and reconcile independently; no blind retry.',
         'lifecycle'=>'experimental','tests'=>['tests/unit/marketing_m2_planning.php'],'documentation'=>'docs/04-domains/marketing/overview.md'
+    ];
+}
+$contracts[]=[
+    'id'=>'marketing.attribution.sweep','version'=>'1.0.0','owner_domain'=>'marketing','kind'=>'command',
+    'input_schema'=>'resources/contracts/marketing/attribution-sweep-input.schema.json',
+    'output_schema'=>'resources/contracts/marketing/attribution-sweep-output.schema.json',
+    'execution_binding'=>'action:marketing.attribution.sweep','async'=>true,'side_effect_level'=>'internal',
+    'permission'=>'cos.tenant.manage','approval_policy'=>'required','idempotency'=>'required',
+    'timeout_policy'=>['seconds'=>120],'retry_policy'=>['max_attempts'=>1],
+    'failure_contract'=>'Inspect immutable native receipt; no blind retry. Page exhaustion is not a complete conversion census.',
+    'lifecycle'=>'experimental','tests'=>['tests/integration/marketing_m4_attribution_mysql.php'],
+    'documentation'=>'docs/04-domains/marketing/overview.md',
+];
+// Optimization Goal proposal is internal only. Review record requires independent canonical approvals.
+$contracts[]=[
+    'id'=>'marketing.optimization.rule.plan.propose','version'=>'1.0.0','owner_domain'=>'marketing','kind'=>'command',
+    'input_schema'=>'resources/contracts/marketing/optimization-review-plan-propose-input.schema.json',
+    'output_schema'=>'resources/contracts/marketing/optimization-review-plan-propose-output.schema.json',
+    'execution_binding'=>'command:marketing.optimization.rule.plan.propose','side_effect_level'=>'internal',
+    'permission'=>'cos.tenant.manage','approval_policy'=>'conditional','idempotency'=>'required',
+    'timeout_policy'=>['seconds'=>30],'retry_policy'=>['max_attempts'=>1],
+    'failure_contract'=>'Exact rule hash required. Proposal creates no approval, Action or provider effect; reconcile immutable Plan key.',
+    'lifecycle'=>'experimental','tests'=>['tests/integration/marketing_analyst_approved_goal_e2e_mysql.php'],
+    'documentation'=>'docs/04-domains/marketing/overview.md',
+];
+$contracts[]=[
+    'id'=>'marketing.optimization.rule.review.record','version'=>'1.0.0','owner_domain'=>'marketing','kind'=>'command',
+    'input_schema'=>'resources/contracts/marketing/optimization-review-record-input.schema.json',
+    'output_schema'=>'resources/contracts/marketing/optimization-review-record-output.schema.json',
+    'execution_binding'=>'action:marketing.optimization.rule.review.record','async'=>true,'side_effect_level'=>'internal',
+    'permission'=>'cos.tenant.manage','approval_policy'=>'required','idempotency'=>'required',
+    'timeout_policy'=>['seconds'=>60],'retry_policy'=>['max_attempts'=>1],
+    'failure_contract'=>'Revalidate exact native rule evidence after approvals. Reconcile immutable receipt before retry; review is not provider or Finance mutation.',
+    'lifecycle'=>'experimental','tests'=>['tests/integration/marketing_analyst_approved_goal_e2e_mysql.php'],
+    'documentation'=>'docs/04-domains/marketing/overview.md',
+];
+foreach([
+    'marketing.optimization.learning.preview'=>['query','none','query','optimization-learning-preview','none'],
+    'marketing.optimization.learning.get'=>['query','none','query','optimization-learning-get','none'],
+    'marketing.optimization.learning.plan.propose'=>['command','internal','command','optimization-learning-plan-propose','conditional'],
+    'marketing.optimization.learning.record'=>['command','internal','action','optimization-learning-record','required'],
+] as $id=>[$kind,$effect,$binding,$schema,$approval]){
+    $contracts[]=[
+        'id'=>$id,'version'=>'1.0.0','owner_domain'=>'marketing','kind'=>$kind,
+        'input_schema'=>'resources/contracts/marketing/'.$schema.'-input.schema.json',
+        'output_schema'=>'resources/contracts/marketing/'.$schema.'-output.schema.json',
+        'execution_binding'=>$binding.':'.$id,'side_effect_level'=>$effect,'permission'=>'cos.tenant.manage',
+        'async'=>$binding==='action','approval_policy'=>$approval,'idempotency'=>$kind==='command'?'required':'none',
+        'timeout_policy'=>$kind==='command'?['seconds'=>60]:[],'retry_policy'=>$kind==='command'?['max_attempts'=>1]:[],
+        'failure_contract'=>'Require persisted trusted review Outcome and exact native follow-up batch pins. Receipt is observational only; never train, alter rules, mutate provider or Finance.',
+        'lifecycle'=>'experimental','tests'=>['tests/integration/marketing_analyst_approved_goal_e2e_mysql.php'],
+        'documentation'=>'docs/04-domains/marketing/overview.md',
     ];
 }
 $manifest['contributions']['capability_contracts'] = $contracts;

@@ -103,7 +103,8 @@ try {
     };
     $manifest=require $root.'/app/Domains/Marketing/module.php';
     $catalog=new ModuleCatalog([ModuleDefinition::fromArray($manifest),
-        new ModuleDefinition(new ModuleManifest('federation','Federation','1.0.0'),new ModuleContributions())]);
+        ModuleDefinition::fromArray((static fn(string $path):array=>require $path)($root.'/app/Domains/Sales/module.php')),
+        ModuleDefinition::fromArray((static fn(string $path):array=>require $path)($root.'/app/Domains/Federation/module.php'))]);
     $states=new class implements ModuleStateRepositoryInterface {
         public function enabledOverride(string $org,string $moduleId):?bool{return true;}
         public function setEnabled(string $org,string $moduleId,bool $value):void{}
@@ -178,10 +179,43 @@ try {
     });
     $factory=new \Domains\Marketing\Infrastructure\Hermes\HermesAnalystExecutionFactory($profiles,$contexts,$runs,$vault,$transport,$budget,$modules);
     $handler=new \Domains\Marketing\Automation\Action\MarketingAnalystRunHandler($factory,$worker,$identityResolver,$tenantFactory,$modules);
-    $domains=new DomainModuleRegistry([new \Domains\Marketing\Bootstrap\MarketingDomainModule($handler)]);
+    $captureStore=new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingAttributionStore($pdo);
+    $commerceStore=new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingCommerceAttributionStore($pdo);
+    $orderRepo=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository($pdo);
+    $orderRead=new \App\Infrastructure\Marketing\CommerceOrderReadAdapter($modules,$orderRepo,$orderRepo,$orderRepo);
+    $leadRead=new \App\Infrastructure\Marketing\SalesAttributionReadAdapter(new \Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceReadModel($pdo),$modules);
+    $candidateRead=new \App\Infrastructure\Marketing\AttributionCandidateReadAdapter(new \Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesAttributionCandidateReadModel($pdo),$modules);
+    $funding=new class implements \Domains\Marketing\Application\Contract\MarketingFinanceFundingReadPort{
+        public function observe(TenantContext $actor,string $envelopeId,string $reservationId):?array{throw new DomainException('No funding operation in sweep.');}
+    };
+    $sweepPlans=new \Domains\Marketing\Application\Service\MarketingPaidLaunchPlanService(
+        new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidLaunchPlanStore($pdo),$campaignService,
+        new \Domains\Marketing\Application\Service\MarketingPlanningService($planning,$planningPolicy),
+        new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidReadRepository($pdo),$funding,$modules);
+    $sweepService=new \Domains\Marketing\Application\Service\MarketingAttributionSweepService($campaignService,$sweepPlans,$candidateRead,$leadRead,$orderRead,$captureStore,$commerceStore,$modules);
+    $sweepHandler=new \Domains\Marketing\Automation\Action\MarketingAttributionSweepHandler($sweepService,$worker,$identityResolver,$tenantFactory,$modules,$capabilities);
+    $optAccounts=new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidReadRepository($pdo);
+    $optMediaStore=new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingMediaAnalyticsStore($pdo,$optAccounts);
+    $optProvider=new class implements \Domains\Marketing\Application\Contract\PaidMediaProviderInterface{
+        public function inspectAccount(string $organizationId,string $providerAccountId,string $credentialRef):array{throw new DomainException('No provider call in optimization review.');}
+        public function hierarchy(string $organizationId,string $providerAccountId,string $credentialRef):array{throw new DomainException('No provider call in optimization review.');}
+        public function insights(string $organizationId,string $providerAccountId,string $credentialRef,string $from,string $to,string $grain):array{throw new DomainException('No provider call in optimization review.');}
+    };
+    $optMedia=new \Domains\Marketing\Application\Service\MarketingMediaAnalyticsService($optAccounts,$optProvider,$optMediaStore,$modules);
+    $ruleService=new \Domains\Marketing\Application\Service\MarketingOptimizationRuleService($optMedia);
+    $optReceipts=new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingOptimizationReceiptStore($pdo);
+    $optReviewService=new \Domains\Marketing\Application\Service\MarketingOptimizationReviewService($ruleService,$optReceipts,$modules);
+    $optReviewHandler=new \Domains\Marketing\Automation\Action\MarketingOptimizationReviewHandler($optReviewService,$worker,$identityResolver,$tenantFactory,$modules,$capabilities);
+    $optReviewOutcome=new \App\Persistence\Marketing\MarketingOptimizationReviewOutcomeProvider($db,$optReceipts,$receipts);
+    $optHistory=new \App\Infrastructure\Marketing\MarketingOptimizationReviewEvidenceReader(new \App\Persistence\Federation\FederationTrustedActionOutcomeReader($db),$optReceipts);
+    $learningService=new \Domains\Marketing\Application\Service\MarketingOptimizationLearningService($optHistory,$ruleService,$optReceipts,$modules);
+    $learningHandler=new \Domains\Marketing\Automation\Action\MarketingOptimizationLearningHandler($learningService,$worker,$identityResolver,$tenantFactory,$modules,$capabilities);
+    $learningOutcome=new \App\Persistence\Marketing\MarketingOptimizationLearningOutcomeProvider($db,$optReceipts,$receipts);
+    $planHandler=new \App\Persistence\Federation\FederationPlanApproveHandler($db,$planReader);
+    $domains=new DomainModuleRegistry([new \Domains\Marketing\Bootstrap\MarketingDomainModule($handler,null,$sweepHandler,$optReviewHandler,$learningHandler),new \Domains\Federation\Bootstrap\FederationDomainModule($planHandler)]);
     $bindings=new FederationCapabilityBindingResolver($capabilities,$domains,$modules);
     $gate=new ModuleActionExecutionGate($domains,$modules,null,$worker);
-    $actionService=new ActionService(new MysqlActionRepository($pdo),new ActionExecutor([$handler],$gate));
+    $actionService=new ActionService(new MysqlActionRepository($pdo),new ActionExecutor([$handler,$sweepHandler,$optReviewHandler,$learningHandler,$planHandler],$gate));
     $approvalRepo=new MysqlApprovalRepository($pdo);
     $policies=new MysqlPolicyRepository($pdo);
     $engine=new PolicyEngine(new ConditionEvaluator());
@@ -189,8 +223,9 @@ try {
     $policyService=new ActionPolicyService($actionService,$policies,new MysqlPolicyEvaluationRepository($pdo),$approvalRepo,$engine,
         $transactions,null,$domains,$modules,$policyContexts);
     $outcome=new MarketingAnalystRunOutcomeProvider($db,$runs,$receipts);
+    $sweepOutcome=new \App\Persistence\Marketing\MarketingAttributionSweepOutcomeProvider($db,$captureStore,$receipts);
     $goals=new FederationGoalStore($db,$bindings,new GoalPlanValidator($capabilities),new GoalOutcomeEvaluator(),
-        new FederationTrustedOutcomeEvidenceResolver($modules,[$outcome]),$planReader);
+        new FederationTrustedOutcomeEvidenceResolver($modules,[$outcome,$sweepOutcome,$optReviewOutcome,$learningOutcome]),$planReader);
     $scheduler=new WorkflowStepScheduler();
     $bridge=new FederationCanonicalWorkflowBridge($db,$store,$scheduler,$goals,$planEvidence,$receipts,
         new FailClosedWorkflowNonActionReceiptEvidence(),$planReader,$capabilities,$domains,$modules,$policies,$engine,$policyContexts,$policyService,
@@ -319,6 +354,271 @@ try {
         'Forged native context was counted as a trusted outcome.');
     $assert($transport->posts===1,'Readback or review caused another remote turn.');
     echo "Marketing approved Goal/Plan/Action/Outcome native MySQL E2E with Hermes fixture PASS.\\n";
+
+    // Bounded native sweep through the same canonical Plan/Workflow/Action/Outcome path.
+    // The Plan approval evidence is a fixture, as in the analyst case above.
+    $sweepCap=\Domains\Marketing\Automation\Action\MarketingAttributionSweepHandler::TYPE;
+    $criterion=\App\Persistence\Marketing\MarketingAttributionSweepOutcomeProvider::CRITERION;
+    $sweepGoal='goal-sweep-'.$token;$sweepPlan='plan-sweep-'.$token;$sweepRun='run-sweep-'.$token;
+    $sweepApproval=bin2hex(random_bytes(16));$sweepDate='2026-02-02';
+    $insert=$pdo->prepare("INSERT INTO tn_leads (organization_id,full_name,status,utm_source,utm_medium,utm_campaign,created_at)
+        VALUES (?,'Private sweep fixture','new','google','organic',?,?)");
+    for($i=0;$i<51;$i++)$insert->execute([$org,$campaignId,$sweepDate.' 12:00:00']);
+    $input=['target_type'=>'marketing_campaign','target_id'=>$campaignId,'parameters'=>[
+        'plan_id'=>null,'source_kind'=>'lead','window_start'=>$sweepDate,'window_end'=>$sweepDate,'after'=>null,'max_pages'=>2]];
+    $goals->createGoal($actor,new \Platform\Orchestration\Goal\GoalSpecification($sweepGoal,$org,$owner,
+        'Record bounded native conversion sweep',[['id'=>$criterion,'operator'=>'at_least','expected'=>1]],[$sweepCap],1,null,null,'',[],['independent_plan','independent_action'],'always'));
+    $goals->proposePlan($actor,$sweepPlan,$sweepGoal,[['id'=>'sweep','capability_id'=>$sweepCap,'capability_version'=>'1.0.0','input'=>$input]]);
+    $deny(fn()=>$bridge->start($actor,$sweepRun,$sweepPlan,$sweepApproval),'Unapproved sweep plan started.');
+    $assert($captureStore->list($org,$campaignId,$sweepDate,$sweepDate,501,0)===[],'Plan proposal captured evidence before approval.');
+    $pdo->prepare('INSERT INTO cos_policies
+        (id,organization_id,code,name,action_type,conditions,decision,priority,version,status)
+        VALUES (?,?,"mkt-sweep-e2e","Marketing independent sweep approval",?,?,"APPROVAL_REQUIRED",1,1,"ACTIVE")')
+        ->execute([bin2hex(random_bytes(16)),$org,$sweepCap,'[]']);
+    $db->executeStatement('UPDATE cos_federation_plans SET state=:state WHERE organization_id=:org AND plan_id=:plan',
+        ['state'=>'approved','org'=>$org,'plan'=>$sweepPlan]);
+    $planJson=(string)$db->fetchOne('SELECT plan_json FROM cos_federation_plans WHERE organization_id=:org AND plan_id=:plan',['org'=>$org,'plan'=>$sweepPlan]);
+    $db->insert('cos_actions',[
+        'id'=>$sweepApproval,'organization_id'=>$org,'type'=>'cos.federation.plan.approval',
+        'target_type'=>'cos_federation_plan','target_id'=>$sweepPlan,
+        'parameters'=>json_encode(['goal_id'=>$sweepGoal,'plan_id'=>$sweepPlan,'specification_version'=>1,'plan_hash'=>hash('sha256',$planJson)],JSON_THROW_ON_ERROR),
+        'source_type'=>'USER','source_id'=>$owner,'status'=>'COMPLETED','execution_mode'=>'APPROVAL_REQUIRED','risk_level'=>'HIGH',
+        'idempotency_key'=>'plan-sweep:'.$token,'correlation_id'=>'mkt-sweep-plan-'.$token,
+    ]);
+    $db->insert('cos_policy_evaluations',[
+        'id'=>bin2hex(random_bytes(16)),'organization_id'=>$org,'action_id'=>$sweepApproval,
+        'decision'=>'APPROVAL_REQUIRED','correlation_id'=>'mkt-sweep-plan-'.$token,'evaluated_at'=>gmdate('Y-m-d H:i:s.u'),
+    ]);
+    $db->insert('cos_approvals',[
+        'id'=>bin2hex(random_bytes(16)),'organization_id'=>$org,'action_id'=>$sweepApproval,
+        'status'=>'APPROVED','approver_type'=>'USER','approver_id'=>$reviewer,'requested_by_type'=>'USER','requested_by_id'=>$owner,
+        'decided_by_type'=>'USER','decided_by_id'=>$reviewer,'decided_at'=>gmdate('Y-m-d H:i:s.u'),
+        'expires_at'=>(new DateTimeImmutable('+1 day'))->format('Y-m-d H:i:s.u'),
+    ]);
+    $assert($bridge->start($actor,$sweepRun,$sweepPlan,$sweepApproval)['execution_authority']==='platform_workflow','Sweep bypassed canonical workflow.');
+    $assert($bridge->advance($actor,$sweepRun,$sweepApproval)['state']==='running','Sweep run failed to start.');
+    $pending=$bridge->advance($actor,$sweepRun,$sweepApproval);
+    $assert($pending['state']==='awaiting_human_approval','Sweep not independently approved.');
+    $sweepAction=$pending['action_id'];
+    $assert($actionService->execute($org,$sweepAction,'sweep-unapproved')===null&&$captureStore->list($org,$campaignId,$sweepDate,$sweepDate,501,0)===[],'Unapproved sweep mutated evidence.');
+    $decisionId=(string)$db->fetchOne('SELECT id FROM cos_approvals WHERE organization_id=:org AND action_id=:action',['org'=>$org,'action'=>$sweepAction]);
+    $assert($approvalRepo->decide($org,$decisionId,ApprovalStatus::Approved,$reviewer,'CI verified sweep'),'Sweep Action independent approval failed.');
+    $actionService->queue($org,$sweepAction);
+    $out=$actionService->executeOutcome($org,$sweepAction,'sweep-approved');
+    $assert($out!==null&&$out->result->successful&&$out->result->data['scanned']===51&&$out->result->data['pages_processed']===2
+        &&$out->result->data['recorded_or_already_present']===51&&!$out->result->data['complete_coverage'],'Approved native sweep failed.');
+    $assert($actionService->execute($org,$sweepAction,'sweep-replay')===null,'Completed sweep replayed.');
+    $assert(count($captureStore->list($org,$campaignId,$sweepDate,$sweepDate,501,0))===51,'Sweep did not persist native evidence.');
+    $assert($bridge->advance($actor,$sweepRun,$sweepApproval)['state']==='step_completed','Sweep canonical receipt not attested.');
+    $assert($bridge->advance($actor,$sweepRun,$sweepApproval)['state']==='completed','Sweep workflow not completed.');
+    $evaluation=$goals->recordEvaluation($actor,'mkt-sweep-eval-'.$token,$sweepRun);
+    $assert(($evaluation['result']??null)==='satisfied'&&($evaluation['criteria'][0]['observed']??null)===1,'Sweep Goal native receipt did not satisfy outcome.');
+    $sweepKey=(string)$db->fetchOne('SELECT idempotency_key FROM cos_actions WHERE organization_id=? AND id=?',[$org,$sweepAction]);
+    $db->executeStatement('UPDATE marketing_attribution_capture_intents SET request_hash=? WHERE organization_id=? AND idempotency_key=?',
+        [str_repeat('0',64),$org,$sweepKey]);
+    $deny(fn()=>$sweepOutcome->observeRun($actor,$sweepRun,$criterion,new DateTimeImmutable('-1 day'),new DateTimeImmutable('+1 day')),'Tampered sweep scope accepted as outcome.');
+    echo "Marketing M4 canonical approved sweep Action, multipage native capture and independently read Goal receipt PASS (Plan evidence fixture).\n";
+    // Scheduler uses real Plan approval Action, then independent sweep Action approval.
+    $pdo->prepare('INSERT INTO cos_policies
+        (id,organization_id,code,name,action_type,conditions,decision,priority,version,status)
+        VALUES (?,?,"mkt-schedule-plan-e2e","Independent scheduled Plan approval",?,?,"APPROVAL_REQUIRED",1,1,"ACTIVE")')
+        ->execute([bin2hex(random_bytes(16)),$org,'cos.federation.plan.approval','[]']);
+    $coordinator=new \App\Persistence\Federation\FederationPlanApprovalCoordinator($db,$goals,$domains,$modules,
+        new \Platform\Orchestration\Goal\GoalPlanApprovalRequestFactory(),$policyService,$policies,$policyContexts,$engine);
+    $scheduler=new \App\Persistence\Marketing\MarketingAttributionScheduleService($db,$goals,$bridge,$coordinator,$sweepOutcome,$campaignService,$sweepPlans,$modules);
+    $date='2026-02-03';
+    for($i=0;$i<51;$i++)$insert->execute([$org,$campaignId,$date.' 12:00:00']);
+    $profile=['profile_id'=>'fixture-sweep','organization_id'=>$org,'actor_id'=>$owner,'campaign_id'=>$campaignId,
+        'plan_id'=>null,'source_kind'=>'lead','lookback_days'=>1,'max_pages'=>1];
+    $clock=new DateTimeImmutable('2026-02-04T00:00:00Z');
+    $tick=fn()=>$scheduler->tick($actor,$profile,$clock);
+    $scheduleRow=fn()=>$db->fetchAssociative('SELECT * FROM marketing_attribution_schedules WHERE organization_id=? AND profile_id=?',[$org,$profile['profile_id']]);
+    $approve=static function(string $action)use($db,$org,$approvalRepo,$reviewer,$actionService,$assert):void{
+        $id=(string)$db->fetchOne('SELECT id FROM cos_approvals WHERE organization_id=? AND action_id=?',[$org,$action]);
+        $assert($id!==''&&$approvalRepo->decide($org,$id,ApprovalStatus::Approved,$reviewer,'Independent CI approval'),'Scheduled approval missing.');
+        $actionService->queue($org,$action);
+    };
+    for($page=0;$page<2;$page++){
+        $assert($tick()==='PLAN_PROPOSED','Schedule did not propose its pinned Plan.');
+        $pid=$scheduleRow()['plan_id'];
+        $assert($tick()==='PLAN_APPROVAL_REQUESTED'&&$tick()==='WAIT_PLAN_APPROVAL','Schedule bypassed Plan approval.');
+        $planAction=$goals->planApprovalAction($actor,$pid)['id'];
+        $assert($actionService->execute($org,$planAction,'schedule-unapproved-plan')===null,'Unapproved scheduled Plan executed.');
+        $approve($planAction);
+        $planResult=$actionService->executeOutcome($org,$planAction,'schedule-plan');
+        $assert($planResult!==null&&$planResult->result->successful,'Scheduled Plan approval handler failed.');
+        $assert($tick()==='RUN_STARTED','Schedule did not start canonical run.');
+        $assert($tick()==='RUN_ADVANCED'&&$tick()==='RUN_ADVANCED','Schedule did not submit sweep Action.');
+        $key=(string)$db->fetchOne('SELECT s.idempotency_key FROM cos_workflow_steps s JOIN cos_workflow_runs w ON w.organization_id=s.organization_id AND w.run_id=s.run_id WHERE w.organization_id=? AND w.source_plan_id=?',[$org,$pid]);
+        $action=(string)$db->fetchOne('SELECT id FROM cos_actions WHERE organization_id=? AND idempotency_key=?',[$org,'wf:'.$key]);
+        $assert($action!==''&&$actionService->execute($org,$action,'schedule-unapproved-sweep')===null,'Scheduled sweep bypassed approval.');
+        $assert(count($captureStore->list($org,$campaignId,$date,$date,501,0))===($page===0?0:50),'Unapproved scheduled sweep changed capture.');
+        $approve($action);
+        $result=$actionService->executeOutcome($org,$action,'schedule-sweep');
+        $assert($result!==null&&$result->result->successful&&$result->result->data['scanned']===($page===0?50:1),'Scheduled page sweep failed.');
+        $assert($tick()==='RUN_ADVANCED'&&$tick()==='RUN_ADVANCED','Schedule did not attest and complete workflow.');
+        $assert($tick()===($page===0?'CONTINUATION_READY':'CYCLE_SCANNED'),'Schedule did not checkpoint verified native receipt.');
+        $row=$scheduleRow();
+        $assert($row['plan_id']===null&&$row['window_start']===$date&&$row['window_end']===$date
+            &&($page===0?$row['after_cursor']!==null:$row['after_cursor']===null),'Schedule cursor/window persistence failed.');
+    }
+    $assert(count($captureStore->list($org,$campaignId,$date,$date,501,0))===51&&$tick()==='CURRENT_CYCLE_SCANNED','Schedule did not exhaust exactly 51 candidates.');
+    $deny(fn()=>$scheduler->tick($actor,array_replace($profile,['max_pages'=>2]),$clock),'Changed schedule profile reused checkpoint.');
+    $assert($scheduler->tick($actor,$profile,new DateTimeImmutable('2026-02-05T00:00:00Z'))==='PLAN_PROPOSED'
+        &&$scheduleRow()['after_cursor']===null,'Next daily cycle did not restart from null cursor.');
+    echo "Marketing M4 scheduled two-page canonical Plan/Action approvals, durable continuation, rolling rescan PASS.\n";
+
+    // M5.9: no mocked Plan approval. The same canonical coordinator issues an independent Plan Action.
+    $optCap=\Domains\Marketing\Automation\Action\MarketingOptimizationReviewHandler::TYPE;
+    $optCriterion=\App\Persistence\Marketing\MarketingOptimizationReviewOutcomeProvider::CRITERION;
+    $pdo->prepare('INSERT INTO cos_policies
+        (id,organization_id,code,name,action_type,conditions,decision,priority,version,status)
+        VALUES (?,?,"mkt-opt-review-e2e","Independent optimization review approval",?,?,"APPROVAL_REQUIRED",1,1,"ACTIVE")')
+        ->execute([bin2hex(random_bytes(16)),$org,$optCap,'[]']);
+    $optAccount=$optAccounts->registerAccount($org,'env://META_OPT_FIXTURE',['ad_account_id'=>'act_'.random_int(1000000000,9999999999),
+        'currency'=>'USD','timezone'=>'UTC','connection_status'=>'READ_ONLY','capability_scope'=>['ads_read']]);
+    $mediaRow=static fn(string $from,string $to,string $spend,string $clicks):array=>[
+        'account_id'=>substr($optAccount['ad_account_id'],4),'campaign_id'=>'90001','date_start'=>$from,'date_stop'=>$to,
+        'spend'=>$spend,'impressions'=>'2000','clicks'=>$clicks];
+    $batch=static fn(string $key,string $from,string $to,string $spend,string $clicks):array=>$optMediaStore->commit(
+        $org,$owner,'opt-'.$key.'-'.$token,hash('sha256',$key),$optAccount,'campaign',$from,$to,[$mediaRow($from,$to,$spend,$clicks)]);
+    $optBaseline=$batch('base','2026-03-01','2026-03-07','100.00','100');
+    $optCurrent=$batch('current','2026-03-08','2026-03-14','150.00','40');
+    $optParameters=['external_id'=>'90001','rule'=>'CTR_DECLINE','threshold_percent'=>60,
+        'current_run_id'=>$optCurrent['id'],'baseline_run_id'=>$optBaseline['id'],'window_start'=>'2026-03-08','window_end'=>'2026-03-14',
+        'baseline_start'=>'2026-03-01','baseline_end'=>'2026-03-07'];
+    $optEval=$ruleService->evaluate($actor,['account_id'=>$optAccount['id'],...$optParameters]);
+    $assert($optEval['status']==='TRIGGERED_REVIEW_REQUIRED','Native rule fixture did not trigger.');
+    $optInput=['target_type'=>'marketing_paid_account','target_id'=>$optAccount['id'],
+        'parameters'=>[...$optParameters,'evaluation_hash'=>$optEval['evaluation_hash']]];
+    $optPlanner=new \App\Persistence\Marketing\MarketingOptimizationReviewPlanProposalService($db,$goals,$bridge,$optReviewService);
+    $optAdapter=new \App\Application\Capability\MarketingOptimizationReviewPlanProposeAdapter($optPlanner);
+    $optKey='opt-plan-'.$token;
+    $deny(fn()=>$optAdapter->invoke($actor,[...$optInput,'parameters'=>[...$optInput['parameters'],'evaluation_hash'=>str_repeat('0',64)]],$optKey,'fixture'),
+        'Forged rule evaluation proposed a Plan.');
+    $optProposal=$optAdapter->invoke($actor,$optInput,$optKey,'fixture');
+    $assert($optProposal['state']==='proposed'&&$optAdapter->invoke($actor,$optInput,$optKey,'fixture')['state']==='existing',
+        'Optimization Plan replay failed.');
+    $optRun='run-opt-'.$token;$optPlan=$optProposal['plan_id'];
+    $countReviews=static fn():int=>(int)$db->fetchOne('SELECT COUNT(*) FROM marketing_optimization_receipts WHERE organization_id=?',[$org]);
+    $deny(fn()=>$bridge->start($actor,$optRun,$optPlan,bin2hex(random_bytes(16))),'Unapproved optimization Plan started.');
+    $assert($countReviews()===0,'Plan proposal recorded a review.');
+    $optPlanAction=$coordinator->requestApproval($actor,$optPlan,'opt-plan-'.$token)['action_id'];
+    $assert($actionService->execute($org,$optPlanAction,'opt-plan-unapproved')===null,'Unapproved optimization Plan Action executed.');
+    $approve($optPlanAction);
+    $assert($actionService->execute($org,$optPlanAction,'opt-plan-approved')?->status===ActionStatus::Completed,'Optimization Plan approval failed.');
+    $bridge->start($actor,$optRun,$optPlan,$optPlanAction);
+    $bridge->advance($actor,$optRun,$optPlanAction);
+    $optPending=$bridge->advance($actor,$optRun,$optPlanAction);
+    $assert($optPending['state']==='awaiting_human_approval'&&$countReviews()===0,'Optimization record bypassed independent Action approval.');
+    $optAction=$optPending['action_id'];
+    $assert($actionService->execute($org,$optAction,'opt-action-unapproved')===null,'Unapproved optimization Action executed.');
+    $approve($optAction);
+    $optResult=$actionService->executeOutcome($org,$optAction,'opt-action-approved');
+    $assert($optResult!==null&&$optResult->result->successful&&$optResult->result->data['review_recorded']
+        &&!$optResult->result->data['effect_confirmed']&&!$optResult->result->data['provider_mutation']&&$countReviews()===1,
+        'Approved optimization review did not persist independent native receipt.');
+    $assert($actionService->execute($org,$optAction,'opt-action-replay')===null,'Optimization Action replayed.');
+    $assert($bridge->advance($actor,$optRun,$optPlanAction)['state']==='step_completed'&&$bridge->advance($actor,$optRun,$optPlanAction)['state']==='completed',
+        'Optimization review canonical receipt not attested.');
+    $optOutcome=$goals->recordEvaluation($actor,'opt-eval-'.$token,$optRun);
+    $assert(($optOutcome['result']??null)==='satisfied'&&($optOutcome['criteria'][0]['observed']??null)===1
+        &&$optReviewOutcome->verifiedReceipt($actor,$optRun)===$optResult->result->data,
+        'Optimization review Goal not independently satisfied.');
+    $optReceiptId=$optResult->result->data['review_id'];
+    // Duplicate signal in another independently approved plan may not append another receipt.
+    $duplicate=$optAdapter->invoke($actor,$optInput,'opt-duplicate-'.$token,'fixture');
+    $duplicatePlan=$duplicate['plan_id'];$duplicateRun='run-opt-dup-'.$token;
+    $duplicateApproval=$coordinator->requestApproval($actor,$duplicatePlan,'opt-dup-'.$token)['action_id'];$approve($duplicateApproval);
+    $assert($actionService->execute($org,$duplicateApproval,'opt-dup-plan')?->status===ActionStatus::Completed,'Duplicate fixture Plan approval failed.');
+    $bridge->start($actor,$duplicateRun,$duplicatePlan,$duplicateApproval);$bridge->advance($actor,$duplicateRun,$duplicateApproval);
+    $duplicateAction=$bridge->advance($actor,$duplicateRun,$duplicateApproval)['action_id'];$approve($duplicateAction);
+    $assert($actionService->execute($org,$duplicateAction,'opt-dup-action')?->status===ActionStatus::Failed&&$countReviews()===1,'Duplicate signal recorded twice.');
+    // A newer batch between approvals and worker readback invalidates the originally approved evidence.
+    $staleBaseline=$batch('stale-base','2026-04-01','2026-04-07','100.00','100');
+    $staleCurrent=$batch('stale-current','2026-04-08','2026-04-14','150.00','40');
+    $staleParams=[...$optParameters,'current_run_id'=>$staleCurrent['id'],'baseline_run_id'=>$staleBaseline['id'],
+        'window_start'=>'2026-04-08','window_end'=>'2026-04-14','baseline_start'=>'2026-04-01','baseline_end'=>'2026-04-07'];
+    $staleEval=$ruleService->evaluate($actor,['account_id'=>$optAccount['id'],...$staleParams]);
+    $staleProposal=$optAdapter->invoke($actor,[...$optInput,'parameters'=>[...$staleParams,'evaluation_hash'=>$staleEval['evaluation_hash']]],'opt-stale-'.$token,'fixture');
+    $stalePlan=$staleProposal['plan_id'];$staleRun='run-opt-stale-'.$token;
+    $staleApproval=$coordinator->requestApproval($actor,$stalePlan,'opt-stale-'.$token)['action_id'];$approve($staleApproval);
+    $assert($actionService->execute($org,$staleApproval,'opt-stale-plan')?->status===ActionStatus::Completed,'Stale fixture Plan approval failed.');
+    $bridge->start($actor,$staleRun,$stalePlan,$staleApproval);$bridge->advance($actor,$staleRun,$staleApproval);
+    $staleAction=$bridge->advance($actor,$staleRun,$staleApproval)['action_id'];$approve($staleAction);
+    $batch('stale-revision','2026-04-08','2026-04-14','150.00','95');
+    $assert($actionService->execute($org,$staleAction,'opt-stale-action')?->status===ActionStatus::Failed&&$countReviews()===1,
+        'Stale optimization signal passed worker recheck.');
+
+    // M5.10: independent subsequent observation. Historical approved review does not imply causal lift.
+    $learnCap=\Domains\Marketing\Automation\Action\MarketingOptimizationLearningHandler::TYPE;
+    $learnCriterion=\App\Persistence\Marketing\MarketingOptimizationLearningOutcomeProvider::CRITERION;
+    $pdo->prepare('INSERT INTO cos_policies
+        (id,organization_id,code,name,action_type,conditions,decision,priority,version,status)
+        VALUES (?,?,"mkt-opt-learn-e2e","Independent optimization learning approval",?,?,"APPROVAL_REQUIRED",1,1,"ACTIVE")')
+        ->execute([bin2hex(random_bytes(16)),$org,$learnCap,'[]']);
+    $follow=$batch('followup','2026-03-15','2026-03-21','150.00','80');
+    $learnParameters=['review_run_id'=>$optRun,'review_evaluation_id'=>'opt-eval-'.$token,'review_id'=>$optReceiptId,
+        'followup_run_id'=>$follow['id'],'followup_window_start'=>'2026-03-15','followup_window_end'=>'2026-03-21'];
+    $learnInput=['target_type'=>'marketing_paid_account','target_id'=>$optAccount['id'],'parameters'=>$learnParameters];
+    $learnPreview=new \App\Application\Capability\MarketingOptimizationLearningPreviewAdapter($learningService);
+    $learnPlanner=new \App\Persistence\Marketing\MarketingOptimizationLearningPlanProposalService($db,$goals,$bridge,$learningService);
+    $learnAdapter=new \App\Application\Capability\MarketingOptimizationLearningPlanProposeAdapter($learnPlanner);
+    $learnGet=new \App\Application\Capability\MarketingOptimizationLearningGetAdapter($learningService);
+    $deniedEval=[...$learnInput,'parameters'=>[...$learnParameters,'review_evaluation_id'=>'forged-'.$token]];
+    $deny(fn()=>$learnPreview->invoke($actor,$deniedEval,'fixture','fixture'),'Learning without trusted recorded review outcome admitted.');
+    $deny(fn()=>$learnPreview->invoke($actor,[...$learnInput,'target_id'=>'mads-'.str_repeat('0',24)],'fixture','fixture'),'Learning foreign account admitted.');
+    $deny(fn()=>$learnPreview->invoke($actor,[...$learnInput,'parameters'=>[...$learnParameters,'followup_run_id'=>$optCurrent['id'],
+        'followup_window_start'=>'2026-03-08','followup_window_end'=>'2026-03-14']],'fixture','fixture'),'Overlapping learning window admitted.');
+    // An absent follow-up row is never a successful learning record.
+    $empty=$optMediaStore->commit($org,$owner,'opt-empty-'.$token,hash('sha256','empty'),$optAccount,'campaign','2026-03-29','2026-04-04',[]);
+    $unavailable=$learnPreview->invoke($actor,[...$learnInput,'parameters'=>[...$learnParameters,'followup_run_id'=>$empty['id'],
+        'followup_window_start'=>'2026-03-29','followup_window_end'=>'2026-04-04']],'fixture','fixture');
+    // Use non-overlapping exact windows even when other imported scopes exist.
+    $assert($unavailable['status']==='INSUFFICIENT_EVIDENCE'&&$unavailable['next_step']==='COLLECT_EVIDENCE'&&!$unavailable['effect_confirmed'],
+        'Absent follow-up promoted to learning effect.');
+    // Review approvals may expire after an independently recorded outcome; that history is not live execution authority.
+    $oldExpiry=$db->fetchAllAssociative('SELECT id,expires_at FROM cos_approvals WHERE organization_id=? AND action_id IN (?,?)',[$org,$optAction,$optPlanAction]);
+    $db->executeStatement("UPDATE cos_approvals SET expires_at='2020-01-01 00:00:00' WHERE organization_id=? AND action_id IN (?,?)",[$org,$optAction,$optPlanAction]);
+    $learn=$learnPreview->invoke($actor,$learnInput,'fixture','fixture');
+    $assert($learn['status']==='IMPROVED_OBSERVED'&&$learn['window_relation']==='RETROSPECTIVE_ONLY'
+        &&(float)$learn['followup_evaluation']['change_percent']===100.0&&!$learn['causal_attribution']&&!$learn['rule_change_authorized'],
+        'Follow-up learning overclaimed causality or lost direction.');
+    $learnActionInput=[...$learnInput,'parameters'=>[...$learnParameters,'learning_hash'=>$learn['learning_hash']]];
+    $learnKey='opt-learning-'.$token;$lproposal=$learnAdapter->invoke($actor,$learnActionInput,$learnKey,'fixture');
+    $assert($lproposal['state']==='proposed'&&$learnAdapter->invoke($actor,$learnActionInput,$learnKey,'fixture')['state']==='existing'&&$countReviews()===1,
+        'Learning proposal replay or premature write.');
+    $lplan=$lproposal['plan_id'];$lrun='run-opt-learn-'.$token;
+    $lplanAction=$coordinator->requestApproval($actor,$lplan,'opt-learning-'.$token)['action_id'];
+    $assert($actionService->execute($org,$lplanAction,'learning-plan-unapproved')===null,'Learning Plan bypassed approval.');
+    $approve($lplanAction);
+    $assert($actionService->execute($org,$lplanAction,'learning-plan-approved')?->status===ActionStatus::Completed,'Learning Plan approval failed.');
+    $bridge->start($actor,$lrun,$lplan,$lplanAction);$bridge->advance($actor,$lrun,$lplanAction);
+    $lpending=$bridge->advance($actor,$lrun,$lplanAction);
+    $assert($lpending['state']==='awaiting_human_approval'&&$countReviews()===1,'Learning skipped independent Action approval.');
+    $laction=$lpending['action_id'];
+    $assert($actionService->execute($org,$laction,'learning-unapproved')===null,'Unapproved learning Action executed.');
+    $approve($laction);$lresult=$actionService->executeOutcome($org,$laction,'learning-approved');
+    $assert($lresult!==null&&$lresult->result->successful&&$lresult->result->data['learning_recorded']&&$countReviews()===2
+        &&!$lresult->result->data['effect_confirmed']&&!$lresult->result->data['rule_change_authorized'],'Approved learning native readback failed.');
+    $lid=$lresult->result->data['learning_id'];
+    $readback=$learnGet->invoke($actor,['learning_id'=>$lid],'fixture','fixture');
+    $assert($readback===$lresult->result->data&&$actionService->execute($org,$laction,'learning-replay')===null,'Learning replay or receipt lookup failed.');
+    $assert($bridge->advance($actor,$lrun,$lplanAction)['state']==='step_completed'&&$bridge->advance($actor,$lrun,$lplanAction)['state']==='completed',
+        'Learning canonical Run did not complete.');
+    $lout=$goals->recordEvaluation($actor,'opt-learn-eval-'.$token,$lrun);
+    $assert(($lout['result']??null)==='satisfied'&&($lout['criteria'][0]['observed']??null)===1
+        &&$learningOutcome->verifiedReceipt($actor,$lrun)===$readback,'Learning Goal not independently satisfied.');
+    foreach($oldExpiry as $approvalRow)$db->executeStatement('UPDATE cos_approvals SET expires_at=? WHERE organization_id=? AND id=?',[$approvalRow['expires_at'],$org,$approvalRow['id']]);
+    $db->executeStatement('UPDATE marketing_optimization_receipts SET request_hash=? WHERE organization_id=? AND id=?',[str_repeat('0',64),$org,$lid]);
+    $deny(fn()=>$learningOutcome->observeRun($actor,$lrun,$learnCriterion,new DateTimeImmutable('-1 day'),new DateTimeImmutable('+1 day')),
+        'Tampered learning receipt accepted as outcome.');
+    echo "Marketing M5.10 historical trusted review, pinned retrospective follow-up, independent Plan and Action, native learning receipt and Outcome PASS.\n";
+    $db->executeStatement('UPDATE marketing_optimization_receipts SET request_hash=? WHERE organization_id=? AND id=?',[str_repeat('0',64),$org,$optReceiptId]);
+    $deny(fn()=>$optReviewOutcome->observeRun($actor,$optRun,$optCriterion,new DateTimeImmutable('-1 day'),new DateTimeImmutable('+1 day')),
+        'Tampered optimization receipt accepted as trusted outcome.');
+    echo "Marketing M5.9 real canonical Plan and Action approvals, native optimization review, stale and duplicate fences and independent Outcome PASS.\n";
+
 } finally {
     if($oldRollout===false)putenv('COS_FEDERATION_CANONICAL_ORGANIZATION');
     else putenv('COS_FEDERATION_CANONICAL_ORGANIZATION='.$oldRollout);

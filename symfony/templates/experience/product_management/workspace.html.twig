@@ -304,14 +304,14 @@
                 <a href="/product-management/categories">Керування категоріями</a>
             {% endif %}
         </section>
-        <section class="cos-panel">
+        <section class="cos-panel" id="product-media">
             <h2>Зображення товару</h2>
             <p>Посилання на перевірені файли COS Documents. Файли й байти зберігає Documents/Storage, тут лише контрольований зв'язок із Product.</p>
             <div class="table-responsive"><table class="table">
                 <thead><tr><th>Роль</th><th>Файл</th><th>Варіант</th><th>Checksum</th><th>Дії</th></tr></thead>
                 <tbody>{% for image in product.media|default([]) %}
                     <tr>
-                        <td>{{ image.role }}</td><td>{{ image.file_id }}</td>
+                        <td>{{ image.role }}</td><td><a href="/product-management/media/images/{{ image.file_id }}"><img src="/product-management/media/images/{{ image.file_id }}" alt="Зображення товару" loading="lazy" width="96" height="96" style="object-fit:contain"></a> <code>{{ image.file_id }}</code></td>
                         <td>{{ image.variant_id|default('Товар') }}</td>
                         <td><code>{{ image.checksum|slice(0,16) }}</code></td>
                         <td>
@@ -328,12 +328,40 @@
                 </tbody>
             </table></div>
             {% if product.status != 'archived' %}
+                <form method="post" enctype="multipart/form-data" action="/product-management/products/{{ product.product_id }}/media/upload" class="cos-toolbar">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00003001">
+                    <label>Завантажити зображення до Documents (до 10 MiB)
+                        <input class="form-control" type="file" name="image" accept="image/jpeg,image/png,image/webp,image/gif" required>
+                    </label>
+                    <button type="submit" class="btn btn-outline-primary">Завантажити</button>
+                </form>
+                {% if notice == 'image_uploaded' %}<p role="status">Файл завантажено до Documents. Виберіть роль і підтвердьте прив'язку нижче.</p>{% endif %}
+                <form method="get" action="/product-management/products/{{ product.product_id }}#product-media" class="cos-toolbar">
+                    <label>Пошук зображень Documents <input class="form-control" name="media_q" maxlength="100" value="{{ mediaQuery }}"></label>
+                    <button class="btn btn-outline-secondary" type="submit">Знайти</button>
+                </form>
                 <form method="post" action="/product-management/products/{{ product.product_id }}/media" class="cos-page__stack">
                     <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                     <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00003000">
-                    <label>ID зображення з Documents
-                        <input class="form-control" name="file_id" maxlength="80" pattern="[A-Za-z0-9_-]+" required placeholder="Ідентифікатор перевіреного файлу">
-                    </label>
+                    <fieldset>
+                        <legend>Вибрати зображення з Documents</legend>
+                        <div class="d-flex flex-wrap gap-3">
+                        {% if selectedImage and selectedImage not in imageCandidates|map(i => i.file_id) %}
+                            <label class="border rounded p-2"><img src="/product-management/media/images/{{ selectedImage }}" alt="Завантажений файл" width="96" height="96" style="object-fit:contain"><input type="radio" name="file_id" value="{{ selectedImage }}" required checked> Завантажений файл</label>
+                        {% endif %}
+                        {% for candidate in imageCandidates %}
+                            <label class="border rounded p-2 d-flex flex-column" style="max-width:180px">
+                                <img src="/product-management/media/images/{{ candidate.file_id }}" alt="{{ candidate.title }}" loading="lazy" width="128" height="96" style="object-fit:contain">
+                                <span><input type="radio" name="file_id" value="{{ candidate.file_id }}" required {% if candidate.file_id == selectedImage %}checked{% endif %}> {{ candidate.title }}</span>
+                            </label>
+                        {% else %}<p>Зображення не знайдено. Завантажте файл або змініть пошук.</p>{% endfor %}
+                        </div>
+                    </fieldset>
+                    <nav aria-label="Сторінки зображень">
+                        {% if mediaPage > 1 %}<a href="?media_q={{ mediaQuery|url_encode }}&media_page={{ mediaPage - 1 }}#product-media">Попередня</a>{% endif %}
+                        {% if imageCandidates|length == 30 and mediaPage < 1001 %}<a href="?media_q={{ mediaQuery|url_encode }}&media_page={{ mediaPage + 1 }}#product-media">Наступна</a>{% endif %}
+                    </nav>
                     <label>Роль
                         <select name="role" class="form-select">
                             <option value="gallery">Галерея</option><option value="cover">Обкладинка</option>

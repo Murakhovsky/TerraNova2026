@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "plan_id": {
+      "type": "string",
+      "pattern": "^mkpl-[a-f0-9]{24}$"
+    },
+    "reservation_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^finr-[a-f0-9]{24}$"
+    },
+    "conversion_through": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    }
+  },
+  "required": [
+    "plan_id",
+    "reservation_id"
+  ],
+  "additionalProperties": false
+}

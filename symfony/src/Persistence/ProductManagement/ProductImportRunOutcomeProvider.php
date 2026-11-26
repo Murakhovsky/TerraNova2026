@@ -24,6 +24,7 @@ final readonly class ProductImportRunOutcomeProvider implements RunScopedGoalOut
         private Connection $db,
         private ProductManagementService $products,
         private DoctrineWorkflowActionReceiptVerifier $receipts,
+        private ?ProductGovernedRunOutcomeProvider $assemblyEvidence=null,
     ) {}
 
     public function domain():string{return 'product_management';}
@@ -44,7 +45,7 @@ final readonly class ProductImportRunOutcomeProvider implements RunScopedGoalOut
             throw new DomainException('Invalid Product CSV outcome time or criterion.');
         $org=$actor->organizationId()->value();
         $row=$this->db->fetchAssociative(
-            'SELECT w.input_digest,w.source_plan_id,w.state,s.step_id,s.state AS step_state,
+            'SELECT w.input_digest,w.source_plan_id,w.state,w.actor_id,s.step_id,s.state AS step_state,
                     s.result_reference,p.plan_json
              FROM cos_workflow_runs w
              INNER JOIN cos_workflow_steps s ON s.organization_id=w.organization_id AND s.run_id=w.run_id
@@ -127,6 +128,14 @@ final readonly class ProductImportRunOutcomeProvider implements RunScopedGoalOut
                 if(($variant['sku']??null)===$item['sku']){$found=true;break;}
             }
             if(!$found)throw new DomainException('Native Variant SKU differs from approved CSV.');
+            if(isset($payload['assembly'])){
+                $receipt=$this->db->fetchAssociative('SELECT operation,result_json FROM pm_operation_receipts WHERE organization_id=? AND idempotency_key=?',[$org,$key]);
+                if($this->assemblyEvidence===null||$receipt===false||$receipt['operation']!=='product.assemble'||!is_string($receipt['result_json']))
+                    throw new DomainException('Extended CSV native assembly receipt unavailable.');
+                $nativeReceipt=json_decode($receipt['result_json'],true,64,JSON_THROW_ON_ERROR);
+                if(($nativeReceipt['product_id']??null)!==$item['product_id'])throw new DomainException('Extended CSV assembly identity mismatch.');
+                $this->assemblyEvidence->verifyAssembly($org,$payload['assembly'],$key,$row['actor_id'],$nativeReceipt);
+            }
             $evidence[]='product_management:product:'.$item['product_id'];
         }
         if(!hash_equals((string)$batch['rows_digest'],hash('sha256',implode("\\n",$hashes)))

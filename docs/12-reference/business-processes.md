@@ -26,9 +26,10 @@ generated: true
 | Signal → Qualified Opportunity Handoff | `growth` | `to-be` | `source-verified` | 6 | 0 | 6/6 | 6/6 | 6/6 | 5/5 | 0/5 | [Відкрити workflow](../02-workflows/growth-opportunity-candidate-to-handoff.md) |
 | Campaign UTM → Native Sales Attribution | `marketing` | `as-is` | `source-verified` | 4 | 0 | 4/4 | 4/4 | 4/4 | 4/4 | 0/4 | [Відкрити workflow](../02-workflows/marketing-attribution-to-analytics.md) |
 | Meta Read Import → Media Analytics | `marketing` | `as-is` | `source-verified` | 2 | 0 | 2/2 | 2/2 | 2/2 | 2/2 | 0/2 | [Відкрити workflow](../02-workflows/marketing-media-import-to-report.md) |
+| Optimization Rule → Approved Review → Learning | `marketing` | `as-is` | `source-verified` | 7 | 0 | 7/7 | 7/7 | 7/7 | 7/7 | 0/7 | [Відкрити workflow](../02-workflows/marketing-optimization-review-learning.md) |
 | Product Catalog → Variant Matrix | `product_management` | `as-is` | `source-verified` | 9 | 0 | 9/9 | 9/9 | 9/9 | 9/9 | 0/9 | [Відкрити workflow](../02-workflows/product-management-catalog-to-variants.md) |
 | Product CSV → Native Catalog | `product_management` | `as-is` | `source-verified` | 3 | 0 | 3/3 | 3/3 | 3/3 | 3/3 | 0/3 | [Відкрити workflow](../02-workflows/product-management-csv-to-native-catalog.md) |
-| Product Governed Business Cycle | `product_management` | `to-be` | `source-verified` | 8 | 0 | 8/8 | 8/8 | 8/8 | 8/8 | 0/8 | [Відкрити workflow](../02-workflows/product-management-governed-business-cycle.md) |
+| Product Governed Business Cycle | `product_management` | `to-be` | `source-verified` | 9 | 0 | 9/9 | 9/9 | 9/9 | 9/9 | 0/9 | [Відкрити workflow](../02-workflows/product-management-governed-business-cycle.md) |
 | Product Physical Count → Correction | `product_management` | `as-is` | `source-verified` | 4 | 0 | 4/4 | 4/4 | 4/4 | 4/4 | 0/4 | [Відкрити workflow](../02-workflows/product-management-physical-count-to-correction.md) |
 | Product Pricing → Verified Quote | `product_management` | `as-is` | `source-verified` | 6 | 0 | 6/6 | 6/6 | 6/6 | 6/6 | 0/6 | [Відкрити workflow](../02-workflows/product-management-pricing-to-quote.md) |
 | Product Stock → Reconciliation | `product_management` | `as-is` | `source-verified` | 8 | 0 | 8/8 | 8/8 | 8/8 | 8/8 | 0/8 | [Відкрити workflow](../02-workflows/product-management-stock-to-reconciliation.md) |
@@ -58,9 +59,10 @@ generated: true
 | Signal → Qualified Opportunity Handoff | 6/6 | 6/6 | 0/6 | 0/6 | 6/6 | 6/6 | 0/6 | 5/5 | 0/5 |
 | Campaign UTM → Native Sales Attribution | 4/4 | 4/4 | 0/4 | 0/4 | 4/4 | 4/4 | 0/4 | 4/4 | 0/4 |
 | Meta Read Import → Media Analytics | 2/2 | 2/2 | 0/2 | 0/2 | 2/2 | 2/2 | 0/2 | 2/2 | 0/2 |
+| Optimization Rule → Approved Review → Learning | 7/7 | 7/7 | 0/7 | 0/7 | 7/7 | 7/7 | 0/7 | 7/7 | 0/7 |
 | Product Catalog → Variant Matrix | 9/9 | 9/9 | 0/9 | 0/9 | 9/9 | 9/9 | 0/9 | 9/9 | 0/9 |
 | Product CSV → Native Catalog | 3/3 | 3/3 | 0/3 | 0/3 | 3/3 | 3/3 | 0/3 | 3/3 | 0/3 |
-| Product Governed Business Cycle | 8/8 | 8/8 | 0/8 | 0/8 | 8/8 | 8/8 | 0/8 | 8/8 | 0/8 |
+| Product Governed Business Cycle | 9/9 | 9/9 | 0/9 | 0/9 | 9/9 | 9/9 | 0/9 | 9/9 | 0/9 |
 | Product Physical Count → Correction | 4/4 | 4/4 | 0/4 | 0/4 | 4/4 | 4/4 | 0/4 | 4/4 | 0/4 |
 | Product Pricing → Verified Quote | 6/6 | 6/6 | 0/6 | 0/6 | 6/6 | 6/6 | 0/6 | 6/6 | 0/6 |
 | Product Stock → Reconciliation | 8/8 | 8/8 | 0/8 | 0/8 | 8/8 | 8/8 | 0/8 | 8/8 | 0/8 |
@@ -304,6 +306,36 @@ generated: true
 | Import complete provider batch | Marketing | `marketing` | `marketing.analytics.media.sync` | `state` | так | source `app/Domains/Marketing/Application/Service/MarketingMediaAnalyticsService.php` · `public function sync(` [source]<br>source `app/Domains/Marketing/Infrastructure/Persistence/MySql/MysqlMarketingMediaAnalyticsStore.php` · `public function commit(` [source] |
 | Read exact media report and comparison | Marketing | `marketing` | `marketing.analytics.media.report` | `outcome` | так | source `app/Domains/Marketing/Application/Service/MarketingMediaAnalyticsService.php` · `public function report(` [source]<br>source `app/Domains/Marketing/Domain/MarketingMediaAnalyticsPolicy.php` · `public static function comparison(` [source] |
 
+## Optimization Rule → Approved Review → Learning
+
+- **Process ID:** `marketing.optimization-review-learning`
+- **Schema:** `v4`
+- **Domain:** `marketing`
+- **Бізнес-стан:** `as-is`
+- **Покриття capabilities:** 7/7 кроків
+- **Cross-domain кроки:** 0/7
+- **Derived verification:** `source-verified`
+- **Тригер:** Tenant manager submits a triggered rule with exact native comparison evidence
+- **Workflow:** [Optimization Rule → Approved Review → Learning](../02-workflows/marketing-optimization-review-learning.md)
+
+**Результати**
+
+- Independent Plan and Action approvals precede a native immutable review receipt and trusted Outcome
+- Follow-up exact native evidence is compared against the reviewed window and classified without causal or financial claims
+- Separately approved native learning receipt is independently readable and never authorizes rule or provider mutation
+
+**Відповідальність, capabilities і runtime evidence**
+
+| Крок | Owner | Domain | Capability / gap | Вид | Критичний | Executable / evidence mapping |
+| --- | --- | --- | --- | --- | --- | --- |
+| Evaluate rule against pinned batches | Marketing | `marketing` | `marketing.optimization.rule.evaluate` | `operation` | так | source `app/Domains/Marketing/Application/Service/MarketingOptimizationRuleService.php` · `public function evaluate(` [source] |
+| Propose the canonical review Plan | Marketing | `marketing` | `marketing.optimization.rule.plan.propose` | `operation` | так | source `symfony/src/Persistence/Marketing/MarketingOptimizationReviewPlanProposalService.php` · `public function propose(` [source] |
+| Record independently approved review and attest Outcome | Marketing | `marketing` | `marketing.optimization.rule.review.record` | `state` | так | source `app/Domains/Marketing/Automation/Action/MarketingOptimizationReviewHandler.php` · `public function execute(` [source]<br>source `symfony/src/Persistence/Marketing/MarketingOptimizationReviewOutcomeProvider.php` · `public function observeRun(` [source] |
+| Evaluate follow-up from trusted review Outcome | Marketing | `marketing` | `marketing.optimization.learning.preview` | `operation` | так | source `app/Domains/Marketing/Application/Service/MarketingOptimizationLearningService.php` · `public function preview(` [source]<br>source `symfony/src/Infrastructure/Marketing/MarketingOptimizationReviewEvidenceReader.php` · `public function review(` [source] |
+| Propose independent learning Plan | Marketing | `marketing` | `marketing.optimization.learning.plan.propose` | `operation` | так | source `symfony/src/Persistence/Marketing/MarketingOptimizationLearningPlanProposalService.php` · `public function propose(` [source] |
+| Record approved learning observation and attest Outcome | Marketing | `marketing` | `marketing.optimization.learning.record` | `state` | так | source `app/Domains/Marketing/Automation/Action/MarketingOptimizationLearningHandler.php` · `public function execute(` [source]<br>source `symfony/src/Persistence/Marketing/MarketingOptimizationLearningOutcomeProvider.php` · `public function observeRun(` [source] |
+| Read immutable learning receipt | Marketing | `marketing` | `marketing.optimization.learning.get` | `outcome` | так | source `app/Domains/Marketing/Application/Service/MarketingOptimizationLearningService.php` · `public function get(` [source] |
+
 ## Product Catalog → Variant Matrix
 
 - **Process ID:** `product_management.catalog-to-variants`
@@ -368,15 +400,15 @@ generated: true
 - **Schema:** `v4`
 - **Domain:** `product_management`
 - **Бізнес-стан:** `to-be`
-- **Покриття capabilities:** 8/8 кроків
-- **Cross-domain кроки:** 0/8
+- **Покриття capabilities:** 9/9 кроків
+- **Cross-domain кроки:** 0/9
 - **Derived verification:** `source-verified`
 - **Тригер:** Signed AI or CRON intent is reviewed and adopted into an approved Plan
 - **Workflow:** [Product Governed Business Cycle](../02-workflows/product-management-governed-business-cycle.md)
 
 **Результати**
 
-- Eight approved native operations produce independently verified effects
+- Nine approved native operations produce independently verified effects, including atomic draft assembly
 - No unapproved Action or second executor
 - Ledger and current native results are verified
 
@@ -392,6 +424,7 @@ generated: true
 | Generate variants for known Product | Approved Product Action worker | `product_management` | `product_management.governed.variant.matrix.create` | `operation` | так | source `app/Domains/ProductManagement/Automation/Action/ProductGovernedOperationHandler.php` · `'variant.matrix.create'=>$this->products->createMatrix` [source] |
 | Patch known Product attributes | Approved Product Action worker | `product_management` | `product_management.governed.attribute.product.bulk_set` | `operation` | так | source `app/Domains/ProductManagement/Automation/Action/ProductGovernedOperationHandler.php` · `'attribute.product.bulk_set'=>$this->products->bulkSetAttributes` [source] |
 | Release existing reservation | Approved Product Action worker | `product_management` | `product_management.governed.stock.release` | `operation` | так | source `app/Domains/ProductManagement/Automation/Action/ProductGovernedOperationHandler.php` · `'stock.release'=>$this->products->releaseStock` [source] |
+| Assemble a complete draft Product | Approved Product Action worker | `product_management` | `product_management.governed.product.assemble` | `operation` | так | source `app/Domains/ProductManagement/Application/Service/ProductAssemblyService.php` · `public function assemble` [source] |
 
 ## Product Physical Count → Correction
 

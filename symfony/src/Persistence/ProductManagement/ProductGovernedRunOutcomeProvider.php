@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use Doctrine\DBAL\Connection;
 use DomainException;
+use Domains\ProductManagement\Application\Service\ProductAssemblyService;
 use Domains\ProductManagement\Application\Contract\ProductMediaFileReferenceInterface;
 use Domains\ProductManagement\Automation\Action\ProductGovernedOperationHandler;
 use Domains\ProductManagement\Domain\AttributeRules;
@@ -37,10 +38,59 @@ final readonly class ProductGovernedRunOutcomeProvider implements RunScopedGoalO
         [$whole,$frac]=array_pad(explode('.',$value,2),2,'');
         return $whole.'.'.str_pad($frac,$scale,'0');
     }
+    /** Reuse the exact independent native checks for an approved extended CSV row. */
+    public function verifyAssembly(string $org,array $parameters,string $key,string $actor,array $receipt):array
+    {
+        return $this->verifyNative($org,'product.assemble',$parameters,$key,$actor,$receipt);
+    }
     private function verifyNative(string $org,string $op,array $p,string $key,string $actor,array $r):array
     {
         $ids=[];
         switch($op){
+            case 'product.assemble':
+                $pid=$r['product_id']??'';$fresh=$this->products->getProduct($org,$pid);
+                $type=$p['type']??'stock';$track=in_array($type,['stock','material'],true);
+                $this->require($fresh!==null&&$fresh['status']==='draft'&&$fresh['name']===ProductRules::name($p['name'])
+                    &&$fresh['product_type']===$type&&count($fresh['variants'])===count($p['variants'])
+                    &&count($r['variants']??[])===count($p['variants'])&&($r['status']??null)==='draft','assembled draft product');
+                $native=array_column($fresh['variants'],null,'sku');$reported=array_column($r['variants'],'variant_id','sku');
+                $ids=['product_management:product:'.$pid];
+                $verifyChild=function(string $label,string $nativeOp,string $op,array $params)use($org,$key,$actor):array{
+                    $childKey=ProductAssemblyService::childKey($key,$label);
+                    $receipt=$this->db->fetchAssociative('SELECT operation,result_json FROM pm_operation_receipts WHERE organization_id=? AND idempotency_key=?',[$org,$childKey]);
+                    $this->require($receipt!==false&&$receipt['operation']===$nativeOp&&is_string($receipt['result_json']),'assembly child receipt '.$label);
+                    $result=json_decode($receipt['result_json'],true,64,JSON_THROW_ON_ERROR);
+                    return $this->verifyNative($org,$op,$params,$childKey,$actor,$result);
+                };
+                foreach($p['variants'] as $i=>$v){
+                    $sku=ProductRules::sku($v['sku']);$vid=$reported[$sku]??null;
+                    $this->require(isset($native[$sku])&&$vid===$native[$sku]['variant_id'],'assembled variant identity');
+                    $params=['product_id'=>$pid,'sku'=>$sku,'uom'=>$v['uom']??'pcs','track_inventory'=>$v['track_inventory']??$track];
+                    if($i===0){
+                        $this->require($vid===($r['variant_id']??null)&&$sku===($r['sku']??null),'assembly primary variant');
+                        $found=$verifyChild('product','product.create','product.create',$params+['name'=>$p['name'],'type'=>$type]);
+                    }else $found=$verifyChild('variant:'.$i,'variant.create','variant.create',$params);
+                    $this->require(in_array('product_management:variant:'.$vid,$found,true),'assembly child variant scope');
+                    array_push($ids,...$found);
+                    if(isset($v['price']))array_push($ids,...$verifyChild('price:'.$i,'price.set','price.base.set',['variant_id'=>$vid,'currency'=>$v['price']['currency'],'amount'=>$v['price']['amount'],'expected_revision'=>0]));
+                }
+                $actualCategories=array_column($fresh['categories'],'category_id');$expectedCategories=$p['category_ids']??[];
+                sort($actualCategories,SORT_STRING);sort($expectedCategories,SORT_STRING);
+                $this->require($actualCategories===$expectedCategories,'assembly category cardinality');
+                foreach($p['category_ids']??[] as $i=>$cid)array_push($ids,...$verifyChild('category:'.$i,'category.assign','category.assign',['product_id'=>$pid,'category_id'=>$cid]));
+                if(!empty($p['attributes'])){
+                    // New product, category assignment does not advance the Product revision.
+                    array_push($ids,...$verifyChild('attributes','attribute.product.set','attribute.product.set',['product_id'=>$pid,'values'=>$p['attributes'],'expected_revision'=>1]));
+                }
+                $this->require(count($r['media_ids']??[])===count($p['media']??[])&&count($fresh['media'])===count($p['media']??[]),'assembly media count');
+                foreach($p['media']??[] as $i=>$image){
+                    $params=['product_id'=>$pid,'file_id'=>$image['file_id'],'role'=>$image['role']??'gallery','sort_order'=>$image['sort_order']??0];
+                    if(isset($image['sku']))$params['variant_id']=$reported[ProductRules::sku($image['sku'])]??'';
+                    $found=$verifyChild('media:'.$i,'media.attach','media.attach',$params);
+                    $this->require(in_array('product_management:media:'.$r['media_ids'][$i],$found,true),'assembly child media identity');
+                    array_push($ids,...$found);
+                }
+                break;
             case 'product.create':
                 $product=$this->products->getProduct($org,(string)($r['product_id']??''));
                 $this->require($product!==null&&$product['name']===ProductRules::name($p['name'])
@@ -294,8 +344,13 @@ final readonly class ProductGovernedRunOutcomeProvider implements RunScopedGoalO
     }
     public function observeRun(TenantContext $actor,string $runId,string $criterionId,DateTimeImmutable $from,DateTimeImmutable $to):array
     {
+        return $this->observeRunForAudit($actor->organizationId()->value(),$runId,$criterionId,$from,$to);
+    }
+
+    /** Internal read-only operator audit, using actual durable Run/Action provenance, not a fabricated user context. */
+    public function observeRunForAudit(string $org,string $runId,string $criterionId,DateTimeImmutable $from,DateTimeImmutable $to):array
+    {
         if(!$this->supports($criterionId)||$to<=$from)throw new DomainException('Invalid Product business criterion.');
-        $org=$actor->organizationId()->value();
         $rows=$this->db->fetchAllAssociative('SELECT w.input_digest,w.state,w.actor_id,w.definition_json,s.step_id,s.state AS step_state,s.capability_id,s.result_reference,s.idempotency_key
             FROM cos_workflow_runs w JOIN cos_workflow_steps s ON s.organization_id=w.organization_id AND s.run_id=w.run_id
             WHERE w.organization_id=? AND w.run_id=? AND w.definition_id=? ORDER BY s.ordinal_no',[$org,$runId,'federation.approved-plan']);

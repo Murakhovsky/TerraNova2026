@@ -2,7 +2,7 @@
 title: Marketing — паспорт домену COS
 description: Межі, компоненти, доступні Capabilities і докази приймання Marketing.
 status: draft
-updated: 2026-11-24
+updated: 2026-11-26
 kind: domain
 contract: domain-v1
 domain_id: marketing
@@ -79,7 +79,11 @@ domain_id: marketing
     },
     {
       "id": "attribution_analytics",
-      "capability_ids": ["marketing.attribution.capture", "marketing.attribution.discover","marketing.attribution.tracking.get","marketing.analytics.report.get", "marketing.analytics.media.report", "marketing.analytics.media.sync", "marketing.attribution.commerce.inspect", "marketing.attribution.commerce.capture", "marketing.analytics.commerce.report"]
+      "capability_ids": ["marketing.attribution.capture", "marketing.attribution.discover","marketing.attribution.tracking.get","marketing.analytics.report.get", "marketing.analytics.media.report", "marketing.analytics.media.sync", "marketing.attribution.commerce.inspect", "marketing.attribution.commerce.capture", "marketing.analytics.commerce.report", "marketing.attribution.sweep", "marketing.attribution.journey.get", "marketing.analytics.economics.report", "marketing.analytics.monitor.get"]
+    },
+    {
+      "id": "optimization_planning",
+      "capability_ids": ["marketing.optimization.budget.preview", "marketing.optimization.audience.preview", "marketing.experiment.register", "marketing.experiment.get", "marketing.optimization.creative.preview", "marketing.optimization.rule.evaluate", "marketing.optimization.rule.plan.propose", "marketing.optimization.rule.review.record", "marketing.optimization.learning.preview", "marketing.optimization.learning.get", "marketing.optimization.learning.plan.propose", "marketing.optimization.learning.record"]
     },
     {
       "id": "product_evidence",
@@ -89,7 +93,7 @@ domain_id: marketing
       ]
     }
   ],
-  "process_ids": ["marketing.attribution-to-analytics", "marketing.media-import-to-report"],
+  "process_ids": ["marketing.attribution-to-analytics", "marketing.media-import-to-report", "marketing.optimization-review-learning"],
   "readiness": {
     "level": "D2",
     "evidence": []
@@ -118,7 +122,8 @@ Marketing володіє Campaign Draft, Meta Ad Account binding, provider Campa
 | `analyst_review` | Scoped analyst context, response policy, evidence proposals та незалежні review-рішення | D2, Hermes adapter, admission, journal, review, recovery, Kernel budget ceiling та canonical Action binding; native E2E fixture PASS, операторський preflight додано; live acceptance очікується |
 | `audience_planning` | Версії Audience і AdSet Draft, revision pins, планова потреба бюджету та Workspace editor | Backend CI green; Workspace CI/staging очікуються; без Finance reservation або Meta write |
 | `paid_funding` | Immutable funding candidate і Finance readback | D2 candidate; Finance execution claim, Meta write lifecycle, journal, Goal proposals, source comparison та Workspace; CI/live acceptance очікуються |
-| `attribution_analytics` | Exact UTM, Sales readback, джерельні медіаметрики та Finance квитанції | D2 implementation, native MySQL acceptance pending |
+| `attribution_analytics` | Exact UTM, Sales readback, джерельні медіаметрики та Finance квитанції | D2, native MySQL fixture acceptance пройдено; незалежне live acceptance очікується |
+| `optimization_planning` | Порівняння ефективності, бюджету, аудиторії та креативу; незмінний протокол A/B і контрольовані правила review без дозволу витрат або запуску | D2 implementation, source acceptance pending |
 | `product_evidence` | Пошук Product/SKU, Product/Variant/Price та stock-by-location readback через Product Management read port | D2, без складу/URL/Meta policy acceptance |
 
 Компоненти не є незалежними installable modules.
