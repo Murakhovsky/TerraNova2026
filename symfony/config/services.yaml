@@ -4311,6 +4311,7 @@ services:
         - '@App\Persistence\ProductManagement\ProductStockCountSessionRunOutcomeProvider'
         - '@App\Persistence\ProductManagement\ProductGovernedRunOutcomeProvider'
         - '@App\Persistence\ProductManagement\ShopifyImportRunOutcomeProvider'
+        - '@App\Persistence\ProductManagement\ShopifyDraftRunOutcomeProvider'
         - '@App\Persistence\Marketing\MarketingAnalystRunOutcomeProvider'
         - '@App\Persistence\Marketing\MarketingPaidGoalOutcomeProvider'
         - '@App\Persistence\Finance\FinancePaidSettlementOutcomeProvider'
