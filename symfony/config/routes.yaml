@@ -1,3 +1,9 @@
+# Shopify outbound proposal only; approval and execution remain canonical.
+cos_product_management_shopify_draft_propose:
+  path: /product-management/shopify/draft/propose
+  controller: App\Web\ProductManagement\ProductGovernedPlanController::proposeShopifyDraft
+  methods: [POST]
+
 # Product Management: authenticated manager proposal only, never approval/Action.
 cos_product_management_import_plan_propose:
   path: /api/v1/product-management/imports/{batchId}/propose
