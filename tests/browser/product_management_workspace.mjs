@@ -23,8 +23,12 @@ const go = async path => {
   check(await page.locator('.cos-page__stack').count()>0,'Workspace shell missing: '+actual+' title='+await page.title()+' body='+(await page.locator('body').innerText()).slice(0,600));
 };
 const submit = async (form, path) => {
+  // All successful mutations use POST/303/GET, frequently returning to the
+  // exact same URL (notice=updated). Register the navigation waiter before
+  // click so old DOM and old URL cannot satisfy a subsequent assertion.
   const [r] = await Promise.all([
     page.waitForResponse(r => new URL(r.url()).pathname===path && r.request().method()==='POST'),
+    page.waitForNavigation({waitUntil:'domcontentloaded'}),
     form.locator('button[type="submit"], button:not([type])').last().click()
   ]);
   check(r.status()===303,'Expected 303 for '+path+', got '+r.status()+' '+(await r.text().catch(()=>'' )).slice(0,500));
