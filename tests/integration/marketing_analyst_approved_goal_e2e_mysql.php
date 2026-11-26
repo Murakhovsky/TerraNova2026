@@ -604,7 +604,7 @@ try {
     $lid=$lresult->result->data['learning_id'];
     $readback=$learnGet->invoke($actor,['learning_id'=>$lid],'fixture','fixture');
     $assert($readback===$lresult->result->data&&$actionService->execute($org,$laction,'learning-replay')===null,'Learning replay or receipt lookup failed.');
-    $assert($bridge->advance($actor,$lrun,$lplanAction)['state']==='step_completed'&&$bridge->advance($actor,$lrun,$lplan,$lplanAction)['state']==='completed',
+    $assert($bridge->advance($actor,$lrun,$lplanAction)['state']==='step_completed'&&$bridge->advance($actor,$lrun,$lplanAction)['state']==='completed',
         'Learning canonical Run did not complete.');
     $lout=$goals->recordEvaluation($actor,'opt-learn-eval-'.$token,$lrun);
     $assert(($lout['result']??null)==='satisfied'&&($lout['criteria'][0]['observed']??null)===1
