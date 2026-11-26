@@ -207,7 +207,7 @@ try {
     $optReviewService=new \Domains\Marketing\Application\Service\MarketingOptimizationReviewService($ruleService,$optReceipts,$modules);
     $optReviewHandler=new \Domains\Marketing\Automation\Action\MarketingOptimizationReviewHandler($optReviewService,$worker,$identityResolver,$tenantFactory,$modules,$capabilities);
     $optReviewOutcome=new \App\Persistence\Marketing\MarketingOptimizationReviewOutcomeProvider($db,$optReceipts,$receipts);
-    $optHistory=new \App\Persistence\Marketing\MarketingOptimizationReviewEvidenceReader($db,$optReceipts);
+    $optHistory=new \App\Infrastructure\Marketing\MarketingOptimizationReviewEvidenceReader(new \App\Persistence\Federation\FederationTrustedActionOutcomeReader($db),$optReceipts);
     $learningService=new \Domains\Marketing\Application\Service\MarketingOptimizationLearningService($optHistory,$ruleService,$optReceipts,$modules);
     $learningHandler=new \Domains\Marketing\Automation\Action\MarketingOptimizationLearningHandler($learningService,$worker,$identityResolver,$tenantFactory,$modules,$capabilities);
     $learningOutcome=new \App\Persistence\Marketing\MarketingOptimizationLearningOutcomeProvider($db,$optReceipts,$receipts);

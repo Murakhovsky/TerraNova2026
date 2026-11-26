@@ -87,7 +87,7 @@
         },
         {
           "type": "source",
-          "path": "symfony/src/Persistence/Marketing/MarketingOptimizationReviewEvidenceReader.php",
+          "path": "symfony/src/Infrastructure/Marketing/MarketingOptimizationReviewEvidenceReader.php",
           "symbol": "public function review("
         }
       ]
