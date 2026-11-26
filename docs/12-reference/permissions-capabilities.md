@@ -308,6 +308,7 @@ generated: true
 | `product_management` | `product_management.product.get` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.product.search` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.product.update` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
+| `product_management` | `product_management.shopify.draft.writeback` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.shopify.import.apply` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.stock.balance.get` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.stock.count.apply` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
