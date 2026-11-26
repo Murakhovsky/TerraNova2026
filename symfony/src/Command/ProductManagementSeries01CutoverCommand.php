@@ -208,7 +208,7 @@ final class ProductManagementSeries01CutoverCommand extends Command
         $seenSku=[];$seenProduct=[];$verified=[];
         foreach($rows as $index=>$row) {
             $sku=$row['sku']??null;
-            if(!is_array($row)||($row['row_no']??null)!=$index+1
+            if(!is_array($row)||(int)($row['row_no']??0)!==$index+1
                 ||!is_string($sku)||!preg_match('/^SERIES01-[LFA]0[1-3]$/D',$sku)
                 ||isset($seenSku[$sku])) {
                 throw new RuntimeException('SERIES01 batch contains unexpected, duplicate or out-of-order SKU.');
