@@ -67,7 +67,12 @@ $identities=new class implements \Kernel\Identity\Contract\IdentityResolverInter
         return new \Kernel\Identity\Model\AuthenticatedIdentity($userId,$organizationId,\Kernel\Identity\Model\OrganizationRole::fromString('manager'));
     }
 };
-$tenants=new \Kernel\Tenant\Service\TenantContextFactory(new \App\Security\RoleTenantPermissionResolver());
+$tenants=new \Kernel\Tenant\Service\TenantContextFactory(new class implements \Kernel\Tenant\Contract\TenantPermissionResolverInterface {
+    public function permissionsFor(\Kernel\Identity\Model\AuthenticatedIdentity $identity):array {
+        return [\Kernel\Tenant\Model\Permission::fromString(\Kernel\Tenant\Model\TenantPermissions::ACCESS),
+            \Kernel\Tenant\Model\Permission::fromString(\Kernel\Tenant\Model\TenantPermissions::MANAGE)];
+    }
+});
 $keyFor=static fn(string $key):string=>str_starts_with($key,'wf:')?$key:'wf:'.hash('sha256',$key);
 
 $financePolicy=new FinanceSpendObservationPolicy();
