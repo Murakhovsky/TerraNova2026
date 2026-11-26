@@ -311,7 +311,7 @@ Manifest capabilities не задекларовані.
 - обробники jobs: —;
 - внески API routes: —;
 - постачальники конфігурації: —;
-- міграції: `app/migrations/20261119_000152_marketing_foundation.sql`, `app/migrations/20261119_000154_marketing_planning_m2.sql`, `app/migrations/20261124_000162_marketing_audience_adsets.sql`, `app/migrations/20261124_000163_marketing_analyst_execution.sql`, `app/migrations/20261124_000164_marketing_analyst_decisions.sql`, `app/migrations/20261124_000165_marketing_paid_launch_plans.sql`, `app/migrations/20261124_000167_marketing_paid_operation_journal.sql`, `app/migrations/20261124_000192_marketing_m4_attribution_intents.sql`, `app/migrations/20261124_000193_marketing_media_analytics.sql`, `app/migrations/20261126_009020_marketing_attribution_schedules.sql`.
+- міграції: `app/migrations/20261119_000152_marketing_foundation.sql`, `app/migrations/20261119_000154_marketing_planning_m2.sql`, `app/migrations/20261124_000162_marketing_audience_adsets.sql`, `app/migrations/20261124_000163_marketing_analyst_execution.sql`, `app/migrations/20261124_000164_marketing_analyst_decisions.sql`, `app/migrations/20261124_000165_marketing_paid_launch_plans.sql`, `app/migrations/20261124_000167_marketing_paid_operation_journal.sql`, `app/migrations/20261124_000192_marketing_m4_attribution_intents.sql`, `app/migrations/20261124_000193_marketing_media_analytics.sql`, `app/migrations/20261126_009020_marketing_attribution_schedules.sql`, `app/migrations/20261126_009021_marketing_experiment_protocols.sql`.
 
 ### Задекларовані capabilities
 
@@ -349,8 +349,11 @@ Manifest capabilities не задекларовані.
 - `marketing.creative.create`;
 - `marketing.creative.list`;
 - `marketing.creative.revise`;
+- `marketing.experiment.get`;
+- `marketing.experiment.register`;
 - `marketing.optimization.audience.preview`;
 - `marketing.optimization.budget.preview`;
+- `marketing.optimization.creative.preview`;
 - `marketing.paid.account.list`;
 - `marketing.paid.change.request`;
 - `marketing.paid.funding.check`;

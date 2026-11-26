@@ -34,7 +34,7 @@ foreach($manifest['contributions']['capability_contracts'] as $raw) {
     $assert(is_file($root.'/'.$contract->outputSchema),'Output schema missing: '.$contract->id);
 }
 $validator->validate(CapabilityContract::fromArray($manifest['contributions']['capability_contracts'][2]),['name'=>'Test launch','business_objective'=>'Leads']);
-$assert(count($found)===48,'Expected 48 typed Marketing contracts including Commerce Attribution');
+$assert(count($found)===51,'Expected 51 typed Marketing contracts including immutable experiment protocol');
 echo "Marketing M0 foundation PASS\n";
 
 
@@ -143,3 +143,37 @@ foreach([[...$audB,'planned_countries'=>['UA','PL']],[...$audB,'creative_hash'=>
     $assert($blocked,'Non-comparable audience scope admitted.');
 }
 echo "Marketing M5.5 pinned audience comparison advisory and incompatible-scope fences PASS\n";
+
+$experimentPolicy=\Domains\Marketing\Domain\MarketingExperimentPolicy::class;
+$armA=['plan_id'=>$budgetA['plan_id'],'plan_hash'=>$budgetA['plan_hash'],'campaign_id'=>$budgetA['campaign_id'],
+    'campaign_revision'=>1,'account_id'=>$budgetA['account_id'],'account_revision'=>1,'currency'=>'EUR','account_timezone'=>'UTC',
+    'period_start'=>$budgetA['window_start'],'period_end'=>$budgetA['window_end'],'daily_minor'=>10000,'lifetime_minor'=>70000,
+    'audience_id'=>$audA['audience_id'],'audience_revision'=>1,'creative_id'=>'mkcr-'.str_repeat('a',24),'creative_revision'=>1,
+    'creative_hash'=>str_repeat('a',64),'campaign_scope_hash'=>str_repeat('b',64),'creative_controls_hash'=>str_repeat('c',64),'treatment_hash'=>str_repeat('d',64)];
+$armB=[...$armA,'plan_id'=>$budgetB['plan_id'],'plan_hash'=>$budgetB['plan_hash'],'campaign_id'=>$budgetB['campaign_id'],
+    'creative_id'=>'mkcr-'.str_repeat('b',24),'creative_hash'=>str_repeat('e',64),'treatment_hash'=>str_repeat('f',64)];
+$protocol=$experimentPolicy::protocol($armA,$armB,'HEADLINE','2026-01-31');
+$assert($protocol['target_allocation_percent']===50&&$protocol['factor']==='HEADLINE'&&$protocol['control']===$armA,
+    'Experiment protocol changed control identity or planned allocation.');
+$assert($experimentPolicy::digest($protocol)===$experimentPolicy::digest(array_reverse($protocol,true)),'Canonical protocol digest affected by JSON ordering.');
+foreach([[$armA,$armB,'HEADLINE','2026-02-01'],[$armA,$armA,'HEADLINE','2026-01-31'],
+    [$armA,[...$armB,'creative_controls_hash'=>str_repeat('0',64)],'HEADLINE','2026-01-31'],
+    [$armA,[...$armB,'audience_revision'=>2],'HEADLINE','2026-01-31'],
+    [$armA,[...$armB,'daily_minor'=>9999],'HEADLINE','2026-01-31'],
+    [$armA,[...$armB,'treatment_hash'=>$armA['treatment_hash']],'HEADLINE','2026-01-31'],[$armA,$armB,'AUDIENCE','2026-01-31']] as $args){
+    $blocked=false;try{$experimentPolicy::protocol(...$args);}catch(DomainException){$blocked=true;}
+    $assert($blocked,'Confounded or retrospective protocol admitted.');
+}
+$obs=$experimentPolicy::observe($protocol,$budgetA,$budgetB);
+$assert($obs['status']==='REVIEW_OBSERVED_DIFFERENCE'&&$obs['lower_observed_cpc_plan_id']===$budgetB['plan_id']
+    &&!$obs['randomization_verified']&&!$obs['winning_creative_confirmed']&&!$obs['causal_attribution']
+    &&!array_key_exists('candidate_daily_minor',$obs['control']),'Observation promoted non-randomized data or exposed mutation.');
+$obs=$experimentPolicy::observe($protocol,$budgetA,[...$budgetB,'clicks'=>null]);
+$assert($obs['status']==='INSUFFICIENT_EVIDENCE'&&$obs['lower_observed_cpc_plan_id']===null,'Insufficient creative evidence ranked.');
+$assert($experimentPolicy::observe($protocol,$budgetA,[...$budgetB,'reported_spend_decimal'=>'95.00'])['status']==='NO_MATERIAL_OBSERVED_DIFFERENCE',
+    'Immaterial difference ranked.');
+$blocked=false;try{$experimentPolicy::observe($protocol,$budgetB,$budgetA);}catch(DomainException){$blocked=true;}
+$assert($blocked,'Swapped arm observations accepted.');
+$blocked=false;try{$experimentPolicy::observe($protocol,$budgetA,[...$budgetB,'plan_hash'=>str_repeat('0',64)]);}catch(DomainException){$blocked=true;}
+$assert($blocked,'Changed plan hash accepted.');
+echo "Marketing M5.6 immutable single-factor experiment protocol and M5.7 non-causal creative observation PASS\n";

@@ -2783,6 +2783,12 @@ services:
   Domains\Marketing\Application\Service\MarketingAnalystPerformanceService: ~
   Domains\Marketing\Application\Service\MarketingBudgetOptimizationService: ~
   Domains\Marketing\Application\Service\MarketingAudienceOptimizationService: ~
+  Domains\Marketing\Application\Service\MarketingExperimentService: ~
+  Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingExperimentStore:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Marketing\Application\Contract\MarketingExperimentStore:
+    alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingExperimentStore
   Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingAnalystRunStore:
     arguments:
       $connection: '@cos.database.pdo'

@@ -70,7 +70,7 @@ $manifest = [
                 'purpose' => 'Search current tenant-scoped Product variants and read base price facts for Marketing draft planning, without Product SQL or launch authorization.',
             ],
         ],
-        'migration_files' => ['app/migrations/20261119_000152_marketing_foundation.sql','app/migrations/20261119_000154_marketing_planning_m2.sql','app/migrations/20261124_000162_marketing_audience_adsets.sql','app/migrations/20261124_000163_marketing_analyst_execution.sql','app/migrations/20261124_000164_marketing_analyst_decisions.sql','app/migrations/20261124_000165_marketing_paid_launch_plans.sql','app/migrations/20261124_000167_marketing_paid_operation_journal.sql','app/migrations/20261124_000192_marketing_m4_attribution_intents.sql','app/migrations/20261124_000193_marketing_media_analytics.sql','app/migrations/20261126_009020_marketing_attribution_schedules.sql'],
+        'migration_files' => ['app/migrations/20261119_000152_marketing_foundation.sql','app/migrations/20261119_000154_marketing_planning_m2.sql','app/migrations/20261124_000162_marketing_audience_adsets.sql','app/migrations/20261124_000163_marketing_analyst_execution.sql','app/migrations/20261124_000164_marketing_analyst_decisions.sql','app/migrations/20261124_000165_marketing_paid_launch_plans.sql','app/migrations/20261124_000167_marketing_paid_operation_journal.sql','app/migrations/20261124_000192_marketing_m4_attribution_intents.sql','app/migrations/20261124_000193_marketing_media_analytics.sql','app/migrations/20261126_009020_marketing_attribution_schedules.sql','app/migrations/20261126_009021_marketing_experiment_protocols.sql'],
         'capabilities' => [
             'marketing.campaign.search',
             'marketing.campaign.get',
@@ -124,6 +124,9 @@ $manifest = [
             'marketing.analytics.monitor.get',
             'marketing.optimization.budget.preview',
             'marketing.optimization.audience.preview',
+            'marketing.experiment.register',
+            'marketing.experiment.get',
+            'marketing.optimization.creative.preview',
         ],
         'capability_contracts' => [],
     ],
@@ -250,6 +253,24 @@ foreach ([
         'lifecycle' => 'experimental',
         'tests' => ['tests/unit/marketing_m2_planning.php'],
         'documentation' => 'docs/04-domains/marketing/overview.md',
+    ];
+}
+
+// Immutable internal experiment plan; observation is advisory and requires native terminal sources.
+foreach([
+    'marketing.experiment.register'=>['command','internal','marketing/experiment-register'],
+    'marketing.experiment.get'=>['query','none','marketing/experiment-get'],
+    'marketing.optimization.creative.preview'=>['query','none','marketing/optimization-creative-preview'],
+] as $id=>[$kind,$sideEffect,$schema]){
+    $contracts[]=[
+        'id'=>$id,'version'=>'1.0.0','owner_domain'=>'marketing','kind'=>$kind,
+        'input_schema'=>'resources/contracts/'.$schema.'-input.schema.json','output_schema'=>'resources/contracts/'.$schema.'-output.schema.json',
+        'execution_binding'=>$kind.':'.$id,'side_effect_level'=>$sideEffect,'permission'=>'cos.tenant.manage',
+        'approval_policy'=>$kind==='command'?'conditional':'none','idempotency'=>$kind==='command'?'required':'none',
+        'timeout_policy'=>$kind==='command'?['seconds'=>30]:[],'retry_policy'=>$kind==='command'?['max_attempts'=>1]:[],
+        'failure_contract'=>'Immutable protocol only; read back exact registration and source pins. No randomized evidence, provider writes, budget or activation authority.',
+        'lifecycle'=>'experimental','tests'=>['tests/unit/marketing_domain_foundation.php','tests/integration/marketing_paid_approved_goal_e2e_mysql.php'],
+        'documentation'=>'docs/04-domains/marketing/overview.md',
     ];
 }
 

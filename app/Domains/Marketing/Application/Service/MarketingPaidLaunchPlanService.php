@@ -7,6 +7,7 @@ use Domains\Marketing\Application\Contract\MarketingFinanceFundingReadPort;
 use Domains\Marketing\Application\Contract\MarketingPaidLaunchPlanStore;
 use Domains\Marketing\Application\Contract\MarketingPaidReadRepository;
 use Domains\Marketing\Domain\MarketingPaidFundingPolicy;
+use Domains\Marketing\Domain\MarketingExperimentPolicy;
 use Domains\Marketing\Domain\MarketingPlanningPolicy;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Tenant\Model\TenantContext;
@@ -93,6 +94,33 @@ final readonly class MarketingPaidLaunchPlanService
     /** Historical planning identity only. Not a claim of observed targeting or delivery. */
     public function comparisonPins(TenantContext $actor,string $id):array
     {
+        [$plan,$audience,$creative]=$this->comparisonContext($actor,$id);
+        return ['audience_id'=>$audience['id'],'audience_revision'=>$audience['revision'],
+            'planned_countries'=>$audience['content']['target_spec']['market_countries'],'creative_hash'=>$creative['content_hash']];
+    }
+
+    /** Exact, private planning pins, no creative body, destination or personal data in the protocol. */
+    public function experimentPins(TenantContext $actor,string $id,string $factor):array
+    {
+        [$plan,$audience,$creative]=$this->comparisonContext($actor,$id);
+        $campaign=$this->campaigns->get($actor,$plan['campaign_id']);
+        if($campaign===null||$campaign['revision']!==$plan['campaign_revision'])throw new DomainException('Experiment campaign source changed.');
+        $key=MarketingExperimentPolicy::factor($factor);$content=$creative['content'];
+        $treatment=$content[$key];unset($content[$key]);
+        $this->assertCurrent($actor,$plan);
+        return ['plan_id'=>$id,'plan_hash'=>$plan['plan_hash'],'campaign_id'=>$plan['campaign_id'],
+            'campaign_revision'=>$plan['campaign_revision'],'account_id'=>$plan['account_id'],'account_revision'=>$plan['account_revision'],
+            'currency'=>$plan['currency'],'account_timezone'=>$plan['account_timezone'],'period_start'=>$plan['period_start'],
+            'period_end'=>$plan['period_end'],'daily_minor'=>$plan['daily_minor'],'lifetime_minor'=>$plan['lifetime_minor'],
+            'audience_id'=>$audience['id'],'audience_revision'=>$audience['revision'],'creative_id'=>$creative['id'],
+            'creative_revision'=>$creative['revision'],'creative_hash'=>$creative['content_hash'],
+            'campaign_scope_hash'=>MarketingExperimentPolicy::digest(array_intersect_key($campaign,array_flip(['business_objective','brief','product_refs']))),
+            'creative_controls_hash'=>MarketingExperimentPolicy::digest($content),
+            'treatment_hash'=>MarketingExperimentPolicy::digest([$treatment])];
+    }
+
+    private function comparisonContext(TenantContext $actor,string $id):array
+    {
         $plan=$this->requirePlan($actor,$id);$this->assertCurrent($actor,$plan);
         $adset=null;$audience=null;$creative=null;
         foreach($this->planning->adsets($actor,$plan['campaign_id']) as $row){
@@ -111,8 +139,7 @@ final readonly class MarketingPaidLaunchPlanService
         }
         if($audience===null||$creative===null)throw new DomainException('Comparison planning source missing.');
         $this->assertCurrent($actor,$plan);
-        return ['audience_id'=>$audience['id'],'audience_revision'=>$audience['revision'],
-            'planned_countries'=>$audience['content']['target_spec']['market_countries'],'creative_hash'=>$creative['content_hash']];
+        return [$plan,$audience,$creative];
     }
 
     private function requirePlan(TenantContext $actor,string $id):array
