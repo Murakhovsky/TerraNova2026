@@ -83,7 +83,7 @@ domain_id: marketing
     },
     {
       "id": "optimization_planning",
-      "capability_ids": ["marketing.optimization.budget.preview", "marketing.optimization.audience.preview", "marketing.experiment.register", "marketing.experiment.get", "marketing.optimization.creative.preview", "marketing.optimization.rule.evaluate"]
+      "capability_ids": ["marketing.optimization.budget.preview", "marketing.optimization.audience.preview", "marketing.experiment.register", "marketing.experiment.get", "marketing.optimization.creative.preview", "marketing.optimization.rule.evaluate", "marketing.optimization.rule.plan.propose", "marketing.optimization.rule.review.record"]
     },
     {
       "id": "product_evidence",

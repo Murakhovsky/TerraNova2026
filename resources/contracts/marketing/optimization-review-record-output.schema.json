@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "review_id": {
+      "type": "string",
+      "pattern": "^mkor-[a-f0-9]{24}$"
+    },
+    "receipt_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "evaluation_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "account_id": {
+      "type": "string",
+      "pattern": "^mads-[a-f0-9]{24}$"
+    },
+    "external_id": {
+      "type": "string",
+      "pattern": "^[0-9]{1,30}$"
+    },
+    "recorded_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\.\\d{6}$"
+    },
+    "review_recorded": {
+      "type": "boolean",
+      "const": true
+    },
+    "provider_mutation": {
+      "type": "boolean",
+      "const": false
+    },
+    "financial_mutation": {
+      "type": "boolean",
+      "const": false
+    },
+    "effect_confirmed": {
+      "type": "boolean",
+      "const": false
+    }
+  },
+  "required": [
+    "review_id",
+    "receipt_hash",
+    "evaluation_hash",
+    "account_id",
+    "external_id",
+    "recorded_at",
+    "review_recorded",
+    "provider_mutation",
+    "financial_mutation",
+    "effect_confirmed"
+  ],
+  "additionalProperties": false
+}

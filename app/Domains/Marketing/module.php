@@ -70,7 +70,7 @@ $manifest = [
                 'purpose' => 'Search current tenant-scoped Product variants and read base price facts for Marketing draft planning, without Product SQL or launch authorization.',
             ],
         ],
-        'migration_files' => ['app/migrations/20261119_000152_marketing_foundation.sql','app/migrations/20261119_000154_marketing_planning_m2.sql','app/migrations/20261124_000162_marketing_audience_adsets.sql','app/migrations/20261124_000163_marketing_analyst_execution.sql','app/migrations/20261124_000164_marketing_analyst_decisions.sql','app/migrations/20261124_000165_marketing_paid_launch_plans.sql','app/migrations/20261124_000167_marketing_paid_operation_journal.sql','app/migrations/20261124_000192_marketing_m4_attribution_intents.sql','app/migrations/20261124_000193_marketing_media_analytics.sql','app/migrations/20261126_009020_marketing_attribution_schedules.sql','app/migrations/20261126_009021_marketing_experiment_protocols.sql'],
+        'migration_files' => ['app/migrations/20261119_000152_marketing_foundation.sql','app/migrations/20261119_000154_marketing_planning_m2.sql','app/migrations/20261124_000162_marketing_audience_adsets.sql','app/migrations/20261124_000163_marketing_analyst_execution.sql','app/migrations/20261124_000164_marketing_analyst_decisions.sql','app/migrations/20261124_000165_marketing_paid_launch_plans.sql','app/migrations/20261124_000167_marketing_paid_operation_journal.sql','app/migrations/20261124_000192_marketing_m4_attribution_intents.sql','app/migrations/20261124_000193_marketing_media_analytics.sql','app/migrations/20261126_009020_marketing_attribution_schedules.sql','app/migrations/20261126_009021_marketing_experiment_protocols.sql','app/migrations/20261126_009022_marketing_optimization_receipts.sql'],
         'capabilities' => [
             'marketing.campaign.search',
             'marketing.campaign.get',
@@ -128,6 +128,8 @@ $manifest = [
             'marketing.experiment.get',
             'marketing.optimization.creative.preview',
             'marketing.optimization.rule.evaluate',
+            'marketing.optimization.rule.plan.propose',
+            'marketing.optimization.rule.review.record',
         ],
         'capability_contracts' => [],
     ],
@@ -310,6 +312,29 @@ $contracts[]=[
     'timeout_policy'=>['seconds'=>120],'retry_policy'=>['max_attempts'=>1],
     'failure_contract'=>'Inspect immutable native receipt; no blind retry. Page exhaustion is not a complete conversion census.',
     'lifecycle'=>'experimental','tests'=>['tests/integration/marketing_m4_attribution_mysql.php'],
+    'documentation'=>'docs/04-domains/marketing/overview.md',
+];
+// Optimization Goal proposal is internal only. Review record requires independent canonical approvals.
+$contracts[]=[
+    'id'=>'marketing.optimization.rule.plan.propose','version'=>'1.0.0','owner_domain'=>'marketing','kind'=>'command',
+    'input_schema'=>'resources/contracts/marketing/optimization-review-plan-propose-input.schema.json',
+    'output_schema'=>'resources/contracts/marketing/optimization-review-plan-propose-output.schema.json',
+    'execution_binding'=>'command:marketing.optimization.rule.plan.propose','side_effect_level'=>'internal',
+    'permission'=>'cos.tenant.manage','approval_policy'=>'conditional','idempotency'=>'required',
+    'timeout_policy'=>['seconds'=>30],'retry_policy'=>['max_attempts'=>1],
+    'failure_contract'=>'Exact rule hash required. Proposal creates no approval, Action or provider effect; reconcile immutable Plan key.',
+    'lifecycle'=>'experimental','tests'=>['tests/integration/marketing_analyst_approved_goal_e2e_mysql.php'],
+    'documentation'=>'docs/04-domains/marketing/overview.md',
+];
+$contracts[]=[
+    'id'=>'marketing.optimization.rule.review.record','version'=>'1.0.0','owner_domain'=>'marketing','kind'=>'command',
+    'input_schema'=>'resources/contracts/marketing/optimization-review-record-input.schema.json',
+    'output_schema'=>'resources/contracts/marketing/optimization-review-record-output.schema.json',
+    'execution_binding'=>'action:marketing.optimization.rule.review.record','async'=>true,'side_effect_level'=>'internal',
+    'permission'=>'cos.tenant.manage','approval_policy'=>'required','idempotency'=>'required',
+    'timeout_policy'=>['seconds'=>60],'retry_policy'=>['max_attempts'=>1],
+    'failure_contract'=>'Revalidate exact native rule evidence after approvals. Reconcile immutable receipt before retry; review is not provider or Finance mutation.',
+    'lifecycle'=>'experimental','tests'=>['tests/integration/marketing_analyst_approved_goal_e2e_mysql.php'],
     'documentation'=>'docs/04-domains/marketing/overview.md',
 ];
 $manifest['contributions']['capability_contracts'] = $contracts;
