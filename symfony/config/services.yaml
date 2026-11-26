@@ -2786,6 +2786,12 @@ services:
   Domains\Marketing\Application\Service\MarketingExperimentService: ~
   Domains\Marketing\Application\Service\MarketingOptimizationRuleService: ~
   Domains\Marketing\Application\Service\MarketingOptimizationReviewService: ~
+  Domains\Marketing\Application\Service\MarketingOptimizationLearningService: ~
+  Domains\Marketing\Automation\Action\MarketingOptimizationLearningHandler: ~
+  App\Persistence\Marketing\MarketingOptimizationReviewEvidenceReader: ~
+  Domains\Marketing\Application\Contract\MarketingOptimizationReviewEvidenceReadPort:
+    alias: App\Persistence\Marketing\MarketingOptimizationReviewEvidenceReader
+  App\Persistence\Marketing\MarketingOptimizationLearningOutcomeProvider: ~
   Domains\Marketing\Automation\Action\MarketingOptimizationReviewHandler: ~
   Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingOptimizationReceiptStore:
     arguments:
@@ -2810,6 +2816,7 @@ services:
       $paid: '@Domains\Marketing\Automation\Action\MarketingPaidLifecycleHandler'
       $sweep: '@Domains\Marketing\Automation\Action\MarketingAttributionSweepHandler'
       $review: '@Domains\Marketing\Automation\Action\MarketingOptimizationReviewHandler'
+      $learning: '@Domains\Marketing\Automation\Action\MarketingOptimizationLearningHandler'
   Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesAttributionCandidateReadModel:
     arguments:
       $connection: '@cos.database.pdo'
@@ -4343,6 +4350,7 @@ services:
         - '@App\Persistence\Marketing\MarketingAnalystRunOutcomeProvider'
         - '@App\Persistence\Marketing\MarketingAttributionSweepOutcomeProvider'
         - '@App\Persistence\Marketing\MarketingOptimizationReviewOutcomeProvider'
+        - '@App\Persistence\Marketing\MarketingOptimizationLearningOutcomeProvider'
         - '@App\Persistence\Marketing\MarketingPaidGoalOutcomeProvider'
         - '@App\Persistence\Finance\FinancePaidSettlementOutcomeProvider'
         - '@App\Persistence\Finance\FinanceOrderRunOutcomeProvider'

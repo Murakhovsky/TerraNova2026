@@ -2,7 +2,7 @@
 title: Marketing — паспорт домену COS
 description: Межі, компоненти, доступні Capabilities і докази приймання Marketing.
 status: draft
-updated: 2026-11-24
+updated: 2026-11-26
 kind: domain
 contract: domain-v1
 domain_id: marketing
@@ -83,7 +83,7 @@ domain_id: marketing
     },
     {
       "id": "optimization_planning",
-      "capability_ids": ["marketing.optimization.budget.preview", "marketing.optimization.audience.preview", "marketing.experiment.register", "marketing.experiment.get", "marketing.optimization.creative.preview", "marketing.optimization.rule.evaluate", "marketing.optimization.rule.plan.propose", "marketing.optimization.rule.review.record"]
+      "capability_ids": ["marketing.optimization.budget.preview", "marketing.optimization.audience.preview", "marketing.experiment.register", "marketing.experiment.get", "marketing.optimization.creative.preview", "marketing.optimization.rule.evaluate", "marketing.optimization.rule.plan.propose", "marketing.optimization.rule.review.record", "marketing.optimization.learning.preview", "marketing.optimization.learning.get", "marketing.optimization.learning.plan.propose", "marketing.optimization.learning.record"]
     },
     {
       "id": "product_evidence",
@@ -93,7 +93,7 @@ domain_id: marketing
       ]
     }
   ],
-  "process_ids": ["marketing.attribution-to-analytics", "marketing.media-import-to-report"],
+  "process_ids": ["marketing.attribution-to-analytics", "marketing.media-import-to-report", "marketing.optimization-review-learning"],
   "readiness": {
     "level": "D2",
     "evidence": []

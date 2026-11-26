@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "goal_id": {
+      "type": "string",
+      "pattern": "^goal-[a-f0-9]{24}$"
+    },
+    "plan_id": {
+      "type": "string",
+      "pattern": "^plan-[a-f0-9]{24}$"
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "existing",
+        "proposed"
+      ]
+    },
+    "learning_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "learning_recorded": {
+      "type": "boolean",
+      "const": false
+    },
+    "provider_mutation": {
+      "type": "boolean",
+      "const": false
+    },
+    "financial_mutation": {
+      "type": "boolean",
+      "const": false
+    }
+  },
+  "required": [
+    "goal_id",
+    "plan_id",
+    "state",
+    "learning_hash",
+    "learning_recorded",
+    "provider_mutation",
+    "financial_mutation"
+  ],
+  "additionalProperties": false
+}
