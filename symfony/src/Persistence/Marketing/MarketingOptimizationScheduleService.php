@@ -34,7 +34,23 @@ final readonly class MarketingOptimizationScheduleService
         $w=MarketingOptimizationSchedulePolicy::windows($clock??new DateTimeImmutable('now',new DateTimeZone('UTC')),$p['lookback_days']);
         if($w['cycle_date']>gmdate('Y-m-d'))throw new DomainException('Future monitoring cycle.');
         $hash=MarketingExperimentPolicy::digest($p);$id=$p['profile_id'];
-        return $this->db->transactional(function()use($actor,$org,$who,$p,$w,$hash,$id):string{
+        // Provider import owns its PDO transaction; never hold checkpoint lock across remote reads.
+        $before=$this->db->fetchAssociative('SELECT * FROM marketing_optimization_schedules WHERE organization_id=? AND BINARY organization_id=BINARY ? AND profile_id=?',[$org,$org,$id]);
+        if($before&&!hash_equals($before['configuration_hash'],$hash))throw new DomainException('Optimization schedule configuration changed; reconcile existing profile.');
+        $prepared=!$before||(!in_array($before['state'],['PENDING','RECONCILIATION_REQUIRED'],true)&&($before['cycle_date']===null||$before['cycle_date']<$w['cycle_date']));
+        if($prepared){
+            // Reuse exact complete native batches; import only missing/current-revision data with stable read keys.
+            $batch=function(string $from,string $to)use($actor,$org,$who,$p,$w):array{
+                try{$v=$this->media->report($actor,$p['account_id'],'campaign',$from,$to,null,null);
+                    if(($v['account_revision_current']??null)===true)return $v;
+                }catch(DomainException){}
+                $key='mkm-import-'.MarketingExperimentPolicy::digest([$org,$who,$p['account_id'],$w['cycle_date'],$from,$to]);
+                $this->media->sync($actor,$p['account_id'],'campaign',$from,$to,$key);
+                return $this->media->report($actor,$p['account_id'],'campaign',$from,$to,null,null);
+            };
+            $batch($w['window_start'],$w['window_end']);$batch($w['baseline_start'],$w['baseline_end']);
+        }
+        return $this->db->transactional(function()use($actor,$org,$who,$p,$w,$hash,$id,$prepared):string{
             $this->db->executeStatement('INSERT INTO marketing_optimization_schedules (organization_id,profile_id,configuration_hash) VALUES (?,?,?) ON DUPLICATE KEY UPDATE profile_id=profile_id',[$org,$id,$hash]);
             $r=$this->db->fetchAssociative('SELECT * FROM marketing_optimization_schedules WHERE organization_id=? AND BINARY organization_id=BINARY ? AND profile_id=? FOR UPDATE',[$org,$org,$id]);
             if(!$r||!hash_equals($r['configuration_hash'],$hash))throw new DomainException('Optimization schedule configuration changed; reconcile existing profile.');
@@ -68,16 +84,9 @@ final readonly class MarketingOptimizationScheduleService
                 return 'REVIEW_RECORDED';
             }
             if($r['cycle_date']!==null&&$r['cycle_date']>=$w['cycle_date'])return 'CURRENT_CYCLE_OBSERVED';
-            // Reuse exact complete native batches; import only missing/current-revision data with stable read keys.
-            $batch=function(string $from,string $to)use($actor,$org,$who,$p,$w):array{
-                try{$v=$this->media->report($actor,$p['account_id'],'campaign',$from,$to,null,null);
-                    if(($v['account_revision_current']??null)===true)return $v;
-                }catch(DomainException){}
-                $key='mkm-import-'.MarketingExperimentPolicy::digest([$org,$who,$p['account_id'],$w['cycle_date'],$from,$to]);
-                $this->media->sync($actor,$p['account_id'],'campaign',$from,$to,$key);
-                return $this->media->report($actor,$p['account_id'],'campaign',$from,$to,null,null);
-            };
-            $current=$batch($w['window_start'],$w['window_end']);$baseline=$batch($w['baseline_start'],$w['baseline_end']);
+            if(!$prepared)return 'DEFERRED';
+            $current=$this->media->report($actor,$p['account_id'],'campaign',$w['window_start'],$w['window_end'],null,null);
+            $baseline=$this->media->report($actor,$p['account_id'],'campaign',$w['baseline_start'],$w['baseline_end'],null,null);
             $parameters=['external_id'=>$p['external_id'],'rule'=>$p['rule'],'threshold_percent'=>$p['threshold_percent'],
                 'current_run_id'=>$current['id'],'baseline_run_id'=>$baseline['id'],'window_start'=>$w['window_start'],'window_end'=>$w['window_end'],
                 'baseline_start'=>$w['baseline_start'],'baseline_end'=>$w['baseline_end']];

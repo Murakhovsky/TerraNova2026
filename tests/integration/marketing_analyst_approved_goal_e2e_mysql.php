@@ -649,6 +649,25 @@ try {
     $deny(fn()=>$monitorScheduler->tick($actor,[...$monitorProfile,'threshold_percent'=>50],$monitorClock),'Changed monitor configuration reused checkpoint.');
     $quiet=[...$monitorProfile,'profile_id'=>'monitor-quiet','rule'=>'CPM_INCREASE','threshold_percent'=>25];
     $assert($monitorScheduler->tick($actor,$quiet,$monitorClock)==='NOT_TRIGGERED'&&$monitorScheduler->tick($actor,$quiet,$monitorClock)==='CURRENT_CYCLE_OBSERVED','Quiet monitor proposed an unnecessary Action.');
+    // Missing batches exercise actual provider-read import before checkpoint transaction.
+    $freshProvider=new class implements \Domains\Marketing\Application\Contract\PaidMediaProviderInterface{
+        public int $calls=0;
+        public function inspectAccount(string $organizationId,string $providerAccountId,string $credentialRef):array{throw new DomainException('Unexpected account probe.');}
+        public function hierarchy(string $organizationId,string $providerAccountId,string $credentialRef):array{throw new DomainException('Unexpected hierarchy probe.');}
+        public function insights(string $organizationId,string $providerAccountId,string $credentialRef,string $from,string $to,string $grain):array{
+            $this->calls++;
+            return [['account_id'=>substr($providerAccountId,4),'campaign_id'=>'90001','date_start'=>$from,'date_stop'=>$to,
+                'spend'=>'100.00','impressions'=>'2000','clicks'=>'100']];
+        }
+    };
+    $freshMedia=new \Domains\Marketing\Application\Service\MarketingMediaAnalyticsService($optAccounts,$freshProvider,$optMediaStore,$modules);
+    $freshRules=new \Domains\Marketing\Application\Service\MarketingOptimizationRuleService($freshMedia);
+    $freshMonitor=new \App\Persistence\Marketing\MarketingOptimizationScheduleService($db,$goals,$bridge,$coordinator,$optPlanner,$freshMedia,$freshRules,$modules);
+    $freshProfile=[...$monitorProfile,'profile_id'=>'monitor-import','rule'=>'CPM_INCREASE','threshold_percent'=>25];
+    $freshClock=new DateTimeImmutable('2026-06-15T00:00:00Z');
+    $assert($freshMonitor->tick($actor,$freshProfile,$freshClock)==='NOT_TRIGGERED'&&$freshProvider->calls===2
+        &&$freshMonitor->tick($actor,$freshProfile,$freshClock)==='CURRENT_CYCLE_OBSERVED'&&$freshProvider->calls===2,
+        'Missing monitoring batches were not imported once outside the schedule transaction.');
     echo "Marketing M5 scheduled native monitoring, one UTC cycle, independent canonical Plan and Action, Outcome and quiet signals PASS.\n";
 
 
