@@ -11,6 +11,7 @@ use Domains\ProductManagement\Infrastructure\Shopify\ShopifyReadClient;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyAccessReadiness;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifySeries01NativeAudit;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyDraftWritebackService;
+use Domains\ProductManagement\Infrastructure\Shopify\ShopifyChannelReadback;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyImportPreviewService;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyImportRecoveryAudit;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyOrderReadbackService;
@@ -45,13 +46,14 @@ final class ProductManagementShopifyOperatorCommand extends Command
         private readonly ShopifyAccessReadiness $access,
         private readonly ShopifySeries01NativeAudit $series01,
         private readonly ShopifyDraftWritebackService $writeback,
+        private readonly ShopifyChannelReadback $channels,
     ) {
         parent::__construct();
     }
 
     protected function configure(): void
     {
-        $this->addArgument('action',InputArgument::REQUIRED,'preflight|provision|status|pull|candidates|inspect|stage|audit|order|order-sandbox|access|series01|draft-preview|draft-audit')
+        $this->addArgument('action',InputArgument::REQUIRED,'preflight|provision|status|pull|candidates|inspect|stage|audit|order|order-sandbox|access|series01|draft-preview|draft-audit|channel-readback')
             ->addOption('organization',null,InputOption::VALUE_REQUIRED,'Explicit tenant organization')
             ->addOption('shop',null,InputOption::VALUE_REQUIRED,'Existing <shop>.myshopify.com name')
             ->addOption('secret-ref',null,InputOption::VALUE_REQUIRED,'Vault ref env://COS_SHOPIFY_* or pilot legacy','shopify_env_primary')
@@ -79,7 +81,7 @@ final class ProductManagementShopifyOperatorCommand extends Command
             return $this->result($output,['status'=>'INVALID_TENANT'],Command::INVALID);
         }
         try {
-            if (!in_array($action,['preflight','provision','status','pull','candidates','inspect','stage','audit','order','order-sandbox','access','series01','draft-preview','draft-audit'],true)) {
+            if (!in_array($action,['preflight','provision','status','pull','candidates','inspect','stage','audit','order','order-sandbox','access','series01','draft-preview','draft-audit','channel-readback'],true)) {
                 return $this->result($output,['status'=>'INVALID_ACTION'],Command::INVALID);
             }
             // Supervised, read-only diagnostics are available even before tenant
@@ -104,7 +106,7 @@ final class ProductManagementShopifyOperatorCommand extends Command
                 throw new DomainException('Product Management module not activated for tenant.');
             }
             if ($action==='provision') {
-                if ($input->getOption('confirm')!=='PROVISION_READ_ONLY') {
+                if (!in_array($input->getOption('confirm'),['PROVISION_READ_ONLY','PROVISION_OBSERVATION_ONLY'],true)) {
                     return $this->result($output,['status'=>'CONFIRMATION_REQUIRED'],Command::INVALID);
                 }
                 $shop=strtolower(trim((string)$input->getOption('shop')));
@@ -114,7 +116,8 @@ final class ProductManagementShopifyOperatorCommand extends Command
                 $ref=trim((string)$input->getOption('secret-ref'));
                 ShopifyClientCredentials::assertSecretReference($ref);
                 $this->credentials->accessToken($shop,$ref,$org,'shopify-provision-preflight');
-                $connection=$this->observations->provision($org,$shop,$ref);
+                $mode=$input->getOption('confirm')==='PROVISION_OBSERVATION_ONLY'?'observation_only':null;
+                $connection=$this->observations->provision($org,$shop,$ref,$mode);
                 return $this->result($output,
                     ['status'=>'PROVISIONED_READ_ONLY','organization_id'=>$org,'connection_id'=>$connection],
                     Command::SUCCESS);
@@ -142,6 +145,9 @@ final class ProductManagementShopifyOperatorCommand extends Command
                 return $this->result($output,['state'=>'preview','product_id'=>$product,'connection_id'=>$connection,
                     'payload_digest'=>ShopifyDraftWritebackService::digest($plan),'variables'=>$plan['variables'],
                     'requires_independent_approval'=>true],Command::SUCCESS);
+            }
+            if($action==='channel-readback'){
+                return $this->result($output,$this->channels->inspect($org,$connection,trim((string)$input->getOption('product-gid'))),Command::SUCCESS);
             }
             if ($action==='status') {
                 return $this->result($output,$this->observations->status($org,$connection),Command::SUCCESS);
