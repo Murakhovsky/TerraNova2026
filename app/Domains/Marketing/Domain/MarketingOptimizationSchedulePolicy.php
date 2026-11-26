@@ -16,8 +16,10 @@ final class MarketingOptimizationSchedulePolicy
         foreach($rows as $r){
             if(!is_array($r))throw new DomainException('Invalid optimization profile.');
             $keys=array_keys($r);sort($keys,SORT_STRING);
-            if($keys!==['account_id','actor_id','external_id','lookback_days','organization_id','profile_id','rule','threshold_percent'])
+            if($keys!==['account_id','actor_id','external_id','lookback_days','organization_id','profile_id','rule','threshold_percent']
+                &&$keys!==['account_id','actor_id','external_id','followup_enabled','lookback_days','organization_id','profile_id','rule','threshold_percent'])
                 throw new DomainException('Unexpected optimization schedule fields.');
+            if(array_key_exists('followup_enabled',$r)&&!is_bool($r['followup_enabled']))throw new DomainException('Invalid learning schedule flag.');
             foreach(['profile_id'=>'/^[a-z0-9][a-z0-9_.-]{0,63}$/D','organization_id'=>'/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,39}$/D',
                 'actor_id'=>'/^[1-9][0-9]{0,17}$/D','account_id'=>'/^mads-[a-f0-9]{24}$/D','external_id'=>'/^[0-9]{1,30}$/D'] as $k=>$pattern)
                 if(!is_string($r[$k])||!preg_match($pattern,$r[$k]))throw new DomainException('Invalid optimization schedule identity.');
@@ -32,6 +34,13 @@ final class MarketingOptimizationSchedulePolicy
             ksort($r,SORT_STRING);$out[]=$r;
         }
         return $out;
+    }
+    /** First equal-length complete UTC period strictly after review day. */
+    public static function followupWindow(string $recordedAt,int $days):array
+    {
+        if($days<1||$days>30||!preg_match('/^\d{4}-\d{2}-\d{2} /D',$recordedAt))throw new DomainException('Invalid follow-up time.');
+        $from=(new DateTimeImmutable($recordedAt,new DateTimeZone('UTC')))->setTime(0,0)->modify('+1 day');
+        return ['window_start'=>$from->format('Y-m-d'),'window_end'=>$from->modify('+'.($days-1).' days')->format('Y-m-d')];
     }
     public static function windows(DateTimeImmutable $clock,int $days):array
     {

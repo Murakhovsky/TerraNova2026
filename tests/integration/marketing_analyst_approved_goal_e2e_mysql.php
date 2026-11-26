@@ -623,9 +623,9 @@ try {
     $batch('schedule-baseline','2026-05-01','2026-05-07','100.00','100');
     $batch('schedule-current','2026-05-08','2026-05-14','100.00','40');
     $monitorProfile=['profile_id'=>'monitor-e2e','organization_id'=>$org,'actor_id'=>$owner,'account_id'=>$optAccount['id'],
-        'external_id'=>'90001','rule'=>'CTR_DECLINE','threshold_percent'=>60,'lookback_days'=>7];
+        'external_id'=>'90001','rule'=>'CTR_DECLINE','threshold_percent'=>60,'lookback_days'=>7,'followup_enabled'=>true];
     $monitorClock=new DateTimeImmutable('2026-05-15T00:00:00Z');
-    $monitorScheduler=new \App\Persistence\Marketing\MarketingOptimizationScheduleService($db,$goals,$bridge,$coordinator,$optPlanner,$optMedia,$ruleService,$modules);
+    $monitorScheduler=new \App\Persistence\Marketing\MarketingOptimizationScheduleService($db,$goals,$bridge,$coordinator,$optPlanner,$optMedia,$ruleService,$modules,$optReviewOutcome,$learningService,$learnPlanner);
     $tickMonitor=static fn()=>$monitorScheduler->tick($actor,$monitorProfile,$monitorClock);
     $monitorRow=static fn()=>$db->fetchAssociative('SELECT * FROM marketing_optimization_schedules WHERE organization_id=? AND profile_id=?',[$org,$monitorProfile['profile_id']]);
     $beforeMonitor=$countReviews();
@@ -645,9 +645,9 @@ try {
     $assert($tickMonitor()==='RUN_ADVANCED'&&$tickMonitor()==='RUN_ADVANCED'&&$tickMonitor()==='REVIEW_RECORDED','Monitor did not reach trusted Outcome.');
     $mr=$monitorRow();
     $assert($mr['state']==='REVIEW_RECORDED'&&$mr['evaluation_id']!==null&&$countReviews()===$beforeMonitor+1
-        &&$tickMonitor()==='CURRENT_CYCLE_OBSERVED','Monitor receipt checkpoint/replay failed.');
+        &&$tickMonitor()==='WAIT_FOLLOWUP_WINDOW','Monitor receipt checkpoint or prospective learning wait failed.');
     $deny(fn()=>$monitorScheduler->tick($actor,[...$monitorProfile,'threshold_percent'=>50],$monitorClock),'Changed monitor configuration reused checkpoint.');
-    $quiet=[...$monitorProfile,'profile_id'=>'monitor-quiet','rule'=>'CPM_INCREASE','threshold_percent'=>25];
+    $quiet=[...$monitorProfile,'profile_id'=>'monitor-quiet','rule'=>'CPM_INCREASE','threshold_percent'=>25,'followup_enabled'=>false];
     $assert($monitorScheduler->tick($actor,$quiet,$monitorClock)==='NOT_TRIGGERED'&&$monitorScheduler->tick($actor,$quiet,$monitorClock)==='CURRENT_CYCLE_OBSERVED','Quiet monitor proposed an unnecessary Action.');
     // Missing batches exercise actual provider-read import before checkpoint transaction.
     $freshProvider=new class implements \Domains\Marketing\Application\Contract\PaidMediaProviderInterface{
@@ -663,7 +663,7 @@ try {
     $freshMedia=new \Domains\Marketing\Application\Service\MarketingMediaAnalyticsService($optAccounts,$freshProvider,$optMediaStore,$modules);
     $freshRules=new \Domains\Marketing\Application\Service\MarketingOptimizationRuleService($freshMedia);
     $freshMonitor=new \App\Persistence\Marketing\MarketingOptimizationScheduleService($db,$goals,$bridge,$coordinator,$optPlanner,$freshMedia,$freshRules,$modules);
-    $freshProfile=[...$monitorProfile,'profile_id'=>'monitor-import','rule'=>'CPM_INCREASE','threshold_percent'=>25];
+    $freshProfile=[...$monitorProfile,'profile_id'=>'monitor-import','rule'=>'CPM_INCREASE','threshold_percent'=>25,'followup_enabled'=>false];
     $freshClock=new DateTimeImmutable('2026-06-15T00:00:00Z');
     $assert($freshMonitor->tick($actor,$freshProfile,$freshClock)==='NOT_TRIGGERED'&&$freshProvider->calls===2
         &&$freshMonitor->tick($actor,$freshProfile,$freshClock)==='CURRENT_CYCLE_OBSERVED'&&$freshProvider->calls===2,

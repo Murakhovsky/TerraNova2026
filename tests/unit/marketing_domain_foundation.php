@@ -255,3 +255,11 @@ $assert($commandHash::commandHash('marketing.paid.meta.campaign.pause',$params)=
     &&$commandHash::commandHash('marketing.paid.meta.campaign.pause',$params)!==$commandHash::commandHash('marketing.paid.meta.campaign.pause',[...$params,'optimization_review'=>[...$reviewPin,'review_receipt_hash'=>str_repeat('c',64)]]),
     'Review is not deterministically bound to paid command receipt.');
 echo "Marketing M5 optimization pause exact account, campaign, current evidence, native lifecycle and command digest PASS.\n";
+
+$fw=$monitorPolicy::followupWindow('2026-02-15 22:30:00.123456',7);
+$assert($fw===['window_start'=>'2026-02-16','window_end'=>'2026-02-22'],'Learning window must be complete and strictly after review day.');
+$assert($monitorPolicy::parse(json_encode([[...$monitorProfile,'followup_enabled'=>true]],JSON_THROW_ON_ERROR))[0]['followup_enabled']===true,
+    'Explicit prospective learning flag rejected.');
+$blocked=false;try{$monitorPolicy::parse(json_encode([[...$monitorProfile,'followup_enabled'=>1]],JSON_THROW_ON_ERROR));}catch(DomainException){$blocked=true;}
+$assert($blocked,'Ambiguous learning flag admitted.');
+echo "Marketing M5 prospective learning schedule UTC and opt-in policy PASS.\n";
