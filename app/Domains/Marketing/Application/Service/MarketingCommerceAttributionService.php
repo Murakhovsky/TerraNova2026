@@ -126,7 +126,7 @@ final readonly class MarketingCommerceAttributionService
         $result=['status'=>'UNAVAILABLE','captured_leads'=>0,'won_deals'=>0,'placed_orders'=>$orders,
             'overlapping_won_deals'=>0,'unresolved_order_links'=>$unknownLinks,'unresolved_lead_evidence'=>0,'unique_outcomes'=>null];
         if($this->sales===null)return $result;
-        $won=[];$leads=[];$invalid=0;
+        $won=[];$leads=[];$invalid=0;$boundPlans=[];
         try{
             $rows=$this->receipts->list($actor->organizationId()->value(),$campaign,$from,$to,501,0);
             if(count($rows)>500)return $result;
@@ -135,6 +135,8 @@ final readonly class MarketingCommerceAttributionService
                 try{
                     $l=$this->sales->lead($actor,$r['lead_id'])??throw new DomainException('Captured lead missing.');
                     $e=MarketingAttributionPolicy::evidence($l,$campaign,$r['plan_id']);
+                    $bound=$r['plan_id']===null?null:($boundPlans[$r['plan_id']]??=$this->scope($actor,$campaign,$r['plan_id']));
+                    MarketingAttributionPolicy::assertLeadPlanWindow($e,$bound);
                     if(!hash_equals($r['evidence_hash'],$e['evidence_hash']))throw new DomainException('Captured lead evidence changed.');
                 }catch(DomainException|\LogicException){$invalid++;continue;}
                 if(strtolower($l['status'])==='spam')continue;
@@ -142,8 +144,7 @@ final readonly class MarketingCommerceAttributionService
                 $d=$l['deal']??null;
                 if(!is_array($d)||!($d['won']??false))continue;
                 if(!is_string($d['deal_id']??null)||!preg_match('/^[1-9][0-9]{0,17}$/D',$d['deal_id'])||!is_string($d['closed_at']??null)){$invalid++;continue;}
-                $closed=substr($d['closed_at'],0,10);
-                if($closed<substr($r['created_at'],0,10)||$closed>$to)continue;
+                if(!MarketingAttributionPolicy::wonWithin($d,$r['created_at'],$to))continue;
                 $won[$d['deal_id']]=true;
             }
         }catch(DomainException|\LogicException){return $result;}

@@ -32,6 +32,30 @@ final class MarketingAttributionPolicy
         $e=['lead_id'=>$lead['lead_id'],'plan_id'=>$plan,'created_at'=>$lead['created_at'],'utm_source'=>$source,'utm_medium'=>$medium,'utm_campaign'=>$tag];
         return [...$e,'evidence_hash'=>hash('sha256',json_encode($e,JSON_THROW_ON_ERROR)),'model'=>self::VERSION];
     }
+    /** A paid lead must have been created in the immutable plan's native calendar window.
+     * A copied UTM after expiry is not acquisition evidence for that paid plan.
+     */
+    public static function assertLeadPlanWindow(array $evidence,?array $plan):void
+    {
+        if($plan===null)return;
+        $created=substr($evidence['created_at'],0,10);
+        if(($evidence['plan_id']??null)!==($plan['id']??null)
+            ||$created<$plan['period_start']||$created>$plan['period_end'])
+            throw new DomainException('Lead acquisition is outside the pinned paid plan window.');
+    }
+
+    /** Native calendar, with full timestamp ordering on the acquisition day. */
+    public static function wonWithin(array $deal,string $created,string $cutoff):bool
+    {
+        $closed=$deal['closed_at']??null;
+        if(($deal['won']??false)!==true||!is_string($closed)
+            ||!preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d{1,6})?$/D',$closed))return false;
+        try {self::date(substr($closed,0,10));}catch(DomainException){return false;}
+        $zone=new DateTimeZone('UTC');
+        return new DateTimeImmutable($closed,$zone)>=new DateTimeImmutable($created,$zone)
+            &&substr($closed,0,10)<=$cutoff;
+    }
+
     public static function count(mixed $v):?int
     {
         return (is_int($v)||is_string($v))&&preg_match('/^(0|[1-9][0-9]{0,11})$/D',(string)$v)?(int)$v:null;

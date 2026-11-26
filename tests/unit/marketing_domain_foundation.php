@@ -51,6 +51,12 @@ $assert($attr::minor('12.340000')===1234&&$attr::minor('12.345')===null&&$attr::
 $metrics=$attr::media(['id'=>'mis-'.str_repeat('c',24),'revision'=>2,'source_status'=>'REVISED','fetched_at'=>'2026-01-01','currency'=>'USD',
     'spend_decimal'=>'12.50','metrics'=>['impressions'=>'1000','clicks'=>'25']]);
 $assert($metrics['ctr_percent']===2.5&&$metrics['cpc']===0.5&&$metrics['cpm']===12.5,'M4 media metric formulas incorrect.');
+$attr::assertLeadPlanWindow($e,['id'=>$plan,'period_start'=>'2026-01-01','period_end'=>'2026-01-01']);
+$blocked=false;try{$attr::assertLeadPlanWindow($e,['id'=>$plan,'period_start'=>'2026-01-02','period_end'=>'2026-01-07']);}catch(DomainException){$blocked=true;}
+$assert($blocked,'Out-of-window paid acquisition admitted.');
+$assert(!$attr::wonWithin(['won'=>true,'closed_at'=>'2026-01-01 09:59:59'],$e['created_at'],'2026-01-01')
+    &&$attr::wonWithin(['won'=>true,'closed_at'=>'2026-01-01 10:00:00'],$e['created_at'],'2026-01-01')
+    &&!$attr::wonWithin(['won'=>true,'closed_at'=>'2026-01-02 00:00:00'],$e['created_at'],'2026-01-01'),'Native outcome chronology incorrect.');
 echo "Marketing M4 exact attribution and guarded KPI policy PASS\n";
 
 $mp=\Domains\Marketing\Domain\MarketingMediaAnalyticsPolicy::class;

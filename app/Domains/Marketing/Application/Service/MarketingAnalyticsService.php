@@ -36,7 +36,7 @@ final readonly class MarketingAnalyticsService
     /** Bounded human capture; no caller-supplied outcome or attribution identity. */
     public function capture(TenantContext $actor,string $campaign,?string $plan,array $leadIds,string $key):array
     {
-        $this->scope($actor,$campaign,$plan);
+        $p=$this->scope($actor,$campaign,$plan);
         if(!array_is_list($leadIds)||count($leadIds)<1||count($leadIds)>50)throw new DomainException('Choose 1-50 distinct native lead IDs.');
         $out=[];
         foreach($leadIds as $id){
@@ -45,12 +45,13 @@ final readonly class MarketingAnalyticsService
         if(count(array_unique($leadIds))!==count($leadIds))throw new DomainException('Duplicate lead reference.');
         sort($leadIds,SORT_STRING);
         $hash=hash('sha256',json_encode([$actor->userId()->value(),$campaign,$plan,$leadIds],JSON_THROW_ON_ERROR));
-        return $this->store->batch($actor->organizationId()->value(),$key,$hash,function()use($actor,$campaign,$plan,$leadIds,$out):array{
+        return $this->store->batch($actor->organizationId()->value(),$key,$hash,function()use($actor,$campaign,$plan,$leadIds,$out,$p):array{
         foreach($leadIds as $id){
             try{
                 $l=$this->sales->lead($actor,$id)??throw new DomainException('Native lead missing.');
                 if(strtolower($l['status'])==='spam')throw new DomainException('Spam lead excluded.');
-                $r=$this->store->record($actor->organizationId()->value(),$campaign,Policy::evidence($l,$campaign,$plan));
+                $e=Policy::evidence($l,$campaign,$plan);Policy::assertLeadPlanWindow($e,$p);
+                $r=$this->store->record($actor->organizationId()->value(),$campaign,$e);
                 $out[]=['lead_id'=>$id,'state'=>'RECORDED','evidence_id'=>$r['id']];
             }catch(DomainException){$out[]=['lead_id'=>$id,'state'=>'REJECTED','evidence_id'=>null];}
         }
@@ -60,14 +61,14 @@ final readonly class MarketingAnalyticsService
     /** Bounded non-mutating discovery; changing Sales lists cannot prove complete coverage. */
     public function discover(TenantContext $actor,string $campaign,?string $plan,string $from,string $to,int $offset):array
     {
-        Policy::window($from,$to);$this->scope($actor,$campaign,$plan);
+        Policy::window($from,$to);$p=$this->scope($actor,$campaign,$plan);
         if($offset<0||$offset>99900)throw new DomainException('Invalid discovery offset.');
         $rows=$this->sales->page($actor,$offset,50);$matches=[];
         foreach($rows as $r){
             $date=substr($r['created_at'],0,10);
             if($date<$from||$date>$to)continue;
             $l=$this->sales->lead($actor,$r['lead_id']);if($l===null)continue;
-            try{$e=Policy::evidence($l,$campaign,$plan);}catch(DomainException){continue;}
+            try{$e=Policy::evidence($l,$campaign,$plan);Policy::assertLeadPlanWindow($e,$p);}catch(DomainException){continue;}
             if($l['status']!=='spam')$matches[]=$e;
         }
         return ['model'=>Policy::VERSION,'matches'=>$matches,'scanned'=>count($rows),
@@ -80,22 +81,26 @@ final readonly class MarketingAnalyticsService
         if($p===null&&($snapshot!==null||$reservation!==null))throw new DomainException('Paid plan required for provider or Finance facts.');
         $rows=$this->store->list($org,$campaign,$from,$to,501,0);
         if(count($rows)>500)throw new DomainException('Analytics cohort exceeds 500 evidence records; narrow window.');
-        $channels=[];$deals=[];$value=[];$leads=0;$qualified=0;$won=0;$missing=0;$drift=0;$unknownValue=0;$linked=0;
+        $channels=[];$deals=[];$wonIds=[];$boundPlans=[];$value=[];$leads=0;$qualified=0;$won=0;$missing=0;$drift=0;$unknownValue=0;$linked=0;
         foreach($rows as $r){
             if($plan!==null&&$r['plan_id']!==$plan)continue;
             $l=$this->sales->lead($actor,$r['lead_id']);
             if($l===null){$missing++;continue;}
-            try{$e=Policy::evidence($l,$campaign,$r['plan_id']);}catch(DomainException){$drift++;continue;}
+            try{
+                $e=Policy::evidence($l,$campaign,$r['plan_id']);$bound=$p;
+                if($bound===null&&$r['plan_id']!==null)$bound=$boundPlans[$r['plan_id']]??=$this->scope($actor,$campaign,$r['plan_id']);
+                Policy::assertLeadPlanWindow($e,$bound);
+            }catch(DomainException){$drift++;continue;}
             if($e['evidence_hash']!==$r['evidence_hash']){$drift++;continue;}
             if(strtolower($l['status'])==='spam')continue;
             $leads++;$key=$r['utm_source'].'/'.$r['utm_medium'];
             $channels[$key]??=['source'=>$r['utm_source'],'medium'=>$r['utm_medium'],'leads'=>0,'qualified_leads'=>0,'won_deals'=>0];
             $channels[$key]['leads']++;
             if(strtolower($l['status'])==='qualified'){$qualified++;$channels[$key]['qualified_leads']++;}
-            $d=$l['deal'];if(!is_array($d)||isset($deals[$d['deal_id']]))continue;
-            $deals[$d['deal_id']]=true;$linked++;
-            if(!$d['won']||!is_string($d['closed_at'])||substr($d['closed_at'],0,10)<substr($r['created_at'],0,10)||substr($d['closed_at'],0,10)>$to)continue;
-            $won++;$channels[$key]['won_deals']++;
+            $d=$l['deal'];if(!is_array($d))continue;
+            if(!isset($deals[$d['deal_id']])){$deals[$d['deal_id']]=true;$linked++;}
+            if(isset($wonIds[$d['deal_id']])||!Policy::wonWithin($d,$r['created_at'],$to))continue;
+            $wonIds[$d['deal_id']]=true;$won++;$channels[$key]['won_deals']++;
             $c=$d['currency'];$v=Policy::minor($d['deal_value']);
             if(!in_array($c,['USD','EUR','UAH','PLN'],true)||$v===null){$unknownValue++;continue;}
             $value[$c]=($value[$c]??0)+$v;
@@ -126,8 +131,8 @@ final readonly class MarketingAnalyticsService
             'leads'=>$leads,'qualified_leads'=>$qualified,'linked_deals'=>$linked,'won_deals'=>$won,
             'lead_to_won_percent'=>Policy::ratio($won,$leads,100),'won_deal_value'=>$values,'unknown_value_count'=>$unknownValue,
             'missing_source_count'=>$missing,'source_drift_count'=>$drift,'channels'=>array_values($channels),'media'=>$media,'settlement'=>$settlement,
-            'cost_per_captured_lead'=>$media===null?null:Policy::ratio((float)$media['reported_spend_decimal'],$leads),
-            'cost_per_captured_won_deal'=>$media===null?null:Policy::ratio((float)$media['reported_spend_decimal'],$won),
+            'cost_per_captured_lead'=>$media===null||$missing>0||$drift>0?null:Policy::ratio((float)$media['reported_spend_decimal'],$leads),
+            'cost_per_captured_won_deal'=>$media===null||$missing>0||$drift>0?null:Policy::ratio((float)$media['reported_spend_decimal'],$won),
             'recognized_revenue_confirmed'=>false,'roas'=>null,'profit'=>null,'causal_attribution'=>false];
     }
 }

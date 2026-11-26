@@ -92,6 +92,10 @@ $r=$analytics->report($actor,$c2,null,'2026-01-01','2026-01-02',null,null);
 $assert($r['leads']===1&&$r['qualified_leads']===1&&$r['won_deals']===1&&$r['won_deal_value']===[['currency'=>'EUR','minor'=>12550]]
     &&$r['roas']===null&&!$r['recognized_revenue_confirmed'],'Native Sales outcome or currency semantics invalid.');
 $assert(!str_contains(json_encode($r,JSON_THROW_ON_ERROR),'Private fixture'),'PII leaked into analytics report.');
+$db->prepare("UPDATE tn_client_cases SET closed_at='2026-01-01 09:59:59' WHERE organization_id=? AND id=?")->execute([$org,$deal]);
+$chronology=$analytics->report($actor,$c2,null,'2026-01-01','2026-01-02',null,null);
+$assert($chronology['linked_deals']===1&&$chronology['won_deals']===0&&$chronology['won_deal_value']===[],'Pre-acquisition same-day deal counted as conversion.');
+$db->prepare("UPDATE tn_client_cases SET closed_at='2026-01-02 10:00:00' WHERE organization_id=? AND id=?")->execute([$org,$deal]);
 $db->prepare("UPDATE tn_leads SET utm_medium='email' WHERE organization_id=? AND id=?")->execute([$org,$id]);
 $r=$analytics->report($actor,$c2,null,'2026-01-01','2026-01-02',null,null);
 $assert($r['leads']===0&&$r['source_drift_count']===1,'Revised native UTM not quarantined.');
