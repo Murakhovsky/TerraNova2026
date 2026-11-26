@@ -20,7 +20,7 @@ generated: true
 | --- | ---: | --- |
 | `both` | 48 | Capability присутня і в runtime catalogue, і в manifest. |
 | `runtime-only` | 3 | Runtime може перевіряти capability, але manifest її не декларує. |
-| `manifest-only` | 423 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
+| `manifest-only` | 421 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
 
 ## Каталог
 
@@ -67,18 +67,16 @@ generated: true
 | `capital_markets` | `capital_markets.view` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
 | `diagnostic` | `diagnostic.evidence.capture` | ні | так | `manifest-only` | — | `app/Domains/Diagnostic/module.php` |
 | `diagnostic` | `diagnostic.methodology.compile` | ні | так | `manifest-only` | — | `app/Domains/Diagnostic/module.php` |
+| `diagnostic` | `diagnostic.methodology.publish` | ні | так | `manifest-only` | — | `app/Domains/Diagnostic/module.php` |
 | `diagnostic` | `diagnostic.recommendation.accept` | ні | так | `manifest-only` | — | `app/Domains/Diagnostic/module.php` |
 | `diagnostic` | `diagnostic.report.summary.get` | ні | так | `manifest-only` | — | `app/Domains/Diagnostic/module.php` |
-| `diagnostic` | `diagnostic.semantic.v1` | ні | так | `manifest-only` | — | `app/Domains/Diagnostic/module.php` |
 | `diagnostic` | `diagnostic.session.complete` | ні | так | `manifest-only` | — | `app/Domains/Diagnostic/module.php` |
 | `diagnostic` | `diagnostic.session.start` | ні | так | `manifest-only` | — | `app/Domains/Diagnostic/module.php` |
-| `diagnostic` | `diagnostic.state.rebuild` | ні | так | `manifest-only` | — | `app/Domains/Diagnostic/module.php` |
-| `diagnostic` | `diagnostic.traceability` | ні | так | `manifest-only` | — | `app/Domains/Diagnostic/module.php` |
-| `diagnostic` | `diagnostic.v1` | ні | так | `manifest-only` | — | `app/Domains/Diagnostic/module.php` |
 | `documents` | `documents.proposal.prepare` | ні | так | `manifest-only` | — | `app/Domains/Documents/module.php` |
 | `documents` | `documents.signature.request` | ні | так | `manifest-only` | — | `app/Domains/Documents/module.php` |
 | `documents` | `documents.signature.sign` | ні | так | `manifest-only` | — | `app/Domains/Documents/module.php` |
 | `federation` | `federation.plan.approval` | ні | так | `manifest-only` | — | `app/Domains/Federation/module.php` |
+| `finance` | `finance.ad_spend.marketing_snapshot.import` | ні | так | `manifest-only` | — | `app/Domains/Finance/module.php` |
 | `finance` | `finance.ad_spend.reconciliation.status` | ні | так | `manifest-only` | — | `app/Domains/Finance/module.php` |
 | `finance` | `finance.ad_spend.settlement.commit` | ні | так | `manifest-only` | — | `app/Domains/Finance/module.php` |
 | `finance` | `finance.ad_spend.settlement.review` | ні | так | `manifest-only` | — | `app/Domains/Finance/module.php` |

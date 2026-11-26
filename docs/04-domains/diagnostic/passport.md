@@ -32,13 +32,13 @@ domain_id: diagnostic
     {
       "id": "methodology",
       "capability_ids": [
-        "diagnostic.methodology.compile"
+        "diagnostic.methodology.compile",
+        "diagnostic.methodology.publish"
       ]
     },
     {
       "id": "evaluation",
       "capability_ids": [
-        "diagnostic.traceability",
         "diagnostic.report.summary.get",
         "diagnostic.recommendation.accept"
       ]
@@ -120,7 +120,7 @@ ModuleLifecycle, migrations, workers та rollback контролюються в
 
 ## 13. План розвитку, борги та рішення
 
-Наступний крок: Domain-owner review бізнесових компонентів, актуальний capability-to-component mapping, перевірка integration boundaries та один незалежний UI → Use Case → Domain readback E2E.
+Архітектурний реєстр має сім typed public capabilities і нуль descriptive-only IDs та process gaps після проходження gates. `diagnostic.state.rebuild` і `diagnostic.traceability` залишаються внутрішніми функціями semantic runtime; `diagnostic.semantic.v1` і `diagnostic.v1` є історичними release markers, не callable operations. Видалення legacy IDs не видаляє native функціонал. Наступний крок: незалежний UI → Use Case → Domain readback E2E; readiness залишається UNKNOWN.
 Архітектурні зміни узгоджувати з ADR-0001 і DAS-001.
 
 ## 14. Карта джерел

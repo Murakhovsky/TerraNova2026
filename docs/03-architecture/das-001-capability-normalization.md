@@ -42,3 +42,11 @@ Gap закривається лише в **одному атомарному PR*
 ### Прийняття рекомендації
 
 `diagnostic.recommendation.accept` є human-only внутрішньою командою. Native recommendation та Kernel Action перевіряються незалежним читанням. Ідемпотентність визначається tenant/session/recommendation та незмінним assignment (owner, due date, workflow). Створення approval-required Action не означає його approval, execution чи успішний бізнесовий результат. Автономний виклик заборонено.
+
+### Компіляція методології
+
+`diagnostic.methodology.compile` є read-only preflight для точного tenant-owned Studio pack/version. Generic manager permission не замінює `diagnostic.methodology.edit`. Результат містить ідентичність, runtime version, статус і content hash; не розкриває документ методології. Операція не викликає mutable `validate`, regression, publish або activate. Хеш є fingerprint компільованого snapshot, а не доказ publication readiness. 
+
+### Публікація методології та retirement legacy IDs
+
+`diagnostic.methodology.publish` є human-only command з додатковим Studio PUBLISH permission, explicit expected content hash та перевіркою native immutable version. Один tenant lock охоплює preflight, regression, publish, activate і native readback; повторна публікація не реактивує стару версію. Process Registry описує publication готового draft, а не штучну універсальну команду manage. Історичні `diagnostic.semantic.v1` і `diagnostic.v1` є release markers; `diagnostic.state.rebuild` і `diagnostic.traceability` — внутрішні semantic functions, не самостійні callable identities. Пошук точних ID в repository виявив лише manifest, documentation, passport і історичні архітектурні тести; runtime implementations не вилучаються. D3–D5 readiness не встановлюється.

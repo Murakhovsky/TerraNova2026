@@ -123,7 +123,7 @@ AI не створює канонічну «істину» без evidence та 
 
 <ProcessDiagram process-id="diagnostic.session-to-recommendation" view="capability" direction="LR" />
 
-Проєкція показує фактичні публічні межі. `diagnostic.session.complete` атомарно оцінює evidence, зберігає report і завершує session; внутрішні evaluation та record не є окремими публічними командами. `diagnostic.report.summary.get` незалежно читає persisted report metadata. `diagnostic.recommendation.accept` фіксує людське рішення і створює лише approval-required Kernel Action; виконання потребує окремого approval. Methodology залишається explicit gap. Існування runtime не підміняє capability model.
+Проєкція показує фактичні публічні межі. `diagnostic.session.complete` атомарно оцінює evidence, зберігає report і завершує session; внутрішні evaluation та record не є окремими публічними командами. `diagnostic.report.summary.get` незалежно читає persisted report metadata. `diagnostic.recommendation.accept` фіксує людське рішення і створює лише approval-required Kernel Action; виконання потребує окремого approval. `diagnostic.methodology.publish` приймає підготовлену версію та очікуваний content hash, повторно перевіряє regression, атомарно публікує й активує нову версію. Draft editing залишається окремою спеціалізованою Studio surface; це не універсальна команда довільної зміни методології. Існування runtime не підміняє capability model.
 
 ## Точки рішень
 

@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace Domains\Finance\Bootstrap;
 
 use Domains\Finance\Automation\Action\FinanceBudgetActionHandler;
+use Domains\Finance\Automation\Action\FinanceMarketingSpendImportActionHandler;
 use Domains\Finance\Automation\Action\FinanceOrderPaymentActionHandler;
 use Domains\Finance\Automation\Action\FinancePaidSettlementHandler;
 use Domains\Finance\Application\Service\ApprovedFinancePaidSettlementService;
@@ -17,7 +18,7 @@ use Kernel\Policy\PolicyDecision;
 final readonly class FinanceDomainModule implements DomainModuleInterface,
     ActionOwningModuleInterface,PolicyProvidingModuleInterface,BootstrapPolicyProvidingModuleInterface
 {
-    public function __construct(private FinanceBudgetActionHandler $handler,private ?FinanceOrderPaymentActionHandler $payments=null,private ?FinancePaidSettlementHandler $settlement=null){}
+    public function __construct(private FinanceBudgetActionHandler $handler,private ?FinanceOrderPaymentActionHandler $payments=null,private ?FinancePaidSettlementHandler $settlement=null,private ?FinanceMarketingSpendImportActionHandler $spendImport=null){}
     public function name():string{return 'finance';}
     public function actionTypes():array
     {
@@ -28,9 +29,10 @@ final readonly class FinanceDomainModule implements DomainModuleInterface,
             FinanceBudgetActionHandler::FREEZE,
             ...($this->payments===null?[]:[FinanceOrderPaymentActionHandler::REGISTER,FinanceOrderPaymentActionHandler::RECONCILE]),
             ...($this->settlement===null?[]:[ApprovedFinancePaidSettlementService::TYPE]),
+            ...($this->spendImport===null?[]:[FinanceMarketingSpendImportActionHandler::IMPORT]),
         ];
     }
-    public function actionHandlers():array{return array_values(array_filter([$this->handler,$this->payments,$this->settlement]));}
+    public function actionHandlers():array{return array_values(array_filter([$this->handler,$this->payments,$this->settlement,$this->spendImport]));}
     public function policies(string $organizationId):array
     {
         $policies=[];

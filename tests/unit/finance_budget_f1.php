@@ -53,14 +53,15 @@ $manifest=require $root.'/app/Domains/Finance/module.php';
 $module=ModuleDefinition::fromArray($manifest);
 $assert($module->manifest->id==='finance'&&!$module->manifest->enabledByDefault,'Finance F1 must be disabled by default');
 $assert($module->contributions->runtimeModuleService==='financeDomainModule','Finance F1 missing runtime owner');
-$assert(count($module->contributions->capabilityContracts)===16,'Expected seven budget, two source-evidence, four order collection and three settlement Finance capabilities');
+$assert(count($module->contributions->capabilityContracts)===17,'Expected seven budget, three source-evidence, four order collection and three settlement Finance capabilities');
 $typed=[];
 foreach($module->contributions->capabilityContracts as $c){
     $typed[$c->id]=$c;
     $assert(is_file($root.'/'.$c->inputSchema),'Missing Finance schema '.$c->inputSchema);
     $assert(is_file($root.'/'.$c->outputSchema),'Missing Finance schema '.$c->outputSchema);
     if(str_starts_with($c->executionBinding,'action:')){
-        $assert($c->sideEffectLevel==='financial'&&$c->approvalPolicy==='required'
+        $expectedSideEffect=$c->id==='finance.ad_spend.marketing_snapshot.import'?'internal':'financial';
+        $assert($c->sideEffectLevel===$expectedSideEffect&&$c->approvalPolicy==='required'
             &&$c->idempotency==='required','Financial capability must require approval and idempotency');
     }
 }
@@ -95,5 +96,7 @@ $reviewInput=['reservation_id'=>'finr-'.str_repeat('a',24),'document_ref'=>'DOC-
 $validator->validate($review,$reviewInput);
 $blocked=false;try{$validator->validate($review,[...$reviewInput,'confirm_review'=>false]);}catch(DomainException){$blocked=true;}
 $assert($blocked,'Review requires explicit human confirmation.');
+$approvedEvidence=$typed['finance.ad_spend.marketing_snapshot.import'];
+$assert($approvedEvidence->executionBinding==='action:finance.ad_spend.marketing_snapshot.import'&&$approvedEvidence->sideEffectLevel==='internal'&&$approvedEvidence->approvalPolicy==='required'&&$approvedEvidence->idempotency==='required','Source-only import must remain independently approved canonical Action.');
 echo "Finance F1 bounded amounts, approval schemas and capability contracts PASS\n";
 
