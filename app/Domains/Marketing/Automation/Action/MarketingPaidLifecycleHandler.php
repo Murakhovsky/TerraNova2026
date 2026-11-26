@@ -2,6 +2,7 @@
 declare(strict_types=1);
 namespace Domains\Marketing\Automation\Action;
 use DomainException;
+use Domains\Marketing\Application\Service\MarketingOptimizationPauseGuard;
 use Domains\Marketing\Infrastructure\Meta\ApprovedMetaPaidLifecycle;
 use Kernel\Action\Action;
 use Kernel\Action\ActionStatus;
@@ -21,7 +22,7 @@ final readonly class MarketingPaidLifecycleHandler implements IdempotentExternal
 {
     public const TYPES=['marketing.paid.meta.campaign.create_paused','marketing.paid.meta.campaign.activate','marketing.paid.meta.campaign.pause'];
     public function __construct(private ApprovedMetaPaidLifecycle $lifecycle,private WorkflowActionWorkerAdmissionInterface $admission,
-        private IdentityResolverInterface $identities,private TenantContextFactory $tenants,private ActiveModuleResolver $modules){}
+        private IdentityResolverInterface $identities,private TenantContextFactory $tenants,private ActiveModuleResolver $modules,private ?MarketingOptimizationPauseGuard $optimization=null){}
     public function supports(string $type):bool{return in_array($type,self::TYPES,true);}
     public function idempotencyKey(Action $action):string{return ExternalActionIdempotency::resolve($action);}
     public function execute(Action $action):ExecutionResult
@@ -35,7 +36,8 @@ final readonly class MarketingPaidLifecycleHandler implements IdempotentExternal
             }
             $p=$action->parameters;$keys=array_keys($p);sort($keys);
             $activation=$action->type===self::TYPES[1];
-            if($keys!==($activation?['configuration_hash','envelope_id','finance_revision','plan_hash','reservation_id']:['configuration_hash','plan_hash'])
+            $reviewedPause=$action->type===self::TYPES[2]&&array_key_exists('optimization_review',$p);
+            if($keys!==($activation?['configuration_hash','envelope_id','finance_revision','plan_hash','reservation_id']:($reviewedPause?['configuration_hash','optimization_review','plan_hash']:['configuration_hash','plan_hash']))
                 ||!is_string($p['configuration_hash']??null)||!preg_match('/^[a-f0-9]{64}$/D',$p['configuration_hash'])
                 ||!is_string($p['plan_hash']??null)||!preg_match('/^[a-f0-9]{64}$/D',$p['plan_hash'])
                 ||($activation&&(!is_string($p['envelope_id'])||!preg_match('/^finb-[a-f0-9]{24}$/D',$p['envelope_id'])
@@ -50,6 +52,10 @@ final readonly class MarketingPaidLifecycleHandler implements IdempotentExternal
             $actor=$this->tenants->fromIdentity($identity);
             if(!$actor->isManager()||!$actor->allows(TenantPermissions::ACCESS)||!$actor->allows(TenantPermissions::MANAGE))
                 throw new DomainException('Requester no longer authorized.');
+            if($reviewedPause){
+                if($this->optimization===null||!is_array($p['optimization_review']))throw new DomainException('Optimization pause validation unavailable.');
+                $this->optimization->verify($actor,(string)$action->targetId,$p['optimization_review']);
+            }
             return ExecutionResult::success($this->lifecycle->execute($action,$actor));
         }catch(Throwable){return ExecutionResult::failure('Paid Marketing Action blocked or uncertain. Inspect native journal; never retry blindly.');}
     }

@@ -47,6 +47,15 @@
                             <input type="hidden" name="envelope_id" value="{{ funding.envelope_id }}">
                             <input type="hidden" name="reservation_id" value="{{ funding.reservation_id }}">
                         {% endif %}
+                        {% if operation == 'pause' %}
+                            <details><summary>Optional: bind pause to an independently recorded optimization review</summary>
+                                <p>All four references are required together. A review is not approval; stale sources block optimization-specific pause.</p>
+                                <label>Review run ID <input class="form-control" name="review_run_id" maxlength="64"></label>
+                                <label>Review Goal evaluation ID <input class="form-control" name="review_evaluation_id" maxlength="64"></label>
+                                <label>Native review ID <input class="form-control" name="review_id" maxlength="29"></label>
+                                <label>Review receipt SHA-256 <input class="form-control" name="review_receipt_hash" maxlength="64"></label>
+                            </details>
+                        {% endif %}
                         <button class="btn btn-outline-primary" type="submit">Propose {{ operation }} in COS Goals</button>
                     </form>
                 {% endif %}

@@ -2805,6 +2805,7 @@ services:
   Domains\Marketing\Application\Service\MarketingAudienceOptimizationService: ~
   Domains\Marketing\Application\Service\MarketingExperimentService: ~
   Domains\Marketing\Application\Service\MarketingOptimizationRuleService: ~
+  Domains\Marketing\Application\Service\MarketingOptimizationPauseGuard: ~
   Domains\Marketing\Application\Service\MarketingOptimizationReviewService: ~
   Domains\Marketing\Application\Service\MarketingOptimizationLearningService: ~
   Domains\Marketing\Automation\Action\MarketingOptimizationLearningHandler: ~

@@ -96,6 +96,7 @@ final readonly class ApprovedMetaPaidLifecycle
     public static function commandHash(string $type,array $parameters):string
     {
         ksort($parameters);
+        if(is_array($parameters['optimization_review']??null))ksort($parameters['optimization_review'],SORT_STRING);
         return hash('sha256',json_encode([$type,$parameters],JSON_THROW_ON_ERROR));
     }
 

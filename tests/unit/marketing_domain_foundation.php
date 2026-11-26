@@ -218,3 +218,40 @@ foreach([[$monitorProfile,[...$monitorProfile,'profile_id'=>'duplicate']],[[...$
     $assert($blocked,'Invalid scheduled monitor profile accepted.');
 }
 echo "Marketing M5 scheduler explicit bounded profile and UTC windows PASS.\n";
+
+$pausePolicy=\Domains\Marketing\Domain\MarketingOptimizationPausePolicy::class;
+$reviewPin=['review_evaluation_id'=>'evaluation-fixture','review_id'=>'mkor-'.str_repeat('a',24),'review_receipt_hash'=>str_repeat('b',64),'review_run_id'=>'run-fixture'];
+$pausePolicy::pin($reviewPin);
+$pausePlan=['id'=>'mkpl-'.str_repeat('f',24),'account_id'=>$ruleEval['account_id'],'account_revision'=>1,
+    'currency'=>'EUR','account_timezone'=>'UTC','period_start'=>'2026-02-01','period_end'=>'2026-02-28'];
+$pauseRows=[];
+foreach(['DEPLOY_PAUSED'=>'PAUSED','ACTIVATE'=>'ACTIVE_CONFIGURED'] as $op=>$state){
+    $pauseRows[$op]=['state'=>'CONFIRMED','provider_id'=>'90001','action_id'=>str_repeat($op==='ACTIVATE'?'a':'b',32),
+        'receipt'=>['provider_campaign_id'=>'90001','plan_id'=>$pausePlan['id'],'operation'=>$op,'state'=>$state]];
+}
+foreach(['CAMPAIGN'=>'90001','ADSET'=>'90002','AD'=>'90003'] as $kind=>$providerId){
+    foreach(['CREATE_'=>'DEPLOY_PAUSED','ACTIVATE_'=>'ACTIVATE'] as $prefix=>$command){
+        $pauseRows[$prefix.$kind]=['state'=>'CONFIRMED','provider_id'=>$providerId,'action_id'=>$pauseRows[$command]['action_id'],
+            'receipt'=>['provider_id'=>$providerId,'configured_status'=>$command==='ACTIVATE'?'ACTIVE':'PAUSED']];
+    }
+}
+$pausePolicy::verify($pausePlan,$ruleEval,$pauseRows,'2026-02-15');
+foreach([
+    [$pausePlan,$ruleEval,$pauseRows,'2026-02-22'],
+    [$pausePlan,[...$ruleEval,'external_id'=>'90002'],$pauseRows,'2026-02-15'],
+    [$pausePlan,[...$ruleEval,'account_revision'=>2],$pauseRows,'2026-02-15'],
+    [$pausePlan,[...$ruleEval,'status'=>'NOT_TRIGGERED'],$pauseRows,'2026-02-15'],
+    [$pausePlan,$ruleEval,[...$pauseRows,'PAUSE'=>['state'=>'STARTED']],'2026-02-15'],
+    [$pausePlan,$ruleEval,[...$pauseRows,'ACTIVATE_AD'=>[...$pauseRows['ACTIVATE_AD'],'state'=>'UNCERTAIN']],'2026-02-15'],
+] as $args){
+    $blocked=false;try{$pausePolicy::verify(...$args);}catch(DomainException){$blocked=true;}
+    $assert($blocked,'Invalid optimization pause evidence admitted.');
+}
+$blocked=false;try{$pausePolicy::pin([...$reviewPin,'unknown'=>true]);}catch(DomainException){$blocked=true;}
+$assert($blocked,'Unexpected review pin admitted.');
+$commandHash=\Domains\Marketing\Infrastructure\Meta\ApprovedMetaPaidLifecycle::class;
+$params=['plan_hash'=>str_repeat('a',64),'configuration_hash'=>str_repeat('b',64),'optimization_review'=>$reviewPin];
+$assert($commandHash::commandHash('marketing.paid.meta.campaign.pause',$params)===$commandHash::commandHash('marketing.paid.meta.campaign.pause',[...$params,'optimization_review'=>array_reverse($reviewPin,true)])
+    &&$commandHash::commandHash('marketing.paid.meta.campaign.pause',$params)!==$commandHash::commandHash('marketing.paid.meta.campaign.pause',[...$params,'optimization_review'=>[...$reviewPin,'review_receipt_hash'=>str_repeat('c',64)]]),
+    'Review is not deterministically bound to paid command receipt.');
+echo "Marketing M5 optimization pause exact account, campaign, current evidence, native lifecycle and command digest PASS.\n";

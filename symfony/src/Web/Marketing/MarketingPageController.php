@@ -158,8 +158,11 @@ final readonly class MarketingPageController
         try{
             if($this->paidPlans->get($actor,$planId)['campaign_id']!==$id)throw new DomainException('Paid plan campaign mismatch.');
             $form=$request->request->all();$e=MarketingWorkspacePlanningInput::field($form,'envelope_id');$r=MarketingWorkspacePlanningInput::field($form,'reservation_id');
+            $review=[];
+            foreach(['review_evaluation_id','review_id','review_receipt_hash','review_run_id'] as $field)$review[$field]=MarketingWorkspacePlanningInput::field($form,$field);
+            $review=count(array_filter($review,static fn(string $v):bool=>$v!==''))===0?null:$review;
             $this->paidGoals->propose($actor,$planId,MarketingWorkspacePlanningInput::field($form,'operation'),
-                MarketingWorkspacePlanningInput::field($form,'idempotency_key'),$e===''?null:$e,$r===''?null:$r);
+                MarketingWorkspacePlanningInput::field($form,'idempotency_key'),$e===''?null:$e,$r===''?null:$r,$review);
             return new RedirectResponse('/workspace/goals',303);
         }catch(DomainException $e){return new Response('Paid proposal blocked: '.$e->getMessage(),422);}
         catch(Throwable){return new Response('Paid proposal unavailable; inspect Goals.',503);}

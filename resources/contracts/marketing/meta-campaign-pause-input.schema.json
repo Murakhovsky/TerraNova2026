@@ -20,6 +20,34 @@
         "configuration_hash": {
           "type": "string",
           "pattern": "^[a-f0-9]{64}$"
+        },
+        "optimization_review": {
+          "type": "object",
+          "properties": {
+            "review_evaluation_id": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9_:-]{0,63}$"
+            },
+            "review_id": {
+              "type": "string",
+              "pattern": "^mkor-[a-f0-9]{24}$"
+            },
+            "review_receipt_hash": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "review_run_id": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9_:-]{0,63}$"
+            }
+          },
+          "required": [
+            "review_evaluation_id",
+            "review_id",
+            "review_receipt_hash",
+            "review_run_id"
+          ],
+          "additionalProperties": false
         }
       },
       "required": [
