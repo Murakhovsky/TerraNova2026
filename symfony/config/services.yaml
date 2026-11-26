@@ -3085,6 +3085,7 @@ services:
     alias: Domains\ProductManagement\Infrastructure\Shopify\CurlShopifyHttpTransport
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyReadClient: ~
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyAccessReadiness: ~
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyChannelReadback: ~
   Domains\ProductManagement\Infrastructure\Shopify\ShopifySeries01NativeAudit:
     arguments:
       $connection: '@cos.database.pdo'
