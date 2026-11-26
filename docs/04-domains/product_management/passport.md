@@ -143,6 +143,7 @@ domain_id: product_management
         "product_management.import.preview",
         "product_management.import.apply",
         "product_management.shopify.import.apply",
+        "product_management.shopify.draft.writeback",
         "product_management.sync.status.get",
         "product_management.import.batch.get"
       ]
@@ -230,6 +231,10 @@ Native release: all CI at candidate SHA, actual browser and independent approval
 ### P4–P5
 
 Typed product attributes, enum axes, filters and atomic bulk editing use the existing Gateway. Attribute lifecycle adds a human-only command for rename, archive/restore and category binding update/removal. Definition identity and semantic type are immutable. Archive requires zero bindings and values; changing/removing a binding requires an unused category. Native receipts and independent readback; existing approved Action contracts remain unchanged. New exact-head CI and browser acceptance pending.
+
+### Shopify S1–S5 follow-up
+
+S1 connection/scope/currency readback; S2 nine native SERIES01 identity audit (not approved-import proof); S3 one-shot approved draft creation with pinned payload digest, unique provider claim, independent live readback and canonical mappings; S4 bounded read-only media, collections and publications; S5 existing Commerce Order Source and Sales-owned reconciliation. No production activation or publication. SERIES01 remains concept-only. Existing products, multi-variant generic writeback, media upload and publication execution remain unimplemented; exact-head CI and live acceptance pending.
 
 ## 14. Карта джерел
 
