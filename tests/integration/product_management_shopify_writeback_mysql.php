@@ -132,7 +132,7 @@ $assert($http->writes===2,'Unknown effect must not replay.');
 // Generic multi-variant canonical draft, per-SKU exact prices and preserved GIDs on update.
 $multi=$create('GENERIC-A','multi');$mid=$multi['product_id'];
 $second=$products->createVariant($org,$mid,'GENERIC-B','pcs',false,'multi-variant','42','qa-writeback');
-$prices->set($org,$second['variant_id'],'USD','510.25','multi-price','42','qa-writeback');
+$prices->set($org,$second['variant_id'],'USD','510.25','multi-second-price','42','qa-writeback');
 $collection=['gid://shopify/Collection/123'];
 $plan=$writer->preview($org,$conn,$mid,$collection);$hash=ShopifyDraftWritebackService::digest($plan);
 $assert(count($plan['variables']['input']['variants'])===2,'Multi-variant preview');
