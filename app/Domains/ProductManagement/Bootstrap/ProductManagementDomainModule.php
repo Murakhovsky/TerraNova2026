@@ -59,6 +59,11 @@ final readonly class ProductManagementDomainModule implements DomainModuleInterf
             $policies[]=new ActionPolicy($policyId,$organizationId,ShopifyImportApplyHandler::TYPE,[],
                 PolicyDecision::ApprovalRequired,10,'Shopify import requires independently approved canonical Action.');
         }
+        if($this->writebackHandler!==null) {
+            $policyId=substr(hash('sha256',$organizationId.':shopify-draft-writeback-approved-v1'),0,32);
+            $policies[]=new ActionPolicy($policyId,$organizationId,ShopifyDraftWritebackHandler::TYPE,[],
+                PolicyDecision::ApprovalRequired,10,'Shopify draft creation requires independent approved canonical Action.');
+        }
         if($this->stockCountHandler!==null) {
             $policyId=substr(hash('sha256',$organizationId.':product-stock-count-approved-v1'),0,32);
             $policies[]=new ActionPolicy($policyId,$organizationId,ProductStockCountApplyHandler::TYPE,[],
