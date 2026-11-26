@@ -2803,9 +2803,12 @@ services:
   Domains\Marketing\Application\Service\MarketingOptimizationReviewService: ~
   Domains\Marketing\Application\Service\MarketingOptimizationLearningService: ~
   Domains\Marketing\Automation\Action\MarketingOptimizationLearningHandler: ~
-  App\Persistence\Marketing\MarketingOptimizationReviewEvidenceReader: ~
+  App\Persistence\Federation\FederationTrustedActionOutcomeReader: ~
+  Domains\Federation\Application\Contract\FederationTrustedActionOutcomeReadPort:
+    alias: App\Persistence\Federation\FederationTrustedActionOutcomeReader
+  App\Infrastructure\Marketing\MarketingOptimizationReviewEvidenceReader: ~
   Domains\Marketing\Application\Contract\MarketingOptimizationReviewEvidenceReadPort:
-    alias: App\Persistence\Marketing\MarketingOptimizationReviewEvidenceReader
+    alias: App\Infrastructure\Marketing\MarketingOptimizationReviewEvidenceReader
   App\Persistence\Marketing\MarketingOptimizationLearningOutcomeProvider: ~
   Domains\Marketing\Automation\Action\MarketingOptimizationReviewHandler: ~
   Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingOptimizationReceiptStore:

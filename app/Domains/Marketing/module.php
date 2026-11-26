@@ -28,6 +28,11 @@ $manifest = [
         ],
         'cross_domain_contracts' => [
             [
+                'contract' => 'Domains\\Marketing\\Application\\Contract\\MarketingOptimizationReviewEvidenceReadPort',
+                'role'=>'requires','counterpart'=>'federation','kind'=>'synchronous_port',
+                'purpose'=>'Read exact persisted trusted review Outcome for learning; no new approval or execution authority.',
+            ],
+            [
                 'contract' => 'Domains\\Marketing\\Application\\Contract\\MarketingAttributionCandidateReadPort',
                 'role'=>'requires','counterpart'=>'sales','kind'=>'synchronous_port',
                 'purpose'=>'Bounded tenant-scoped native lead and order ID discovery; no customer data or Sales mutation.',

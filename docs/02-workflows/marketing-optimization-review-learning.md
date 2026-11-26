@@ -37,7 +37,7 @@ Marketing manager, незалежний approver, Federation і Platform Workflo
 
 <ProcessDiagram process-id="marketing.optimization-review-learning" view="capability" direction="LR" />
 
-Порт `MarketingOptimizationReviewEvidenceReadPort` читає вже збережені Goal/Workflow/Action докази з таблиць, власником яких є Platform, і звіряє їх із нативною квитанцією Marketing. Це read-only межа Platform, а не контракт між бізнес-доменами; вона не делегує погодження або виконання.
+Порт `MarketingOptimizationReviewEvidenceReadPort` використовує типізований read-only контракт Federation для вже збережених Goal/Workflow/Action доказів (таблиці належать Platform). Адаптер Marketing звіряє ці докази з нативною квитанцією Marketing. Він не делегує погодження або виконання.
 
 ## Межі приймання
 

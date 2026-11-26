@@ -4,11 +4,7 @@ namespace Domains\Marketing\Application\Contract;
 
 use Kernel\Tenant\Model\TenantContext;
 
-/**
- * Consumer-owned read port for independently recorded Platform Goal/Workflow evidence.
- * The composition persistence reader verifies this evidence against the native Marketing receipt.
- * This is a Platform boundary, not a dependency on another business Domain; no Run/approval authority.
- */
+/** Historical independently recorded Federation outcome; cannot create or approve a Run. */
 interface MarketingOptimizationReviewEvidenceReadPort
 {
     public function review(TenantContext $actor,string $runId,string $evaluationId,string $reviewId):array;
