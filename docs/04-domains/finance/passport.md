@@ -40,7 +40,7 @@ domain_id: finance
     },
     {
       "id": "marketing_spend_readback",
-      "capability_ids": []
+      "capability_ids": ["finance.ad_spend.marketing_snapshot.import"]
     },
     {
       "id": "sales_commercial_evidence",
@@ -82,6 +82,7 @@ Finance є єдиним authoritative writer для BudgetEnvelope, Reservation,
 | --- | --- | --- |
 | `budgets` | BudgetEnvelope, Reservations, ревізії, ідемпотентні фінансові події | 7 F1 типізованих контрактів |
 | `spend_observations` | Незмінні ревізійні спостереження джерела | 1 типізований статус звіряння |
+| `marketing_spend_readback` | Погоджений імпорт, native source revision і durable intent | 1 governed Action |
 | `sales_commercial_evidence` | Read-only accepted Sales quote evidence, no settlement | 1 typed query |
 | `order_collections` | Незмінна реєстрація, незалежна звірка й фінансовий баланс замовлень | 2 governed Actions, 2 queries |
 | `paid_settlement` | Перевірені документи, рев’ю, фінансові квитанції | 3 типізовані контракти |
@@ -94,7 +95,7 @@ BudgetEnvelope має DRAFT/ACTIVE/FROZEN та точні цілочисельн
 
 ## 5. Use Cases та Capabilities
 
-Машинне джерело callable IDs, input/output schemas, permissions, execution bindings: `app/Domains/Finance/module.php`. Бюджетний компонент публікує draft/create, get, reservations/list і чотири governed Action transitions. Спостереження публікують лише `finance.ad_spend.reconciliation.status`. Паспорт не надає прав виклику й не дублює версії контрактів.
+Машинне джерело callable IDs, input/output schemas, permissions, execution bindings: `app/Domains/Finance/module.php`. Бюджетний компонент публікує draft/create, get, reservations/list і чотири governed Action transitions. Спостереження публікують `finance.ad_spend.reconciliation.status`; F1.3 імпорт — лише scoped approved Action `finance.ad_spend.marketing_snapshot.import`. Паспорт не надає прав виклику й не дублює версії контрактів.
 
 ## 6. Виконання
 
@@ -102,7 +103,7 @@ Draft/query проходять дозволений tenant-scoped Gateway; activ
 
 ## 7. Міждоменні контракти
 
-Marketing→Finance trusted source ingestion поки **не прийнятий** і не відкритий для автономного доступу. Приватний source observation contract не є public command. Майбутній зв'язок повинен мати declared requires/provides та незалежний review, tenant, origin, reconciliation та version semantics.
+Marketing→Finance source ingestion використовує declared tenant-scoped read port. F1.3 вимагає незалежних canonical Plan і Action Approval, exact source revision/hash та Finance-owned intent; не відкриває прямий autonomous write. D3–D5 і фактична перевірка провайдера не прийняті.
 
 ## 8. Процеси та результати
 

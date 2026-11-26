@@ -486,17 +486,26 @@ try {
         new \Kernel\Tenant\Service\TenantContextFactory(new \App\Security\RoleTenantPermissionResolver()));
     $settlementHandler=new \Domains\Finance\Automation\Action\FinancePaidSettlementHandler(
         new \Domains\Finance\Application\Service\ApprovedFinancePaidSettlementService($settlements,$reviews,$financialWorker,$modules),$identityResolver,$tenantFactory);
+    $sourceImport=new \Domains\Finance\Automation\Action\FinanceMarketingSpendImportActionHandler(
+        new \Domains\Finance\Application\Service\ApprovedFinanceMarketingSpendImportOperations(
+            new \App\Infrastructure\Finance\MarketingSpendEvidenceReadAdapter($paidRead),
+            new \Domains\Finance\Application\Service\FinanceSpendObservationService(
+                new \Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceSpendObservationRepository($pdo,new \Domains\Finance\Domain\FinanceSpendObservationPolicy()),
+                new \Domains\Finance\Domain\FinanceSpendObservationPolicy()),
+            new \Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceMarketingSpendActionIntentRepository($pdo),$financialWorker,$modules),
+        $identityResolver,$tenantFactory);
     $domains=new DomainModuleRegistry([new \Domains\Marketing\Bootstrap\MarketingDomainModule($handler,$paidHandler),
-        new \Domains\Finance\Bootstrap\FinanceDomainModule(new \Domains\Finance\Automation\Action\FinanceBudgetActionHandler($financeOps),settlement:$settlementHandler)]);
+        new \Domains\Finance\Bootstrap\FinanceDomainModule(new \Domains\Finance\Automation\Action\FinanceBudgetActionHandler($financeOps),settlement:$settlementHandler,spendImport:$sourceImport)]);
     $bindings=new FederationCapabilityBindingResolver($capabilities,$domains,$modules);
     $gate=new ModuleActionExecutionGate($domains,$modules,null,$financialWorker);
-    $actionService=new ActionService(new MysqlActionRepository($pdo),new ActionExecutor([$handler,$paidHandler,$settlementHandler],$gate));
+    $actionService=new ActionService(new MysqlActionRepository($pdo),new ActionExecutor([$handler,$paidHandler,$settlementHandler,$sourceImport],$gate));
     $policyContexts=new PolicyContextBuilder($domains);
     $policyService=new ActionPolicyService($actionService,$policies,new MysqlPolicyEvaluationRepository($pdo),$approvalRepo,$engine,
         $transactions,null,$domains,$modules,$policyContexts);
     $settlementOutcome=new \App\Persistence\Finance\FinancePaidSettlementOutcomeProvider($db,$settlements,$receipts);
+    $sourceOutcome=new \App\Persistence\Finance\FinanceMarketingSpendImportOutcomeProvider($db,$receipts);
     $goals=new FederationGoalStore($db,$bindings,new GoalPlanValidator($capabilities),new GoalOutcomeEvaluator(),
-        new FederationTrustedOutcomeEvidenceResolver($modules,[$outcome,$settlementOutcome]),$planReader);
+        new FederationTrustedOutcomeEvidenceResolver($modules,[$outcome,$settlementOutcome,$sourceOutcome]),$planReader);
     $bridge=new FederationCanonicalWorkflowBridge($db,$store,$scheduler,$goals,$planEvidence,$receipts,
         new FailClosedWorkflowNonActionReceiptEvidence(),$planReader,$capabilities,$domains,$modules,$policies,$engine,$policyContexts,$policyService,
         new DoctrineWorkflowExecutionCoordinator($db,$store,$scheduler,$planEvidence,$receipts));
@@ -542,6 +551,50 @@ try {
     $analyticsReceipt=$analyticsFinance->settlement($actor,$paidPlan['id'],$paidPlan['plan_hash'],$reservation['id']);
     $assert($analyticsReceipt['committed_minor']===1250&&$analyticsReceipt['finance_settled']===true,'M4 Finance native receipt readback failed.');
     $deny(fn()=>$analyticsFinance->settlement($actor,$paidPlan['id'],str_repeat('0',64),$reservation['id']),'M4 foreign plan hash accepted.');
+    // Finance F1.3: a separate, independently approved native source-only Action.
+    $source=$paidRead->spendEvidence($actor,$account['id'],$snapshotId);
+    $cap=\Domains\Finance\Automation\Action\FinanceMarketingSpendImportActionHandler::IMPORT;
+    $criterion=\App\Persistence\Finance\FinanceMarketingSpendImportOutcomeProvider::CRITERION;
+    $goalId='goal-source-'.$token;$planId='plan-source-'.$token;$runId='run-source-'.$token;$planApproval=bin2hex(random_bytes(16));
+    $input=['target_type'=>'marketing_spend_snapshot','target_id'=>$snapshotId,'parameters'=>[
+        'ad_account_ref'=>$account['id'],'source_snapshot_ref'=>$snapshotId,
+        'expected_source_revision'=>$source['source_revision'],'expected_source_hash'=>$source['source_hash']]];
+    $goals->createGoal($actor,new \Platform\Orchestration\Goal\GoalSpecification($goalId,$org,$owner,
+        'Import exact observed source revision without confirming expense',
+        [['id'=>$criterion,'operator'=>'at_least','expected'=>1]],[$cap],1,null,null,'',[],['independent_plan','independent_action'],'always'));
+    $goals->proposePlan($actor,$planId,$goalId,[['id'=>'import-source','capability_id'=>$cap,'capability_version'=>'1.0.0','input'=>$input]]);
+    $pdo->prepare('INSERT INTO cos_policies (id,organization_id,code,name,action_type,conditions,decision,priority,version,status)
+        VALUES (?,?,?,?,?,?,"APPROVAL_REQUIRED",1,1,"ACTIVE")')->execute([bin2hex(random_bytes(16)),$org,'source-import','Finance source approval',$cap,'[]']);
+    $deny(fn()=>$bridge->start($actor,$runId,$planId,$planApproval),'Unapproved source import Plan started.');
+    $db->executeStatement('UPDATE cos_federation_plans SET state=:state WHERE organization_id=:org AND plan_id=:plan',['state'=>'approved','org'=>$org,'plan'=>$planId]);
+    $storedPlan=(string)$db->fetchOne('SELECT plan_json FROM cos_federation_plans WHERE organization_id=:org AND plan_id=:plan',['org'=>$org,'plan'=>$planId]);
+    $db->insert('cos_actions',['id'=>$planApproval,'organization_id'=>$org,'type'=>'cos.federation.plan.approval',
+        'target_type'=>'cos_federation_plan','target_id'=>$planId,'parameters'=>json_encode(['goal_id'=>$goalId,'plan_id'=>$planId,
+            'specification_version'=>1,'plan_hash'=>hash('sha256',$storedPlan)],JSON_THROW_ON_ERROR),
+        'source_type'=>'USER','source_id'=>$owner,'status'=>'COMPLETED','execution_mode'=>'APPROVAL_REQUIRED','risk_level'=>'HIGH',
+        'idempotency_key'=>'plan:source:'.$token,'correlation_id'=>'source-'.$token]);
+    $db->insert('cos_policy_evaluations',['id'=>bin2hex(random_bytes(16)),'organization_id'=>$org,'action_id'=>$planApproval,
+        'decision'=>'APPROVAL_REQUIRED','correlation_id'=>'source-'.$token,'evaluated_at'=>gmdate('Y-m-d H:i:s.u')]);
+    $db->insert('cos_approvals',['id'=>bin2hex(random_bytes(16)),'organization_id'=>$org,'action_id'=>$planApproval,'status'=>'APPROVED',
+        'approver_type'=>'USER','approver_id'=>$reviewer,'requested_by_type'=>'USER','requested_by_id'=>$owner,'decided_by_type'=>'USER',
+        'decided_by_id'=>$reviewer,'decided_at'=>gmdate('Y-m-d H:i:s.u'),'expires_at'=>(new DateTimeImmutable('+1 day'))->format('Y-m-d H:i:s.u')]);
+    $bridge->start($actor,$runId,$planId,$planApproval);
+    $bridge->advance($actor,$runId,$planApproval);
+    $pending=$bridge->advance($actor,$runId,$planApproval);
+    $assert($pending['state']==='awaiting_human_approval','Source import lacks independent Action approval.');
+    $actionId=$pending['action_id'];
+    $assert($actionService->execute($org,$actionId,'premature-source')===null,'Unapproved source import entered worker.');
+    $approvalId=(string)$db->fetchOne('SELECT id FROM cos_approvals WHERE organization_id=:org AND action_id=:action',['org'=>$org,'action'=>$actionId]);
+    $assert($approvalRepo->decide($org,$approvalId,ApprovalStatus::Approved,$reviewer,'Independent source import fixture'),'Source approval failed.');
+    $actionService->queue($org,$actionId);
+    $assert($actionService->execute($org,$actionId,'source-approved-worker')?->status===ActionStatus::Completed,'Canonical Finance source worker failed.');
+    $assert($bridge->advance($actor,$runId,$planApproval)['state']==='step_completed','Source import canonical receipt unverified.');
+    $assert($bridge->advance($actor,$runId,$planApproval)['state']==='completed','Source import Workflow incomplete.');
+    $evaluation=$goals->recordEvaluation($actor,'source-eval-'.$token,$runId);
+    $assert(($evaluation['result']??null)==='satisfied','Native Finance source observation outcome unsatisfied.');
+    $assert($financeRepo->envelope($org,$envelope['id'])['committed_minor']===1250,'Source import illegally changed settled budget.');
+    $assert($actionService->execute($org,$actionId,'source-replay')===null,'Completed source import replayed.');
+    echo "Finance F1.3 approved canonical source-only Action, immutable native event and independent Goal outcome PASS.\n";
     echo "Marketing M4 native Finance analytics receipt PASS\n";
     echo "Marketing M3 native Documents review, canonical financial Goal and independent Finance settlement outcome E2E PASS.\n";
     echo "Marketing M3 approved create-paused/activate/pause native MySQL E2E with isolated Meta fixture PASS.\n";

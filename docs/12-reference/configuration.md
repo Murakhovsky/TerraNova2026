@@ -19,7 +19,7 @@ generated: true
 | `diagnostic` | `1.0.0` | — | 7 |
 | `documents` | `0.1.0` | — | 3 |
 | `federation` | `1.0.0` | — | 1 |
-| `finance` | `0.2.2` | — | 16 |
+| `finance` | `0.2.3` | — | 17 |
 | `growth` | `0.50.0` | — | 92 |
 | `hr` | `0.1.0` | — | 0 |
 | `marketing` | `0.2.3` | — | 62 |
@@ -64,7 +64,7 @@ generated: true
 
 - manifest: `app/Domains/Finance/module.php`;
 - configuration provisioners: —;
-- capabilities: `finance.order.payment.register`, `finance.order.payment.reconcile`, `finance.order.financial_evidence.read`, `finance.order.payment.operations.read`, `finance.sales.commercial_evidence.read`, `finance.budget.envelope.draft.create`, `finance.budget.envelope.get`, `finance.budget.reservation.list`, `finance.budget.envelope.activate`, `finance.budget.reservation.reserve`, `finance.budget.reservation.release`, `finance.budget.envelope.freeze`, `finance.ad_spend.reconciliation.status`, `finance.ad_spend.settlement.commit`, `finance.ad_spend.settlement.status`, `finance.ad_spend.settlement.review`.
+- capabilities: `finance.order.payment.register`, `finance.order.payment.reconcile`, `finance.order.financial_evidence.read`, `finance.order.payment.operations.read`, `finance.sales.commercial_evidence.read`, `finance.budget.envelope.draft.create`, `finance.budget.envelope.get`, `finance.budget.reservation.list`, `finance.budget.envelope.activate`, `finance.budget.reservation.reserve`, `finance.budget.reservation.release`, `finance.budget.envelope.freeze`, `finance.ad_spend.reconciliation.status`, `finance.ad_spend.settlement.commit`, `finance.ad_spend.settlement.status`, `finance.ad_spend.settlement.review`, `finance.ad_spend.marketing_snapshot.import`.
 
 ## `growth`
 

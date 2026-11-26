@@ -24,7 +24,7 @@ kind: product
 | Property | `1.0.0` | canonical Asset/Inventory/Listing/Publication runtime; legacy `tn_properties` ізольований як compatibility output |
 | Product_management | `0.1.0` | Пілотний E0–E4 Domain: каталог, рухи, базові ціни, CSV staging, Shopify read-only. Tenant-disabled, MySQL/production acceptance не підтверджені |
 | Marketing | `0.2.3` | M0/M1 Meta read-only + Finance-facing spend evidence, M2a Creative/Analyst Review, M2b Product Management live draft check у Workspace (ціна/варіант/tenant); немає Hermes runtime, stock/URL/ad-policy signoff, paid writes чи D3–D5 acceptance |
-| Finance | `0.2.2` | F1 бюджетні конверти, approved Action резервування/замороження та source-reported Meta Spend Observations з приватним Marketing→Finance F1.2 readback, provenance й unreconciled read-model; без Expense, settlement, trusted Marketing bridge і Meta write; disabled by default |
+| Finance | `0.2.3` | F1 бюджети, незалежно погоджені резерви, F1.2 source readback та F1.3 canonical Workflow source import із pinned revision/hash; окреме документальне врегулювання бюджету й order collection evidence. Немає підтвердження provider payment, бухгалтерської виручки або Meta write; disabled by default |
 | Procurement | `0.1.0` | встановлюваний V1 skeleton; runtime і persistence навмисно відкладені |
 | Service | `1.0.0` | V1-stable Request → Ticket → Assignment/SLA → Escalation → Resolution → Close runtime; schema `0.2.0`; lifecycle/idempotency/locking/event/audit release gates |
 | Construction | `0.1.0` | встановлюваний V1 skeleton; runtime і persistence навмисно відкладені |

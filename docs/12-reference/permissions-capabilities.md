@@ -20,7 +20,7 @@ generated: true
 | --- | ---: | --- |
 | `both` | 48 | Capability присутня і в runtime catalogue, і в manifest. |
 | `runtime-only` | 3 | Runtime може перевіряти capability, але manifest її не декларує. |
-| `manifest-only` | 417 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
+| `manifest-only` | 418 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
 
 ## Каталог
 
@@ -76,6 +76,7 @@ generated: true
 | `documents` | `documents.signature.request` | ні | так | `manifest-only` | — | `app/Domains/Documents/module.php` |
 | `documents` | `documents.signature.sign` | ні | так | `manifest-only` | — | `app/Domains/Documents/module.php` |
 | `federation` | `federation.plan.approval` | ні | так | `manifest-only` | — | `app/Domains/Federation/module.php` |
+| `finance` | `finance.ad_spend.marketing_snapshot.import` | ні | так | `manifest-only` | — | `app/Domains/Finance/module.php` |
 | `finance` | `finance.ad_spend.reconciliation.status` | ні | так | `manifest-only` | — | `app/Domains/Finance/module.php` |
 | `finance` | `finance.ad_spend.settlement.commit` | ні | так | `manifest-only` | — | `app/Domains/Finance/module.php` |
 | `finance` | `finance.ad_spend.settlement.review` | ні | так | `manifest-only` | — | `app/Domains/Finance/module.php` |

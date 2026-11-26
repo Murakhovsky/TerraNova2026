@@ -248,6 +248,14 @@ jobs:
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
         run: php tests/integration/finance_spend_observations_mysql.php
+      - name: Finance F1.3 approval and source import governance unit
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/unit/finance_marketing_spend_action.php
+      - name: Finance F1.3 native intent and source revision MySQL
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/integration/finance_marketing_spend_action_mysql.php
       - name: Finance F1.2 tenant-safe Marketing source readback MySQL acceptance
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
