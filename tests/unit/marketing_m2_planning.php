@@ -97,7 +97,7 @@ foreach($manifest['contributions']['capability_contracts'] as $raw){
     $c=CapabilityContract::fromArray($raw);
     $contracts[$c->id]=$c;
 }
-$expect(count($contracts)===60,'Expected typed M0-M5 capabilities.');
+$expect(count($contracts)===61,'Expected typed M0-M5 capabilities.');
 $validator=new CapabilityJsonInputValidator();
 $validator->validate($contracts['marketing.audience.save'],['name'=>'Broad local market','target_spec'=>$target]);
 $validator->validate($contracts['marketing.adset.save'],['campaign_id'=>'mkt-'.str_repeat('a',24),'campaign_revision'=>1,...$ad]);
