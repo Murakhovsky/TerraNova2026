@@ -28,11 +28,11 @@ contract: domain-v1
 ```text
 id: product_management
 version: 0.1.0
-schema_version: 0.16.0
+schema_version: 0.17.0
 runtime: tenant-disabled by default
-persistence: 20 registered migrations; production acceptance pending
-capabilities: 96 typed contracts (31 queries, 31 direct human commands, 34 approved Actions)
-Shopify: read-only; no outbound writes
+persistence: 21 registered migrations; production acceptance pending
+capabilities: 97 typed contracts (31 queries, 31 direct human commands, 35 approved Actions)
+Shopify: read-only by default; supervised approved SERIES01 draft writer disabled by default
 process model: six canonical Process Registry models; independent release acceptance pending
 ```
 
@@ -131,3 +131,7 @@ AI/CRON подає підписаний intent без execution authority. Не�
 ## P4–P5: Attribute lifecycle
 
 Типізовані форми редагування, фільтрів, bulk patch і матриці SKU не потребують ручного JSON. Lifecycle command дозволяє перейменувати визначення, архівувати/відновити невикористаний атрибут, змінити або видалити прив'язку порожньої категорії. Код, тип, одиниця та enum choices незмінні; категорії з товарами вимагають окремої міграції каталогу. Потрібне CI-приймання точного SHA.
+
+## Shopify S1–S5 follow-up
+
+Operator `access` verifies OAuth scopes and authenticated shop currency; `series01` reports nine native identities without asserting approved import; `draft-preview` / `draft-audit` prepare and inspect a pinned provider write; `channel-readback` inspects existing media, collections and publications. Approved Action `product_management.shopify.draft.writeback` is create-only, one-shot, tenant-gated, USD SERIES01 draft pilot. New connections may be explicitly provisioned observation-only; existing ownership is never silently switched. No publication, inventory write or generic multi-variant sync. Runtime and live acceptance pending.
