@@ -57,7 +57,8 @@ interface ProductManagementStoreInterface
     public function getCountSession(string $org,string $sessionId):?array;
     public function getStockCount(string $org,string $countId):?array;
     public function defineAttribute(string $org,array $definition,string $key,string $actor,string $trace):array;
-    public function attributes(string $org,int $limit,int $offset):array;
+    public function attributes(string $org,int $limit,int $offset,string $status='active'):array;
+    public function changeAttributeLifecycle(string $org,array $in,string $key,string $actor,string $trace):array;
     public function bindAttribute(string $org,string $category,string $code,bool $required,bool $axis,string $key,string $actor,string $trace):array;
     public function categoryAttributes(string $org,string $category):array;
     public function setAttributes(string $org,string $product,array $changes,int $revision,string $key,string $actor,string $trace):array;

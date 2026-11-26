@@ -9,10 +9,35 @@
     {% if product.status != 'archived' and attributes.items %}
       <form method="post" action="/product-management/products/{{ product.product_id }}/attributes" class="cos-page__stack">
         <input type="hidden" name="csrf_token" value="{{ csrfToken }}"><input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000001"><input type="hidden" name="action" value="set"><input type="hidden" name="expected_revision" value="{{ attributes.revision }}">
-        <label>Пакет значень (JSON; decimal як рядок, boolean true/false, null видаляє необов'язкове)
-          <textarea name="values" class="form-control" rows="5" required>[{% for d in attributes.items %}{"code":{{ d.code|json_encode }},"value":{{ d.value|json_encode }}}{% if not loop.last %},{% endif %}{% endfor %}]</textarea>
-        </label>
-        <p>Залиште в пакеті тільки ті характеристики, які треба змінити.</p>
+        <p>Для кожної характеристики оберіть дію. Незмінені поля не входять у пакет.</p>
+        {% for d in attributes.items %}
+          <fieldset class="border rounded p-2">
+            <legend class="fs-6">{{ d.name }} ({{ d.code }}){% if d.is_required %} · обов'язкова{% endif %}</legend>
+            <label>Дія
+              <select name="attribute_mode[{{ d.code }}]" class="form-select">
+                <option value="keep">Не змінювати</option>
+                <option value="set">Встановити значення</option>
+                {% if not d.is_required %}<option value="clear">Очистити значення</option>{% endif %}
+              </select>
+            </label>
+            <label>Значення{% if d.unit %} ({{ d.unit }}){% endif %}
+              {% if d.value_type == 'boolean' %}
+                <select name="attribute_value[{{ d.code }}]" class="form-select">
+                  <option value="" {% if d.value is null %}selected{% endif %}>Оберіть</option>
+                  <option value="true" {% if d.value is same as(true) %}selected{% endif %}>Так</option>
+                  <option value="false" {% if d.value is same as(false) %}selected{% endif %}>Ні</option>
+                </select>
+              {% elseif d.value_type == 'enum' %}
+                <select name="attribute_value[{{ d.code }}]" class="form-select">
+                  <option value="">Оберіть</option>
+                  {% for choice in d.choices %}<option value="{{ choice }}" {% if d.value is same as(choice) %}selected{% endif %}>{{ choice }}</option>{% endfor %}
+                </select>
+              {% else %}
+                <input name="attribute_value[{{ d.code }}]" class="form-control" type="text" {% if d.value_type == 'decimal' %}inputmode="decimal"{% endif %} value="{{ d.value ?? '' }}">
+              {% endif %}
+            </label>
+          </fieldset>
+        {% endfor %}
         <button type="submit" class="btn btn-primary">Зберегти пакет</button>
       </form>
     {% endif %}
@@ -24,9 +49,20 @@
       <form method="post" action="/product-management/products/{{ product.product_id }}/attributes" class="cos-page__stack" data-turbo="false">
         <input type="hidden" name="csrf_token" value="{{ csrfToken }}"><input type="hidden" name="action" value="preview">
         <label>Префікс SKU <input name="sku_prefix" class="form-control" required maxlength="60" value="{{ matrixInput.sku_prefix ?? '' }}"></label>
-        <label>Вісі та вибрані значення (JSON)
-          <textarea name="axes" class="form-control" rows="5" required>{% if matrixInput %}{{ matrixInput.axes|json_encode }}{% else %}[{% set first = true %}{% for d in attributes.items %}{% if d.is_axis %}{% if not first %},{% endif %}{"code":{{ d.code|json_encode }},"choices":{{ d.choices|json_encode }}}{% set first = false %}{% endif %}{% endfor %}]{% endif %}</textarea>
-        </label>
+        {% set selectedAxes = {} %}
+        {% for axis in matrixInput.axes ?? [] %}
+          {% set selectedAxes = selectedAxes|merge({(axis.code): axis.choices}) %}
+        {% endfor %}
+        {% for d in attributes.items %}
+          {% if d.is_axis and d.value_type == 'enum' %}
+            <fieldset class="border rounded p-2">
+              <legend class="fs-6">{{ d.name }}</legend>
+              {% for choice in d.choices %}
+                <label class="d-block"><input type="checkbox" name="axis_choices[{{ d.code }}][]" value="{{ choice }}" {% if choice in (selectedAxes[d.code] ?? []) %}checked{% endif %}> {{ choice }}</label>
+              {% endfor %}
+            </fieldset>
+          {% endif %}
+        {% endfor %}
         <button type="submit" class="btn btn-outline-primary">Попередній перегляд</button>
       </form>
       {% if preview %}

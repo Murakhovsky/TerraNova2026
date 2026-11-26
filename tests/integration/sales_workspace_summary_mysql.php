@@ -71,7 +71,7 @@ try{
     $shopStore->map($org,$conn,'product','gid://shopify/Product/41',str_repeat('a',32));
     $shopStore->map($org,$conn,'variant','gid://shopify/ProductVariant/42',str_repeat('b',32));
     $http=new class implements \Domains\ProductManagement\Infrastructure\Shopify\ShopifyHttpTransportInterface {
-        public bool $returnScope=true;public bool $badReturn=false;public bool $fulfilledLifecycle=false;public bool $lifecycleCountMismatch=false;public bool $fulfillmentScope=true;public bool $fulfillmentTruncated=false;public bool $journeyReady=false;public string $journeyCampaign='mkt-aaaaaaaaaaaaaaaaaaaaaaaa';
+        public bool $returnScope=true;public bool $badReturn=false;public bool $fulfilledLifecycle=false;public bool $lifecycleCountMismatch=false;public bool $fulfillmentScope=true;public bool $fulfillmentTruncated=false;public bool $journeyReady=false;public bool $historyDenied=false;public bool $journeyDenied=false;public string $journeyCampaign='mkt-aaaaaaaaaaaaaaaaaaaaaaaa';
         public int $reads=0;public string $updated='2026-11-24T10:00:00Z';public string $financial='PAID';
         public string $current='120.00';public bool $edited=false;public bool $fail=false;public bool $unmapped=false;public bool $truncated=false;public bool $multi=false;public bool $revisionShift=false;public bool $pageMode=false;public bool $temporaryFailure=false;
         public function post(string $url,array $headers,string $body):array
@@ -85,6 +85,10 @@ try{
             if($this->fail)return ['status'=>403,'body'=>'{}'];
             $money=static fn(string $amount)=>['shopMoney'=>['amount'=>$amount,'currencyCode'=>'EUR']];
             $data=['currentAppInstallation'=>['accessScopes'=>[['handle'=>'read_orders']]]];
+            if(($this->historyDenied&&str_contains($request['query'],'COSCommerceOrderHistory'))
+                ||($this->journeyDenied&&str_contains($request['query'],'COSCommerceOrderJourney'))){
+                return ['status'=>200,'body'=>'{"errors":[{"message":"Protected data unavailable","extensions":{"code":"ACCESS_DENIED"}}]}'];
+            }
             if(str_contains($request['query'],'COSCommerceFulfillmentEvidence')){
                 if($this->fulfillmentScope)foreach(['merchant_managed','third_party','assigned'] as $scope)$data['currentAppInstallation']['accessScopes'][]=['handle'=>'read_'.$scope.'_fulfillment_orders'];
                 $data['order']=['id'=>$request['variables']['id'],'updatedAt'=>$this->updated,'test'=>false,'cancelledAt'=>null,'displayFulfillmentStatus'=>$this->fulfilledLifecycle?'FULFILLED':'UNFULFILLED',
@@ -121,7 +125,13 @@ try{
                         'variant'=>['id'=>'gid://shopify/ProductVariant/42'],'originalUnitPriceSet'=>$money('60.00')]],'pageInfo'=>['hasNextPage'=>false,'endCursor'=>null]]];
             }else{
                 $data['order']=['id'=>$request['variables']['id'],'createdAt'=>'2026-11-24T09:00:00Z','updatedAt'=>$this->updated,'cancelledAt'=>null,'test'=>false,
-                    'customerJourneySummary'=>['ready'=>$this->journeyReady,'lastVisit'=>['occurredAt'=>'2026-11-24T08:00:00Z','utmParameters'=>['source'=>'meta','medium'=>'paid_social','campaign'=>$this->journeyCampaign]]],
+                    'customerJourneySummary'=>['ready'=>$this->journeyReady,
+                        'firstVisit'=>['id'=>'gid://shopify/CustomerVisit/301','occurredAt'=>'2026-11-23T08:00:00Z','utmParameters'=>null],
+                        'lastVisit'=>['id'=>'gid://shopify/CustomerVisit/302','occurredAt'=>'2026-11-24T08:00:00Z','utmParameters'=>['source'=>'meta','medium'=>'paid_social','campaign'=>$this->journeyCampaign]],
+                        'momentsCount'=>['count'=>2,'precision'=>'EXACT'],'moments'=>['nodes'=>[
+                            ['id'=>'gid://shopify/CustomerVisit/301','occurredAt'=>'2026-11-23T08:00:00Z','utmParameters'=>null],
+                            ['id'=>'gid://shopify/CustomerVisit/302','occurredAt'=>'2026-11-24T08:00:00Z','utmParameters'=>['source'=>'meta','medium'=>'paid_social','campaign'=>$this->journeyCampaign]]],
+                            'pageInfo'=>['hasNextPage'=>false,'hasPreviousPage'=>false]]],
                     'edited'=>$this->edited,'taxesIncluded'=>true,'displayFinancialStatus'=>$this->financial,'displayFulfillmentStatus'=>$this->fulfilledLifecycle?'FULFILLED':'UNFULFILLED',
                     'originalTotalPriceSet'=>$money('120.00'),'totalPriceSet'=>$money('120.00'),'currentTotalPriceSet'=>$money($this->current),
                     'totalDiscountsSet'=>$money('0.00'),'totalTaxSet'=>$money('20.00'),'totalShippingPriceSet'=>$money('0.00'),
@@ -438,17 +448,27 @@ try{
     $same=$runSource($sourceInput,'same-'.$token);
     $check($same['outcome']==='unchanged'&&$same['order_id']===$externalOrderId,'Source identity duplicated across keys.');
     $check($orderRepo->journey($org,$externalOrderId)===null,'Unready journey accepted.');
-    $http->journeyReady=true;
+    $http->journeyReady=true;$http->historyDenied=true;
+    $partialJourney=$runSource($sourceInput,'journey-history-denied-'.$token);
+    $check($partialJourney['outcome']==='unchanged'&&$orderRepo->journey($org,$externalOrderId)['state']==='observed'
+        &&$orderRepo->touchHistory($org,$externalOrderId)===null,'Optional protected history blocked native order or last visit.');
+    $http->historyDenied=false;
     $late=$runSource($sourceInput,'journey-ready-'.$token);
     $j=$orderRepo->journey($org,$externalOrderId);
     $check($late['outcome']==='unchanged'&&$j['state']==='observed'&&$j['utm_campaign']===$http->journeyCampaign
         &&$orderRepo->journey('foreign-'.$token,$externalOrderId)===null,'Delayed ready journey or tenant fence failed.');
+    $history=$orderRepo->touchHistory($org,$externalOrderId);
+    $check($history['state']==='observed'&&count($history['touches'])===2&&$history['touches'][0]['tags']===null&&$history['touches'][1]['tags']['utm_campaign']===$http->journeyCampaign,'Complete Shopify moments not recorded or unknown contact lost.');
     $runSource($sourceInput,'journey-repeat-'.$token);
+    $check($orderRepo->touchHistory($org,$externalOrderId)===$history,'History replay changed evidence.');
     $check($orderRepo->journey($org,$externalOrderId)===$j,'Journey duplicate changed evidence.');
     $http->journeyCampaign='mkpl-bbbbbbbbbbbbbbbbbbbbbbbb';
     $runSource($sourceInput,'journey-conflict-'.$token);
     $check($orderRepo->journey($org,$externalOrderId)===['state'=>'conflict'],'Conflicting journey silently reassigned.');
-    $http->journeyReady=false;
+    $check($orderRepo->touchHistory($org,$externalOrderId)===['state'=>'conflict'],'Conflicting complete history silently reassigned.');
+    $http->journeyDenied=true;$http->historyDenied=true;
+    $check($runSource($sourceInput,'journey-both-denied-'.$token)['outcome']==='unchanged','Optional protected customer data blocked native commercial reconciliation.');
+    $http->journeyDenied=false;$http->historyDenied=false;$http->journeyReady=false;
     $check($orderRepo->placement($org,$externalOrderId)['realized_revenue']===null,'Journey implied financial revenue.');
     echo "Sales O5 Shopify delayed journey, independent order revision, tenant, replay and conflict PASS.\n";
     $http->financial='REFUNDED';$http->current='0.00';$http->updated='2026-11-24T11:00:00Z';

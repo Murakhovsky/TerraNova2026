@@ -11,7 +11,7 @@ $assert=static function(bool $ok,string $why):void{if(!$ok)throw new RuntimeExce
 $org='mkt-m4-'.bin2hex(random_bytes(6));$other='mkt-m4-'.bin2hex(random_bytes(6));
 $campaigns=new MysqlMarketingCampaignRepository($db);$store=new MysqlMarketingAttributionStore($db);
 $campaign=$campaigns->createDraft($org,'42',(new MarketingDraftPolicy())->validate(['name'=>'M4 integration fixture','business_objective'=>'Native lead attribution']),'m4-campaign-1')['id'];
-$lead=['lead_id'=>'42','created_at'=>'2026-01-01 10:00:00','utm_campaign'=>$campaign,'utm_source'=>'google','utm_medium'=>'organic'];
+$lead=['lead_id'=>'999999999999999998','created_at'=>'2026-01-01 10:00:00','utm_campaign'=>$campaign,'utm_source'=>'google','utm_medium'=>'organic'];
 $e=Policy::evidence($lead,$campaign,null);
 $h=hash('sha256','capture');
 $r=$store->batch($org,'m4-capture-key',$h,fn()=>['result'=>$store->record($org,$campaign,$e)]);
@@ -25,7 +25,7 @@ $assert($deny,'Source attribution drift reallocated.');
 $assert(count($store->list($org,$campaign,'2026-01-01','2026-01-01',50,0))===1
     &&$store->list($other,$campaign,'2026-01-01','2026-01-01',50,0)===[],'Tenant/window evidence scope incorrect.');
 try{$store->batch($org,'m4-rollback-key',$h,function()use($store,$org,$campaign,$lead){
-    $store->record($org,$campaign,Policy::evidence([...$lead,'lead_id'=>'43'],$campaign,null));
+    $store->record($org,$campaign,Policy::evidence([...$lead,'lead_id'=>'999999999999999997'],$campaign,null));
     throw new RuntimeException('synthetic rollback');
 });}catch(RuntimeException $e){if($e->getMessage()!=='synthetic rollback')throw $e;}
 $assert(count($store->list($org,$campaign,'2026-01-01','2026-01-01',50,0))===1,'Partial capture committed.');
@@ -92,6 +92,10 @@ $r=$analytics->report($actor,$c2,null,'2026-01-01','2026-01-02',null,null);
 $assert($r['leads']===1&&$r['qualified_leads']===1&&$r['won_deals']===1&&$r['won_deal_value']===[['currency'=>'EUR','minor'=>12550]]
     &&$r['roas']===null&&!$r['recognized_revenue_confirmed'],'Native Sales outcome or currency semantics invalid.');
 $assert(!str_contains(json_encode($r,JSON_THROW_ON_ERROR),'Private fixture'),'PII leaked into analytics report.');
+$db->prepare("UPDATE tn_client_cases SET closed_at='2026-01-01 09:59:59' WHERE organization_id=? AND id=?")->execute([$org,$deal]);
+$chronology=$analytics->report($actor,$c2,null,'2026-01-01','2026-01-02',null,null);
+$assert($chronology['linked_deals']===1&&$chronology['won_deals']===0&&$chronology['won_deal_value']===[],'Pre-acquisition same-day deal counted as conversion.');
+$db->prepare("UPDATE tn_client_cases SET closed_at='2026-01-02 10:00:00' WHERE organization_id=? AND id=?")->execute([$org,$deal]);
 $db->prepare("UPDATE tn_leads SET utm_medium='email' WHERE organization_id=? AND id=?")->execute([$org,$id]);
 $r=$analytics->report($actor,$c2,null,'2026-01-01','2026-01-02',null,null);
 $assert($r['leads']===0&&$r['source_drift_count']===1,'Revised native UTM not quarantined.');
@@ -208,6 +212,52 @@ $financial->facts[$shopId]['net_collected_amount']='99.00';
 $f=$withFinance->report($actor,$c2,null,'2026-01-01','2026-01-02');
 $assert($f['financial_evidence_invalid_count']===1&&$f['net_cash_received']===null,'Broken collection arithmetic accepted.');
 echo "Marketing Commerce Finance contract fixtures: partial, exact net collection, separate currency and invalid evidence PASS\n";
+
+// Historical fixture: native persisted Paid Plan and Sales lead/deal, independent delayed Shopify read-port fact.
+// Seeding a historical immutable snapshot is test-only, not a production backdated plan admission.
+$lateCampaign=$campaigns->createDraft($org,'42',(new MarketingDraftPolicy())->validate([
+    'name'=>'M4 late paid conversion fixture','business_objective'=>'Historical acquisition cohort']),'m4-late-campaign')['id'];
+$lateCreative=$planning->createCreative($actor,$lateCampaign,['headline'=>'Late fixture creative','primary_text'=>'Synthetic late commerce fixture',
+    'call_to_action'=>'Read more','destination_url'=>'https://example.com/catalog','language'=>'uk'],'m4-late-creative');
+$lateAudience=$planning->saveAudience($actor,null,null,['name'=>'Late fixture audience','target_spec'=>[
+    'market_countries'=>['UA'],'audience_hypothesis'=>'Historical fixture only']],'m4-late-audience');
+$lateAdset=$planning->saveAdset($actor,$lateCampaign,1,null,null,['name'=>'Late fixture traffic','audience_id'=>$lateAudience['id'],
+    'audience_revision'=>$lateAudience['revision'],'creatives'=>[['creative_id'=>$lateCreative['id'],'revision'=>$lateCreative['revision']]],
+    'placements'=>['AUTOMATIC'],'optimization'=>'TRAFFIC','planned_daily_budget'=>'10.00','currency'=>'USD'],'m4-late-adset');
+$historicalPlan=(new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidLaunchPlanStore($db))->create($org,'42','m4-late-plan',
+    hash('sha256','m4 late historical fixture'),['campaign_id'=>$lateCampaign,'campaign_revision'=>1,'adset_id'=>$lateAdset['id'],
+        'adset_revision'=>$lateAdset['revision'],'adset_content_hash'=>$lateAdset['content_hash'],'account_id'=>$account['id'],
+        'account_revision'=>$account['revision'],'currency'=>'USD','account_timezone'=>'UTC',
+        'period_start'=>'2026-01-01','period_end'=>'2026-01-03','days'=>3,'daily_minor'=>1000,'lifetime_minor'=>3000]);
+$latePlan=$historicalPlan['id'];
+$db->prepare("INSERT INTO tn_leads (organization_id,full_name,status,utm_source,utm_medium,utm_campaign,created_at) VALUES (?,'Late lead fixture','qualified','meta','paid_social',?,'2026-01-02 10:00:00')")->execute([$org,$latePlan]);
+$lateLead=(string)$db->lastInsertId();
+$db->prepare("INSERT INTO tn_leads (organization_id,full_name,status,utm_source,utm_medium,utm_campaign,created_at) VALUES (?,'Expired UTM fixture','new','meta','paid_social',?,'2026-01-04 10:00:00')")->execute([$org,$latePlan]);
+$expiredLead=(string)$db->lastInsertId();
+$db->prepare("INSERT INTO tn_client_cases (organization_id,public_id,person_id,type,title,status,inbound_request_id,pipeline_id,stage_id,deal_value,currency,closed_at) VALUES (?,?,?,'buy','Late fixture deal','closed',?,?,?,50.00,'USD','2026-01-10 10:00:00')")->execute([$org,'CC-'.bin2hex(random_bytes(5)),$person,$lateLead,$pipeline,$stage]);
+$lateDeal=(int)$db->lastInsertId();
+$db->prepare('UPDATE tn_leads SET client_case_id=? WHERE organization_id=? AND id=?')->execute([$lateDeal,$org,$lateLead]);
+$lateCapture=$analytics->capture($actor,$lateCampaign,$latePlan,[$lateLead,$expiredLead],'m4-late-lead-capture');
+$lateStates=array_column($lateCapture['results'],'state','lead_id');
+$assert($lateStates[$lateLead]==='RECORDED'&&$lateStates[$expiredLead]==='REJECTED','Paid Lead expiry fence not applied on native capture.');
+$lateOrder=bin2hex(random_bytes(16));
+$commerceSource->facts[$org][$lateOrder]=$fact($lateOrder,bin2hex(random_bytes(16)),'shopify','USD','50.00',[]);
+$commerceSource->facts[$org][$lateOrder]['placement']['occurred_at']='2026-01-10T10:00:00.000000Z';
+$commerceSource->facts[$org][$lateOrder]['placement']['deal_id']=null;
+$commerceSource->facts[$org][$lateOrder]['journey']=['state'=>'observed','evidence_hash'=>str_repeat('e',64),
+    'model'=>'shopify-last-visit-utm-v1','visit_at'=>'2026-01-02T10:00:00.000000Z',
+    'utm_campaign'=>$latePlan,'utm_source'=>'meta','utm_medium'=>'paid_social'];
+$assert($withFinance->capture($actor,$lateCampaign,$latePlan,[$lateOrder],'m4-late-order-capture')['results'][0]['state']==='RECORDED',
+    'Bounded delayed order capture failed.');
+$economics=new \Domains\Marketing\Application\Service\MarketingEconomicsService($plans,$analytics,$withFinance,$finance);
+$early=$economics->report($actor,$latePlan,null);
+$late=$economics->report($actor,$latePlan,null,'2026-01-10');
+$assert($early['captured_leads']===1&&$early['won_deals']===0&&$early['placed_orders']===0
+    &&$late['window_end']==='2026-01-03'&&$late['conversion_through']==='2026-01-10'&&$late['captured_leads']===1
+    &&$late['won_deals']===1&&$late['placed_orders']===1&&$late['settled_media_minor']===null&&$late['roas']===null,
+    'Late conversion economics changed acquisition or invented financial evidence.');
+echo "Marketing M4 native historical cohort, expired paid UTM, bounded late Deal/Order economics PASS\n";
+
 // Real repository readback runs only on unified Sales/Marketing checkout; explicitly report missing dependency.
 if(interface_exists(\Domains\Sales\Application\Contract\SalesOrderJourneyStore::class)){
     $nativeRepo=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository($db);
@@ -240,3 +290,91 @@ if(interface_exists(\Domains\Sales\Application\Contract\SalesOrderJourneyStore::
     $assert($missing,'Absent Sales commerce package did not fail closed.');
     echo "Marketing M4.10 combined native Sales repository acceptance DEFERRED: source branch not installed\n";
 }
+
+$candidateRead=new \Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesAttributionCandidateReadModel($db);
+$candidateAdapter=new \App\Infrastructure\Marketing\AttributionCandidateReadAdapter($candidateRead,$modules);
+$sweepCampaign=$campaigns->createDraft($org,'42',(new MarketingDraftPolicy())->validate(['name'=>'M4 sweep fixture','business_objective'=>'Native conversion collection']),'m4-sweep-campaign')['id'];
+$insertLead=$db->prepare("INSERT INTO tn_leads (organization_id,full_name,status,utm_source,utm_medium,utm_campaign,created_at) VALUES (?,'Private sweep fixture','new','google','organic',?,'2026-02-01 10:00:00')");
+for($i=0;$i<51;$i++)$insertLead->execute([$org,$sweepCampaign]);
+$db->prepare('INSERT INTO cos_organizations (id,name,status) VALUES (?,?,"ACTIVE")')->execute([$other,'Other sweep fixture']);
+$insertLead->execute([$other,$sweepCampaign]);
+$sweepOrderRepo=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderRepository($db);
+$sweepOrderSource=new \App\Infrastructure\Marketing\CommerceOrderReadAdapter($modules,$sweepOrderRepo,$sweepOrderRepo,$sweepOrderRepo);
+$sweep=new \Domains\Marketing\Application\Service\MarketingAttributionSweepService($campaignService,$plans,$candidateAdapter,$sales,$sweepOrderSource,$store,$commerceStore,$modules);
+$sourcePage=$candidateRead->page($org,'lead','2026-02-01','2026-02-01',null,50);
+$assert(count($sourcePage['ids'])===50&&$sourcePage['next_after']!==null,'Native Sales source page invalid: '.json_encode(['count'=>count($sourcePage['ids']),'has_more'=>$sourcePage['next_after']!==null],JSON_THROW_ON_ERROR));
+$firstLead=$sales->lead($actor,$sourcePage['ids'][0]);
+$assert($firstLead!==null&&$firstLead['utm_campaign']===$sweepCampaign,'Native lead source tag mismatch.');
+$firstEvidence=Policy::evidence($firstLead,$sweepCampaign,null);
+$assert(substr($firstEvidence['created_at'],0,10)==='2026-02-01','Native source date mismatch.');
+$page1=$sweep->sweep($actor,$sweepCampaign,null,'lead','2026-02-01','2026-02-01',null,'m4-sweep-first');
+$assert($page1['scanned']===50&&$page1['recorded_or_already_present']===50&&!$page1['page_exhausted']&&!$page1['complete_coverage'],'Sweep first page or tenant fence invalid: '.json_encode($page1,JSON_THROW_ON_ERROR));
+$page2=$sweep->sweep($actor,$sweepCampaign,null,'lead','2026-02-01','2026-02-01',$page1['next_after'],'m4-sweep-second');
+$assert($page2['scanned']===1&&$page2['recorded_or_already_present']===1&&$page2['page_exhausted']&&!$page2['complete_coverage'],'Sweep cursor skipped or duplicated rows: '.json_encode($page2,JSON_THROW_ON_ERROR));
+$assert($sweep->sweep($actor,$sweepCampaign,null,'lead','2026-02-01','2026-02-01',null,'m4-sweep-first')===$page1,'Sweep receipt replay changed.');
+$deny=false;try{$sweep->sweep($actor,$sweepCampaign,null,'lead','2026-02-01','2026-02-01',$page1['next_after'],'m4-sweep-first');}catch(DomainException){$deny=true;}
+$assert($deny,'Sweep replay key accepted changed cursor.');
+$assert(count($store->list($org,$sweepCampaign,'2026-02-01','2026-02-01',501,0))===51,'Sweep native evidence coverage failed.');
+$scan=$sweep->sweep($actor,$c2,null,'order','2026-01-02','2026-01-02',null,'m4-sweep-native-orders');
+$assert($scan['scanned']>=1&&$scan['recorded_or_already_present']>=1&&!$scan['financial_mutation'],'Native order sweep failed.');
+$assert($candidateRead->page(strtoupper($org),'lead','2026-02-01','2026-02-01',null,50)['ids']===[],'Case-variant tenant leaked.');
+echo "Marketing M4 governed sweep service native keyset discovery, source capture, replay and tenant fence PASS\n";
+
+$multi=$sweep->sweep($actor,$sweepCampaign,null,'lead','2026-02-01','2026-02-01',null,'m4-sweep-multi',5);
+$assert($multi['scanned']===51&&$multi['pages_processed']===2&&$multi['max_pages']===5&&$multi['recorded_or_already_present']===51&&$multi['page_exhausted'],'Bounded automatic page continuation failed.');
+$assert($store->receipt($org,'m4-sweep-multi')['receipt']===$multi&&$store->receipt($other,'m4-sweep-multi')===null,'Native sweep receipt readback or tenant fence failed.');
+$assert($sweep->sweep($actor,$sweepCampaign,null,'lead','2026-02-01','2026-02-01',null,'m4-sweep-multi',5)===$multi,'Multipage replay changed receipt.');
+$deny=false;try{$sweep->sweep($actor,$sweepCampaign,null,'lead','2026-02-01','2026-02-01',null,'m4-sweep-multi',4);}catch(DomainException){$deny=true;}
+$assert($deny,'Sweep replay changed approved page budget.');
+$deny=false;try{$sweep->sweep($actor,$sweepCampaign,null,'lead','2026-02-01','2026-02-01',null,'m4-sweep-invalid',6);}catch(DomainException){$deny=true;}
+$assert($deny&&$store->receipt($org,'m4-sweep-invalid')===null,'Unbounded page budget admitted.');
+echo "Marketing M4 multipage atomic native receipt, tenant fence, bounded continuation and replay PASS\n";
+
+$historyService=new \Domains\Marketing\Application\Service\MarketingTouchAttributionService($nativeSource,$campaignService,$plans,$modules);
+$assert($historyService->report($actor,$nativeId,'linear')['status']==='UNAVAILABLE','Missing history fabricated attribution.');
+$touch1=str_repeat('1',64);$touch2=str_repeat('2',64);$touch3=str_repeat('3',64);
+$history=['model'=>'shopify-journey-moments-v1','first_touch'=>$touch1,'last_touch'=>$touch3,'touches'=>[
+    ['touch_id'=>$touch1,'visit_at'=>'2026-01-01T08:00:00.000000Z','tags'=>['utm_campaign'=>$campaign,'utm_source'=>'google','utm_medium'=>'organic']],
+    ['touch_id'=>$touch2,'visit_at'=>'2026-01-01T09:00:00.000000Z','tags'=>null],
+    ['touch_id'=>$touch3,'visit_at'=>'2026-01-01T10:00:00.000000Z','tags'=>['utm_campaign'=>$c2,'utm_source'=>'google','utm_medium'=>'organic']]]];
+$beforeJourney=$nativeRepo->journey($org,$nativeId);
+$db->beginTransaction();$nativeRepo->recordJourney($org,$nativeId,$placement['store_reference'],$placement['external_order_id'],$history);$db->commit();
+$assert($nativeRepo->journey($org,$nativeId)===$beforeJourney,'Full history rewrote last visit evidence.');
+$first=$historyService->report($actor,$nativeId,'first_touch');$last=$historyService->report($actor,$nativeId,'last_touch');$linear=$historyService->report($actor,$nativeId,'linear');
+$assert($first['allocations'][0]['campaign_id']===$campaign&&$first['allocations'][0]['minor']===2500&&$last['allocations'][0]['campaign_id']===$c2&&$last['allocations'][0]['minor']===2500,'First/last touch models invalid.');
+$assert($linear['touch_count']===3&&$linear['unassigned_minor']===833&&array_sum(array_column($linear['allocations'],'minor'))===1667&&$linear['recognized_revenue']===null,'Linear allocation failed exact conservation or unknown share.');
+$assert($nativeRepo->touchHistory($other,$nativeId)===null,'Cross tenant touch history leak.');
+$changed=$history;$changed['touches'][1]['tags']=['utm_campaign'=>$c2,'utm_source'=>'google','utm_medium'=>'organic'];
+$db->beginTransaction();$nativeRepo->recordJourney($org,$nativeId,$placement['store_reference'],$placement['external_order_id'],$changed);$db->commit();
+$assert($historyService->report($actor,$nativeId,'linear')['status']==='CONFLICT'&&$nativeRepo->journey($org,$nativeId)===$beforeJourney,'History conflict silently reallocated or poisoned last touch.');
+echo "Marketing M4.11 native history independent of last touch, first/last/linear exact allocation and conflict PASS\n";
+
+$monCurrent=$mediaStore->commit($org,'42','m5-monitor-now',hash('sha256','m5-now'),$account,'campaign','2026-02-08','2026-02-14',[
+    [...$base,'date_start'=>'2026-02-08','date_stop'=>'2026-02-14','spend'=>'150.00','impressions'=>'2000','clicks'=>'40'],
+    [...$base,'campaign_id'=>'90003','date_start'=>'2026-02-08','date_stop'=>'2026-02-14','spend'=>'3.00','impressions'=>'20','clicks'=>'1']]);
+$monBaseline=$mediaStore->commit($org,'42','m5-monitor-base',hash('sha256','m5-base'),$account,'campaign','2026-02-01','2026-02-07',[
+    [...$base,'date_start'=>'2026-02-01','date_stop'=>'2026-02-07','spend'=>'100.00','impressions'=>'2000','clicks'=>'100'],
+    [...$base,'campaign_id'=>'90004','date_start'=>'2026-02-01','date_stop'=>'2026-02-07','spend'=>'10.00','impressions'=>'1000','clicks'=>'40']]);
+$monitor=new \Domains\Marketing\Application\Service\MarketingOptimizationMonitor(new \Domains\Marketing\Application\Service\MarketingMediaAnalyticsService($accounts,$provider,$mediaStore,$modules));
+$mon=$monitor->report($actor,$account['id'],'campaign','2026-02-08','2026-02-14','2026-02-01','2026-02-07');
+$states=array_column($mon['items'],'state','external_id');
+$assert($mon['alert_count']===1&&$mon['insufficient_count']===2&&$states['90001']==='REVIEW_REQUIRED'&&$states['90003']==='NO_BASELINE'&&$states['90004']==='NO_CURRENT_OBSERVATION'
+    &&count($mon['items'][0]['flags'])===4&&!$mon['provider_mutation'],'M5 source comparison missed anomalies or inferred missing delivery.');
+echo "Marketing M5 native media batch monitoring, matched anomalies and unavailable scopes PASS\n";
+
+$ruleService=new \Domains\Marketing\Application\Service\MarketingOptimizationRuleService(
+    new \Domains\Marketing\Application\Service\MarketingMediaAnalyticsService($accounts,$provider,$mediaStore,$modules));
+$ruleAdapter=new \App\Application\Capability\MarketingOptimizationRuleEvaluateAdapter($ruleService);
+$ruleInput=['account_id'=>$account['id'],'external_id'=>'90001','rule'=>'CTR_DECLINE','threshold_percent'=>60,
+    'current_run_id'=>$monCurrent['id'],'baseline_run_id'=>$monBaseline['id'],'window_start'=>'2026-02-08',
+    'window_end'=>'2026-02-14','baseline_start'=>'2026-02-01','baseline_end'=>'2026-02-07'];
+$ev=$ruleAdapter->invoke($actor,$ruleInput,'fixture-rule','fixture');
+$assert($ev['status']==='TRIGGERED_REVIEW_REQUIRED'&&$ev['change_percent']===-60.0&&$ev['current_source']['source_hash']===$monCurrent['rows'][0]['source_hash']
+    &&$ev['baseline_source']['source_hash']===$monBaseline['rows'][0]['source_hash']&&!$ev['action_created']&&!$ev['financial_mutation'],
+    'M5 rule did not bind persisted source snapshots or fenced review.');
+$assert($ruleAdapter->invoke($actor,$ruleInput,'fixture-rule','fixture')===$ev,'M5 rule fingerprint not deterministic.');
+$missing=$ruleAdapter->invoke($actor,[...$ruleInput,'external_id'=>'90003'],'fixture-rule','fixture');
+$assert($missing['status']==='INSUFFICIENT_EVIDENCE'&&$missing['baseline_source']===null&&!$missing['review_recommended'],'Rule inferred zero from absent baseline.');
+$blocked=false;try{$ruleAdapter->invoke($actor,[...$ruleInput,'current_run_id'=>'mkar-'.str_repeat('0',24)],'fixture-rule','fixture');}catch(DomainException){$blocked=true;}
+$assert($blocked,'M5 rule accepted changed source pin.');
+echo "Marketing M5.8 native exact scope rule evaluation, deterministic evidence, threshold and missing-source fences PASS\n";

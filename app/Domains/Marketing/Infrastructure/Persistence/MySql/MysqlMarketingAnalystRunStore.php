@@ -97,6 +97,13 @@ final readonly class MysqlMarketingAnalystRunStore implements MarketingAnalystRu
                 throw new DomainException('Marketing source revision is stale.');
             }
         }
+        if(isset($pins['media_snapshot'])){
+            $pin=$pins['media_snapshot'];
+            $q=$this->connection->prepare('SELECT revision,source_hash FROM marketing_paid_insight_snapshots WHERE organization_id=? AND id=? FOR UPDATE');
+            $q->execute([$org,$pin['record_id']]);$row=$q->fetch(PDO::FETCH_ASSOC);
+            if(!is_array($row)||(int)$row['revision']!==$pin['revision']||!hash_equals($pin['content_hash'],$row['source_hash']))
+                throw new DomainException('Marketing performance snapshot changed.');
+        }
     }
 
     public function claim(string $org,string $key,array $claim,int $dailyLimit):array

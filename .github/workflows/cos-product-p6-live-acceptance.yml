@@ -1,0 +1,132 @@
+name: COS Product P6 supervised live AI acceptance
+on:
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Exact currently deployed main revision
+        required: true
+        type: string
+      organization:
+        description: Explicit isolated staging tenant (never default)
+        required: true
+        type: string
+      operation:
+        description: Request one live proposal, or inspect approved native result
+        required: true
+        type: choice
+        default: inspect
+        options: [propose, inspect]
+      intent_id:
+        description: Exact intent ID (inspect only)
+        type: string
+        required: false
+      run_id:
+        description: Exact canonical Workflow run ID (inspect only)
+        type: string
+        required: false
+
+permissions:
+  contents: read
+concurrency:
+  group: cos-product-p6-live-acceptance
+  cancel-in-progress: false
+
+jobs:
+  supervised:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: AWS TN2026
+    env:
+      EXPECTED_SHA: ${{ inputs.expected_sha }}
+      ORG: ${{ inputs.organization }}
+      APPROVED_ORG: ${{ vars.COS_PRODUCT_AI_ACCEPTANCE_ORGANIZATION }}
+      OP: ${{ inputs.operation }}
+      INTENT: ${{ inputs.intent_id }}
+      RUN: ${{ inputs.run_id }}
+      DEV_PATH: ${{ vars.DEV_PATH }}
+      DEV_HOST: ${{ secrets.DEV_HOST }}
+      DEV_USER: ${{ secrets.DEV_USER }}
+      DEV_PORT: ${{ secrets.DEV_PORT }}
+      DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enforce explicit protected staging tenant and exact main SHA
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$EXPECTED_SHA" =~ ^[a-f0-9]{40}$ && "$EXPECTED_SHA" == "$(git rev-parse HEAD)" ]]
+          [[ "$ORG" =~ ^[A-Za-z0-9][A-Za-z0-9._:-]{0,39}$ && "$ORG" != default && "$ORG" == "$APPROVED_ORG" ]]
+          [[ "$DEV_PATH" == /opt/cos && "$DEV_PORT" =~ ^[0-9]{1,5}$ ]]
+          for key in DEV_HOST DEV_USER DEV_SSH_KEY; do [[ -n "${!key:-}" ]]; done
+          case "$OP" in
+            propose) [[ -z "$INTENT" && -z "$RUN" ]] ;;
+            inspect) [[ "$INTENT" =~ ^intent-[a-f0-9]{24}$ && "$RUN" =~ ^[a-z0-9][a-z0-9_:-]{0,63}$ ]] ;;
+            *) exit 2 ;;
+          esac
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$DEV_SSH_KEY" > "$HOME/.ssh/p6_key"
+          chmod 600 "$HOME/.ssh/p6_key"
+          ssh-keyscan -T 10 -p "$DEV_PORT" -H "$DEV_HOST" > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test -s "$HOME/.ssh/known_hosts"
+          CODE_SHA="$( { find app/Kernel app/Platform app/Domains app/Infrastructure symfony/src -type f -name '*.php' -print | LC_ALL=C sort | xargs sha256sum; sha256sum symfony/config/services.yaml; } | sha256sum | cut -d' ' -f1 )"
+          ROUTES_SHA="$(sha256sum symfony/config/routes.yaml | cut -d' ' -f1)"
+          printf 'CODE_SHA=%s\nROUTES_SHA=%s\n' "$CODE_SHA" "$ROUTES_SHA" >> "$GITHUB_ENV"
+      - name: Verify deployed source and execute only bounded P6 operator
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          mkdir -p tmp/product-p6
+          # Use validated arguments only. No secret is passed on the command line; the existing container configuration is authoritative.
+          printf -v remote '%q ' sudo -n bash -s -- "$EXPECTED_SHA" "$CODE_SHA" "$ROUTES_SHA" "$ORG" "$OP" "$INTENT" "$RUN"
+          ssh -T -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes \
+            -i "$HOME/.ssh/p6_key" -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" "$remote" \
+            >tmp/product-p6/raw.json <<'REMOTE'
+          set -Eeuo pipefail
+          export LC_ALL=C
+          EXPECTED="$1"; CODE="$2"; ROUTES="$3"; ORG="$4"; OP="$5"; INTENT="$6"; RUN="$7"
+          cd /opt/cos
+          python3 - "$EXPECTED" "$CODE" "$ROUTES" <<'VERIFY'
+          import json,sys
+          from pathlib import Path
+          m=json.loads(Path(".cos-deployment-attestation.json").read_text())
+          if [m.get("source_sha"),m.get("execution_source_sha256"),m.get("routes_sha256")] != sys.argv[1:]:
+              raise SystemExit("Deployment attestation mismatch")
+          VERIFY
+          source_sha="$( { find app/Kernel app/Platform app/Domains app/Infrastructure symfony/src -type f -name '*.php' -print | sort | xargs sha256sum; sha256sum symfony/config/services.yaml; } | sha256sum | cut -d' ' -f1 )"
+          [[ "$source_sha" == "$CODE" && "$(sha256sum symfony/config/routes.yaml | cut -d' ' -f1)" == "$ROUTES" ]]
+          # Verify active HTTP and canonical worker images, not only the host sync.
+          for container in cos-php-1 cos-worker-1 cos-kernel-worker-1; do
+            [[ "$(docker inspect --format '{{.State.Running}}' "$container")" == true ]]
+            actual="$(docker exec "$container" sh -ec 'cd /var/www/html; export LC_ALL=C; { find app/Kernel app/Platform app/Domains app/Infrastructure symfony/src -type f -name "*.php" -print | sort | xargs sha256sum; sha256sum symfony/config/services.yaml; } | sha256sum | cut -d" " -f1')"
+            [[ "$actual" == "$CODE" ]]
+            [[ "$(docker exec "$container" sha256sum /var/www/html/symfony/config/routes.yaml | cut -d' ' -f1)" == "$ROUTES" ]]
+          done
+          args=()
+          if [[ "$OP" == inspect ]]; then args=("--intent-id=$INTENT" "--run-id=$RUN"); fi
+          timeout --signal=TERM --kill-after=5s 300s docker exec \
+            -e COS_PRODUCT_AI_ACCEPTANCE_ENABLED=1 -e COS_PRODUCT_AI_ACCEPTANCE_ENVIRONMENT=staging \
+            -e COS_PRODUCT_AI_ACCEPTANCE_ORGANIZATION="$ORG" cos-php-1 \
+            php bin/console cos:product:ai-acceptance "$OP" "--organization=$ORG" "${args[@]}"
+          REMOTE
+          python3 - <<'VERIFY'
+          import datetime,json,os
+          from pathlib import Path
+          raw=Path("tmp/product-p6/raw.json")
+          payload=json.loads(raw.read_text())
+          expected="PENDING_INDEPENDENT_REVIEW" if os.environ["OP"]=="propose" else "NATIVE_AI_READBACK_PASS"
+          if payload.get("status")!=expected or payload.get("tenant")!=os.environ["ORG"]:
+              raise SystemExit("P6 evidence blocked")
+          payload.update(revision_sha=os.environ["EXPECTED_SHA"],environment="staging",
+                         performed_at=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                         evidence_url=f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}")
+          Path("tmp/product-p6/evidence.json").write_text(json.dumps(payload,indent=2))
+          raw.unlink()
+          print(expected)
+          VERIFY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: product-p6-live-evidence
+          path: tmp/product-p6/evidence.json
+          if-no-files-found: error

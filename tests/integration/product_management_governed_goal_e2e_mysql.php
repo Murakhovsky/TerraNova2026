@@ -29,6 +29,7 @@ use App\Persistence\Capability\CanonicalAutomationIntentStore;
 use App\Application\Capability\AutomationIntentSignatureVerifier;
 use Domains\ProductManagement\Application\Service\PricingService;
 use Domains\ProductManagement\Application\Service\ProductMediaService;
+use Domains\ProductManagement\Application\Service\ProductAssemblyService;
 use Domains\ProductManagement\Infrastructure\Media\ExistingDocumentsImageReference;
 use Infrastructure\Storage\LocalFileStorage;
 use App\Persistence\ProductManagement\ProductGovernedRunOutcomeProvider;
@@ -147,7 +148,8 @@ try {
     $storage=new LocalFileStorage(sys_get_temp_dir().'/cos-governed-media-'.$token);
     $fileReference=new ExistingDocumentsImageReference($pdo,$storage);
     $media=new ProductMediaService(new MySqlProductManagementStore($pdo,new MysqlEventStore($pdo)),$fileReference);
-    $handler=new ProductGovernedOperationHandler($products,$prices,$modules,$capabilities,$media);
+    $assembly=new ProductAssemblyService(new MySqlProductManagementStore($pdo,new MysqlEventStore($pdo)),$products,$prices,$media);
+    $handler=new ProductGovernedOperationHandler($products,$prices,$modules,$capabilities,$media,$assembly);
     $planReader=new FederationPlanApprovalEvidenceReader($db);
     $planHandler=new FederationPlanApproveHandler($db,$planReader);
     $domains=new DomainModuleRegistry([new ProductManagementDomainModule(governedHandler:$handler),new FederationDomainModule($planHandler)]);
@@ -200,8 +202,8 @@ try {
     }
     $catalogSeed=$products->createProduct($org,['name'=>'Catalog fixture','sku'=>'CAT'.strtoupper($token),'type'=>'stock'],'seed-catalog',$owner,'governed-e2e');
     $suite=(string)(getenv('COS_TEST_PM_GOVERNED_SUITE')?:'catalog');
-    $assert(in_array($suite,['catalog','pricing','media_attributes'],true),'Known governed suite');
-    $pricingOnly=$suite==='pricing';$mediaOnly=$suite==='media_attributes';
+    $assert(in_array($suite,['catalog','pricing','media_attributes','ai_canary'],true),'Known governed suite');
+    $pricingOnly=$suite==='pricing';$mediaOnly=$suite==='media_attributes';$aiCanary=$suite==='ai_canary';
     $renameList=$prices->createList($org,'QA-RENAME','Before rename','retail','USD','seed-rename-list',$owner,'governed-e2e')['list_id'];
     $archiveList=$prices->createList($org,'QA-ARCHIVE','Before archive','partner','EUR','seed-archive-list',$owner,'governed-e2e')['list_id'];
     $removeList=$prices->createList($org,'QA-REMOVE','Remove entry','retail','USD','seed-remove-list',$owner,'governed-e2e')['list_id'];
@@ -248,7 +250,13 @@ try {
         $uploaded=$storage->put($fileKey,$png,'image/png');
         $pdo->prepare('INSERT INTO cos_document_files (organization_id,file_id,storage_key,mime_type,size_bytes,sha256,created_by) VALUES (?,?,?,?,?,?,?)')->execute([$org,$fileId,$uploaded->key,'image/png',$uploaded->size,$uploaded->sha256,$owner]);
         $detachId=$media->attach($org,$second['product_id'],$fileId,null,'gallery',0,'seed-media-detach',$owner,'governed-e2e')['media_id'];
+        // Fail after the first variant/price and verify rollback of all child effects.
+        $rollbackSku='ROLLBACK'.strtoupper($token);
+        $deny(fn()=>$assembly->assemble($org,['name'=>'Rollback fixture','variants'=>[['sku'=>$rollbackSku,'price'=>['currency'=>'USD','amount'=>'1']],['sku'=>$variant]],'category_ids'=>[str_repeat('f',32)]],'qa-rollback-'.$token,$owner,'governed-e2e'),'Invalid assembly rolled back');
+        $assert($products->searchProducts($org,$rollbackSku)===[],'Assembly left a partial product');
+        $assert((int)$db->fetchOne('SELECT COUNT(*) FROM pm_operation_receipts WHERE organization_id=? AND idempotency_key IN (?,?)',[$org,'qa-rollback-'.$token,ProductAssemblyService::childKey('qa-rollback-'.$token,'product')])===0,'Assembly left a partial receipt');
         $mediaOperations=[
+            ['assemble','product.assemble',['name'=>'Approved assembly','type'=>'stock','variants'=>[['sku'=>'ASM-A'.strtoupper($token),'price'=>['currency'=>'USD','amount'=>'14.50']],['sku'=>'ASM-B'.strtoupper($token),'price'=>['currency'=>'EUR','amount'=>'20']]],'category_ids'=>[$category],'attributes'=>[['code'=>'notes','value'=>'Assembled notes']],'media'=>[['file_id'=>$fileId,'sku'=>'ASM-B'.strtoupper($token),'role'=>'cover','sort_order'=>2]]]],
             ['define','attribute.define',['code'=>'qa_new','name'=>'Approved attribute','value_type'=>'enum','choices'=>['red','blue']]],
             ['bind','attribute.category.bind',['category_id'=>$category,'code'=>'qa_bind','is_required'=>false,'is_axis'=>false]],
             ['set','attribute.product.set',['product_id'=>$catalogSeed['product_id'],'expected_revision'=>$attributeRevision,'values'=>[['code'=>'notes','value'=>'Approved notes']]]],
@@ -256,7 +264,10 @@ try {
             ['detach','media.detach',['media_id'=>$detachId]],
         ];
     }
-    $selected=$mediaOnly?$mediaOperations:($pricingOnly?$pricingOperations:$catalogOperations);$expectedCount=count($selected);
+    $nonce=bin2hex(random_bytes(16));
+    $aiScenario=\App\Persistence\ProductManagement\ProductAiAcceptanceScenario::expected($nonce);
+    $selected=$aiCanary?[['assemble','product.assemble',$aiScenario['operations'][0]['parameters']]]:
+        ($mediaOnly?$mediaOperations:($pricingOnly?$pricingOperations:$catalogOperations));$expectedCount=count($selected);
     foreach($selected as [$id,$op,$input]){
         $steps[]=['id'=>$id,'capability_id'=>ProductGovernedOperationHandler::PREFIX.$op,'capability_version'=>'1.0.0',
             'input'=>['target_type'=>'product_governed_operation','target_id'=>substr(hash('sha256',$token.':'.$id),0,32),'parameters'=>$input]];
@@ -264,17 +275,26 @@ try {
     $allowed=array_column($steps,'capability_id');
     $operations=array_map(static fn(array $step):array=>['id'=>$step['id'],'capability_id'=>$step['capability_id'],'parameters'=>$step['input']['parameters']],$steps);
     $proposalService=new ProductGovernedPlanProposalService($db,$goals,$bindings);
-    $description='Prepare new assortment, price, receive, reserve, issue and release inventory';
+    $description=$aiCanary?$aiScenario['description']:'Prepare new assortment, price, receive, reserve, issue and release inventory';
     $secret=str_repeat('q',40);$signatures=new AutomationIntentSignatureVerifier($secret,'',$org);
     $intents=new CanonicalAutomationIntentStore($db,$signatures,null,$proposalService,$capabilities);
     $raw=json_encode(['kind'=>'product_management.governed_plan.v1','description'=>$description,'operations'=>$operations],JSON_THROW_ON_ERROR);
-    $ts=(string)time();$nonce=bin2hex(random_bytes(16));
+    $ts=(string)time();
     $sign=static fn(string $body):string=>hash_hmac('sha256',implode("\n",['ai',$ts,$nonce,$body]),$secret);
     $deny(fn()=>$intents->submitProduct('ai',$ts,$nonce,str_repeat('0',64),$raw),'Invalid AI signature');
-    $machine=$intents->submitProduct('ai',$ts,$nonce,$sign($raw),$raw);
+    if($aiCanary){
+        $controller=new \App\Http\Api\V1\Controller\CanonicalAutomationIntentController($intents);
+        $request=\Symfony\Component\HttpFoundation\Request::create('/api/v1/capability-intents/product-business','POST',[],[],[],[
+            'HTTP_X_COS_AUTOMATION_ORIGIN'=>'ai','HTTP_X_COS_AUTOMATION_TIMESTAMP'=>$ts,
+            'HTTP_X_COS_AUTOMATION_NONCE'=>$nonce,'HTTP_X_COS_AUTOMATION_SIGNATURE'=>$sign($raw),
+        ],$raw);
+        $response=$controller->submitProduct($request);
+        $assert($response->getStatusCode()===202,'P6 API ingress response');
+        $machine=json_decode($response->getContent(),true,64,JSON_THROW_ON_ERROR);
+    }else $machine=$intents->submitProduct('ai',$ts,$nonce,$sign($raw),$raw);
     $assert($machine['state']==='pending_review'&&$machine['execution_authority']==='none','Machine intake only');
     $assert($intents->submitProduct('ai',$ts,$nonce,$sign($raw),$raw)['intent_id']===$machine['intent_id'],'Machine nonce replay');
-    $changed=$operations;if($pricingOnly||$mediaOnly)$changed[0]['parameters']['name']='Different approved name';else $changed[0]['parameters']['quantity']='9';
+    $changed=$operations;if($pricingOnly||$mediaOnly||$aiCanary)$changed[0]['parameters']['name']='Different approved name';else $changed[0]['parameters']['quantity']='9';
     $altered=json_encode(['kind'=>'product_management.governed_plan.v1','description'=>$description,'operations'=>$changed],JSON_THROW_ON_ERROR);
     $deny(fn()=>$intents->submitProduct('ai',$ts,$nonce,$sign($altered),$altered),'Conflicting signed nonce');
     $assert((int)$db->fetchOne('SELECT COUNT(*) FROM cos_federation_plans WHERE organization_id=?',[$org])===0,'Machine intake created Plan before manager adoption');
@@ -338,13 +358,28 @@ try {
         $assert($actionService->execute($org,$actionId,'pm-governed-worker')?->status===ActionStatus::Completed,'Approved Action failed: '.$step['id']);
         $assert($actionService->execute($org,$actionId,'pm-replay-worker')===null,'Action executed twice');
         $assert($bridge->advance($actor,$runId,$planApproval)['state']==='step_completed','Step checkpoint failed: '.$step['id']);
-        if($i===0&&!$pricingOnly&&!$mediaOnly)$assert($products->balance($org,$variant,$loc)['on_hand']==='10.000000'&&$prices->get($org,$variant,'USD')['price']===null,'First effect and later step isolation');
+        if($i===0&&!$pricingOnly&&!$mediaOnly&&!$aiCanary)$assert($products->balance($org,$variant,$loc)['on_hand']==='10.000000'&&$prices->get($org,$variant,'USD')['price']===null,'First effect and later step isolation');
     }
     $assert($bridge->advance($actor,$runId,$planApproval)['state']==='completed','Workflow completion');
-    if($mediaOnly){
+    if($aiCanary){
+        $expected=$aiScenario['operations'][0]['parameters'];
+        $found=$products->searchProducts($org,$expected['variants'][0]['sku']);
+        $assert(count($found)===1,'P6 synthetic draft exists');
+        $draft=$products->getProduct($org,$found[0]['product_id']);
+        $assert($draft['status']==='draft'&&count($draft['variants'])===2,'P6 exact two native variants');
+        foreach($draft['variants'] as $v){
+            $amount=$v['sku']===$expected['variants'][0]['sku']?'12.5000':'18.7500';
+            $assert($prices->get($org,$v['variant_id'],'USD')['price']===$amount,'P6 exact USD price');
+        }
+    }elseif($mediaOnly){
         $assert(count($media->search($org,$catalogSeed['product_id']))===1&&$media->search($org,$second['product_id'])===[]&&$storage->exists($fileKey),'Media link and unlink without deleting bytes');
         $attrs=array_column($products->productAttributes($org,$catalogSeed['product_id'])['items'],'value','code');
         $assert($attrs['notes']==='Approved notes','Native typed attribute update');
+        $assembled=$products->searchProducts($org,'ASM-A'.strtoupper($token));
+        $assert(count($assembled)===1,'Assembled product exists');
+        $assembledProduct=$products->getProduct($org,$assembled[0]['product_id']);
+        $assert(count($assembledProduct['variants'])===2&&count($assembledProduct['media'])===1&&count($assembledProduct['categories'])===1,'Complete assembled draft readback');
+        $assert($prices->get($org,$assembled[0]['variant_id'],'USD')['price']==='14.5000','Assembled price readback');
     }elseif(!$pricingOnly){
     $balance=$products->balance($org,$variant,$loc);
     $assert($balance['on_hand']==='6.000000'&&$balance['reserved']==='3.000000'&&$balance['available']==='3.000000','Business stock result');
@@ -370,7 +405,36 @@ try {
     $assert((int)$db->fetchOne('SELECT COUNT(*) FROM cos_federation_runs WHERE organization_id=?',[$org])===0,'No legacy executor');
     $foreign=new TenantContext(UserId::fromString($owner),OrganizationId::fromString('foreign-'.$token),OrganizationRole::fromString('manager'),[Permission::fromString(TenantPermissions::MANAGE)]);
     $deny(fn()=>$outcome->observeRun($foreign,$runId,ProductGovernedRunOutcomeProvider::CRITERION,new DateTimeImmutable('-1 day'),new DateTimeImmutable('+1 day')),'Foreign tenant evidence');
-    if($mediaOnly){
+    if($aiCanary){
+        // CI deliberately has no external LLM. It must NEVER claim live P6.
+        $fixture=new class implements \Kernel\Llm\StructuredLlmClientInterface{
+            public function complete(\Kernel\Llm\StructuredLlmRequest $request):\Kernel\Llm\StructuredLlmResponse{
+                throw new RuntimeException('No actual LLM in CI.');
+            }
+        };
+        $acceptance=new \App\Persistence\ProductManagement\ProductAiAcceptanceService($db,$fixture,$intents,$signatures,$modules,$products,$outcome,
+            new \Domains\ProductManagement\Infrastructure\Persistence\MySqlStockReconciliationAudit($pdo));
+        $checkNotLive=static function()use($acceptance,$org,$machine,$runId,$assert):void{
+            try{$acceptance->inspect($org,$machine['intent_id'],$runId);}
+            catch(DomainException $e){$assert($e->getMessage()==='No uniquely attributable live provider usage.','Specific live provenance fence');return;}
+            throw new RuntimeException('Fixture accepted as live AI.');
+        };
+        $checkNotLive();
+        $db->insert('cos_llm_usage',['id'=>bin2hex(random_bytes(16)),'organization_id'=>$org,
+            'correlation_id'=>\App\Persistence\ProductManagement\ProductAiAcceptanceScenario::correlation($nonce),
+            'use_case'=>\App\Persistence\ProductManagement\ProductAiAcceptanceScenario::USE_CASE,
+            'provider'=>'fixture','model'=>'ci-fixture','provider_request_id'=>'test-fixture','latency_ms'=>0,'fallback_count'=>0,
+            'created_at'=>gmdate('Y-m-d H:i:s')]);
+        $checkNotLive();
+        $readback=$acceptance->inspectNativeForAudit($org,$machine['intent_id'],$runId);
+        $assert($readback['status']==='NATIVE_READBACK_ONLY'&&$readback['stock_reconciliation']==='OK'
+            &&$readback['evaluation_id']!==''&&count($readback['business_readback'])>=4,'P6 exact native readback, without live claim');
+        $native=$outcome->observeRunForAudit($org,$runId,ProductGovernedRunOutcomeProvider::CRITERION,new DateTimeImmutable('-1 hour'),new DateTimeImmutable('+1 minute'));
+        $assert($native['value']===1,'Read-only operator native re-attestation');
+        $deny(fn()=>$outcome->observeRunForAudit('foreign-'.$org,$runId,ProductGovernedRunOutcomeProvider::CRITERION,new DateTimeImmutable('-1 hour'),new DateTimeImmutable('+1 minute')),'Cross-tenant audit');
+        $db->executeStatement('UPDATE pm_base_prices SET amount=? WHERE organization_id=? AND variant_id=? AND currency=?',['13.0000',$org,$draft['variants'][0]['variant_id'],'USD']);
+        $deny(fn()=>$acceptance->inspectNativeForAudit($org,$machine['intent_id'],$runId),'Fresh audit detects price drift');
+    }elseif($mediaOnly){
         $db->executeStatement('UPDATE pm_media_refs SET sort_order=8 WHERE organization_id=? AND product_id=?',[$org,$catalogSeed['product_id']]);
         $deny(fn()=>$goals->recordEvaluation($actor,'media-tampered-'.$token,$runId),'Media metadata tampering');
         $db->executeStatement('UPDATE pm_media_refs SET sort_order=7 WHERE organization_id=? AND product_id=?',[$org,$catalogSeed['product_id']]);

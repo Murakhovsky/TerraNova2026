@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "order_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "model": {
+      "type": "string",
+      "enum": [
+        "first_touch",
+        "last_touch",
+        "linear"
+      ]
+    }
+  },
+  "required": [
+    "order_id",
+    "model"
+  ],
+  "additionalProperties": false
+}

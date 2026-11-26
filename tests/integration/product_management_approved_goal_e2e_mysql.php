@@ -39,6 +39,12 @@ use App\Persistence\Workflow\WorkflowPredecessorReceiptVerifier;
 use Doctrine\DBAL\DriverManager;
 use Domains\ProductManagement\Application\Service\ProductManagementService;
 use Domains\ProductManagement\Application\Service\CsvProductImportService;
+use Domains\ProductManagement\Application\Service\ProductAssemblyService;
+use Domains\ProductManagement\Application\Service\PricingService;
+use Domains\ProductManagement\Application\Service\ProductMediaService;
+use Domains\ProductManagement\Infrastructure\Media\ExistingDocumentsImageReference;
+use Infrastructure\Storage\LocalFileStorage;
+use App\Persistence\ProductManagement\ProductGovernedRunOutcomeProvider;
 use Domains\ProductManagement\Automation\Action\ProductImportApplyHandler;
 use Domains\ProductManagement\Bootstrap\ProductManagementDomainModule;
 use Domains\ProductManagement\Infrastructure\Persistence\MySqlProductManagementStore;
@@ -119,7 +125,13 @@ try {
     };
     $products=new ProductManagementService(
         new MySqlProductManagementStore($pdo,new MysqlEventStore($pdo)));
-    $imports=new CsvProductImportService($pdo,$products);
+    $nativeStore=new MySqlProductManagementStore($pdo,new MysqlEventStore($pdo));
+    $prices=new PricingService($pdo,new MysqlEventStore($pdo));
+    $storage=new LocalFileStorage(sys_get_temp_dir().'/cos-csv-rich-'.$token);
+    $files=new ExistingDocumentsImageReference($pdo,$storage);
+    $media=new ProductMediaService($nativeStore,$files);
+    $assembly=new ProductAssemblyService($nativeStore,$products,$prices,$media);
+    $imports=new CsvProductImportService($pdo,$products,$assembly,$files);
     $manifest=require $root.'/app/Domains/ProductManagement/module.php';
     $catalog=new ModuleCatalog([
         ModuleDefinition::fromArray($manifest),
@@ -152,7 +164,7 @@ try {
     $policyService=new ActionPolicyService($actionService,$policies,
         new MysqlPolicyEvaluationRepository($pdo),$approvalRepo,$engine,
         $transactions,null,$domains,$modules,$contexts);
-    $outcome=new ProductImportRunOutcomeProvider($db,$products,$receipts);
+    $outcome=new ProductImportRunOutcomeProvider($db,$products,$receipts,new ProductGovernedRunOutcomeProvider($db,$products,$prices,$receipts,$files));
     $goals=new FederationGoalStore($db,$bindings,new GoalPlanValidator($capabilities),
         new GoalOutcomeEvaluator(),
         new FederationTrustedOutcomeEvidenceResolver($modules,[$outcome]),$planReader);
@@ -164,8 +176,19 @@ try {
     $planner=new ProductImportPlanProposalService($db,$imports,$goals);
 
     $sku1='GOAL'.strtoupper($token).'A';$sku2='GOAL'.strtoupper($token).'B';
-    $batch=$imports->preview($org,"sku,name,type,uom,track_inventory\n".
-        $sku1.",Alpha,stock,pcs,1\n".$sku2.",Beta,stock,pcs,1\n",$owner,'ci-goal-preview-'.$token);
+    $category=$products->createCategory($org,'Rich CSV','rich-csv',null,'seed-cat',$owner,'ci-goal')['category_id'];
+    $products->defineAttribute($org,['code'=>'finish','name'=>'Finish','value_type'=>'enum','choices'=>['oak','walnut']],'seed-attr',$owner,'ci-goal');
+    $products->bindAttribute($org,$category,'finish',false,false,'seed-bind',$owner,'ci-goal');
+    $fileId='FILE-'.$token;$fileKey='documents/'.substr(hash('sha256',$org),0,20).'/DOC-'.$token.'/'.$fileId.'/tiny.png';
+    $png=base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==',true);
+    $uploaded=$storage->put($fileKey,$png,'image/png');
+    $pdo->prepare('INSERT INTO cos_document_files (organization_id,file_id,storage_key,mime_type,size_bytes,sha256,created_by) VALUES (?,?,?,?,?,?,?)')->execute([$org,$fileId,$uploaded->key,'image/png',$uploaded->size,$uploaded->sha256,$owner]);
+    $stream=fopen('php://temp','w+');
+    fputcsv($stream,\Domains\ProductManagement\Domain\ExtendedProductCsvRow::HEADER,',','"','');
+    fputcsv($stream,[$sku1,'Alpha','stock','pcs','1','USD','25.5',json_encode([$category]),json_encode([['code'=>'finish','value'=>'oak']]),json_encode([['file_id'=>$fileId,'sku'=>$sku1,'role'=>'cover']]),json_encode([['sku'=>$sku1.'-EXTRA','price'=>['currency'=>'EUR','amount'=>'31.2']]])],',','"','');
+    fputcsv($stream,[$sku2,'Beta','stock','pcs','1','','','','','',''],',','"','');
+    rewind($stream);$source=stream_get_contents($stream);fclose($stream);
+    $batch=$imports->preview($org,$source,$owner,'ci-goal-preview-'.$token);
     $assert(($batch['counts']['ready']??0)===2 && $products->searchProducts($org,$sku1)===[],
         'CSV preview created a Product or lost ready rows');
     $proposal=$planner->propose($actor,$batch['batch_id'],$batch['digest'],$batch['rows_digest']);
@@ -241,7 +264,7 @@ try {
         'approved Product CSV Action worker did not complete');
     $assert($actionService->execute($org,$actionId,'pm-second-worker')===null,
         'completed Product Action was executed a second time');
-    $assert(count($products->searchProducts($org,$sku1))===1
+    $assert(count($products->searchProducts($org,$sku1))===2
         &&count($products->searchProducts($org,$sku2))===1,
         'two native Products not independently readable');
     $assert($bridge->advance($actor,$runId,$planApproval)['state']==='step_completed',
@@ -259,12 +282,19 @@ try {
     $assert((int)$db->fetchOne('SELECT COUNT(*) FROM cos_federation_runs
         WHERE organization_id=:org',['org'=>$org])===0,
         'legacy executor duplicated canonical Run');
+    $rich=$products->searchProducts($org,$sku1);
+    $primary=array_values(array_filter($rich,static fn($v)=>$v['sku']===$sku1))[0];
+    $assert(count($products->getProduct($org,$primary['product_id'])['variants'])===2&&$prices->get($org,$primary['variant_id'],'USD')['price']==='25.5000','Extended CSV native prices and SKU readback');
+    $db->executeStatement('UPDATE pm_base_prices SET amount=? WHERE organization_id=? AND variant_id=? AND currency=?',['26.0000',$org,$primary['variant_id'],'USD']);
+    $deny(fn()=>$goals->recordEvaluation($actor,'pm-eval-rich-tampered-'.$token,$runId),'Tampered rich CSV price satisfied Goal');
+    $db->executeStatement('UPDATE pm_base_prices SET amount=? WHERE organization_id=? AND variant_id=? AND currency=?',['25.5000',$org,$primary['variant_id'],'USD']);
     // Product-owned evidence drift must not be silently counted as success.
     $db->executeStatement('UPDATE pm_import_rows SET receipt_key=:fake
         WHERE organization_id=:org AND batch_id=:batch AND row_no=1',
         ['fake'=>'FORGED-RECEIPT','org'=>$org,'batch'=>$batch['batch_id']]);
     $deny(fn()=>$goals->recordEvaluation($actor,'pm-eval-tampered-'.$token,$runId),
         'tampered Product CSV receipt satisfied Goal again');
+    $storage->delete($fileKey);
     echo "Product CSV approved Goal/Plan/Action/Outcome FULL native MySQL E2E PASS.\n";
 } finally {
     if($oldRollout===false)putenv('COS_FEDERATION_CANONICAL_ORGANIZATION');

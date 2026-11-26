@@ -3,6 +3,9 @@ parameters:
   env(COS_MARKETING_HERMES_PROFILES_JSON): '{}'
   env(COS_MARKETING_META_EXECUTION_PROFILES_JSON): '{}'
   env(COS_MARKETING_META_ACTIVATION_ENABLED): '0'
+  env(COS_MARKETING_ATTRIBUTION_SCHEDULER_ENABLED): '0'
+  env(COS_MARKETING_ATTRIBUTION_SCHEDULER_INTERVAL_MINUTES): '15'
+  env(COS_MARKETING_ATTRIBUTION_SCHEDULER_TARGETS_JSON): '[]'
   env(COS_WORKFLOW_ACTION_WORKER_ORGANIZATION): ''
   env(COS_AI_CAPABILITY_INTENT_SECRET): ''
   env(COS_CRON_CAPABILITY_INTENT_SECRET): ''
@@ -474,6 +477,8 @@ services:
 
   App\Scheduler\CosScheduleProvider:
     arguments:
+      $marketingAttributionEnabled: '%env(bool:COS_MARKETING_ATTRIBUTION_SCHEDULER_ENABLED)%'
+      $marketingAttributionIntervalMinutes: '%env(int:COS_MARKETING_ATTRIBUTION_SCHEDULER_INTERVAL_MINUTES)%'
       $salesAutomationEnabled: '%env(bool:COS_SALES_AUTOMATION_SCHEDULER_ENABLED)%'
       $growthCollectorPollingEnabled: '%env(bool:COS_GROWTH_COLLECTOR_SCHEDULER_ENABLED)%'
       $growthCollectorPollingIntervalMinutes: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_INTERVAL_MINUTES)%'
@@ -2790,6 +2795,16 @@ services:
     alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPlanningRepository
   Domains\Marketing\Application\Service\MarketingPlanningService: ~
   Domains\Marketing\Application\Service\MarketingAnalystContextService: ~
+  Domains\Marketing\Application\Service\MarketingAnalystPerformanceService: ~
+  Domains\Marketing\Application\Service\MarketingBudgetOptimizationService: ~
+  Domains\Marketing\Application\Service\MarketingAudienceOptimizationService: ~
+  Domains\Marketing\Application\Service\MarketingExperimentService: ~
+  Domains\Marketing\Application\Service\MarketingOptimizationRuleService: ~
+  Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingExperimentStore:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Marketing\Application\Contract\MarketingExperimentStore:
+    alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingExperimentStore
   Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingAnalystRunStore:
     arguments:
       $connection: '@cos.database.pdo'
@@ -2800,6 +2815,17 @@ services:
   Domains\Marketing\Bootstrap\MarketingDomainModule:
     arguments:
       $paid: '@Domains\Marketing\Automation\Action\MarketingPaidLifecycleHandler'
+      $sweep: '@Domains\Marketing\Automation\Action\MarketingAttributionSweepHandler'
+  Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesAttributionCandidateReadModel:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Sales\Application\Contract\SalesAttributionCandidateReadPort:
+    alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesAttributionCandidateReadModel
+  App\Infrastructure\Marketing\AttributionCandidateReadAdapter: ~
+  Domains\Marketing\Application\Contract\MarketingAttributionCandidateReadPort:
+    alias: App\Infrastructure\Marketing\AttributionCandidateReadAdapter
+  Domains\Marketing\Application\Service\MarketingAttributionSweepService: ~
+  Domains\Marketing\Automation\Action\MarketingAttributionSweepHandler: ~
   marketingDomainModule:
     alias: Domains\Marketing\Bootstrap\MarketingDomainModule
   Domains\Marketing\Infrastructure\Hermes\HermesAnalystConfigurationRegistry:
@@ -2839,6 +2865,13 @@ services:
       $connection: '@cos.database.pdo'
   Domains\Marketing\Application\Contract\MarketingAttributionStore:
     alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingAttributionStore
+  Domains\Marketing\Application\Contract\MarketingAttributionReceiptReadPort:
+    alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingAttributionStore
+  App\Persistence\Marketing\MarketingAttributionSweepOutcomeProvider: ~
+  App\Application\Marketing\Handler\ContinueMarketingAttributionSchedulesHandler:
+    arguments:
+      $enabled: '%env(bool:COS_MARKETING_ATTRIBUTION_SCHEDULER_ENABLED)%'
+      $targetsJson: '%env(COS_MARKETING_ATTRIBUTION_SCHEDULER_TARGETS_JSON)%'
   App\Infrastructure\Marketing\SalesAttributionReadAdapter: ~
   Domains\Marketing\Application\Contract\MarketingSalesAttributionReadPort:
     alias: App\Infrastructure\Marketing\SalesAttributionReadAdapter
@@ -2864,6 +2897,9 @@ services:
   Domains\Marketing\Application\Contract\MarketingCommerceFinancialReadPort:
     alias: App\Infrastructure\Marketing\CommerceFinancialReadAdapter
   Domains\Marketing\Application\Service\MarketingCommerceAttributionService: ~
+  Domains\Marketing\Application\Service\MarketingTouchAttributionService: ~
+  Domains\Marketing\Application\Service\MarketingEconomicsService: ~
+  Domains\Marketing\Application\Service\MarketingOptimizationMonitor: ~
   Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingMediaAnalyticsStore:
     arguments:
       $connection: '@cos.database.pdo'
@@ -3076,10 +3112,15 @@ services:
   Domains\ProductManagement\Application\Contract\ProductManagementStoreInterface:
     alias: Domains\ProductManagement\Infrastructure\Persistence\MySqlProductManagementStore
   Domains\ProductManagement\Application\Service\ProductManagementService: ~
+  Domains\ProductManagement\Application\Contract\ProductAssemblyTransactionPort:
+    alias: Domains\ProductManagement\Infrastructure\Persistence\MySqlProductManagementStore
+  Domains\ProductManagement\Application\Service\ProductAssemblyService: ~
   Domains\ProductManagement\Infrastructure\Media\ExistingDocumentsImageReference:
     arguments:
       $connection: '@cos.database.pdo'
   Domains\ProductManagement\Application\Contract\ProductMediaFileReferenceInterface:
+    alias: Domains\ProductManagement\Infrastructure\Media\ExistingDocumentsImageReference
+  Domains\ProductManagement\Application\Contract\ProductMediaBrowserPort:
     alias: Domains\ProductManagement\Infrastructure\Media\ExistingDocumentsImageReference
   Domains\ProductManagement\Application\Service\ProductMediaService: ~
   Domains\ProductManagement\Application\Service\PricingService:
@@ -3095,6 +3136,18 @@ services:
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyHttpTransportInterface:
     alias: Domains\ProductManagement\Infrastructure\Shopify\CurlShopifyHttpTransport
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyReadClient: ~
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyAccessReadiness: ~
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyChannelReadback: ~
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifySeries01NativeAudit:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyStagedImageUploader: ~
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyStagedImageUploadPort:
+    alias: Domains\ProductManagement\Infrastructure\Shopify\ShopifyStagedImageUploader
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyOutboundMedia: ~
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyDraftWritebackService:
+    arguments:
+      $connection: '@cos.database.pdo'
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyCommerceOrderSource: ~
   Domains\ProductManagement\Application\Contract\CommerceOrderFulfillmentEvidencePort:
     alias: Domains\ProductManagement\Infrastructure\Shopify\ShopifyCommerceOrderSource
@@ -3121,6 +3174,7 @@ services:
   productManagementNavigationContributor:
     alias: App\Web\Experience\Extension\Provider\ProductManagementWebProvider
 
+  App\Application\ProductManagement\ProductMediaDocumentUpload: ~
   App\Web\ProductManagement\ProductManagementPageController:
     public: true
     tags: ['controller.service_arguments']
@@ -3143,10 +3197,12 @@ services:
   Domains\ProductManagement\Automation\Action\ProductStockCountSessionApplyHandler: ~
   Domains\ProductManagement\Automation\Action\ProductGovernedOperationHandler: ~
   Domains\ProductManagement\Automation\Action\ShopifyImportApplyHandler: ~
+  Domains\ProductManagement\Automation\Action\ShopifyDraftWritebackHandler: ~
   Domains\ProductManagement\Bootstrap\ProductManagementDomainModule:
     arguments:
       $importHandler: '@Domains\ProductManagement\Automation\Action\ProductImportApplyHandler'
       $shopifyHandler: '@Domains\ProductManagement\Automation\Action\ShopifyImportApplyHandler'
+      $writebackHandler: '@Domains\ProductManagement\Automation\Action\ShopifyDraftWritebackHandler'
       $stockCountHandler: '@Domains\ProductManagement\Automation\Action\ProductStockCountApplyHandler'
       $countSessionHandler: '@Domains\ProductManagement\Automation\Action\ProductStockCountSessionApplyHandler'
       $governedHandler: '@Domains\ProductManagement\Automation\Action\ProductGovernedOperationHandler'
@@ -4313,7 +4369,9 @@ services:
         - '@App\Persistence\ProductManagement\ProductStockCountSessionRunOutcomeProvider'
         - '@App\Persistence\ProductManagement\ProductGovernedRunOutcomeProvider'
         - '@App\Persistence\ProductManagement\ShopifyImportRunOutcomeProvider'
+        - '@App\Persistence\ProductManagement\ShopifyDraftRunOutcomeProvider'
         - '@App\Persistence\Marketing\MarketingAnalystRunOutcomeProvider'
+        - '@App\Persistence\Marketing\MarketingAttributionSweepOutcomeProvider'
         - '@App\Persistence\Marketing\MarketingPaidGoalOutcomeProvider'
         - '@App\Persistence\Finance\FinancePaidSettlementOutcomeProvider'
         - '@App\Persistence\Finance\FinanceOrderRunOutcomeProvider'

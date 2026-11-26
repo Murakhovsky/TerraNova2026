@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "first_plan_id": {
+      "type": "string",
+      "pattern": "^mkpl-[a-f0-9]{24}$"
+    },
+    "first_snapshot_ref": {
+      "type": "string",
+      "pattern": "^mis-[a-f0-9]{24}$"
+    },
+    "second_plan_id": {
+      "type": "string",
+      "pattern": "^mkpl-[a-f0-9]{24}$"
+    },
+    "second_snapshot_ref": {
+      "type": "string",
+      "pattern": "^mis-[a-f0-9]{24}$"
+    }
+  },
+  "required": [
+    "first_plan_id",
+    "first_snapshot_ref",
+    "second_plan_id",
+    "second_snapshot_ref"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,188 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "model": {
+      "type": "string",
+      "const": "monitor-v1"
+    },
+    "account_id": {
+      "type": "string",
+      "pattern": "^mads-[a-f0-9]{24}$"
+    },
+    "grain": {
+      "type": "string",
+      "enum": [
+        "account",
+        "campaign",
+        "adset",
+        "ad"
+      ]
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "current_run_id": {
+      "type": "string",
+      "pattern": "^mkar-[a-f0-9]{24}$"
+    },
+    "baseline_run_id": {
+      "type": "string",
+      "pattern": "^mkar-[a-f0-9]{24}$"
+    },
+    "alert_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "insufficient_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "external_id": {
+            "type": "string",
+            "pattern": "^[0-9]{1,30}$"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "COMPARABLE",
+              "REVIEW_REQUIRED",
+              "NO_BASELINE",
+              "NO_CURRENT_OBSERVATION",
+              "INSUFFICIENT_EVIDENCE"
+            ]
+          },
+          "flags": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "CTR_DECLINE",
+                    "CPM_INCREASE",
+                    "CPC_INCREASE",
+                    "SPEND_UP_CLICKS_DOWN"
+                  ]
+                },
+                "ratio": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "code",
+                "ratio"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "current_source_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^mis-[a-f0-9]{24}$"
+          },
+          "current_source_revision": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "baseline_source_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^mis-[a-f0-9]{24}$"
+          },
+          "baseline_source_revision": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          }
+        },
+        "required": [
+          "external_id",
+          "state",
+          "flags",
+          "current_source_ref",
+          "current_source_revision",
+          "baseline_source_ref",
+          "baseline_source_revision"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "thresholds": {
+      "type": "object",
+      "properties": {
+        "minimum_impressions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "minimum_clicks_for_cpc": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ctr_decline_ratio": {
+          "type": "number"
+        },
+        "cost_increase_ratio": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "minimum_impressions",
+        "minimum_clicks_for_cpc",
+        "ctr_decline_ratio",
+        "cost_increase_ratio"
+      ],
+      "additionalProperties": false
+    },
+    "provider_mutation": {
+      "type": "boolean",
+      "const": false
+    },
+    "financial_mutation": {
+      "type": "boolean",
+      "const": false
+    },
+    "causal_attribution": {
+      "type": "boolean",
+      "const": false
+    },
+    "statistical_significance_confirmed": {
+      "type": "boolean",
+      "const": false
+    }
+  },
+  "required": [
+    "model",
+    "account_id",
+    "grain",
+    "currency",
+    "current_run_id",
+    "baseline_run_id",
+    "alert_count",
+    "insufficient_count",
+    "items",
+    "thresholds",
+    "provider_mutation",
+    "financial_mutation",
+    "causal_attribution",
+    "statistical_significance_confirmed"
+  ],
+  "additionalProperties": false
+}

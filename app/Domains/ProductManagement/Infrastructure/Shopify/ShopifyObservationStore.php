@@ -36,11 +36,12 @@ final readonly class ShopifyObservationStore
     }
 
     /** Explicit operator-only provisioning, never from a webhook payload. */
-    public function provision(string $org,string $shopDomain,string $secretRef): string
+    public function provision(string $org,string $shopDomain,string $secretRef,?string $mode=null): string
     {
         ShopifyReadClient::assertShopDomain($shopDomain);
         if ($org===''||strlen($org)>190) throw new DomainException('Unsupported connection provisioning.');
         ShopifyClientCredentials::assertSecretReference($secretRef);
+        if($mode!==null&&!in_array($mode,['shopify_authoritative','observation_only'],true))throw new DomainException('Unsupported connection ownership.');
         // Shopify webhook routing requires exactly one active connection per shop.
         // Serialize provisioning across all tenants to avoid duplicate ready
         // connections when an operator retries a timed-out cutover job.
@@ -48,20 +49,20 @@ final readonly class ShopifyObservationStore
         $held=(int)$this->query('SELECT GET_LOCK(?,0)',[$lock])->fetchColumn();
         if($held!==1) throw new DomainException('Shopify provisioning is already in progress.');
         try {
-            $ready=$this->query('SELECT organization_id,connection_id,secret_ref FROM pm_external_connections
+            $ready=$this->query('SELECT organization_id,connection_id,secret_ref,mode FROM pm_external_connections
                 WHERE provider=? AND shop_domain=? AND status=? LIMIT 2',
                 ['shopify',$shopDomain,'ready'])->fetchAll(PDO::FETCH_ASSOC);
             if(count($ready)>1) throw new DomainException('Shopify shop has ambiguous existing ready connections.');
             if(count($ready)===1) {
                 if((string)$ready[0]['organization_id']!==$org
-                    ||(string)$ready[0]['secret_ref']!==$secretRef) {
+                    ||(string)$ready[0]['secret_ref']!==$secretRef||($mode!==null&&$ready[0]['mode']!==$mode)) {
                     throw new DomainException('Shopify shop already belongs to another owner or credential reference.');
                 }
                 return (string)$ready[0]['connection_id'];
             }
             $id=bin2hex(random_bytes(16));
-            $this->query('INSERT INTO pm_external_connections (organization_id,connection_id,provider,shop_domain,secret_ref,status) VALUES (?,?,?,?,?,?)',
-                [$org,$id,'shopify',$shopDomain,$secretRef,'ready']);
+            $this->query('INSERT INTO pm_external_connections (organization_id,connection_id,provider,shop_domain,secret_ref,status,mode) VALUES (?,?,?,?,?,?,?)',
+                [$org,$id,'shopify',$shopDomain,$secretRef,'ready',$mode??'shopify_authoritative']);
             return $id;
         } finally {
             $this->query('SELECT RELEASE_LOCK(?)',[$lock]);
@@ -78,7 +79,8 @@ final readonly class ShopifyObservationStore
 
     public function map(string $org,string $conn,string $type,string $gid,string $canonical): void
     {
-        if (!in_array($type,['product','variant'],true)||!preg_match('#^gid://shopify/(?:Product|ProductVariant)/[0-9]+$#D',$gid)
+        $kind=match($type){'product'=>'Product','variant'=>'ProductVariant','media'=>'MediaImage',default=>null};
+        if ($kind===null||!preg_match('#^gid://shopify/'.$kind.'/[0-9]+$#D',$gid)
             ||!preg_match('/^[a-f0-9]{32}$/D',$canonical)) throw new DomainException('Invalid external mapping.');
         $this->query('INSERT INTO pm_external_mappings (organization_id,connection_id,entity_type,external_gid,canonical_id) VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE canonical_id=canonical_id',
             [$org,$conn,$type,$gid,$canonical]);
@@ -482,6 +484,17 @@ SQL;
         $row=$this->query("SELECT state,resource_gid FROM pm_webhook_inbox WHERE organization_id=? AND connection_id=? AND delivery_id=? AND topic LIKE 'orders/%'",[$org,$conn,$delivery])->fetch(PDO::FETCH_ASSOC);
         if($row===false||$row['resource_gid']!==$externalId||!in_array($row['state'],['pending_reconciliation','sales_order_observed'],true))throw new DomainException('Verified order delivery unavailable.');
     }
+    /** Independently query a redacted, authenticated delivery receipt. */
+    public function orderDeliveryEvidence(string $org,string $conn,string $delivery,string $externalId):array
+    {
+        $this->connection($org,$conn);
+        $this->assertOrderDelivery($org,$conn,$delivery,$externalId);
+        $row=$this->query('SELECT topic,payload_sha256,state,received_at FROM pm_webhook_inbox WHERE organization_id=? AND connection_id=? AND delivery_id=? AND resource_gid=?',
+            [$org,$conn,$delivery,$externalId])->fetch(PDO::FETCH_ASSOC);
+        if(!is_array($row)||!preg_match('/^[a-f0-9]{64}$/D',$row['payload_sha256']))throw new DomainException('Missing signed webhook digest.');
+        return $row+['delivery_id'=>$delivery,'external_order_id'=>$externalId,'connection_id'=>$conn];
+    }
+
     /** Only acknowledges Sales observation, not payment, inventory, or lifecycle completion. */
     public function acknowledgeOrderDelivery(string $org,string $conn,string $delivery,string $externalId):void
     {

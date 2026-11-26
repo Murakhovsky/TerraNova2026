@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "control_plan_id": {
+      "type": "string",
+      "pattern": "^mkpl-[a-f0-9]{24}$"
+    },
+    "candidate_plan_id": {
+      "type": "string",
+      "pattern": "^mkpl-[a-f0-9]{24}$"
+    },
+    "factor": {
+      "type": "string",
+      "enum": [
+        "HEADLINE",
+        "PRIMARY_TEXT"
+      ]
+    }
+  },
+  "required": [
+    "control_plan_id",
+    "candidate_plan_id",
+    "factor"
+  ],
+  "additionalProperties": false
+}

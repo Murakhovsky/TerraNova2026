@@ -4,6 +4,7 @@ namespace Domains\Marketing\Bootstrap;
 
 use Domains\Marketing\Automation\Action\MarketingAnalystRunHandler;
 use Domains\Marketing\Automation\Action\MarketingPaidLifecycleHandler;
+use Domains\Marketing\Automation\Action\MarketingAttributionSweepHandler;
 use Kernel\Module\DomainModuleInterface;
 use Kernel\Module\Contract\ActionOwningModuleInterface;
 use Kernel\Module\Contract\PolicyProvidingModuleInterface;
@@ -14,10 +15,10 @@ use Kernel\Policy\PolicyDecision;
 final readonly class MarketingDomainModule implements DomainModuleInterface,ActionOwningModuleInterface,
     PolicyProvidingModuleInterface,BootstrapPolicyProvidingModuleInterface
 {
-    public function __construct(private MarketingAnalystRunHandler $analyst,private ?MarketingPaidLifecycleHandler $paid=null){}
+    public function __construct(private MarketingAnalystRunHandler $analyst,private ?MarketingPaidLifecycleHandler $paid=null,private ?MarketingAttributionSweepHandler $sweep=null){}
     public function name():string{return 'marketing';}
-    public function actionTypes():array{return [MarketingAnalystRunHandler::TYPE,...($this->paid===null?[]:MarketingPaidLifecycleHandler::TYPES)];}
-    public function actionHandlers():array{return $this->paid===null?[$this->analyst]:[$this->analyst,$this->paid];}
+    public function actionTypes():array{return [MarketingAnalystRunHandler::TYPE,...($this->paid===null?[]:MarketingPaidLifecycleHandler::TYPES),...($this->sweep===null?[]:[MarketingAttributionSweepHandler::TYPE])];}
+    public function actionHandlers():array{return [$this->analyst,...($this->paid===null?[]:[$this->paid]),...($this->sweep===null?[]:[$this->sweep])];}
     public function policies(string $organizationId):array{
         $policies=[new ActionPolicy(substr(hash('sha256',$organizationId.':marketing-analyst-approved-v1'),0,32),
             $organizationId,MarketingAnalystRunHandler::TYPE,[],PolicyDecision::ApprovalRequired,10,
@@ -26,6 +27,9 @@ final readonly class MarketingDomainModule implements DomainModuleInterface,Acti
             $policies[]=new ActionPolicy(substr(hash('sha256',$organizationId.':'.$type.':v1'),0,32),$organizationId,$type,[],PolicyDecision::ApprovalRequired,10,
                 'Independent canonical paid Marketing Action approval required.');
         }
+        if($this->sweep!==null)$policies[]=new ActionPolicy(substr(hash('sha256',$organizationId.':'.MarketingAttributionSweepHandler::TYPE.':v1'),0,32),
+            $organizationId,MarketingAttributionSweepHandler::TYPE,[],PolicyDecision::ApprovalRequired,10,
+            'Independent canonical attribution sweep Action approval required.');
         return $policies;
     }
     public function bootstrapPolicies():array{return $this->policies('default');}

@@ -23,8 +23,12 @@ const go = async path => {
   check(await page.locator('.cos-page__stack').count()>0,'Workspace shell missing: '+actual+' title='+await page.title()+' body='+(await page.locator('body').innerText()).slice(0,600));
 };
 const submit = async (form, path) => {
+  // All successful mutations use POST/303/GET, frequently returning to the
+  // exact same URL (notice=updated). Register the navigation waiter before
+  // click so old DOM and old URL cannot satisfy a subsequent assertion.
   const [r] = await Promise.all([
     page.waitForResponse(r => new URL(r.url()).pathname===path && r.request().method()==='POST'),
+    page.waitForNavigation({waitUntil:'domcontentloaded'}),
     form.locator('button[type="submit"], button:not([type])').last().click()
   ]);
   check(r.status()===303,'Expected 303 for '+path+', got '+r.status()+' '+(await r.text().catch(()=>'' )).slice(0,500));
@@ -39,13 +43,13 @@ try {
   const inventoryResponse=await context.request.get(url('/api/v1/capabilities'));
   check(inventoryResponse.ok(),'Authenticated Capability Library unavailable: '+inventoryResponse.status());
   const inventory=(await inventoryResponse.json()).capabilities.filter(c=>c.owner_domain==='product_management');
-  check(inventory.length===94,'Product Capability Library must expose 94 typed capabilities');
+  check(inventory.length===98,'Product Capability Library must expose 98 typed capabilities');
   const counts={};
   for(const c of inventory){
     counts[c.status]=(counts[c.status]||0)+1;
     check(c.contract&&c.status!=='unavailable','Unavailable Product binding: '+c.id+' '+c.reason);
   }
-  check(counts.read_only===31&&counts.direct_human===30&&counts.workflow_approval_required===33,'Unexpected Product execution modes: '+JSON.stringify(counts));
+  check(counts.read_only===31&&counts.direct_human===31&&counts.workflow_approval_required===36,'Unexpected Product execution modes: '+JSON.stringify(counts));
   const csrf=await page.locator('form[action="/product-management/products"] [name=csrf_token]').getAttribute('value');
   const headers={'X-CSRF-Token':csrf,'X-Idempotency-Key':'pm-browser-'+tag};
   const summary=await context.request.post(url('/api/v1/capabilities/product_management.analytics.summary.get/invoke'),{headers,data:{currency:'UAH'}});
@@ -73,6 +77,29 @@ try {
     check(/^[a-f0-9]{32}$/.test(variant||''),'Product variant missing');
     products.push({productId,variant,sku:'PM'+tag+suffix});
   }
+  const mediaProduct=products[0];
+  const mediaPath='/product-management/products/'+mediaProduct.productId;
+  await go(mediaPath);
+  const upload=page.locator('form[action="'+mediaPath+'/media/upload"]');
+  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==','base64');
+  await upload.locator('[name=image]').setInputFiles({name:'QA-'+tag+'.png',mimeType:'image/png',buffer:png});
+  await submit(upload,mediaPath+'/media/upload');
+  await page.waitForURL(u=>u.searchParams.get('notice')==='image_uploaded');
+  const imageId=new URL(page.url()).searchParams.get('media_file');
+  check(!!imageId,'Uploaded Documents file not selected');
+  const preview=await context.request.get(url('/product-management/media/images/'+imageId));
+  check(preview.ok()&&preview.headers()['content-type']==='image/png'&&(await preview.body()).equals(png),'Verified image preview mismatch');
+  const attach=page.locator('form[action="'+mediaPath+'/media"]');
+  await attach.locator('[name=role]').selectOption('cover');
+  await submit(attach,mediaPath+'/media');
+  await page.waitForURL(u=>u.searchParams.get('notice')==='updated');
+  const detach=page.locator('form[action^="'+mediaPath+'/media/"][action$="/detach"]');
+  check(await detach.count()===1,'Attached image link missing');
+  await page.screenshot({path:dir+'/media-desktop.png',fullPage:true});
+  await submit(detach,new URL(await detach.getAttribute('action'),base).pathname);
+  await page.waitForURL(u=>u.searchParams.get('notice')==='updated');
+  check(await detach.count()===0,'Detached image still linked');
+  check((await context.request.get(url('/product-management/media/images/'+imageId))).ok(),'Detach deleted Documents image');
   await go('/product-management/categories');
   const cat=page.locator('form[action="/product-management/categories"]');
   const slug='qa-'+tag.toLowerCase();
@@ -89,11 +116,41 @@ try {
   await definition.locator('[name=choices]').fill('oak,walnut');
   await submit(definition,'/product-management/attributes');
   await page.waitForURL(u=>u.searchParams.get('notice')==='updated');
+  const lifecycleForm=(operation)=>page.locator('form[action="/product-management/attributes"]').filter({has:page.locator('[name=operation][value="'+operation+'"]')}).filter({has:page.locator('[name=code][value="'+attrCode+'"]')});
+  const rename=lifecycleForm('rename');
+  await rename.locator('[name=name]').fill('Renamed finish '+tag);
+  await submit(rename,'/product-management/attributes');
+  await page.waitForURL(u=>u.searchParams.get('notice')==='updated');
+  const archive=lifecycleForm('archive');
+  await archive.locator('[name=confirm_lifecycle]').check();
+  await submit(archive,'/product-management/attributes');
+  await go('/product-management/attributes?dictionary_status=archived');
+  const restore=lifecycleForm('restore');
+  check(await restore.count()===1,'Archived attribute not independently visible');
+  await restore.locator('[name=confirm_lifecycle]').check();
+  await submit(restore,'/product-management/attributes');
+  await go('/product-management/attributes');
+  check(await lifecycleForm('rename').locator('[name=name]').inputValue()==='Renamed finish '+tag,'Restored definition readback missing');
   const catSelect=page.locator('select[name=category]');
   const catId=await catSelect.locator('option').filter({hasText:'QA Category '+tag}).getAttribute('value');
   check(/^[a-f0-9]{32}$/.test(catId||''),'Attribute category missing');
   await go('/product-management/attributes?category='+catId);
   const binding=page.locator('form[action="/product-management/attributes"]').filter({has:page.locator('[name=action][value=bind]')});
+  await binding.locator('[name=code]').fill(attrCode);
+  await binding.locator('[name=is_axis]').check();
+  await submit(binding,'/product-management/attributes');
+  await page.waitForURL(u=>u.searchParams.get('notice')==='updated');
+  const changeBinding=lifecycleForm('binding.update');
+  await changeBinding.locator('[name=is_required]').check();
+  await changeBinding.locator('[name=confirm_lifecycle]').check();
+  await submit(changeBinding,'/product-management/attributes');
+  await page.waitForURL(u=>u.searchParams.get('notice')==='updated');
+  check(await lifecycleForm('binding.update').locator('[name=expected_is_required]').getAttribute('value')==='1','Binding update readback missing');
+  const removeBinding=lifecycleForm('binding.remove');
+  await removeBinding.locator('[name=confirm_lifecycle]').check();
+  await submit(removeBinding,'/product-management/attributes');
+  await page.waitForURL(u=>u.searchParams.get('notice')==='updated');
+  check(await lifecycleForm('binding.update').count()===0,'Removed binding still visible');
   await binding.locator('[name=code]').fill(attrCode);
   await binding.locator('[name=is_axis]').check();
   await submit(binding,'/product-management/attributes');
@@ -109,12 +166,16 @@ try {
   const attrPath=productPath+'/attributes';
   await go(attrPath);
   const patch=page.locator('form[action="'+attrPath+'"]').filter({has:page.locator('[name=action][value=set]')});
-  await patch.locator('[name=values]').fill(JSON.stringify([{code:attrCode,value:'oak'}]));
+  check(await patch.locator('textarea[name=values]').count()===0,'Raw JSON editor must not be exposed for product attributes');
+  await patch.locator('[name="attribute_mode['+attrCode+']"]').selectOption('set');
+  await patch.locator('[name="attribute_value['+attrCode+']"]').selectOption('oak');
   await submit(patch,attrPath);
   await page.waitForURL(u=>u.searchParams.get('notice')==='updated');
   const matrix=page.locator('form[action="'+attrPath+'"]').filter({has:page.locator('[name=action][value=preview]')});
   await matrix.locator('[name=sku_prefix]').fill('QAM'+tag);
-  await matrix.locator('[name=axes]').fill(JSON.stringify([{code:attrCode,choices:['oak','walnut']}]));
+  check(await matrix.locator('textarea[name=axes]').count()===0,'Matrix preview must not require JSON');
+  await matrix.locator('[name="axis_choices['+attrCode+'][]"][value="oak"]').check();
+  await matrix.locator('[name="axis_choices['+attrCode+'][]"][value="walnut"]').check();
   const originalVariants=await page.locator('#matrix-existing-variants tbody tr').allTextContents();
   const [previewResponse]=await Promise.all([
     page.waitForResponse(r=>new URL(r.url()).pathname===attrPath && r.request().method()==='POST'),
@@ -133,8 +194,20 @@ try {
   const createdRows=await page.locator('#matrix-existing-variants tbody tr').allTextContents();
   check(createdRows.filter(row=>row.includes('QAM'+tag)).length===2,'Expected two persisted matrix SKUs');
   await page.screenshot({path:dir+'/attributes-desktop.png',fullPage:true});
-  await go('/product-management/attributes?filter_code='+attrCode+'&filter_value='+encodeURIComponent('"oak"'));
-  check(await page.locator('input[name="selected[]"][value="'+attrProduct.productId+'"]').count()===1,'Typed filter result missing');
+  await go('/product-management/attributes?filter_code='+attrCode);
+  const filter=page.locator('select[name=filter_value]');
+  await filter.selectOption('oak');
+  await Promise.all([page.waitForURL(u=>u.searchParams.get('filter_value')==='oak'),filter.locator('xpath=ancestor::form').locator('button[type=submit]').click()]);
+  const bulk=page.locator('form[action="/product-management/attributes"]').filter({has:page.locator('[name=action][value=bulk]')});
+  const selected=bulk.locator('input[name="selected[]"][value="'+attrProduct.productId+'"]');
+  check(await selected.count()===1,'Typed filter result missing');
+  await selected.check();
+  await bulk.locator('[name="attribute_mode['+attrCode+']"]').selectOption('set');
+  await bulk.locator('[name="attribute_value['+attrCode+']"]').selectOption('walnut');
+  await bulk.locator('[name=confirm_bulk]').check();
+  await submit(bulk,'/product-management/attributes');
+  await go('/product-management/attributes?filter_code='+attrCode+'&filter_value=walnut');
+  check(await page.locator('input[name="selected[]"][value="'+attrProduct.productId+'"]').count()===1,'Bulk edit readback missing');
   await go('/product-management/stock');
   const locForm=page.locator('form[action="/product-management/stock/locations"]');
   await locForm.locator('[name=code]').fill('WH'+tag);

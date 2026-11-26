@@ -16,7 +16,7 @@
         "sources": {
           "type": "array",
           "minItems": 2,
-          "maxItems": 6,
+          "maxItems": 8,
           "items": {
             "type": "object",
             "properties": {
@@ -28,7 +28,9 @@
                   "adset",
                   "audience",
                   "product",
-                  "variant"
+                  "variant",
+                  "paid_plan",
+                  "media_snapshot"
                 ]
               },
               "record_id": {
@@ -74,7 +76,69 @@
               "properties": {
                 "status": {
                   "type": "string",
-                  "const": "NO_VERIFIED_CAMPAIGN_BINDING"
+                  "enum": [
+                    "NO_VERIFIED_CAMPAIGN_BINDING",
+                    "NATIVE_BOUND_PROVIDER_REPORT"
+                  ]
+                },
+                "currency": {
+                  "type": "string"
+                },
+                "window_start": {
+                  "type": "string"
+                },
+                "window_end": {
+                  "type": "string"
+                },
+                "source_status": {
+                  "type": "string"
+                },
+                "reported_spend_decimal": {
+                  "type": "string"
+                },
+                "planned_cap_minor": {
+                  "type": "integer"
+                },
+                "impressions": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "clicks": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "ctr_percent": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "cpc": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "cpm": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "recognized_revenue": {
+                  "type": "null"
+                },
+                "causal_attribution": {
+                  "type": "boolean",
+                  "const": false
+                },
+                "payment_confirmed": {
+                  "type": "boolean",
+                  "const": false
                 }
               },
               "required": [

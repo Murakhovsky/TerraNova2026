@@ -5,6 +5,7 @@ namespace Domains\ProductManagement\Automation\Action;
 use Domains\ProductManagement\Application\Service\ProductManagementService;
 use Domains\ProductManagement\Application\Service\PricingService;
 use DomainException;
+use Domains\ProductManagement\Application\Service\ProductAssemblyService;
 use Domains\ProductManagement\Application\Service\ProductMediaService;
 use Kernel\Action\Action;
 use Kernel\Action\ActionStatus;
@@ -22,6 +23,7 @@ final readonly class ProductGovernedOperationHandler implements IdempotentExtern
     public const PREFIX='product_management.governed.';
     public const OPERATIONS=[
         'product.create'=>'product.create',
+        'product.assemble'=>'product.assemble',
         'variant.matrix.create'=>'variant.matrix.create',
         'attribute.product.bulk_set'=>'attribute.product.bulk_set',
         'price.base.set'=>'price.set',
@@ -52,7 +54,7 @@ final readonly class ProductGovernedOperationHandler implements IdempotentExtern
         'attribute.product.set'=>'attribute.product.set',
     ];
     public function __construct(private ProductManagementService $products,private PricingService $prices,
-        private ActiveModuleResolver $modules,private CanonicalCapabilityCatalog $catalog,private ProductMediaService $media){}
+        private ActiveModuleResolver $modules,private CanonicalCapabilityCatalog $catalog,private ProductMediaService $media,private ProductAssemblyService $assembly){}
     public static function types():array{return array_map(static fn($op)=>self::PREFIX.$op,array_keys(self::OPERATIONS));}
     public function supports(string $actionType):bool{return in_array($actionType,self::types(),true);}
     public function idempotencyKey(Action $action):string{return ExternalActionIdempotency::resolve($action);}
@@ -73,6 +75,7 @@ final readonly class ProductGovernedOperationHandler implements IdempotentExtern
             $org=$action->organizationId;$key=$action->idempotencyKey;$actor=$action->sourceId;$trace=$action->correlationId;
             $result=match($op){
                 'product.create'=>$this->products->createProduct($org,$p,$key,$actor,$trace),
+                'product.assemble'=>$this->assembly->assemble($org,$p,$key,$actor,$trace),
                 'variant.matrix.create'=>$this->products->createMatrix($org,$p['product_id'],$p['axes'],$p['sku_prefix'],$p['expected_revision'],$p['uom']??'pcs',$p['track_inventory']??true,$key,$actor,$trace),
                 'attribute.product.bulk_set'=>$this->products->bulkSetAttributes($org,$p['products'],$p['values'],$key,$actor,$trace),
                 'price.base.set'=>$this->prices->set($org,$p['variant_id'],$p['currency'],$p['amount'],$key,$actor,$trace,$p['expected_revision']),

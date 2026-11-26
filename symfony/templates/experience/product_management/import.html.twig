@@ -16,7 +16,9 @@
     {% if section == 'preview' %}
         <section class="cos-panel">
             <h2>Підготувати Preview</h2>
-            <p>Точний заголовок CSV: <code>sku,name,type,uom,track_inventory</code>. До 12 000 символів через Gateway. Без формул, дублікатів і неправильних SKU.</p>
+            <p>Базовий заголовок CSV: <code>sku,name,type,uom,track_inventory</code>. Розширений формат (один рядок = один Product):</p>
+            <code>sku,name,type,uom,track_inventory,price_currency,price_amount,category_ids_json,attributes_json,media_json,variants_json</code>
+            <p>Необов'язкові JSON-колонки містять масиви: category IDs, атрибути (code/value), media (file_id/sku/role/sort_order), додаткові SKU (sku/uom/track_inventory/price). JSON у CSV екранується подвійними лапками. Максимум 10 SKU на товар. Preview не виконує записів.</p>
             <form method="post" action="/product-management/import/preview" class="cos-page__stack">
                 <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                 <input type="hidden" name="idempotency_key" value="{{ mutationKey }}">
@@ -45,7 +47,9 @@
                 <thead><tr><th>№</th><th>SKU</th><th>Статус</th><th>Причина</th><th>Product ID</th></tr></thead>
                 <tbody>{% for row in batch.rows|slice(0,100) %}
                     <tr><td>{{ row.row_no }}</td><td>{{ row.sku }}</td><td>{{ row.status }}</td>
-                    <td>{{ row.error_code|default('—') }}</td><td>{{ row.product_id|default('—') }}</td></tr>
+                    <td>{{ row.error_code|default('—') }}</td><td>{{ row.product_id|default('—') }}
+                        {% if row.assembly is defined %}<details><summary>Погоджуваний склад товару</summary><pre>{{ row.assembly|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre></details>{% endif %}
+                    </td></tr>
                 {% else %}<tr><td colspan="5">Рядків немає.</td></tr>{% endfor %}</tbody>
             </table></div>
         </section>

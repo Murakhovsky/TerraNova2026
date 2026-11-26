@@ -31,7 +31,8 @@ final readonly class MarketingAnalystReviewService
             $actor->userId()->value(),MarketingPlanningPolicy::key($key),$decision,function(array $run)use($actor):void{
                 $pins=array_column($run['source_pins'],null,'alias');
                 $fresh=$this->contexts->build($actor,$pins['campaign']['record_id'],$pins['campaign']['revision'],
-                    $pins['creative']['record_id'],$pins['creative']['revision'],$pins['adset']['record_id']??null,$pins['adset']['revision']??null);
+                    $pins['creative']['record_id'],$pins['creative']['revision'],$pins['adset']['record_id']??null,$pins['adset']['revision']??null,
+                    $pins['paid_plan']['record_id']??null,$pins['media_snapshot']['record_id']??null);
                 if(!hash_equals($run['context_hash'],$fresh['context_hash']))throw new DomainException('Advice context is stale.');
             }));
     }

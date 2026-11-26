@@ -20,7 +20,7 @@ generated: true
 | --- | ---: | --- |
 | `both` | 48 | Capability присутня і в runtime catalogue, і в manifest. |
 | `runtime-only` | 3 | Runtime може перевіряти capability, але manifest її не декларує. |
-| `manifest-only` | 400 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
+| `manifest-only` | 414 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
 
 ## Каталог
 
@@ -199,13 +199,17 @@ generated: true
 | `marketing` | `marketing.analyst.run.review` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
 | `marketing` | `marketing.analyst.runtime.status` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
 | `marketing` | `marketing.analytics.commerce.report` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
+| `marketing` | `marketing.analytics.economics.report` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
 | `marketing` | `marketing.analytics.media.report` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
 | `marketing` | `marketing.analytics.media.sync` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
+| `marketing` | `marketing.analytics.monitor.get` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
 | `marketing` | `marketing.analytics.report.get` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
 | `marketing` | `marketing.attribution.capture` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
 | `marketing` | `marketing.attribution.commerce.capture` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
 | `marketing` | `marketing.attribution.commerce.inspect` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
 | `marketing` | `marketing.attribution.discover` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
+| `marketing` | `marketing.attribution.journey.get` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
+| `marketing` | `marketing.attribution.sweep` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
 | `marketing` | `marketing.attribution.tracking.get` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
 | `marketing` | `marketing.audience.list` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
 | `marketing` | `marketing.audience.save` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
@@ -217,6 +221,12 @@ generated: true
 | `marketing` | `marketing.creative.create` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
 | `marketing` | `marketing.creative.list` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
 | `marketing` | `marketing.creative.revise` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
+| `marketing` | `marketing.experiment.get` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
+| `marketing` | `marketing.experiment.register` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
+| `marketing` | `marketing.optimization.audience.preview` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
+| `marketing` | `marketing.optimization.budget.preview` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
+| `marketing` | `marketing.optimization.creative.preview` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
+| `marketing` | `marketing.optimization.rule.evaluate` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
 | `marketing` | `marketing.paid.account.list` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
 | `marketing` | `marketing.paid.change.request` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
 | `marketing` | `marketing.paid.funding.check` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
@@ -241,6 +251,7 @@ generated: true
 | `product_management` | `product_management.attribute.category.bind` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.attribute.category.get` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.attribute.define` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
+| `product_management` | `product_management.attribute.lifecycle.change` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.attribute.product.bulk_set` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.attribute.product.filter` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.attribute.product.get` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
@@ -266,6 +277,7 @@ generated: true
 | `product_management` | `product_management.governed.price.list.tier.set` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.governed.price.list.update` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.governed.product.archive` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
+| `product_management` | `product_management.governed.product.assemble` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.governed.product.create` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.governed.product.update` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.governed.stock.issue` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
@@ -306,6 +318,8 @@ generated: true
 | `product_management` | `product_management.product.get` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.product.search` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.product.update` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
+| `product_management` | `product_management.shopify.channel.publish` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
+| `product_management` | `product_management.shopify.draft.writeback` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.shopify.import.apply` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.stock.balance.get` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.stock.count.apply` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |

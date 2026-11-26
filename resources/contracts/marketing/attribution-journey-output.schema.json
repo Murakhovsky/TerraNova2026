@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "order_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "model": {
+      "type": "string",
+      "enum": [
+        "first_touch",
+        "last_touch",
+        "linear"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "UNAVAILABLE",
+        "CONFLICT",
+        "MODELED_PROVIDER_HISTORY"
+      ]
+    },
+    "history_hash": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "currency": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "USD",
+        "EUR",
+        "UAH",
+        null
+      ]
+    },
+    "placed_total_minor": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "touch_count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "allocations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "campaign_id": {
+            "type": "string",
+            "pattern": "^mkt-[a-f0-9]{24}$"
+          },
+          "plan_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^mkpl-[a-f0-9]{24}$"
+          },
+          "source": {
+            "type": "string"
+          },
+          "medium": {
+            "type": "string"
+          },
+          "minor": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "touches": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "campaign_id",
+          "plan_id",
+          "source",
+          "medium",
+          "minor",
+          "touches"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "unassigned_minor": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "recognized_revenue": {
+      "type": "null"
+    },
+    "causal_attribution": {
+      "type": "boolean",
+      "const": false
+    }
+  },
+  "required": [
+    "order_id",
+    "model",
+    "status",
+    "history_hash",
+    "currency",
+    "placed_total_minor",
+    "touch_count",
+    "allocations",
+    "unassigned_minor",
+    "recognized_revenue",
+    "causal_attribution"
+  ],
+  "additionalProperties": false
+}

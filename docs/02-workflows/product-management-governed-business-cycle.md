@@ -13,7 +13,7 @@ process_id: product_management.governed-business-cycle
 
 ## Бізнес-мета
 
-- Eight approved native operations produce independently verified effects
+- Nine approved native operations produce independently verified effects, including atomic draft assembly
 - No unapproved Action or second executor
 - Ledger and current native results are verified
 
@@ -44,3 +44,5 @@ Signed AI or CRON intent is reviewed and adopted into an approved Plan.
 ## Карта коду
 
 - `app/Domains/ProductManagement/Automation/Action/ProductGovernedOperationHandler.php`
+
+Assembly is one bounded Product-owned transaction. Generated Product and Variant IDs never require generic Platform Workflow substitution. The other steps remain individually atomic.

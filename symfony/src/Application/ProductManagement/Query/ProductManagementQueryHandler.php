@@ -34,7 +34,7 @@ final readonly class ProductManagementQueryHandler implements QueryHandlerInterf
             'analytics.movement.search' => $this->analytics->movement($org,(string)$in['from'],(string)$in['to'],(int)($in['limit']??30),(int)($in['offset']??0)),
             'analytics.quality.search' => $this->analytics->quality($org,(string)$in['currency'],(string)$in['kind'],(int)($in['limit']??30),(int)($in['offset']??0)),
             'analytics.reconciliation.get' => $this->analytics->reconciliation($org,(int)($in['limit']??100)),
-            'attribute.search' => ['items'=>$this->products->attributes($org,(int)($in['limit']??30),(int)($in['offset']??0)),'limit'=>(int)($in['limit']??30),'offset'=>(int)($in['offset']??0)],
+            'attribute.search' => ['items'=>$this->products->attributes($org,(int)($in['limit']??30),(int)($in['offset']??0),(string)($in['status']??'active')),'limit'=>(int)($in['limit']??30),'offset'=>(int)($in['offset']??0)],
             'attribute.category.get' => ['items'=>$this->products->categoryAttributes($org,(string)$in['category_id'])],
             'attribute.product.get' => $this->products->productAttributes($org,(string)$in['product_id']),
             'attribute.product.filter' => ['items'=>$this->products->filterAttributes($org,(string)$in['code'],$in['value'],(int)($in['limit']??30),(int)($in['offset']??0)),'limit'=>(int)($in['limit']??30),'offset'=>(int)($in['offset']??0)],
