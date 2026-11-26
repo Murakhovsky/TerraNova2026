@@ -230,3 +230,108 @@ Existing `sales.reports.data.read` accepts report_id `orders`: a bounded placed-
 ## O6 — Керовані операції AI
 
 Seven `sales.governed.order.*` contracts wrap native create, confirm, allocate, release, fulfill, cancel and return. Human Gateway operations stay unchanged; AI must use the canonical `action:` binding, pinned input, Workflow worker admission, independent human approval, explicit Kernel policy and the same native Sales services. The existing Sales approval authority rechecks persisted Action/Policy/Approval and current order/deal/team scope in the mutation transaction. No separate permission registry, external effect or Finance write. Shopify integration administration remains human-authorized until separately governed job admission is accepted. No production rollout or D3–D5 claim.
+
+
+## S6/R1 — контрольовані команди Sales
+
+Додано 28 типізованих Action bindings для наявних нативних команд Lead, Deal, Team, Activity, Follow-up, Offer, Negotiation, Property Match, CRM Inbox та Order Source Sync. Сім раніше реалізованих Order Lifecycle Actions не змінюються. Немає другого бізнесового executor: `SalesGovernedBusinessHandler` використовує саме ті адаптери та транзакційну SalesDirectInvocationPolicy, що й наявний людський Gateway, без підроблення human_api origin. Схеми окремо фіксують ціль та нативний payload. Канонічний Workflow claim, tenant rollout fence, live identity, незалежне human Approval і live Sales grant перевіряються до мутації. Для початкового пакета необхідний окремий активний manager/admin з дозволом ApprovalAnyTeam; звичайний team approver не отримує нових прав. Автоматичні повтори заборонені; CRM та commerce sync залишаються локальними processing/queue/observation операціями, не підтвердженням зовнішнього ефекту.
+
+Пакет є implementation candidate. Unit перевірка перевіряє coverage, schemas, target pinning, policies та незмінність нативних контрактів. Незалежні реальні MySQL Goal-to-Outcome та worker/approval denial tests, нативний readback кожної групи, approval-required pipeline edges і deployed tenant evidence залишаються обов'язковими перед S6/S7 acceptance. Наявність Action binding не є доказом готовності. D3–D5 залишаються без змін.
+
+## R1 — розширене незалежне підтвердження
+
+Outcome provider covers all 28 new governed operation IDs via native receipt, entity, historical offer/event or integration-admission observations. A missing or changed native record is fail-closed. CRM recovery and sync-start evidence proves admission, not provider settlement. Readback based on current state may become unavailable after later edits; not a claim of immutable historical proof for every operation. Full Goal-to-Outcome and exact-head CI acceptance remain required.
+
+## R2 — додатковий функціонал
+
+- Weighted Round Robin: only public lead intake and the active DEFAULT team configured ROUND_ROBIN; MANUAL remains default. Eligible active manager/admin membership, workspace capability and enabled weighted membership; durable cursor and native lead/case creation in one transaction after receipt claim. No eligible members leaves intake unassigned. Operator and CRM update paths retain their previous authority.
+- Order customer_id: optional explicit native contact, independently scoped, no required Deal; explicit customer must agree with linked Deal. Existing receipt hashes remain compatible when the field is absent.
+- Approval-required Pipeline edges: require exact canonical approved Action, current workflow admission, locked native revision and live independent Sales approval; direct mutations without proof remain denied.
+- Periodic sync: existing Sales scheduler, deployment-owned COS_SALES_ORDER_SYNC_SCHEDULES_JSON, default []. Profiles have organization_id, actor_id, connection_id, mode (webhooks/backfill), interval_minutes (5–1440, multiples of 5). Only explicit live grants, deterministic slot key, defer while previous batch has pending tasks, existing Kernel job queue and recovery. Dead work requires explicit recovery; no new worker or external inventory authority.
+
+Implementation candidate only. R1/R2 acceptance requires exact-head tests, canonical Workflow/Approval denial and replay cases, and deployed tenant evidence; no production activation or D3–D5 promotion.
+
+## R3.1 — Ідентифікація зовнішніх складів та призначень
+
+Product-owned `CommerceOrderFulfillmentEvidencePort` provides bounded, tenant-attested Shopify FulfillmentOrder assignment observations with exact provider line identity, location, status, total and remaining quantities. GraphQL 2026-10 scope visibility and pagination fences reject incomplete results. This is an assignment observation, not independent proof of committed stock, dispatch, return or settlement. Product-owned existing external mapping table supports explicit active warehouse identity mapping after a recent authenticated stock observation. Mapping does not change authority or native stock. Supervised `cos:product:shopify order-fulfillment --confirm=VERIFY_FULFILLMENT_READ_ONLY` and `map-location --confirm=MAP_LOCATION_NO_STOCK_WRITES` use the existing operator gate. No provider mutations. R3.2 still needs durable Sales-owned external lifecycle evidence, independent fulfillment/return facts and commitment/cutover verification. `external_review` remains enforced.
+
+## R3.2 — Збереження зовнішніх складських спостережень
+
+`include_fulfillment_evidence=true` on the existing native/governed order source reconciliation contract explicitly requests an immutable assignment snapshot. Its provider order revision, cancellation and fulfillment status must agree with the independently read commercial snapshot. Test orders, stale/conflicting revisions and truncated or scope-limited reads cannot commit this evidence. The existing receipt namespace stays compatible for default false; new requests pin the expanded effect. Sales stores the redacted evidence and presents a bounded review summary with revision freshness, not physical fulfillment or inventory authority. No new execution engine, local stock mutation or automatic ownership transfer. Full return/dispatch and commitment reconciliation remain open.
+
+
+## S6/R1 — консолідовані нативні докази та AI/CRON
+
+CRM processing retains a separately committed inbox claim. Live Sales actor and independent canonical Action Approval are rechecked in the native apply transaction; completion and input/actor-bound process receipt commit atomically. A new Goal cannot claim a previously completed inbox as its own effect. The same human command retains native claim/recovery semantics. No provider write or new executor.
+
+Canonical Goal acceptance now includes Deal owner assignment, CRM recovery and processing, commerce source reconciliation and durable sync admission. Fixture-provider PAID status does not create Finance collection or local Product stock changes. On `f5d3b00c535aac2622978f2e671fdd2288be01fe`, [Federation MySQL job 139581641284](https://github.com/Murakhovsky/TerraNova2026/actions/runs/45721777474/job/139581641284) passed these cases, the earlier R1/R2 scenarios, and consolidated O7 negative tests from PR #509. This is CI MySQL evidence only; not target-environment release acceptance.
+
+Signed machine proposal API (existing tenant rollout and HMAC headers):
+- POST `/api/v1/capability-intents/sales-business`, envelope `kind=sales.governed_plan.v1`, description, 1–20 ordered operations with id, capability_id and parameters. Only 28 governed business and seven governed Order Actions allowed; target identity derived from native payload or deterministic intent ID. Unknown inputs, unsupported direct commands, bad signature, expired timestamp and conflicting nonce fail closed. No arbitrary dynamic output substitution.
+- GET `/api/v1/capability-intents/sales-business/review` and GET `/api/v1/capability-intents/sales-business/review/{intentId}` require live tenant manager, Sales automation administration and tenant-wide Sales scope. No cross-tenant review; data is private/no-store. Legacy Property/Product HTML review does not expose or adopt Sales intents.
+- POST `/api/v1/capability-intents/sales-business/review/{intentId}/adopt` requires authenticated session, CSRF and exact reviewed digest. Adoption creates canonical Goal/Plan only, not approval or execution. Same signed nonce replays the original intent, not a new business effect.
+- Tests exercise signed AI and CRON requests, unauthorized/CSRF/nonce/target denial, human adoption, actual independent Plan and Action Approval, native readback and equality outcome; the MySQL fixture asserts all 28 governed business operation IDs have successful canonical outcomes. Exact-head CI required. No live model or production scheduler claim.
+
+## S7 — Критерії приймання домену (2026-11-26)
+
+| Gate | Required evidence / current status |
+| --- | --- |
+| Consolidation | Platform, Sales Core/Orders, Product and Marketing baseline merged; O7 negative tests included in #510. |
+| R1 native 28-operation Goal matrix | MySQL scenarios passed on f5d3b00; machine intent HTTP/Goal and coverage assertion require exact-head green. |
+| R2 business extensions | Weighted assignment, independent customer scope, approved Pipeline and periodic sync CI acceptance; live configuration remains opt-in. |
+| O7 native commerce and recovery | Unified Sales/Product/Finance/Marketing MySQL and rejected stale/revoked/replayed Actions passed on f5d3b00; no provider financial claim. |
+| R3 external inventory and fulfillment | Read-only assignment/location evidence accepted in mocked transport; actual provider dispatch/return, commitment and ownership cutover still open. Maintain external_review and no local stock mutation. |
+| O5 conversion deduplication and actual revenue | Marketing-owned cross-Lead/Deal/Order deduplication and verified financial metrics remain separately gated; placement and net collections are not recognized revenue. |
+| D3 | Target staging SHA, tenant activation, human and signed AI/CRON Goal through live worker, independent readback and reviewer evidence still required. |
+| D4 | Operator sign-off and existing Workspace acceptance in separate UI package. |
+| D5 | Explicitly authorized canary/monitoring/rollback; no automatic activation. |
+
+Follow the DAS-001 acceptance runbook in `docs/10-operations/das-001-domain-acceptance.md`. No Passport promotion, no synthetic provider settlement, no production deployment. CI success alone does not close issues #459/#488.
+
+## R3.3 — Зовнішні відвантаження та повернення
+
+Optional `include_lifecycle_evidence=true` requires `include_fulfillment_evidence=true`, authenticated complete fulfillment and return visibility, and the immutable provider line identities recorded at original import. Bounded fulfillment counts, stable resource IDs, per-line quantities, status, processed returns and cancellation residuals are verified independently of assignment remaining quantities. Prior imported orders without immutable line identity evidence require review, not SKU guessing. The existing Sales evidence journal and scoped lifecycle summary expose provider-reported quantities only; successful fulfillment is not carrier delivery, processed return is not physical restock or Finance settlement. Local stock writes remain prohibited. Shopify API field references: https://shopify.dev/docs/api/admin-graphql/latest/objects/Order and https://shopify.dev/docs/api/admin-graphql/latest/objects/ReturnLineItem.
+
+## R3.4 — Контрольована зміна власника запасів
+
+A read-only Product-owned `inventory-cutover-review` operator action (`--confirm=REVIEW_OWNERSHIP_NO_WRITES`) checks authenticated lifecycle, mapped active variants, all native warehouse balances, active reservations, conflicting connections, pending assignments, and returns. The native Shopify-authoritative mutation fence now remains active in disabled/error connection states. A single order observation, even with no pending units, cannot prove the provider-wide write fence, all-channel order coverage, and independent approval required for a physical ownership transfer. Accordingly this review returns `CUTOVER_BLOCKED`; it never flips connection mode or opens local stock writes. Existing external orders remain excluded from native inventory operations. Actual handover requires a separately accepted provider-wide freeze and native inventory reconciliation procedure; no unsafe automatic local takeover.
+
+## R3.5 — Наскрізне приймання Sales і Product
+
+The canonical Goal/Plan/Approval/Action/Outcome fixture includes external lifecycle observation, mismatched provider line denial and rollback, independent Product quantity and Finance evidence readback. Outcome verification checks the exact immutable journal row and its digest, not the latest provider status alone. Provider transport/port fixtures do not establish production provider acceptance. R3.4 actual local ownership transfer remains gated by independently accepted provider-wide write fence and operational cutover; no production or release promotion.
+
+
+## O5/O7 — Нативна атрибуція та зв'язок Lead, Deal і Order
+
+Public Sales intake now persists only a complete bounded UTM source/medium/campaign tuple as untrusted source observations. The four existing public forms carry these non-visual inputs from their landing-page query; no new workspace or tracking cookies. Tags are bound to the native submission receipt, while untagged legacy receipt hashes stay compatible. Malformed or incomplete tuples do not prevent legitimate enquiries and remain unknown. Human operator and provider-origin intake keep distinct trust boundaries. Marketing alone assigns a campaign through its exact approved policy; a public tag is not provider verification.
+
+Native Order placement readback checks the immutable Deal relationship against the native Order in the same tenant. Evidence mismatch invalidates the captured order rather than inflating a combined conversion count. The existing Marketing captured-cohort deduplication is exercised end-to-end from public intake through independently approved Deal/WON and Order Actions and native Marketing capture/report. This is a bounded campaign/date cohort, not exhaustive cross-campaign attribution or recognized revenue. Provider-wide inventory takeover, actual provider execution, Finance accounting-backed revenue and D3–D5 independent release evidence remain gated.
+
+Prior exact head `f7c9a839cfcee07046b5380c2be997551106e687` passed all seven PR workflows (CI, Runtime, Documentation, Frontend, L2 Recovery Smoke, authenticated CSV route and SERIES01 bootstrap); this O5 increment requires its own exact-head acceptance.
+
+
+## R3.6 — Ізольоване приймання реального Shopify lifecycle
+
+The existing protected, manual-only SERIES01 operator now supports `order-lifecycle-sandbox CONNECTION_ID ORDER_GID`. It reads the existing test Order commercially and independently reads complete bounded fulfillment/return evidence using the Product port, checks the exact tenant/connection/shop, revision, statuses, cancellation and line identities, and exports only redacted provider quantities, source digests and review reasons. A non-test order, mismatched read, incomplete permission or inconsistent evidence is denied. Successful readback still reports `scenario_acceptance=independent_review_required`; no import, stock movement, payment or provider mutation is performed.
+
+Acceptance checklist: on a designated isolated SERIES01 staging tenant at the exact deployed SHA, an authorized operator identifies a pre-existing real Shopify test order with partial fulfillment/return and a test order with cancelled residual quantity. Execute the protected manual read-only operation; retain its output plus independent provider-side expected quantities and order revision. Require reviewer match for ordered/assigned/fulfilled/return/cancel quantities and independent evidence that the test order was excluded from native Sales and local Product/Finance writes. Do not set D3, D4 or D5 based on the command status. Provider-wide ownership transfer is still blocked until all sales channels and writers are independently fenced; this test does not establish that condition.
+
+O5/O7 [Federation MySQL job 139727283509](https://github.com/Murakhovsky/TerraNova2026/actions/runs/45766108788/job/139727283509) passed on `7baa92c57256209970facc3b9b9e827b64754afa`: public UTM intake, actual independently approved linked Deal/WON and Order, exact Marketing capture, one unique outcome, replay, relationship drift quarantine and no false revenue. R1 and R3.5 regressions also passed on that revision. This is not live provider evidence.
+
+Signed Sales multi-operation proposals must persist an explicit predecessor chain in the canonical Plan. The immutable replay check also compares these edges. The same existing worker scheduler and predecessor-receipt verification control admission; no additional executor or dynamic output substitution. The signed AI acceptance fixture now exercises two separately approved, ordered operations and native outcome count; CRON retains its independent one-step case.
+
+
+## R3.7 / R4 — Доказ точного розгорнутого SHA
+
+The `8662bc45f98b525c6e3d226978296ad4a4e0ac0a` implementation candidate passed all nine PR workflows, including [Runtime](https://github.com/Murakhovsky/TerraNova2026/actions/runs/45766641100), [CI](https://github.com/Murakhovsky/TerraNova2026/actions/runs/45766641150), Federation MySQL job 139729010482, Shopify operator/readback contracts, Documentation, Frontend, L2 Recovery, authenticated CSV route and SERIES01 bootstrap. Main advanced to `4150ea9eff2c94bbe14d53095b71268de360c6ef`; retain its exact independent Product audit changes during consolidation. This checkpoint is CI acceptance, not D3.
+
+The existing protected SERIES01 `order-lifecycle-sandbox` workflow now additionally requires `expected_sha` to equal the exact selected main workflow SHA. It checks out that revision with no persisted credentials and derives the existing deployment PHP/DI and routes digests. The supervised CLI operator checks the deployment manifest, actual host source and actual pinned live PHP container digests before and after the provider read; container replacement or any mismatch suppresses the result. Only the matching redacted sandbox result (exact tenant, connection, test Order, no mutation or ownership transfer flags) may be retained as an evidence artifact. Other operator actions retain their previous input contract. Mocked shell tests exercise positive readback, invalid/missing SHA, manifest and live code mismatch, post-read code drift, container replacement, failure and foreign/unsafe result denial. No new executor or provider mutation is introduced.
+
+**Operator acceptance remains gated:** use the existing protected manual workflow `COS Shopify SERIES01 supervised connection`, select `order-lifecycle-sandbox`, an independently authorized isolated test tenant, exact `connection_id`, test `order_gid` and deployed main `expected_sha`. Repeat for partial fulfillment/return and cancelled residual scenarios. Compare both artifact quantities/digests and revision with independent provider-side observations; verify native Sales absence and Product/Finance no-effect separately. Evidence must retain exact SHA, environment, tenant, performed_at, HTTPS run/artifact URL and independent reviewer per DAS-001. Passing the operator must not imply D3 release, local inventory takeover or real settlement. Main-only workflow must not be bypassed from a draft branch to obtain a false staging PASS.
+
+Finance's current order evidence contract confirms documented collection/refund/chargeback only. Its [domain overview](../finance/overview.md) explicitly excludes full accounting. No verified recognized-revenue source is available; keep recognized_revenue and ROAS unknown until a Finance-owned accounting evidence contract is independently accepted. Marketing's bounded native cohort deduplication does not establish completeness across all campaigns. UI/D4 remains separate; D5 requires explicit canary authorization. Golden 50 and target-tenant acceptance stay open.
+
+
+## R3.8 — Локальна інвентаризація сфери Shopify-підключення
+
+Product's existing supervised operator adds `inventory-cutover-census --confirm=REVIEW_CONNECTION_INVENTORY_NO_WRITES`, scoped to the explicit tenant and connection (including error/disabled states). One aggregate database read covers product-inherited and individually mapped native variants, invalid mappings, all native warehouse balances/reservations, stale/incomplete/unmapped observations, inconsistent provider inventory identities, overlapping authoritative connections regardless of status, and open sync conflicts. Output is fixed-size counts with a database timestamp; no credential, customer data, provider request, stock write or ownership change. This local census is deliberately **not** a complete provider inventory census, exclusive write fence or approval. It always returns CUTOVER_BLOCKED. MySQL integration verifies inherited authority, orphan mappings and local reservations that are outside the selected order's lines, stale/unmapped observations, separate disabled authority, error state, exact scope and unchanged native state. Supervised real-provider acceptance and exclusive ownership transfer remain open.

@@ -10,5 +10,5 @@ use Kernel\Shared\Domain\OrganizationId;
 final readonly class ProcessCrmInboxNowCommand implements CommandInterface
 {
     public function __construct(public OrganizationId $organizationId,public int $actorId,
-        public string $inboxId,public string $revision,public string $idempotencyKey,public string $correlationId) {}
+        public string $inboxId,public string $revision,public string $idempotencyKey,public string $correlationId, public ?\Closure $authorize = null) {}
 }

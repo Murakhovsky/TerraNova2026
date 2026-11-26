@@ -7,6 +7,7 @@ namespace App\Web\Property;
 use App\Application\Property\Command\RecordPublicPropertyViewCommand;
 use App\Application\Property\Query\GetPublicPropertyDetailQuery;
 use App\Application\Sales\Command\ReceivePublicLeadCommand;
+use Domains\Sales\Domain\Policy\PublicLeadAttribution;
 use App\Application\Sales\Command\SalesMutationResult;
 use App\Web\Experience\Archetype\PageArchetype;
 use App\Web\Experience\Archetype\PagePresentationFactory;
@@ -138,6 +139,7 @@ final readonly class PublicPropertyDetailController
                 ),
                 'detail' => $detail,
                 'leadSubmissionId' => bin2hex(random_bytes(16)),
+                'leadAttribution' => PublicLeadAttribution::observe($request->isMethod('POST') ? $request->request->all() : $request->query->all()),
                 'error' => $error,
             ]),
             $status,

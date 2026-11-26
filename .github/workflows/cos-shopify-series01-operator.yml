@@ -8,17 +8,21 @@ on:
         type: string
         default: default
       operation:
-        description: 'preflight/provision/pull/status/candidates/order/order-sandbox'
+        description: 'preflight/provision/pull/status/candidates/order/order-sandbox/order-lifecycle-sandbox'
         required: true
         type: choice
         default: preflight
-        options: [preflight, provision, status, pull, candidates, order, order-sandbox]
+        options: [preflight, provision, status, pull, candidates, order, order-sandbox, order-lifecycle-sandbox]
       connection_id:
         description: '32-char connection ID for pull/status/candidates/order'
         type: string
         required: false
       order_gid:
         description: 'Exact gid://shopify/Order/123 for read-only order evidence'
+        type: string
+        required: false
+      expected_sha:
+        description: 'Required for lifecycle sandbox: exact deployed main SHA'
         type: string
         required: false
 permissions:
@@ -37,6 +41,7 @@ jobs:
       ACTION: ${{ inputs.operation }}
       CONNECTION: ${{ inputs.connection_id }}
       ORDER_GID: ${{ inputs.order_gid }}
+      EXPECTED_SHA: ${{ inputs.expected_sha }}
       DEV_HOST: ${{ secrets.DEV_HOST }}
       DEV_USER: ${{ secrets.DEV_USER }}
       DEV_PORT: ${{ secrets.DEV_PORT }}
@@ -50,13 +55,37 @@ jobs:
           case "$ACTION" in
             preflight|provision) [[ -z "$CONNECTION" && -z "$ORDER_GID" ]] || exit 2 ;;
             pull|status|candidates) [[ "$CONNECTION" =~ ^[a-f0-9]{32}$ && -z "$ORDER_GID" ]] || exit 2 ;;
-            order|order-sandbox) [[ "$CONNECTION" =~ ^[a-f0-9]{32}$ && "$ORDER_GID" =~ ^gid://shopify/Order/[1-9][0-9]{0,18}$ ]] || exit 2 ;;
+            order|order-sandbox|order-lifecycle-sandbox) [[ "$CONNECTION" =~ ^[a-f0-9]{32}$ && "$ORDER_GID" =~ ^gid://shopify/Order/[1-9][0-9]{0,18}$ ]] || exit 2 ;;
             *) exit 2 ;;
           esac
+          if [[ "$ACTION" == order-lifecycle-sandbox ]]; then
+            [[ "$EXPECTED_SHA" =~ ^[a-f0-9]{40}$ && "$EXPECTED_SHA" == "$GITHUB_SHA" ]] || exit 2
+          else
+            [[ -z "$EXPECTED_SHA" ]] || exit 2
+          fi
           for n in DEV_HOST DEV_USER DEV_PORT DEV_SSH_KEY; do
             [[ -n "${!n:-}" ]] || { echo "Missing $n"; exit 2; }
           done
           [[ "$DEV_PORT" =~ ^[0-9]{1,5}$ ]] || exit 2
+      - name: Checkout exact lifecycle acceptance revision
+        if: inputs.operation == 'order-lifecycle-sandbox'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Calculate trusted lifecycle execution digests
+        if: inputs.operation == 'order-lifecycle-sandbox'
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$(git rev-parse HEAD)" == "$EXPECTED_SHA" ]]
+          code_sha="$( {
+            find app/Kernel app/Platform app/Domains app/Infrastructure symfony/src -type f -name '*.php' -print | LC_ALL=C sort | xargs sha256sum
+            sha256sum symfony/config/services.yaml
+          } | sha256sum | cut -d' ' -f1 )"
+          routes_sha="$(sha256sum symfony/config/routes.yaml | cut -d' ' -f1)"
+          echo "EXPECTED_CODE_SHA=$code_sha" >> "$GITHUB_ENV"
+          echo "EXPECTED_ROUTES_SHA=$routes_sha" >> "$GITHUB_ENV"
       - name: Configure SSH
         shell: bash
         run: |
@@ -74,7 +103,22 @@ jobs:
           cmd=(sudo -n bash /opt/cos/bin/shopify-series01-operator.sh "$ORG" "$ACTION")
           if [[ -n "$CONNECTION" ]]; then cmd+=("$CONNECTION"); fi
           if [[ -n "$ORDER_GID" ]]; then cmd+=("$ORDER_GID"); fi
+          if [[ "$ACTION" == order-lifecycle-sandbox ]]; then
+            cmd+=("$EXPECTED_SHA" "$EXPECTED_CODE_SHA" "$EXPECTED_ROUTES_SHA")
+          fi
           printf -v remote_command '%q ' "${cmd[@]}"
-          ssh -T -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes \
-            -i "$HOME/.ssh/cos_series01_key" -p "$DEV_PORT" \
-            "$DEV_USER@$DEV_HOST" "$remote_command"
+          ssh_cmd=(ssh -T -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes
+            -i "$HOME/.ssh/cos_series01_key" -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" "$remote_command")
+          if [[ "$ACTION" == order-lifecycle-sandbox ]]; then
+            "${ssh_cmd[@]}" | tee operator-result.json
+          else
+            "${ssh_cmd[@]}"
+          fi
+      - name: Retain redacted lifecycle evidence
+        if: inputs.operation == 'order-lifecycle-sandbox'
+        uses: actions/upload-artifact@v4
+        with:
+          name: series01-lifecycle-readback-${{ github.run_id }}
+          path: operator-result.json
+          if-no-files-found: error
+          retention-days: 30

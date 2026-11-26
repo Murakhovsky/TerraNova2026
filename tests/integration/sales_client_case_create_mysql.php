@@ -204,7 +204,8 @@ try {
     $legacyKey='legacy-'.$token;
     $db->prepare('INSERT INTO sales_operation_receipts(organization_id,operation_type,idempotency_key,mutation_id) VALUES(?,?,?,?)')->execute([$org,'api.lead.create',$legacyKey,(string)$newId]);
     $reject(fn()=>$gateway->invoke($manager,'sales.lead.create',$intake,'human_api',$legacyKey,'trace-legacy'));
-    $public=['submission_id'=>bin2hex(random_bytes(16)),'full_name'=>'Public '.$token,'email'=>'public-'.$token.'@example.test','request_intent'=>'viewing'];
+    $public=['submission_id'=>bin2hex(random_bytes(16)),'full_name'=>'Public '.$token,'email'=>'public-'.$token.'@example.test','request_intent'=>'viewing',
+        'utm_source'=>'google','utm_medium'=>'organic','utm_campaign'=>'mkt-'.str_repeat('b',24)];
     $submit=static fn(array $data)=>$bus->dispatch(new ReceivePublicLeadCommand(OrganizationId::fromString($org),$data,'/contacts'));
     $accepted=$submit($public);
     $check($accepted->ok && (int)$accepted->data['lead_id']>0,'Public intake failed.');
@@ -212,9 +213,11 @@ try {
     $again=$submit(array_reverse($public,true));
     $check($again->ok && (int)$again->data['lead_id']===$publicId,'Public replay created a different lead.');
     $check(!$submit([...$public,'full_name'=>'Different'])->ok,'Conflicting public submission accepted.');
+    $check(!$submit([...$public,'utm_medium'=>'email'])->ok,'Conflicting public attribution accepted.');
     $check(!$submit(array_diff_key($public,['submission_id'=>true]))->ok,'Missing public submission identity accepted.');
     $row=$read->lead($org,$publicId);
     $check($row['request_intent']==='viewing' && (int)$row['client_case_id']>0,'Public intent or case link missing.');
+    $check($row['utm_source']===$public['utm_source']&&$row['utm_medium']===$public['utm_medium']&&$row['utm_campaign']===$public['utm_campaign'],'Public UTM native readback differs.');
     $q=$db->prepare('SELECT COUNT(*) FROM tn_leads WHERE organization_id=? AND email=?');$q->execute([$org,$public['email']]);
     $check((int)$q->fetchColumn()===1,'Public replay duplicated the native lead.');
     $q=$db->prepare('SELECT COUNT(*) FROM tn_client_cases WHERE organization_id=? AND person_id=?');$q->execute([$org,(int)$row['person_id']]);
@@ -276,18 +279,28 @@ try {
     $f1=$invoke('sales.followup.schedule',$first,'followup-1');$f2=$invoke('sales.followup.schedule',$second,'followup-2');
     $check($f1['record_id']!==$f2['record_id']&&$invoke('sales.followup.schedule',$first,'followup-1')['replayed'],'Followup identity or replay failed.');
     $reject(fn()=>$invoke('sales.followup.schedule',[...$first,'title'=>'Changed'],'followup-1'));
+    $activityProof=new \Domains\Sales\Application\Service\SalesActivityOutcomeEvidence($activityEvidence,$receipts);
+    $verifyActivity=static fn(string $type,array $p,string $key)=>$activityProof->verify($org,$type,$userId,(string)$caseId,$key,$p);
+    $check($verifyActivity('sales.governed.followup.schedule',$first,'followup-1')==='sales:activity:'.$f1['record_id'].':followup-1','Independent followup proof missing.');
+    $reject(fn()=>$verifyActivity('sales.governed.followup.schedule',[...$first,'title'=>'tampered'],'followup-1'));
+    $reject(fn()=>$activityProof->verify('foreign-'.$org,'sales.governed.followup.schedule',$userId,(string)$caseId,'followup-1',$first));
+    $reject(fn()=>$activityProof->verify($org,'sales.governed.followup.schedule',$targetOwner,(string)$caseId,'followup-1',$first));
     $expectedDate=static fn(string $s)=>(new DateTimeImmutable($s))->setTimezone(new DateTimeZone(date_default_timezone_get()))->format('Y-m-d H:i:s');
     $check($read->deal($org,$caseId)['next_contact_at']===$expectedDate($due1),'Earliest followup projection failed.');
     $call=['deal_id'=>$caseId,'activity_type'=>'call','title'=>'Completed call','completed'=>true,'duration_seconds'=>42,'call_result'=>'answered'];
     $callReceipt=$invoke('sales.activity.record',$call,'call');
     $check($callReceipt['status']==='completed'&&$invoke('sales.activity.record',$call,'call')['replayed'],'Completed call replay failed.');
+    $check($verifyActivity('sales.governed.activity.record',$call,'call')==='sales:activity:'.$callReceipt['record_id'].':call','Independent activity record proof missing.');
     $check($read->deal($org,$caseId)['next_contact_at']===$expectedDate($due1),'Call erased pending followup.');
     $reschedule=['deal_id'=>$caseId,'activity_id'=>$f1['record_id'],'due_at'=>$due3];
     $invoke('sales.activity.reschedule',$reschedule,'move');
+    $check($verifyActivity('sales.governed.activity.reschedule',$reschedule,'move')==='sales:activity:'.$f1['record_id'].':move','Independent reschedule proof missing.');
+    $reject(fn()=>$verifyActivity('sales.governed.followup.schedule',$first,'followup-1'));
     $check($read->deal($org,$caseId)['next_contact_at']===$expectedDate($due2),'Reschedule did not recompute next contact.');
     $complete=['deal_id'=>$caseId,'activity_id'=>$f2['record_id']];
     $check($invoke('sales.activity.complete',$complete,'complete')['status']==='completed','Completion failed.');
     $check($invoke('sales.activity.complete',$complete,'complete')['replayed'],'Completion replay failed.');
+    $check($verifyActivity('sales.governed.activity.complete',$complete,'complete')==='sales:activity:'.$f2['record_id'].':complete','Independent completion proof missing.');
     $check($read->deal($org,$caseId)['next_contact_at']===$expectedDate($due3),'Completion did not preserve remaining followup.');
     $reject(fn()=>$invoke('sales.activity.reschedule',['deal_id'=>$caseId,'activity_id'=>$f2['record_id'],'due_at'=>$due1],'completed'));
     $reject(fn()=>$invoke('sales.property_match.record',['deal_id'=>$caseId,'property_id'=>PHP_INT_MAX,'match_status'=>'suggested'],'no-property'));
@@ -350,7 +363,10 @@ try {
     $matchReceipt=$invoke('sales.property_match.record',$match,'match-create');
     $check($matchReceipt['status']==='suggested'&&$invoke('sales.property_match.record',$match,'match-create')['replayed'],'Property match creation/replay failed.');
     $matchSent=['deal_id'=>$caseId,'property_id'=>$propertyId,'expected_status'=>'suggested','match_status'=>'sent'];
+    $check($verifyActivity('sales.governed.property_match.record',$match,'match-create')==='sales:property_match:'.$matchReceipt['record_id'].':match-create','Independent Property match proof missing.');
     $check($invoke('sales.property_match.record',$matchSent,'match-sent')['status']==='sent','Property match transition failed.');
+    $check($verifyActivity('sales.governed.property_match.record',$matchSent,'match-sent')==='sales:property_match:'.$matchReceipt['record_id'].':match-sent','Independent Property transition proof missing.');
+    $reject(fn()=>$verifyActivity('sales.governed.property_match.record',$match,'match-create'));
     $reject(fn()=>$invoke('sales.property_match.record',[...$matchSent,'match_status'=>'rejected'],'match-stale'));
     $propertyQuote=['deal_id'=>$caseId,'title'=>'Property quote','currency'=>'USD','valid_until'=>'2035-01-01T00:00:00Z','lines'=>[['kind'=>'property','title'=>'Property','quantity'=>1,'unit_price'=>'1000.00','inventory_id'=>$inventory]]];
     $pq=$invoke('sales.offer.create',$propertyQuote,'property-quote')['offer'];
@@ -492,6 +508,33 @@ try {
     $reject(fn()=>$invoke('sales.team.manage',[...$member,'configuration_version'=>3],'disabled-member'));
     $teamRead=$gateway->invoke($manager,'sales.team.read',['team_id'=>$newTeamId],'trusted_read','','trace-team');
     $check($teamRead['found'] && $teamRead['team']['configuration_version']===3,'Team readback failed.');
+    // R2: actual public intake, weighted assignment, replay and revoked eligibility.
+    $defaultQ=$db->prepare('SELECT id FROM sales_teams WHERE organization_id=? AND code="DEFAULT"');
+    $defaultQ->execute([$org]);$defaultTeam=$defaultQ->fetchColumn();
+    $check(is_string($defaultTeam),'Default Sales team unavailable.');
+    $db->prepare('UPDATE sales_teams SET status="ACTIVE",assignment_mode="ROUND_ROBIN",configuration_version=configuration_version+1 WHERE organization_id=? AND id=?')->execute([$org,$defaultTeam]);
+    $db->prepare('UPDATE sales_team_members SET assignment_enabled=0 WHERE organization_id=? AND team_id=?')->execute([$org,$defaultTeam]);
+    foreach([[$userId,2],[$targetOwner,1]] as [$memberId,$weight]){
+        $db->prepare('INSERT INTO sales_team_members(organization_id,team_id,user_id,role,status,assignment_enabled,approval_enabled,assignment_weight,created_at,updated_at) VALUES (?,?,?,"MEMBER","ACTIVE",1,0,?,NOW(6),NOW(6)) ON DUPLICATE KEY UPDATE status="ACTIVE",assignment_enabled=1,assignment_weight=VALUES(assignment_weight)')->execute([$org,$defaultTeam,$memberId,$weight]);
+        $db->prepare('INSERT INTO sales_user_capabilities(organization_id,user_id,capability,status,granted_by,created_at,updated_at) VALUES (?,?,"sales.workspace.use","ACTIVE",?,NOW(6),NOW(6)) ON DUPLICATE KEY UPDATE status="ACTIVE"')->execute([$org,$memberId,(string)$userId]);
+    }
+    $public=$factory->forOrganization($org);$owners=[];
+    for($i=0;$i<3;$i++){
+        $input=['full_name'=>'Round robin fixture','email'=>'rr-'.$token.'-'.$i.'@example.test','submission_id'=>bin2hex(random_bytes(16)),'assigned_user_id'=>999999];
+        $out=$public->receivePublicLead($input,'r2-ci');$check($out->ok,'Round robin intake rejected.');
+        $lead=$read->lead($org,(int)$out->data['lead_id']);$ownerId=(int)$lead['assigned_user_id'];$owners[]=$ownerId;
+        $linked=$read->deal($org,(int)$lead['client_case_id']);
+        $check($linked!==null&&(int)$linked['assigned_user_id']===$ownerId,'Lead and case owner diverged.');
+        $check($public->receivePublicLead($input,'r2-ci')->data['lead_id']===$out->data['lead_id'],'Round robin replay created a lead.');
+    }
+    $check($owners===[$userId,$userId,$targetOwner],'Weighted round robin sequence or replay incorrect.');
+    $db->prepare('UPDATE sales_team_members SET assignment_enabled=0 WHERE organization_id=? AND team_id=? AND user_id=?')->execute([$org,$defaultTeam,$userId]);
+    $next=$public->receivePublicLead(['full_name'=>'Round robin eligibility','email'=>'rr-revoked-'.$token.'@example.test','submission_id'=>bin2hex(random_bytes(16))],'r2-ci');
+    $check($next->ok&&(int)$read->lead($org,(int)$next->data['lead_id'])['assigned_user_id']===$targetOwner,'Disabled member received a lead.');
+    $db->prepare('UPDATE sales_teams SET assignment_mode="MANUAL" WHERE organization_id=? AND id=?')->execute([$org,$defaultTeam]);
+    $manual=$public->receivePublicLead(['full_name'=>'Manual fixture','email'=>'rr-manual-'.$token.'@example.test','submission_id'=>bin2hex(random_bytes(16))],'r2-ci');
+    $check($manual->ok&&$read->lead($org,(int)$manual->data['lead_id'])['assigned_user_id']===null,'Manual mode unexpectedly assigned a lead.');
+    echo "Sales R2 weighted public lead assignment, linked Deal, replay and eligibility PASS.\n";
     echo "Sales S1–S4 native intake, lifecycle, activities, Property/Product quote, approved-handler notification handoff, CRM evidence and WON/LOST PASS.\n";
 } finally {
     if ($db->inTransaction()) $db->rollBack();

@@ -13,6 +13,7 @@ final readonly class RunSalesAutomationCommandHandler implements CommandHandlerI
     public function __construct(
         private SalesAutomationRunner $automation,
         private SalesOutboxDrainer $outbox,
+        private ?\App\Application\Sales\Service\PeriodicSalesOrderSync $periodicSync=null,
     ) {
     }
 
@@ -38,6 +39,9 @@ final readonly class RunSalesAutomationCommandHandler implements CommandHandlerI
             idleDelayMicroseconds: 100_000,
         );
 
+        if($command->runId==='scheduler'&&$this->periodicSync!==null){
+            $result['order_sync']=$this->periodicSync->run($command->organizationId,new DateTimeImmutable());
+        }
         return $result;
     }
 }

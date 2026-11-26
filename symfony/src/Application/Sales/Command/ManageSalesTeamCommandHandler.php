@@ -39,13 +39,13 @@ final readonly class ManageSalesTeamCommandHandler implements CommandHandlerInte
                 return ['team'=>$state,'replayed'=>true];
             }
             if ($op==='create') {
-                $created=$this->teams->createTeam($org,['code'=>$input['code'],'name'=>$input['name'],'assignment_mode'=>'MANUAL'],(string)$actor);
+                $created=$this->teams->createTeam($org,['code'=>$input['code'],'name'=>$input['name'],'assignment_mode'=>$input['assignment_mode']??'MANUAL'],(string)$actor);
                 $id=$created['id']??null;
                 if (!is_string($id)||preg_match('/^[a-f0-9]{32}$/D',$id)!==1) throw new RuntimeException('Team creation returned no native identity.');
                 $done=$hash.':'.$id;
             } elseif ($op==='update') {
-                if ($this->read($org,$id)['assignment_mode']!=='MANUAL') throw new DomainException('Existing non-manual assignment mode requires its own configuration operation.');
-                $this->teams->updateTeam($org,$id,['name'=>$input['name'],'status'=>$input['status'],'assignment_mode'=>'MANUAL'],$input['configuration_version'],(string)$actor);
+                $mode=$input['assignment_mode']??$this->read($org,$id)['assignment_mode'];
+                $this->teams->updateTeam($org,$id,['name'=>$input['name'],'status'=>$input['status'],'assignment_mode'=>$mode],$input['configuration_version'],(string)$actor);
                 $done='done:'.$hash;
             } else {
                 $this->teams->setMember($org,$id,$input['user_id'],[
@@ -70,7 +70,8 @@ final readonly class ManageSalesTeamCommandHandler implements CommandHandlerInte
             'member_set'=>['operation','team_id','configuration_version','user_id','role','member_status','assignment_enabled','approval_enabled','assignment_weight'],
             default=>throw new DomainException('Unknown team operation.'),
         };
-        if (array_diff($required,array_keys($input))!==[] || array_diff(array_keys($input),$required)!==[]) throw new DomainException('Invalid team operation fields.');
+        if (array_diff($required,array_keys($input))!==[] || array_diff(array_keys($input),$op==='member_set'?$required:array_merge($required,['assignment_mode']))!==[]) throw new DomainException('Invalid team operation fields.');
+        if (array_key_exists('assignment_mode',$input)&&!in_array($input['assignment_mode'],['MANUAL','ROUND_ROBIN'],true)) throw new DomainException('Invalid assignment mode.');
         if (isset($input['team_id']) && (!is_string($input['team_id'])||preg_match('/^[A-Za-z0-9_-]{8,40}$/D',$input['team_id'])!==1
             || !is_int($input['configuration_version'])||$input['configuration_version']<1)) throw new DomainException('Invalid team revision.');
         if (isset($input['name'])&&(!is_string($input['name'])||trim($input['name'])!==$input['name']||$input['name']===''||mb_strlen($input['name'])>160)) throw new DomainException('Invalid team name.');
@@ -92,8 +93,8 @@ final readonly class ManageSalesTeamCommandHandler implements CommandHandlerInte
 
     private function matches(string $op,array $input,array $state):bool
     {
-        if ($op==='create')return $state['code']===$input['code']&&$state['name']===$input['name']&&$state['status']==='ACTIVE'&&$state['assignment_mode']==='MANUAL';
-        if ($op==='update')return $state['name']===$input['name']&&$state['status']===$input['status']&&$state['assignment_mode']==='MANUAL';
+        if ($op==='create')return $state['code']===$input['code']&&$state['name']===$input['name']&&$state['status']==='ACTIVE'&&$state['assignment_mode']===($input['assignment_mode']??'MANUAL');
+        if ($op==='update')return $state['name']===$input['name']&&$state['status']===$input['status']&&(!isset($input['assignment_mode'])||$state['assignment_mode']===$input['assignment_mode']);
         foreach($state['members'] as $member)if($member['user_id']===$input['user_id'])return $member['role']===$input['role']&&$member['status']===$input['member_status']
             &&$member['assignment_enabled']===$input['assignment_enabled']&&$member['approval_enabled']===$input['approval_enabled']&&$member['assignment_weight']===$input['assignment_weight'];
         return false;

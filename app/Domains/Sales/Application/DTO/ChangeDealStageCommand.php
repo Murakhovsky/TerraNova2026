@@ -16,6 +16,7 @@ final readonly class ChangeDealStageCommand
         public ?string $lostReasonNote = null,
         public ?string $expectedStageId = null,
         public ?string $expectedOutcome = null,
+        public ?\Kernel\Action\Action $approvedAction = null,
     ) {
     }
 }

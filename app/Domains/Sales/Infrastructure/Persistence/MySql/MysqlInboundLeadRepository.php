@@ -27,17 +27,20 @@ final readonly class MysqlInboundLeadRepository implements InboundLeadRepository
             'manager_note' => null,
             'assigned_user_id' => null,
             'next_contact_at' => null,
+            'utm_source' => null,
+            'utm_medium' => null,
+            'utm_campaign' => null,
         ];
         $lead['request_intent'] ??= 'general_contact';
         $statement = $this->connection->prepare('
             INSERT INTO tn_leads (
                 organization_id, buyer_id, person_id, client_case_id, property_id, full_name, phone, email,
                 role, deal_type, message, preferred_contact, source_page, request_intent, manager_note,
-                status, assigned_user_id, next_contact_at
+                status, assigned_user_id, next_contact_at, utm_source, utm_medium, utm_campaign
             ) VALUES (
                 :organization_id, NULL, :person_id, :client_case_id, :property_id, :full_name, :phone, :email,
                 :role, :deal_type, :message, "any", :source_page, :request_intent, :manager_note,
-                "new", :assigned_user_id, :next_contact_at
+                "new", :assigned_user_id, :next_contact_at, :utm_source, :utm_medium, :utm_campaign
             )
         ');
         $statement->execute(['organization_id' => $organizationId] + $lead);

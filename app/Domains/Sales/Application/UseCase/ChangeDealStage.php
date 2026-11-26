@@ -24,6 +24,7 @@ final readonly class ChangeDealStage
         private StageTransitionPolicy $policy,
         private EventBus $events,
         private TransactionManagerInterface $transactions,
+        private ?\Domains\Sales\Application\Contract\SalesStageApprovalVerifier $approval=null,
     ) {
     }
 
@@ -68,7 +69,10 @@ final readonly class ChangeDealStage
         }
 
         if ($validation->requiresApproval) {
-            return ChangeDealStageResult::failure('Stage transition requires independently verified canonical approval; direct execution is blocked.');
+            if ($this->approval===null||$command->approvedAction===null) {
+                return ChangeDealStageResult::failure('Stage transition requires independently verified canonical approval; direct execution is blocked.');
+            }
+            $this->approval->assertApproved($command,$deal);
         }
 
         if ($target->isWon && ($deal['deal_value']===null || !is_numeric($deal['deal_value']) || (float)$deal['deal_value']<=0

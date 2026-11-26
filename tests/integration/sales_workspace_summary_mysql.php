@@ -71,7 +71,7 @@ try{
     $shopStore->map($org,$conn,'product','gid://shopify/Product/41',str_repeat('a',32));
     $shopStore->map($org,$conn,'variant','gid://shopify/ProductVariant/42',str_repeat('b',32));
     $http=new class implements \Domains\ProductManagement\Infrastructure\Shopify\ShopifyHttpTransportInterface {
-        public bool $journeyReady=false;public string $journeyCampaign='mkt-aaaaaaaaaaaaaaaaaaaaaaaa';
+        public bool $returnScope=true;public bool $badReturn=false;public bool $fulfilledLifecycle=false;public bool $lifecycleCountMismatch=false;public bool $fulfillmentScope=true;public bool $fulfillmentTruncated=false;public bool $journeyReady=false;public string $journeyCampaign='mkt-aaaaaaaaaaaaaaaaaaaaaaaa';
         public int $reads=0;public string $updated='2026-11-24T10:00:00Z';public string $financial='PAID';
         public string $current='120.00';public bool $edited=false;public bool $fail=false;public bool $unmapped=false;public bool $truncated=false;public bool $multi=false;public bool $revisionShift=false;public bool $pageMode=false;public bool $temporaryFailure=false;
         public function post(string $url,array $headers,string $body):array
@@ -85,7 +85,30 @@ try{
             if($this->fail)return ['status'=>403,'body'=>'{}'];
             $money=static fn(string $amount)=>['shopMoney'=>['amount'=>$amount,'currencyCode'=>'EUR']];
             $data=['currentAppInstallation'=>['accessScopes'=>[['handle'=>'read_orders']]]];
-            if(str_contains($request['query'],'COSCommerceOrderPage')){
+            if(str_contains($request['query'],'COSCommerceFulfillmentEvidence')){
+                if($this->fulfillmentScope)foreach(['merchant_managed','third_party','assigned'] as $scope)$data['currentAppInstallation']['accessScopes'][]=['handle'=>'read_'.$scope.'_fulfillment_orders'];
+                $data['order']=['id'=>$request['variables']['id'],'updatedAt'=>$this->updated,'test'=>false,'cancelledAt'=>null,'displayFulfillmentStatus'=>$this->fulfilledLifecycle?'FULFILLED':'UNFULFILLED',
+                    'fulfillmentOrders'=>['nodes'=>[['id'=>'gid://shopify/FulfillmentOrder/900','status'=>'OPEN','requestStatus'=>'UNSUBMITTED','assignedLocation'=>['location'=>['id'=>'gid://shopify/Location/88']],
+                        'lineItems'=>['nodes'=>[['id'=>'gid://shopify/FulfillmentOrderLineItem/901','totalQuantity'=>1,'remainingQuantity'=>1,'lineItem'=>['id'=>'gid://shopify/LineItem/77']]],'pageInfo'=>['hasNextPage'=>false]]]],
+                        'pageInfo'=>['hasNextPage'=>$this->fulfillmentTruncated]]];
+                if(str_contains($request['query'],'COSCommerceFulfillmentEvidenceLifecycle')){
+                    if($this->returnScope)$data['currentAppInstallation']['accessScopes'][]=['handle'=>'read_returns'];
+                    $o=&$data['order'];$o['edited']=false;
+                    $o['lineItems']=['nodes'=>[['id'=>'gid://shopify/LineItem/77','quantity'=>1,'product'=>['id'=>'gid://shopify/Product/41'],'variant'=>['id'=>'gid://shopify/ProductVariant/42']]],'pageInfo'=>['hasNextPage'=>false]];
+                    $o['fulfillmentsCount']=['count'=>$this->lifecycleCountMismatch?2:($this->fulfilledLifecycle?1:0),'precision'=>'EXACT'];
+                    $o['fulfillments']=[];$o['returns']=['nodes'=>[],'pageInfo'=>['hasNextPage'=>false]];
+                    if($this->fulfilledLifecycle){
+                        $o['fulfillmentOrders']['nodes'][0]['status']='CLOSED';
+                        $o['fulfillmentOrders']['nodes'][0]['lineItems']['nodes'][0]['remainingQuantity']=0;
+                        $o['fulfillments']=[['id'=>'gid://shopify/Fulfillment/701','status'=>'SUCCESS','location'=>['id'=>'gid://shopify/Location/88'],
+                            'fulfillmentLineItems'=>['nodes'=>[['id'=>'gid://shopify/FulfillmentLineItem/702','quantity'=>1,'lineItem'=>['id'=>'gid://shopify/LineItem/77']]],'pageInfo'=>['hasNextPage'=>false]]]];
+                        $o['returns']['nodes']=[['id'=>'gid://shopify/Return/703','status'=>'CLOSED','returnLineItems'=>['nodes'=>[
+                            ['__typename'=>'ReturnLineItem','id'=>'gid://shopify/ReturnLineItem/704','quantity'=>1,'processedQuantity'=>$this->badReturn?2:1,'fulfillmentLineItem'=>['id'=>'gid://shopify/FulfillmentLineItem/702']]],
+                            'pageInfo'=>['hasNextPage'=>false]]]];
+                    }
+                    unset($o);
+                }
+            }elseif(str_contains($request['query'],'COSCommerceOrderPage')){
                 $cursor=$request['variables']['after']??null;
                 if($this->pageMode){
                     if(!str_starts_with($request['variables']['filter']??'','created_at:<='))throw new RuntimeException('Backfill cutoff missing.');
@@ -99,7 +122,7 @@ try{
             }else{
                 $data['order']=['id'=>$request['variables']['id'],'createdAt'=>'2026-11-24T09:00:00Z','updatedAt'=>$this->updated,'cancelledAt'=>null,'test'=>false,
                     'customerJourneySummary'=>['ready'=>$this->journeyReady,'lastVisit'=>['occurredAt'=>'2026-11-24T08:00:00Z','utmParameters'=>['source'=>'meta','medium'=>'paid_social','campaign'=>$this->journeyCampaign]]],
-                    'edited'=>$this->edited,'taxesIncluded'=>true,'displayFinancialStatus'=>$this->financial,'displayFulfillmentStatus'=>'UNFULFILLED',
+                    'edited'=>$this->edited,'taxesIncluded'=>true,'displayFinancialStatus'=>$this->financial,'displayFulfillmentStatus'=>$this->fulfilledLifecycle?'FULFILLED':'UNFULFILLED',
                     'originalTotalPriceSet'=>$money('120.00'),'totalPriceSet'=>$money('120.00'),'currentTotalPriceSet'=>$money($this->current),
                     'totalDiscountsSet'=>$money('0.00'),'totalTaxSet'=>$money('20.00'),'totalShippingPriceSet'=>$money('0.00'),
                     'lineItems'=>['nodes'=>[['id'=>'gid://shopify/LineItem/77','quantity'=>1,'sku'=>'LAMP-1','product'=>['id'=>'gid://shopify/Product/41'],
@@ -481,6 +504,15 @@ try{
         $db->prepare("UPDATE cos_jobs SET status='RUNNING',attempts=?,locked_by='order-fixture-worker',locked_at=NOW(6) WHERE organization_id=? AND id=?")->execute([$attempt,$org,$j['id']]);
         return new \Kernel\Queue\Job($j['id'],$org,$j['type'],json_decode($j['payload'],true,512,JSON_THROW_ON_ERROR),$attempt,(int)$j['max_attempts'],(int)$j['timeout_seconds'],$j['correlation_id'],$j['idempotency_key'],'order-fixture-worker');
     };
+    $profile=['organization_id'=>$org,'actor_id'=>$owner,'connection_id'=>$conn,'mode'=>'webhooks','interval_minutes'=>15];
+    $periodic=new \App\Application\Sales\Service\PeriodicSalesOrderSync($db,$guard,$sync,json_encode([$profile],JSON_THROW_ON_ERROR));
+    $tick=new DateTimeImmutable('2026-11-26T12:00:00Z');
+    $check($periodic->run('foreign-'.$token,$tick)===[],'Periodic profile leaked outside tenant filter.');
+    $deferred=$periodic->run($org,$tick);
+    $check($deferred[0]['state']==='deferred'&&$deferred[0]['run_id']===$runId,'Periodic sync overlapped pending batch.');
+    $check($periodic::slotKey($profile,$tick)===$periodic::slotKey($profile,$tick->modify('+5 minutes'))&&$periodic::slotKey($profile,$tick)!==$periodic::slotKey($profile,$tick->modify('+15 minutes')),'Periodic slot identity incorrect.');
+    $reject(fn()=>$periodic::parseProfiles(json_encode([$profile,$profile],JSON_THROW_ON_ERROR)));
+
     $firstPage=$claimTask($runId,'page');
     $syncHandler->handle($firstPage);
     $checkpoint=$syncStatus($runId);
@@ -504,6 +536,13 @@ try{
     $job=$claimTask($runId,'order');$syncHandler->handle($job);$syncQueue->complete($job);
     $job=$claimTask($runId,'order');$syncHandler->handle($job);$syncQueue->complete($job);
     $check($syncStatus($runId)['counts']['orders_done']===2,'Backfill orders not reconciled after replay.');
+    $scheduled=$periodic->run($org,$tick);
+    $check($scheduled[0]['state']==='admitted','Periodic batch not admitted after prior completion.');
+    $scheduledRun=$scheduled[0]['run_id'];
+    $check($periodic->run($org,$tick)[0]['run_id']===$scheduledRun,'Periodic duplicate slot changed run identity.');
+    $pageJob=$claimTask($scheduledRun,'page');$syncHandler->handle($pageJob);$syncQueue->complete($pageJob);
+    $check($syncStatus($scheduledRun)['discovery_state']==='complete','Periodic batch did not reach native checkpoint.');
+    echo "Sales R2 periodic sync tenant filter, slot idempotency and native queue checkpoint PASS.\n";
     $http->pageMode=false;
     $rawSync='{"id":12350}';$sigSync=base64_encode(hash_hmac('sha256',$rawSync,'order-fixture-secret',true));
     $gidSync=\Domains\ProductManagement\Infrastructure\Shopify\ShopifyOrderWebhookEvidence::extractVerified($rawSync,$sigSync,'order-fixture-secret','orders/create');
@@ -654,6 +693,16 @@ try{
     $db->prepare('UPDATE tn_leads SET assigned_user_id=? WHERE organization_id=? AND id=?')->execute([$other,$org,$newLead]);
     $replay=$writes->createLead(['full_name'=>'Private guard fixture','email'=>'guard-'.$token.'@example.test'],$owner,'p4-replay','guard-'.$token);
     $check(!$replay->ok&&$replay->code==='sales_access_denied','Receipt replay exposed reassigned lead.');
+    // R2: customer can be selected independently; shared contact requires tenant scope.
+    $reject(fn()=>$createOrder([...$orderInput,'customer_id'=>$person],'r2-no-scope-'.$token));
+    $grant->execute([$org,$owner,'sales.director.view',(string)$owner]);
+    $customerOrder=$createOrder([...$orderInput,'customer_id'=>$person],'r2-customer-'.$token);
+    $check($customerOrder['order']['customer_id']===$person&&$customerOrder['order']['deal_id']===null,'Independent customer order failed.');
+    $check($createOrder([...$orderInput,'customer_id'=>$person],'r2-customer-'.$token)['replayed'],'Customer order replay failed.');
+    $reject(fn()=>$createOrder($orderInput,'r2-customer-'.$token));
+    $reject(fn()=>$createOrder([...$orderInput,'customer_id'=>PHP_INT_MAX],'r2-invalid-customer-'.$token));
+    $db->prepare('DELETE FROM sales_user_capabilities WHERE organization_id=? AND user_id=? AND capability="sales.director.view"')->execute([$org,$owner]);
+    echo "Sales R2 independent customer identity, scope and replay PASS.\n";
     $db->prepare('DELETE FROM sales_user_capabilities WHERE organization_id=? AND user_id=? AND capability="sales.workspace.use"')->execute([$org,$owner]);
     $denied=$writes->quickUpdateOpportunity($ownedId,['priority'=>'urgent'],$owner,'p4-revoked');
     $check(!$denied->ok&&$denied->code==='sales_access_denied'&&$read->deal($org,$ownedId)['priority']==='high','Revoked permission still wrote.');
@@ -673,6 +722,127 @@ try{
     $reject(fn()=>$reportCall('unknown'));
     $db->prepare('DELETE FROM cos_organization_memberships WHERE organization_id=? AND user_id=?')->execute([$org,$owner]);
     $reject(fn()=>$reportCall('outcomes'));
+    // R3 evidence is separate from commercial intake, never a Product stock mutation.
+    $providerOrder='gid://shopify/Order/12345';
+    $beforeR3=$orderRepo->get($org,$externalOrderId);
+    $readback=$source->fulfillmentEvidence($org,'shopify',$conn,$providerOrder);
+    $check($readback['unmapped_locations']===['gid://shopify/Location/88']&&$readback['assignments'][0]['items'][0]['remaining_quantity']===1
+        &&$readback['inventory_authority']==='external_review'&&!$readback['physical_commitment_verified']&&!$readback['local_stock_write_allowed'],'R3 assignment fabricated authority.');
+    $http->fulfillmentScope=false;$reject(fn()=>$source->fulfillmentEvidence($org,'shopify',$conn,$providerOrder));$http->fulfillmentScope=true;
+    $http->fulfillmentTruncated=true;$reject(fn()=>$source->fulfillmentEvidence($org,'shopify',$conn,$providerOrder));$http->fulfillmentTruncated=false;
+    $reject(fn()=>$source->fulfillmentEvidence('foreign-'.$token,'shopify',$conn,$providerOrder));
+    $mappedLocation=$productStore->createLocation($org,'R3-'.$token,'R3 mapped warehouse','r3-location-'.$token,(string)$owner,'r3-ci')['location_id'];
+    $reject(fn()=>$shopStore->mapFulfillmentLocation($org,$conn,'gid://shopify/Location/88',$mappedLocation));
+    $db->prepare('INSERT INTO pm_external_stock_observations(organization_id,connection_id,variant_gid,location_gid,inventory_gid,on_hand,available) VALUES (?,?,?,?,?,1,0)')
+        ->execute([$org,$conn,'gid://shopify/ProductVariant/42','gid://shopify/Location/88','gid://shopify/InventoryItem/99']);
+    $shopStore->mapFulfillmentLocation($org,$conn,'gid://shopify/Location/88',$mappedLocation);
+    $shopStore->mapFulfillmentLocation($org,$conn,'gid://shopify/Location/88',$mappedLocation);
+    $mapped=$source->fulfillmentEvidence($org,'shopify',$conn,$providerOrder);
+    $check($mapped['provider_hash']===$readback['provider_hash']&&$mapped['unmapped_locations']===[]&&$mapped['assignments'][0]['canonical_location_id']===$mappedLocation
+        &&$orderRepo->get($org,$externalOrderId)===$beforeR3&&!$mapped['local_stock_write_allowed'],'R3 mapping changed provider digest or Sales order state.');
+    // Re-enable the isolated integration actor only for the explicit R3 reconciliation.
+    $db->prepare('INSERT INTO cos_organization_memberships(organization_id,user_id,role,status) VALUES (?,?,"manager","ACTIVE")')->execute([$org,$owner]);
+    $grant->execute([$org,$owner,'sales.workspace.use',(string)$owner]);
+    $http->financial='PAID';$http->edited=false;$http->current='120.00';$http->updated='2026-11-25T14:00:00Z';$http->unmapped=false;
+    $r3input=['channel'=>'shopify','connection_id'=>$conn,'external_order_id'=>$providerOrder,'include_fulfillment_evidence'=>true];
+    $r3key='r3-evidence-'.$token;
+    $r3=$reconcile->reconcile($org,$owner,$r3input,$r3key,'r3-ci');
+    $check($r3['order_id']===$externalOrderId,'External evidence created another order.');
+    $evidenceView=(new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderSourceRepository($db))->latestForOrder($org,$externalOrderId)['fulfillment_evidence'];
+    $check($evidenceView['current_order_revision']&&$evidenceView['assignment_count']===1&&$evidenceView['unmapped_locations']===[]&&!$evidenceView['local_stock_write_allowed'],'Durable external evidence readback failed.');
+    $check($reconcile->reconcile($org,$owner,$r3input,$r3key,'r3-ci')['replayed'],'External evidence receipt replay failed.');
+    $q=$db->prepare('SELECT COUNT(*) FROM sales_order_external_fulfillment_evidence WHERE organization_id=? AND request_key=?');$q->execute([$org,$r3key]);$check((int)$q->fetchColumn()===1,'External evidence duplicated.');
+    $reject(fn()=>$reconcile->reconcile($org,$owner,array_diff_key($r3input,['include_fulfillment_evidence'=>true]),$r3key,'r3-ci'));
+    $check($orderRepo->get($org,$externalOrderId)===$beforeR3,'External evidence changed native commercial order.');
+    // Independently observed provider fulfillment/return, not a local stock or Finance effect.
+    $http->fulfilledLifecycle=true;$http->updated='2026-11-25T15:00:00Z';
+    $lifeInput=[...$r3input,'include_lifecycle_evidence'=>true];$lifeKey='r3-life-'.$token;
+    $rejectLife=static function()use($db,$reject,$reconcile,$org,$owner,$lifeInput,$lifeKey):void{
+        // The enclosing fixture owns the transaction; production guard rolls back on denial.
+        $db->exec('SAVEPOINT r3_denial');
+        try{$reject(fn()=>$reconcile->reconcile($org,$owner,$lifeInput,$lifeKey,'r3-ci'));}
+        finally{$db->exec('ROLLBACK TO SAVEPOINT r3_denial');$db->exec('RELEASE SAVEPOINT r3_denial');}
+    };
+    $http->returnScope=false;$rejectLife();$http->returnScope=true;
+    $http->lifecycleCountMismatch=true;$rejectLife();$http->lifecycleCountMismatch=false;
+    $http->badReturn=true;$rejectLife();$http->badReturn=false;
+    $life=$reconcile->reconcile($org,$owner,$lifeInput,$lifeKey,'r3-ci');
+    $check($life['order_id']===$externalOrderId,'Provider lifecycle changed order identity.');
+    $lifeView=(new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOrderSourceRepository($db))->latestForOrder($org,$externalOrderId)['fulfillment_evidence'];
+    $check($lifeView['provider_lifecycle']===['provider_fulfilled_quantity'=>1,'assigned_pending_quantity'=>0,'return_requested_quantity'=>1,'return_processed_quantity'=>1,'cancelled_unfulfilled_quantity'=>null,'review_reasons'=>[]]
+        &&$lifeView['current_order_revision']&&!$lifeView['local_stock_write_allowed']&&!$lifeView['physical_commitment_verified'],'Provider lifecycle quantities or stock fences invalid.');
+    $check($reconcile->reconcile($org,$owner,$lifeInput,$lifeKey,'r3-ci')['replayed'],'Lifecycle replay failed.');
+    $reject(fn()=>$reconcile->reconcile($org,$owner,$r3input,$lifeKey,'r3-ci'));
+    $check($orderRepo->get($org,$externalOrderId)===$beforeR3,'Provider fulfillment/return modified native order or stock authority.');
+    // Independent deterministic partial/cancellation proof: quantities are tied to provider line IDs.
+    $normalizer=\Domains\ProductManagement\Infrastructure\Shopify\ShopifyFulfillmentEvidenceNormalizer::class;
+    $line='gid://shopify/LineItem/77';$fl='gid://shopify/FulfillmentLineItem/702';
+    $complete=static fn(array $nodes):array=>['nodes'=>$nodes,'pageInfo'=>['hasNextPage'=>false]];
+    $rawLife=['order'=>['id'=>$providerOrder,'updatedAt'=>'2026-11-25T15:00:00Z','test'=>false,'cancelledAt'=>null,'edited'=>false,'displayFulfillmentStatus'=>'PARTIALLY_FULFILLED',
+        'lineItems'=>$complete([['id'=>$line,'quantity'=>3]]),
+        'fulfillmentOrders'=>$complete([['id'=>'gid://shopify/FulfillmentOrder/900','status'=>'IN_PROGRESS','requestStatus'=>'UNSUBMITTED','assignedLocation'=>['location'=>['id'=>'gid://shopify/Location/88']],
+            'lineItems'=>$complete([['id'=>'gid://shopify/FulfillmentOrderLineItem/901','totalQuantity'=>3,'remainingQuantity'=>1,'lineItem'=>['id'=>$line]]])]]),
+        'fulfillmentsCount'=>['count'=>1,'precision'=>'EXACT'],
+        'fulfillments'=>[['id'=>'gid://shopify/Fulfillment/701','status'=>'SUCCESS','location'=>['id'=>'gid://shopify/Location/88'],
+            'fulfillmentLineItems'=>$complete([['id'=>$fl,'quantity'=>2,'lineItem'=>['id'=>$line]]])]],
+        'returns'=>$complete([['id'=>'gid://shopify/Return/703','status'=>'OPEN','returnLineItems'=>$complete([['__typename'=>'ReturnLineItem','id'=>'gid://shopify/ReturnLineItem/704','quantity'=>1,'processedQuantity'=>0,'fulfillmentLineItem'=>['id'=>$fl]]])]])]];
+    $partial=$normalizer::normalize($rawLife,$providerOrder,true)['lifecycle']['lines'][$line];
+    $check($partial['ordered']===3&&$partial['provider_fulfilled']===2&&$partial['assigned_pending']===1&&$partial['return_requested']===1&&$partial['return_processed']===0&&$partial['cancelled_unfulfilled']===null,'Partial quantities invalid.');
+    $rawLife['order']['cancelledAt']='2026-11-25T15:00:00Z';
+    $rawLife['order']['fulfillmentOrders']['nodes'][0]['status']='CLOSED';
+    $rawLife['order']['fulfillmentOrders']['nodes'][0]['lineItems']['nodes'][0]['remainingQuantity']=0;
+    $cancelled=$normalizer::normalize($rawLife,$providerOrder,true)['lifecycle']['lines'][$line];
+    $check($cancelled['cancelled_unfulfilled']===1&&$cancelled['provider_fulfilled']===2,'Cancellation residual incorrectly included fulfilled units.');
+    $rawLife['order']['fulfillments'][0]['fulfillmentLineItems']['nodes'][0]['quantity']=4;
+    $reject(fn()=>$normalizer::normalize($rawLife,$providerOrder,true));
+    $review=$shopStore->inventoryCutoverReview($org,$conn,$source->fulfillmentEvidence($org,'shopify',$conn,$providerOrder,true));
+    $check($review['status']==='CUTOVER_BLOCKED'&&!$review['local_stock_write_allowed']&&!$review['ownership_changed']
+        &&in_array('provider_fulfillment_history',$review['blocking_reasons'],true)
+        &&in_array('provider_global_write_fence_unverified',$review['blocking_reasons'],true),'Cutover inferred from a per-order read.');
+    $reject(fn()=>$shopStore->inventoryCutoverReview('foreign-'.$token,$conn,$source->fulfillmentEvidence($org,'shopify',$conn,$providerOrder,true)));
+    echo "Sales R3.3 full provider lifecycle, partial quantity, return processing, cancellation, immutable line binding, replay and no stock effect PASS.\n";
+    echo "Sales R3.4 provider ownership preflight blocks unauthenticated global handover PASS.\n";
+    // A mapped product can own a native variant even without a variant mapping.
+    // Create unrelated native stock and reserve it BEFORE external authority binds.
+    $censusProduct=$productStore->createProduct($org,['name'=>'Census stock','type'=>'stock','sku'=>'CENSUS-'.strtoupper($token),'uom'=>'pcs','track_inventory'=>true],'census-product-'.$token,(string)$owner,'r3-census');
+    $db->prepare("UPDATE pm_products SET status='active' WHERE organization_id=? AND product_id=?")->execute([$org,$censusProduct['product_id']]);
+    $cv=$censusProduct['variant_id'];$cp=$censusProduct['product_id'];
+    $productStore->postMovement($org,$cv,$locA,'5','receipt','manual:census-opening','census-opening-'.$token,(string)$owner,'r3-census');
+    $productStore->reserveForOrder($org,$cp,$cv,$censusProduct['sku'],$locA,2,'sales-order:'.str_repeat('d',32).':1:'.str_repeat('c',32),'census-reserve-'.$token,(string)$owner,'r3-census');
+    $censusBalance=$productStore->stockBalance($org,$cv,$locA);
+    $shopStore->map($org,$conn,'product','gid://shopify/Product/401',$cp);
+    $otherConn=$shopStore->provision($org,'census-'.$token.'.myshopify.com','shopify_env_primary');
+    $shopStore->map($org,$otherConn,'variant','gid://shopify/ProductVariant/402',$cv);
+    $db->prepare("UPDATE pm_external_connections SET status='disabled' WHERE organization_id=? AND connection_id=?")->execute([$org,$otherConn]);
+    $censusBeforeReads=$http->reads;
+    $census=$shopStore->inventoryCutoverCensus($org,$conn);
+    $cc=$census['local_counts'];
+    $check($census['status']==='CUTOVER_BLOCKED'&&!$census['provider_census_complete']&&!$census['local_stock_write_allowed']&&!$census['ownership_changed']
+        &&$cc['native_variants']===1&&$cc['tracked_native_variants']===1&&$cc['tracked_variants_without_mapping']===1
+        &&$cc['invalid_mappings']>=3&&$cc['active_native_reservations']===1&&$cc['nonzero_native_balances']===1
+        &&$cc['other_authoritative_connections']===1,'Connection census missed inherited scope, orphan mapping, native stock/reservation or disabled authority.');
+    $shopStore->map($org,$conn,'variant','gid://shopify/ProductVariant/402',$cv);
+    $db->prepare("INSERT INTO pm_external_stock_observations(organization_id,connection_id,variant_gid,location_gid,inventory_gid,on_hand,available,observed_at) VALUES (?,?,?,?,?,5,NULL,DATE_SUB(UTC_TIMESTAMP(6),INTERVAL 2 DAY))")
+        ->execute([$org,$conn,'gid://shopify/ProductVariant/402','gid://shopify/Location/999','gid://shopify/InventoryItem/402']);
+    $census=$shopStore->inventoryCutoverCensus($org,$conn);$cc=$census['local_counts'];
+    $check($cc['tracked_variants_without_mapping']===0&&$cc['tracked_variants_without_fresh_observation']===1
+        &&$cc['stale_or_incomplete_observations']===1&&$cc['unmapped_observations']===1,'Connection census accepted stale, incomplete or unmapped stock observation.');
+    $db->prepare("INSERT INTO pm_external_stock_observations(organization_id,connection_id,variant_gid,location_gid,inventory_gid,on_hand,available,observed_at) VALUES (?,?,?,?,?,5,3,UTC_TIMESTAMP(6))")
+        ->execute([$org,$conn,'gid://shopify/ProductVariant/402','gid://shopify/Location/88','gid://shopify/InventoryItem/403']);
+    $db->prepare("UPDATE pm_external_connections SET status='error' WHERE organization_id=? AND connection_id=?")->execute([$org,$conn]);
+    $census=$shopStore->inventoryCutoverCensus($org,$conn);$cc=$census['local_counts'];
+    $check($cc['tracked_variants_without_fresh_observation']===0&&$cc['inconsistent_inventory_variants']===1
+        &&$census['connection_status']==='error'&&$census['configured_inventory_mode']==='shopify_authoritative'&&in_array('connection_not_ready',$census['blocking_reasons'],true)
+        &&in_array('provider_global_write_fence_unverified',$census['blocking_reasons'],true)
+        &&$shopStore->inventoryCutoverCensus($org,$otherConn)['connection_status']==='disabled'
+        &&$productStore->stockBalance($org,$cv,$locA)===$censusBalance&&$orderRepo->get($org,$externalOrderId)===$beforeR3
+        &&$http->reads===$censusBeforeReads,'Census changed native stock/order, contacted provider or ignored conflicting inventory identity/error state.');
+    $reject(fn()=>$shopStore->inventoryCutoverCensus('foreign-'.$token,$conn));
+    if(strtoupper($conn)!==$conn)$reject(fn()=>$shopStore->inventoryCutoverCensus($org,strtoupper($conn)));
+    if(strtoupper($org)!==$org)$reject(fn()=>$shopStore->inventoryCutoverCensus(strtoupper($org),$conn));
+    $db->prepare("UPDATE pm_external_connections SET status='ready' WHERE organization_id=? AND connection_id=?")->execute([$org,$conn]);
+    echo "Sales R3.8 connection-wide local inventory census, inherited product authority, stale observations, disabled overlap, tenant and no-write fences PASS.\n";
+    echo "Sales R3 Product-owned fulfillment assignment readback, location mapping, scope/pagination fences, durable evidence and no stock effect PASS.\n";
     echo "Sales S5 scoped exact summary, redacted lists and timeline PASS.\n";
 }finally{$db->rollBack();}
 

@@ -230,6 +230,26 @@ cos_automation_intents_product_submit:
   controller: App\Http\Api\V1\Controller\CanonicalAutomationIntentController::submitProduct
   methods: [POST]
 
+cos_automation_intents_sales_submit:
+  path: /api/v1/capability-intents/sales-business
+  controller: App\Http\Api\V1\Controller\CanonicalAutomationIntentController::submitSales
+  methods: [POST]
+
+cos_automation_intents_sales_review:
+  path: /api/v1/capability-intents/sales-business/review
+  controller: App\Http\Api\V1\Controller\SalesAutomationIntentReviewController::index
+  methods: [GET]
+
+cos_automation_intents_sales_inspect:
+  path: /api/v1/capability-intents/sales-business/review/{intentId}
+  controller: App\Http\Api\V1\Controller\SalesAutomationIntentReviewController::inspect
+  methods: [GET]
+
+cos_automation_intents_sales_adopt:
+  path: /api/v1/capability-intents/sales-business/review/{intentId}/adopt
+  controller: App\Http\Api\V1\Controller\SalesAutomationIntentReviewController::adopt
+  methods: [POST]
+
 cos_automation_intents_workspace:
   path: /workspace/capabilities/intents
   controller: App\Web\Capability\AutomationIntentReviewController::index

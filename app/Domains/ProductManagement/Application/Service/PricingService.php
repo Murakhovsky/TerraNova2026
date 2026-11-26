@@ -365,7 +365,7 @@ final readonly class PricingService
                 INNER JOIN pm_external_connections c
                     ON c.organization_id=m.organization_id AND c.connection_id=m.connection_id
                 WHERE v.organization_id=? AND v.variant_id=?
-                  AND c.provider='shopify' AND c.mode='shopify_authoritative' AND c.status='ready'
+                  AND c.provider='shopify' AND c.mode='shopify_authoritative'
                 LIMIT 1",[$org,$variantId])->fetch(PDO::FETCH_ASSOC);
             if($owned!==false)
                 throw new DomainException('Shopify-authoritative Price requires controlled owner cutover.');

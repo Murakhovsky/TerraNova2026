@@ -619,7 +619,7 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
               AND v.track_inventory=1 AND p.status<>'archived'
               AND NOT EXISTS (SELECT 1 FROM pm_external_mappings m JOIN pm_external_connections c ON c.organization_id=m.organization_id AND c.connection_id=m.connection_id
                 WHERE m.organization_id=v.organization_id AND ((m.entity_type='variant' AND m.canonical_id=v.variant_id) OR (m.entity_type='product' AND m.canonical_id=v.product_id))
-                AND c.provider='shopify' AND c.mode='shopify_authoritative' AND c.status='ready')
+                AND c.provider='shopify' AND c.mode='shopify_authoritative')
             ORDER BY v.variant_id LIMIT :lim OFFSET :off";
         $stmt=$this->connection->prepare($sql);
         $stmt->bindValue(':org',$org);$stmt->bindValue(':loc',$location);
@@ -890,7 +890,8 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
     }
 
     /**
-     * Preserve Shopify-authoritative catalog/stock ownership. A local owner
+     * Preserve Shopify-authoritative catalog/stock ownership even when a
+     * connection is disabled or in error; disconnection is not a handover. A local owner
      * switch requires a separately reviewed policy/cutover, not a hidden
      * override in a generic Product or Stock command.
      */
@@ -908,7 +909,7 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
                     (m.entity_type=? AND m.canonical_id=?)
                     OR (?='variant' AND m.entity_type='product' AND m.canonical_id=v.product_id)
                 )
-                AND c.provider='shopify' AND c.mode='shopify_authoritative' AND c.status='ready'
+                AND c.provider='shopify' AND c.mode='shopify_authoritative'
             LIMIT 1",[$id,$org,$entityType,$id,$entityType]);
         if($found!==null)
             throw new DomainException('Shopify-authoritative identity requires controlled owner cutover.');

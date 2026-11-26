@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "target_type": {
+      "type": "string",
+      "const": "sales_order_connection"
+    },
+    "target_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "channel": {
+          "type": "string",
+          "enum": [
+            "shopify"
+          ]
+        },
+        "connection_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "backfill",
+            "webhooks"
+          ]
+        }
+      },
+      "required": [
+        "channel",
+        "connection_id",
+        "mode"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "target_type",
+    "target_id",
+    "parameters"
+  ]
+}

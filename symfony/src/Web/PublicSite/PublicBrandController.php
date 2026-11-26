@@ -6,6 +6,7 @@ namespace App\Web\PublicSite;
 
 use App\Application\Content\Query\GetPublicBrandPageQuery;
 use App\Application\Sales\Command\ReceivePublicLeadCommand;
+use Domains\Sales\Domain\Policy\PublicLeadAttribution;
 use App\Application\Sales\Command\SalesMutationResult;
 use App\Web\Experience\Archetype\PageArchetype;
 use App\Web\Experience\Archetype\PagePresentationFactory;
@@ -93,6 +94,7 @@ final readonly class PublicBrandController
                 ),
                 'brand' => $brand,
                 'leadSubmissionId' => bin2hex(random_bytes(16)),
+                'leadAttribution' => PublicLeadAttribution::observe($request->isMethod('POST') ? $request->request->all() : $request->query->all()),
             ]),
             Response::HTTP_OK,
             [

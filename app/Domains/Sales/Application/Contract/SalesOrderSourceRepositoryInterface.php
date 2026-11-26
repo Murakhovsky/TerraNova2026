@@ -6,5 +6,6 @@ interface SalesOrderSourceRepositoryInterface
 {
     public function lock(string $org,string $channel,string $connection,string $externalId):array;
     public function latestForOrder(string $org,string $orderId):?array;
+    public function recordFulfillmentObservation(string $org,string $sourceId,string $orderId,string $key,array $evidence):void;
     public function observe(string $org,string $sourceId,string $updated,string $hash,array $observation,string $outcome,?string $reason,?string $orderId,bool $advance):void;
 }
