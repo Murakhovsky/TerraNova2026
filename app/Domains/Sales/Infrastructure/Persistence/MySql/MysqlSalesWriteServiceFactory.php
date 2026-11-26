@@ -79,7 +79,7 @@ final readonly class MysqlSalesWriteServiceFactory implements SalesWriteServiceF
         );
         $leads = new MysqlInboundLeadRepository($this->connection);
         $receipts = new MysqlSalesMutationReceiptRepository($this->connection);
-        $publicLeads = new ReceivePublicLead($leads,new SalesInboundCaseResolverAdapter($inbound),$events,$transactions,$organizationId,$receipts);
+        $publicLeads = new ReceivePublicLead($leads,new SalesInboundCaseResolverAdapter($inbound),$events,$transactions,$organizationId,$receipts,new MysqlSalesRoundRobinAllocator($this->connection));
 
         return new SalesWriteService(
             $organizationId,

@@ -564,7 +564,7 @@ Manifest capabilities не задекларовані.
 - обробники jobs: `salesCrmInboxJobHandler`, `salesOrderSyncJobHandler`;
 - внески API routes: —;
 - постачальники конфігурації: `salesModuleConfigurationProvisioner`;
-- міграції: `app/migrations/20260910_000030_sales_v071_configuration_ownership.sql`, `app/migrations/20260913_000044_sales_v081_historical_stage_history.sql`, `app/migrations/20260913_000045_sales_v082_funnel_metrics.sql`, `app/migrations/20260913_000046_sales_v083_operational_performance.sql`, `app/migrations/20260913_000047_sales_v086_hardening.sql`, `app/migrations/20260928_000118_sales_v100_release.sql`, `app/migrations/20261003_000121_sales_lead_qualification_transition.sql`, `app/migrations/20261003_000122_sales_followup_activity_type.sql`, `app/migrations/20261003_000123_sales_lead_qualification_governance_repair.sql`, `app/migrations/20261124_009001_sales_offer_lifecycle.sql`, `app/migrations/20261124_009002_sales_activity_cancellation.sql`, `app/migrations/20261124_009003_sales_offer_delivery.sql`, `app/migrations/20261124_009004_sales_native_orders.sql`, `app/migrations/20261125_009005_sales_order_source_reconciliation.sql`, `app/migrations/20261125_009006_sales_order_sync_runs.sql`, `app/migrations/20261125_009008_sales_order_lifecycle.sql`, `app/migrations/20261125_009009_sales_order_journey_evidence.sql`.
+- міграції: `app/migrations/20260910_000030_sales_v071_configuration_ownership.sql`, `app/migrations/20260913_000044_sales_v081_historical_stage_history.sql`, `app/migrations/20260913_000045_sales_v082_funnel_metrics.sql`, `app/migrations/20260913_000046_sales_v083_operational_performance.sql`, `app/migrations/20260913_000047_sales_v086_hardening.sql`, `app/migrations/20260928_000118_sales_v100_release.sql`, `app/migrations/20261003_000121_sales_lead_qualification_transition.sql`, `app/migrations/20261003_000122_sales_followup_activity_type.sql`, `app/migrations/20261003_000123_sales_lead_qualification_governance_repair.sql`, `app/migrations/20261124_009001_sales_offer_lifecycle.sql`, `app/migrations/20261124_009002_sales_activity_cancellation.sql`, `app/migrations/20261124_009003_sales_offer_delivery.sql`, `app/migrations/20261124_009004_sales_native_orders.sql`, `app/migrations/20261125_009005_sales_order_source_reconciliation.sql`, `app/migrations/20261125_009006_sales_order_sync_runs.sql`, `app/migrations/20261125_009008_sales_order_lifecycle.sql`, `app/migrations/20261125_009009_sales_order_journey_evidence.sql`, `app/migrations/20261126_009010_sales_round_robin.sql`, `app/migrations/20261126_009011_sales_external_fulfillment_evidence.sql`.
 
 ### Задекларовані capabilities
 
@@ -599,6 +599,29 @@ Manifest capabilities не задекларовані.
 - `sales.deal.won.observation`;
 - `sales.director.view`;
 - `sales.followup.schedule`;
+- `sales.governed.activity.cancel`;
+- `sales.governed.activity.complete`;
+- `sales.governed.activity.record`;
+- `sales.governed.activity.reschedule`;
+- `sales.governed.client_case.create`;
+- `sales.governed.crm.inbox.process`;
+- `sales.governed.crm.inbox.recover`;
+- `sales.governed.deal.commercial.set`;
+- `sales.governed.deal.outcome.record`;
+- `sales.governed.deal.owner.assign`;
+- `sales.governed.followup.schedule`;
+- `sales.governed.lead.activity.cancel`;
+- `sales.governed.lead.activity.complete`;
+- `sales.governed.lead.activity.reschedule`;
+- `sales.governed.lead.create`;
+- `sales.governed.lead.followup.schedule`;
+- `sales.governed.lead.intake`;
+- `sales.governed.lead.qualify`;
+- `sales.governed.lead.state.manage`;
+- `sales.governed.negotiation.record`;
+- `sales.governed.offer.create`;
+- `sales.governed.offer.revise`;
+- `sales.governed.offer.transition`;
 - `sales.governed.order.create`;
 - `sales.governed.order.lifecycle.allocate`;
 - `sales.governed.order.lifecycle.cancel`;
@@ -606,6 +629,11 @@ Manifest capabilities не задекларовані.
 - `sales.governed.order.lifecycle.fulfill`;
 - `sales.governed.order.lifecycle.release`;
 - `sales.governed.order.lifecycle.return`;
+- `sales.governed.order.source.reconcile`;
+- `sales.governed.order.source.sync.start`;
+- `sales.governed.pipeline.stage.manage`;
+- `sales.governed.property_match.record`;
+- `sales.governed.team.manage`;
 - `sales.inbound.request.read`;
 - `sales.lead.activity.cancel`;
 - `sales.lead.activity.complete`;

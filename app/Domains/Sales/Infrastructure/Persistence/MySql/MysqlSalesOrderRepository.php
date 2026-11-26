@@ -38,13 +38,20 @@ final readonly class MysqlSalesOrderRepository implements SalesOrderRepositoryIn
     public function placement(string $organizationId,string $orderId):?array
     {
         if ($organizationId===''||preg_match('/^[a-f0-9]{32}$/D',$orderId)!==1) return null;
-        $q=$this->connection->prepare('SELECT payload FROM sales_order_evidence WHERE organization_id=? AND order_id=? AND revision=1 AND event_type="sales.commerce.order.placed"');
-        $q->execute([$organizationId,$orderId]);$raw=$q->fetchColumn();
-        if (!is_string($raw)) return null;
-        $fact=json_decode($raw,true,512,JSON_THROW_ON_ERROR);
+        $q=$this->connection->prepare('SELECT e.payload,o.deal_id FROM sales_order_evidence e JOIN sales_orders o
+            ON o.organization_id=e.organization_id AND o.order_id=e.order_id
+            WHERE e.organization_id=? AND BINARY e.organization_id=BINARY ? AND e.order_id=? AND e.revision=1 AND e.event_type="sales.commerce.order.placed"');
+        $q->execute([$organizationId,$organizationId,$orderId]);$row=$q->fetch(PDO::FETCH_ASSOC);
+        if (!is_array($row)) return null;
+        $fact=json_decode($row['payload'],true,512,JSON_THROW_ON_ERROR);
         if (($fact['organization_id']??null)!==$organizationId||($fact['order_id']??null)!==$orderId||
             ($fact['event_type']??null)!=='sales.commerce.order.placed'||($fact['schema_version']??null)!=='1.0.0')
             throw new LogicException('Native placement evidence integrity failed.');
+        // The relationship must be an immutable native placement fact, not a guessed
+        // customer match or an inconsistent event. The consumer quarantines this case.
+        $deal=$row['deal_id']===null?null:(int)$row['deal_id'];
+        if (!array_key_exists('deal_id',$fact)||$fact['deal_id']!==$deal||($deal!==null&&$deal<1))
+            throw new \DomainException('Native placement relationship inconsistent.');
         $fact['attribution_observations']=(object)$fact['attribution_observations'];
         return $fact;
     }

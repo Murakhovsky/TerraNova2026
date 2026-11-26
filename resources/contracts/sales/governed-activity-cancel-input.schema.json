@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "target_type": {
+      "type": "string",
+      "const": "deal"
+    },
+    "target_id": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]{0,18}$"
+    },
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "deal_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "activity_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        }
+      },
+      "required": [
+        "deal_id",
+        "activity_id",
+        "reason"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "target_type",
+    "target_id",
+    "parameters"
+  ]
+}

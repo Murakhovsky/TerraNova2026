@@ -10,8 +10,57 @@ use Domains\ProductManagement\Application\Contract\ProductCommercialReferencePor
 use Kernel\Module\ActiveModuleResolver;
 
 /** Existing read-only transport/credential boundary. Store identity is independently checked on every call. */
-final readonly class ShopifyCommerceOrderSource implements CommerceOrderSourcePort
+final readonly class ShopifyCommerceOrderSource implements CommerceOrderSourcePort,\Domains\ProductManagement\Application\Contract\CommerceOrderFulfillmentEvidencePort
 {
+    private const FULFILLMENT=<<<'GQL'
+query COSCommerceFulfillmentEvidence($id: ID!) {
+  currentAppInstallation { accessScopes { handle } }
+  order(id: $id) {
+    id updatedAt test cancelledAt displayFulfillmentStatus
+    fulfillmentOrders(first: 10) {
+      nodes {
+        id status requestStatus assignedLocation { location { id } }
+        lineItems(first: 20) {
+          nodes { id totalQuantity remainingQuantity lineItem { id } }
+          pageInfo { hasNextPage }
+        }
+      }
+      pageInfo { hasNextPage }
+    }
+  }
+}
+GQL;
+    private const LIFECYCLE=<<<'GQL'
+query COSCommerceFulfillmentEvidenceLifecycle($id: ID!) {
+  currentAppInstallation { accessScopes { handle } }
+  order(id: $id) {
+    id updatedAt test cancelledAt edited displayFulfillmentStatus
+    lineItems(first: 100) { nodes { id quantity product { id } variant { id } } pageInfo { hasNextPage } }
+    fulfillmentOrders(first: 10) {
+      nodes {
+        id status requestStatus assignedLocation { location { id } }
+        lineItems(first: 20) { nodes { id totalQuantity remainingQuantity lineItem { id } } pageInfo { hasNextPage } }
+      }
+      pageInfo { hasNextPage }
+    }
+    fulfillmentsCount { count precision }
+    fulfillments(first: 10) {
+      id status location { id }
+      fulfillmentLineItems(first: 20) { nodes { id quantity lineItem { id } } pageInfo { hasNextPage } }
+    }
+    returns(first: 10) {
+      nodes {
+        id status
+        returnLineItems(first: 20) {
+          nodes { __typename ... on ReturnLineItem { id quantity processedQuantity fulfillmentLineItem { id } } }
+          pageInfo { hasNextPage }
+        }
+      }
+      pageInfo { hasNextPage }
+    }
+  }
+}
+GQL;
     private const ORDER=<<<'GQL'
 query COSCommerceOrder($id: ID!) {
   currentAppInstallation { accessScopes { handle } }
@@ -99,6 +148,12 @@ GQL;
         $cancelled=$raw['cancelledAt']===null?null:self::time($raw['cancelledAt']);
         $items=$this->allLines($c['shop_domain'],$token,$externalId,$updated,$raw['lineItems']??null);
         $raw['lineItems']=$items;
+        $lineIdentities=[];foreach($items['nodes'] as $line){
+            $quantity=$line['quantity']??null;
+            if(!is_int($quantity)||$quantity<1||$quantity>100000)throw new DomainException('Invalid provider order line quantity.');
+            $lineIdentities[$line['id']]=$quantity;
+        }
+        ksort($lineIdentities,SORT_STRING);
         // Optional attribution scopes must not prevent a valid commercial import.
         // Keep last-visit evidence independent of the larger moments query and order revision.
         unset($raw['customerJourneySummary']);
@@ -148,7 +203,48 @@ GQL;
         $providerHash=hash('sha256',json_encode($raw,JSON_THROW_ON_ERROR));
         return ['provider_hash'=>$providerHash,'channel'=>'shopify','store_reference'=>$connection,'external_order_id'=>$externalId,'created_at'=>$created,'updated_at'=>$updated,
             'financial_status'=>$financial,'fulfillment_status'=>$fulfillment,'cancelled_at'=>$cancelled,'test'=>$raw['test'],'edited'=>$raw['edited'],'tax_included'=>$raw['taxesIncluded'],
-            'currency'=>$currency,'original_total'=>$original,'current_total'=>$current,'terms'=>$terms,'blocked_reason'=>$reason,'journey'=>$journey,'journey_history'=>$journeyHistory];
+            'currency'=>$currency,'original_total'=>$original,'current_total'=>$current,'terms'=>$terms,'blocked_reason'=>$reason,'journey'=>$journey,'journey_history'=>$journeyHistory,'line_identities'=>$lineIdentities];
+    }
+
+    public function fulfillmentEvidence(string $org,string $channel,string $connection,string $externalId,bool $includeLifecycle=false):array
+    {
+        self::gid($externalId,'Order');
+        $c=$this->connection($org,$channel,$connection);
+        $token=$this->credentials->accessToken($c['shop_domain'],$c['secret_ref'],$org,$connection);
+        $data=$this->read->query($c['shop_domain'],$token,$includeLifecycle?self::LIFECYCLE:self::FULFILLMENT,['id'=>$externalId])['data'];
+        self::assertOrderScope($data);
+        $scopes=array_column($data['currentAppInstallation']['accessScopes'],'handle');
+        foreach(['merchant_managed','third_party','assigned'] as $scope)
+            if(!in_array('read_'.$scope.'_fulfillment_orders',$scopes,true)&&!in_array('write_'.$scope.'_fulfillment_orders',$scopes,true))
+                throw new DomainException('Fulfillment visibility incomplete; ownership cannot be inferred.');
+        if($includeLifecycle&&!in_array('read_returns',$scopes,true)&&!in_array('write_returns',$scopes,true))
+            throw new DomainException('Complete return visibility required.');
+        $evidence=ShopifyFulfillmentEvidenceNormalizer::normalize($data,$externalId,$includeLifecycle);
+        $fresh=$this->connection($org,$channel,$connection);
+        if($fresh['shop_domain']!==$c['shop_domain']||$fresh['secret_ref']!==$c['secret_ref']||$fresh['mode']!==$c['mode'])
+            throw new DomainException('Commerce fulfillment source changed.');
+        $missing=[];
+        foreach($evidence['assignments'] as &$assignment){
+            $assignment['canonical_location_id']=$this->store->fulfillmentLocation($org,$connection,$assignment['location_gid']);
+            if($assignment['canonical_location_id']===null)$missing[$assignment['location_gid']]=true;
+        }
+        unset($assignment);
+        if($includeLifecycle){
+            // Canonical reference lookup is separate from the provider hash.
+            $mapped=[];
+            foreach($data['order']['lineItems']['nodes'] as $line){
+                $p=$line['product']['id']??null;$v=$line['variant']['id']??null;
+                $pid=is_string($p)?$this->store->mapping($org,$connection,'product',self::gid($p,'Product'))['canonical_id']??null:null;
+                $vid=is_string($v)?$this->store->mapping($org,$connection,'variant',self::gid($v,'ProductVariant'))['canonical_id']??null:null;
+                $ref=is_string($pid)&&is_string($vid)?$this->products->quoteReference($org,$pid,$vid):null;
+                $mapped[$line['id']]=$ref!==null&&($ref['product_id']??null)===$pid&&($ref['variant_id']??null)===$vid
+                    ?['product_id'=>$pid,'variant_id'=>$vid]:null;
+            }
+            ksort($mapped,SORT_STRING);$evidence['canonical_line_mappings']=$mapped;
+        }
+        return ['organization_id'=>$org,'channel'=>$channel,'connection_id'=>$connection,'configured_inventory_mode'=>$c['mode'],
+            ...$evidence,'unmapped_locations'=>array_keys($missing),'inventory_authority'=>'external_review',
+            'local_stock_write_allowed'=>false,'physical_commitment_verified'=>false];
     }
 
     public function page(string $org,string $channel,string $connection,?string $cursor,?string $cutoff=null):array

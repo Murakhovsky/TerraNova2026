@@ -10,7 +10,7 @@ final class SalesOrderTerms
     private const MAX=99999999999999; // DECIMAL(14,2)
     public static function normalize(array $input,int $lineLimit=100):array
     {
-        if (array_diff(array_keys($input),['currency','lines','discount','tax','tax_included','shipping','total','deal_id','owner_id','attribution'])!==[])
+        if (array_diff(array_keys($input),['currency','lines','discount','tax','tax_included','shipping','total','deal_id','owner_id','customer_id','attribution'])!==[])
             throw new DomainException('Unknown order field.');
         $currency=$input['currency']??null;
         if (!in_array($currency,['USD','EUR','UAH'],true)) throw new DomainException('Unsupported order currency.');

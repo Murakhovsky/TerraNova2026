@@ -75,3 +75,25 @@ foreach([['test'=>false],['terms'=>[]],['blocked_reason'=>null],['store_referenc
     throw new RuntimeException('Unsafe sandbox evidence accepted.');
 }
 echo "SHOPIFY_SANDBOX_TEST_ORDER_ISOLATION_CONTRACT_OK\n";
+
+$org='sandbox-fixture';
+$line='gid://shopify/LineItem/222';
+$now='2026-11-24T10:00:00.000000Z';
+$testOrder=[...$testOrder,'updated_at'=>$now,'cancelled_at'=>$now,'fulfillment_status'=>'PARTIALLY_FULFILLED','line_identities'=>[$line=>3]];
+$lifecycle=['organization_id'=>$org,'connection_id'=>$connection,'channel'=>'shopify','external_order_id'=>$gid,'test'=>true,
+    'provider_hash'=>str_repeat('c',64),'provider_updated_at'=>$now,'cancelled_at'=>$now,'provider_fulfillment_status'=>'PARTIALLY_FULFILLED',
+    'inventory_authority'=>'external_review','local_stock_write_allowed'=>false,'physical_commitment_verified'=>false,
+    'lifecycle'=>['lines'=>[$line=>['ordered'=>3,'assigned_pending'=>0,'provider_fulfilled'=>2,'return_requested'=>1,'return_processed'=>1,'cancelled_unfulfilled'=>1]],'review_reasons'=>[]]];
+$proof=\Domains\ProductManagement\Infrastructure\Shopify\ShopifySandboxOrderAcceptance::verifyLifecycle($testOrder,$lifecycle,$org,$connection,$gid);
+if($proof['status']!=='SANDBOX_LIFECYCLE_READBACK_VERIFIED'||$proof['provider_quantities']!==[
+    'ordered'=>3,'assigned_pending'=>0,'provider_fulfilled'=>2,'return_requested'=>1,'return_processed'=>1,'cancelled_unfulfilled'=>1]
+    ||$proof['ownership_changed']||$proof['physical_commitment_verified']||$proof['native_order_created']||$proof['payment_settled']
+    ||$proof['scenario_acceptance']!=='independent_review_required')throw new RuntimeException('Sandbox provider lifecycle readback invalid.');
+foreach([['test'=>false],['organization_id'=>'foreign'],['provider_updated_at'=>'2026-11-25T10:00:00.000000Z'],
+    ['provider_fulfillment_status'=>'FULFILLED'],['local_stock_write_allowed'=>true],['physical_commitment_verified'=>true],
+    ['lifecycle'=>['lines'=>['gid://shopify/LineItem/223'=>$lifecycle['lifecycle']['lines'][$line]],'review_reasons'=>[]]]] as $patch){
+    try{\Domains\ProductManagement\Infrastructure\Shopify\ShopifySandboxOrderAcceptance::verifyLifecycle($testOrder,[...$lifecycle,...$patch],$org,$connection,$gid);}
+    catch(DomainException){continue;}
+    throw new RuntimeException('Unsafe sandbox lifecycle accepted.');
+}
+echo "SHOPIFY_SANDBOX_LIFECYCLE_INDEPENDENT_READBACK_CONTRACT_OK\n";

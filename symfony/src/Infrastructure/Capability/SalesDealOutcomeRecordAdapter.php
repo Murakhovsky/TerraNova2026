@@ -14,11 +14,11 @@ final readonly class SalesDealOutcomeRecordAdapter implements CapabilityInvocati
     public function __construct(private CommandBusInterface $commands) {}
     public function binding():string { return 'command:sales.deal.outcome.record'; }
 
-    public function invoke(TenantContext $actor,array $input,string $key,string $correlationId):mixed
+    public function invoke(TenantContext $actor,array $input,string $key,string $correlationId,?\Kernel\Action\Action $approvedAction=null):mixed
     {
         $user=$actor->userId()->value();
         if (!ctype_digit($user) || (int)$user<1 || (string)(int)$user!==$user) throw new DomainException('Invalid deal operator.');
-        $receipt=$this->commands->dispatch(new ManageSalesDealCommand($actor->organizationId(),(int)$user,'outcome.record',$input,$key,$correlationId));
+        $receipt=$this->commands->dispatch(new ManageSalesDealCommand($actor->organizationId(),(int)$user,'outcome.record',$input,$key,$correlationId,$approvedAction));
         if (!is_array($receipt) || ($receipt['state']['deal_id']??null)!==($input['deal_id']??null)
             || !is_bool($receipt['changed']??null) || !is_bool($receipt['replayed']??null)) throw new DomainException('Invalid native deal receipt.');
         return $receipt;

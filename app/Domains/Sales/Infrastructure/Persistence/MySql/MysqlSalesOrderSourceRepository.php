@@ -28,9 +28,80 @@ final readonly class MysqlSalesOrderSourceRepository implements SalesOrderSource
         if($rows===[])return null;
         if(count($rows)!==1)throw new LogicException('Ambiguous Order source observation.');
         $row=$rows[0];$fact=json_decode($row['observation'],true,32,JSON_THROW_ON_ERROR);
-        return ['source_id'=>$row['source_id'],'provider_updated_at'=>$fact['updated_at'],'provider_fulfillment_status'=>$fact['fulfillment_status'],
+        $view=['source_id'=>$row['source_id'],'provider_updated_at'=>$fact['updated_at'],'provider_fulfillment_status'=>$fact['fulfillment_status'],
             'provider_financial_status'=>$fact['financial_status'],'provider_cancelled_at'=>$fact['cancelled_at'],
             'reconciliation_outcome'=>$row['outcome'],'review_reason'=>$row['blocked_reason']];
+        $q=$this->connection->prepare('SELECT evidence_json,evidence_hash,provider_updated_at,observed_at FROM sales_order_external_fulfillment_evidence WHERE organization_id=? AND BINARY organization_id=BINARY ? AND source_id=? AND order_id=? ORDER BY observed_at DESC,evidence_id DESC LIMIT 1');
+        $q->execute([$org,$org,$row['source_id'],$orderId]);$e=$q->fetch(PDO::FETCH_ASSOC);
+        if(is_array($e)){
+            $evidence=json_decode($e['evidence_json'],true,64,JSON_THROW_ON_ERROR);
+            if(!hash_equals($e['evidence_hash'],self::digest($evidence)))throw new LogicException('External fulfillment evidence integrity failed.');
+            $view['fulfillment_evidence']=['provider_hash'=>$evidence['provider_hash'],'provider_updated_at'=>$evidence['provider_updated_at'],
+                'observed_at'=>str_replace(' ','T',$e['observed_at']).'Z','current_order_revision'=>$evidence['provider_updated_at']===$fact['updated_at'],
+                'assignment_count'=>count($evidence['assignments']),'unmapped_locations'=>$evidence['unmapped_locations'],
+                'inventory_authority'=>'external_review','physical_commitment_verified'=>false,'local_stock_write_allowed'=>false];
+            if(isset($evidence['lifecycle'])){
+                $life=$evidence['lifecycle'];$summary=['provider_fulfilled_quantity'=>0,'assigned_pending_quantity'=>0,
+                    'return_requested_quantity'=>0,'return_processed_quantity'=>0,'cancelled_unfulfilled_quantity'=>0,
+                    'review_reasons'=>$life['review_reasons']];
+                foreach($life['lines'] as $line){
+                    foreach(['provider_fulfilled'=>'provider_fulfilled_quantity','assigned_pending'=>'assigned_pending_quantity','return_requested'=>'return_requested_quantity','return_processed'=>'return_processed_quantity'] as $from=>$to)$summary[$to]+=$line[$from];
+                    if($line['cancelled_unfulfilled']===null)$summary['cancelled_unfulfilled_quantity']=null;
+                    elseif($summary['cancelled_unfulfilled_quantity']!==null)$summary['cancelled_unfulfilled_quantity']+=$line['cancelled_unfulfilled'];
+                }
+                $view['fulfillment_evidence']['provider_lifecycle']=$summary;
+            }
+        }
+        return $view;
+    }
+    public function recordFulfillmentObservation(string $org,string $sourceId,string $orderId,string $key,array $evidence):void
+    {
+        $this->transaction();
+        $q=$this->connection->prepare('SELECT order_id,channel,store_reference,external_order_id,latest_updated_at FROM sales_order_sources WHERE organization_id=? AND BINARY organization_id=BINARY ? AND source_id=? FOR UPDATE');
+        $q->execute([$org,$org,$sourceId]);$s=$q->fetch(PDO::FETCH_ASSOC);
+        if(!is_array($s)||$s['order_id']!==$orderId||($evidence['organization_id']??null)!==$org||($evidence['channel']??null)!==$s['channel']
+            ||($evidence['connection_id']??null)!==$s['store_reference']||($evidence['external_order_id']??null)!==$s['external_order_id']
+            ||($evidence['test']??null)!==false||($evidence['inventory_authority']??null)!=='external_review'
+            ||($evidence['local_stock_write_allowed']??null)!==false||($evidence['physical_commitment_verified']??null)!==false
+            ||($evidence['provider_updated_at']??null)!==str_replace(' ','T',$s['latest_updated_at']).'Z'
+            ||!is_string($evidence['provider_hash']??null)||!preg_match('/^[a-f0-9]{64}$/D',$evidence['provider_hash'])
+            ||!is_array($evidence['assignments']??null)||!is_array($evidence['unmapped_locations']??null))
+            throw new LogicException('External fulfillment evidence does not match canonical source.');
+        if(isset($evidence['lifecycle'])){
+            // Only the originally imported provider line IDs can bind native placement.
+            // Historical orders without that evidence are never silently rebound by SKU.
+            $q=$this->connection->prepare('SELECT observation FROM sales_order_source_observations WHERE organization_id=? AND source_id=? AND outcome="imported" LIMIT 2');
+            $q->execute([$org,$sourceId]);$rows=$q->fetchAll(PDO::FETCH_COLUMN);
+            $baseline=count($rows)===1?json_decode($rows[0],true,64,JSON_THROW_ON_ERROR):null;
+            $original=$baseline['line_identities']??null;$actual=[];
+            foreach($evidence['lifecycle']['lines']??[] as $line=>$fact)$actual[$line]=$fact['ordered'];
+            if(!is_array($original)||$original===[]||self::digest($original)!==self::digest($actual))
+                throw new \DomainException('Provider lifecycle cannot bind immutable placed order lines.');
+            $q=$this->connection->prepare('SELECT quantity,product_id,variant_id FROM sales_order_lines WHERE organization_id=? AND order_id=? ORDER BY line_no');
+            $q->execute([$org,$orderId]);$placed=$q->fetchAll(PDO::FETCH_ASSOC);
+            ksort($original,SORT_STRING);
+            if(array_values($original)!==array_map(static fn(array $r):int=>(int)$r['quantity'],$placed))
+                throw new \DomainException('Provider line quantities differ from canonical placement.');
+            $mappings=$evidence['canonical_line_mappings']??null;
+            if(!is_array($mappings)||count($mappings)!==count($original))throw new \DomainException('Canonical lifecycle line mappings missing.');
+            foreach(array_keys($original) as $index=>$externalLine){
+                $map=$mappings[$externalLine]??null;
+                if(!is_array($map)||($map['product_id']??null)!==$placed[$index]['product_id']||($map['variant_id']??null)!==$placed[$index]['variant_id'])
+                    throw new \DomainException('Provider lifecycle line mapping differs from canonical placement.');
+            }
+        }
+        $hash=self::digest($evidence);
+        $q=$this->connection->prepare('INSERT INTO sales_order_external_fulfillment_evidence(organization_id,evidence_id,source_id,order_id,request_key,provider_updated_at,provider_hash,evidence_hash,evidence_json) VALUES(?,?,?,?,?,?,?,?,?)');
+        $q->execute([$org,bin2hex(random_bytes(16)),$sourceId,$orderId,$key,$s['latest_updated_at'],$evidence['provider_hash'],$hash,json_encode($evidence,JSON_THROW_ON_ERROR)]);
+    }
+    public static function digest(array $evidence):string
+    {
+        $canonical=static function(array $a)use(&$canonical):array {
+            if(!array_is_list($a))ksort($a,SORT_STRING);
+            foreach($a as &$v)if(is_array($v))$v=$canonical($v);unset($v);
+            return $a;
+        };
+        return hash('sha256',json_encode($canonical($evidence),JSON_THROW_ON_ERROR));
     }
     public function observe(string $org,string $sourceId,string $updated,string $hash,array $observation,string $outcome,?string $reason,?string $orderId,bool $advance):void
     {

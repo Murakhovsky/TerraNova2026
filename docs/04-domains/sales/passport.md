@@ -23,7 +23,11 @@ domain_id: sales
         "sales.lead.create",
         "sales.lead.qualify",
         "sales.lead.state.manage",
-        "sales.lead.intake"
+        "sales.lead.intake",
+        "sales.governed.lead.intake",
+        "sales.governed.lead.state.manage",
+        "sales.governed.lead.qualify",
+        "sales.governed.lead.create"
       ]
     },
     {
@@ -32,7 +36,9 @@ domain_id: sales
         "sales.crm.inbox.status",
         "sales.crm.inbox.recover",
         "sales.crm.inbox.process",
-        "sales.crm.reconciliation.read"
+        "sales.crm.reconciliation.read",
+        "sales.governed.crm.inbox.process",
+        "sales.governed.crm.inbox.recover"
       ]
     },
     {
@@ -44,14 +50,20 @@ domain_id: sales
         "sales.deal.owner.assign",
         "sales.deal.commercial.set",
         "sales.pipeline.stage.manage",
-        "sales.deal.outcome.record"
+        "sales.deal.outcome.record",
+        "sales.governed.deal.owner.assign",
+        "sales.governed.deal.commercial.set",
+        "sales.governed.pipeline.stage.manage",
+        "sales.governed.deal.outcome.record",
+        "sales.governed.client_case.create"
       ]
     },
     {
       "id": "teams",
       "capability_ids": [
         "sales.team.read",
-        "sales.team.manage"
+        "sales.team.manage",
+        "sales.governed.team.manage"
       ]
     },
     {
@@ -69,7 +81,17 @@ domain_id: sales
         "sales.lead.activity.cancel",
         "sales.activity.cancel",
         "sales.activity.overdue.read",
-        "sales.activity.reminder.queue"
+        "sales.activity.reminder.queue",
+        "sales.governed.lead.followup.schedule",
+        "sales.governed.lead.activity.complete",
+        "sales.governed.lead.activity.reschedule",
+        "sales.governed.lead.activity.cancel",
+        "sales.governed.activity.cancel",
+        "sales.governed.activity.record",
+        "sales.governed.activity.complete",
+        "sales.governed.activity.reschedule",
+        "sales.governed.followup.schedule",
+        "sales.governed.property_match.record"
       ]
     },
     {
@@ -83,7 +105,11 @@ domain_id: sales
         "sales.offer.list",
         "sales.offer.document.render",
         "sales.offer.delivery.status",
-        "sales.offer.delivery.queue"
+        "sales.offer.delivery.queue",
+        "sales.governed.offer.create",
+        "sales.governed.offer.revise",
+        "sales.governed.offer.transition",
+        "sales.governed.negotiation.record"
       ]
     },
     {
@@ -109,7 +135,9 @@ domain_id: sales
         "sales.order.lifecycle.fulfill",
         "sales.order.lifecycle.cancel",
         "sales.order.lifecycle.return",
-        "sales.order.lifecycle.read"
+        "sales.order.lifecycle.read",
+        "sales.governed.order.source.sync.start",
+        "sales.governed.order.source.reconcile"
       ]
     },
     {

@@ -22,17 +22,20 @@ final readonly class SalesOrderService
     {
         if ($org===''||$actor<1||trim($key)===''||strlen($key)>191||trim($correlation)===''||strlen($correlation)>191) throw new DomainException('Invalid native order identity.');
         $terms=SalesOrderTerms::normalize($input);
-        $owner=$input['owner_id']??$actor;$deal=$input['deal_id']??null;
-        if (!is_int($owner)||$owner<1||($deal!==null&&(!is_int($deal)||$deal<1))) throw new DomainException('Invalid order relationship.');
+        $owner=$input['owner_id']??$actor;$deal=$input['deal_id']??null;$requestedCustomer=$input['customer_id']??null;
+        if (!is_int($owner)||$owner<1||($deal!==null&&(!is_int($deal)||$deal<1))
+            ||(array_key_exists('customer_id',$input)&&(!is_int($requestedCustomer)||$requestedCustomer<1))) throw new DomainException('Invalid order relationship.');
         $key=trim($key);$operation='order.native.create';
-        $hash=hash('sha256',json_encode([$actor,$owner,$deal,$terms],JSON_THROW_ON_ERROR));
-        return $this->guard->run($org,$actor,function()use($org,$actor,$owner,$deal,$terms,$operation,$key,$hash,$correlation):array{
+        $hash=hash('sha256',json_encode($requestedCustomer===null?[$actor,$owner,$deal,$terms]:[$actor,$owner,$deal,$terms,$requestedCustomer],JSON_THROW_ON_ERROR));
+        return $this->guard->run($org,$actor,function()use($org,$actor,$owner,$deal,$terms,$operation,$key,$hash,$correlation,$requestedCustomer):array{
+            if ($requestedCustomer!==null) $this->guard->run($org,$actor,static fn()=>null,'person',$requestedCustomer);
             $pending='pending:'.bin2hex(random_bytes(16));
             if (!$this->receipts->claim($org,$operation,$key,$pending)) {
                 $receipt=$this->receipts->find($org,$operation,$key);
                 if ($receipt===null||preg_match('/^([a-f0-9]{64}):([a-f0-9]{32})$/D',$receipt,$m)!==1||!hash_equals($hash,$m[1])) throw new DomainException('Order receipt conflict.');
                 $order=$this->orders->get($org,$m[2],true);
                 $this->authorize($org,$actor,$order);
+                if ($requestedCustomer!==null&&$order['customer_id']!==$requestedCustomer) throw new DomainException('Order customer receipt mismatch.');
                 return ['order'=>$order,'replayed'=>true];
             }
             foreach ($terms['lines'] as $line) {
@@ -40,7 +43,8 @@ final readonly class SalesOrderService
                 $ref=$this->references->resolve($org,[...$line,'kind'=>'product']);
                 if ($ref===null||($ref['product_id']??null)!==$line['product_id']||($ref['variant_id']??null)!==$line['variant_id']||($ref['sku']??null)!==$line['sku']) throw new DomainException('Product variant unavailable.');
             }
-            $customer=$deal===null?null:$this->orders->customerForDeal($org,$deal);
+            $customer=$deal===null?$requestedCustomer:$this->orders->customerForDeal($org,$deal);
+            if ($requestedCustomer!==null&&$customer!==$requestedCustomer) throw new DomainException('Order customer differs from linked Deal.');
             if ($deal!==null&&$customer===null) throw new DomainException('Order deal unavailable.');
             $id=bin2hex(random_bytes(16));$now=new DateTimeImmutable('now',new DateTimeZone('UTC'));
             $order=[...$terms,'order_id'=>$id,'owner_id'=>$owner,'deal_id'=>$deal,'customer_id'=>$customer,'channel'=>'native',

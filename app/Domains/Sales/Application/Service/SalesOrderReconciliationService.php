@@ -37,9 +37,13 @@ final readonly class SalesOrderReconciliationService
         $channel=$input['channel']??null;$connection=$input['connection_id']??null;$external=$input['external_order_id']??null;$delivery=$input['delivery_id']??null;
         if($channel!=='shopify'||!is_string($connection)||preg_match('/^[a-f0-9]{32}$/D',$connection)!==1||!is_string($external)||preg_match('#^gid://shopify/Order/[1-9][0-9]{0,18}$#D',$external)!==1||
             ($delivery!==null&&(!is_string($delivery)||trim($delivery)===''||strlen($delivery)>190)))throw new DomainException('Invalid source identity.');
-        if(array_diff(array_keys($input),['channel','connection_id','external_order_id','delivery_id'])!==[])throw new DomainException('Unexpected source field.');
-        $key=trim($key);$op='order.source.reconcile';$fingerprint=hash('sha256',json_encode([$actor,$channel,$connection,$external,$delivery],JSON_THROW_ON_ERROR));
-        return $this->guard->run($org,$actor,function()use($org,$actor,$channel,$connection,$external,$delivery,$key,$op,$fingerprint,$correlation):array{
+        $includeFulfillment=$input['include_fulfillment_evidence']??false;
+        $includeLifecycle=$input['include_lifecycle_evidence']??false;
+        if(!is_bool($includeLifecycle)||($includeLifecycle&&!$includeFulfillment))throw new DomainException('Lifecycle evidence requires fulfillment evidence.');
+        if(!is_bool($includeFulfillment)||array_diff(array_keys($input),['channel','connection_id','external_order_id','delivery_id','include_fulfillment_evidence','include_lifecycle_evidence'])!==[])throw new DomainException('Unexpected source field.');
+        $key=trim($key);$op='order.source.reconcile';$request=[$actor,$channel,$connection,$external,$delivery];if($includeFulfillment)$request[]=true;if($includeLifecycle)$request[]=true;
+        $fingerprint=hash('sha256',json_encode($request,JSON_THROW_ON_ERROR));
+        return $this->guard->run($org,$actor,function()use($org,$actor,$channel,$connection,$external,$delivery,$key,$op,$fingerprint,$correlation,$includeFulfillment,$includeLifecycle):array{
             $pending='pending:'.bin2hex(random_bytes(16));
             if(!$this->receipts->claim($org,$op,$key,$pending)){
                 $receipt=$this->receipts->find($org,$op,$key);
@@ -93,8 +97,19 @@ final readonly class SalesOrderReconciliationService
                 // Preserve the reason for downstream review without asserting a business transition.
                 if($latest!==null&&$updated===$latest)$outcome='unchanged';
             }
-            $observation=array_intersect_key($snapshot,array_flip(['channel','store_reference','external_order_id','created_at','updated_at','financial_status','fulfillment_status','cancelled_at','test','edited','tax_included','currency','original_total','current_total']));
+            $observation=array_intersect_key($snapshot,array_flip(['channel','store_reference','external_order_id','created_at','updated_at','financial_status','fulfillment_status','cancelled_at','test','edited','tax_included','currency','original_total','current_total','line_identities']));
             $this->sources->observe($org,$sourceId,$updated,$hash,$observation,$outcome,$reason,$id,$advance);
+            if($includeFulfillment){
+                if($id===null||!$advance||!in_array($outcome,['imported','observed','unchanged'],true)||($snapshot['test']??null)!==false
+                    ||!($this->source instanceof \Domains\ProductManagement\Application\Contract\CommerceOrderFulfillmentEvidencePort))
+                    throw new DomainException('External fulfillment evidence requires accepted non-test order identity.');
+                $evidence=$this->source->fulfillmentEvidence($org,$channel,$connection,$external,$includeLifecycle);
+                if(($evidence['provider_updated_at']??null)!==$snapshot['updated_at']||($evidence['cancelled_at']??null)!==$snapshot['cancelled_at']
+                    ||($evidence['provider_fulfillment_status']??null)!==$snapshot['fulfillment_status'])
+                    throw new DomainException('Provider order changed during fulfillment observation.');
+                if($includeLifecycle&&!is_array($evidence['lifecycle']??null))throw new DomainException('Requested lifecycle evidence missing.');
+                $this->sources->recordFulfillmentObservation($org,$sourceId,$id,$key,$evidence);
+            }
             // Journey readiness is independent of immutable order placement and provider order updatedAt.
             if($id!==null&&$advance&&in_array($outcome,['imported','observed','unchanged'],true)&&is_array($snapshot['journey']??null))
                 $this->journeys->recordJourney($org,$id,$connection,$external,$snapshot['journey']);

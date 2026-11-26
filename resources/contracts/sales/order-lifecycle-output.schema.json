@@ -172,6 +172,105 @@
             "string",
             "null"
           ]
+        },
+        "fulfillment_evidence": {
+          "type": "object",
+          "properties": {
+            "provider_hash": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "provider_updated_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "observed_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "current_order_revision": {
+              "type": "boolean"
+            },
+            "assignment_count": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "unmapped_locations": {
+              "type": "array",
+              "maxItems": 10,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^gid://shopify/Location/[1-9][0-9]{0,18}$"
+              }
+            },
+            "inventory_authority": {
+              "const": "external_review"
+            },
+            "physical_commitment_verified": {
+              "const": false
+            },
+            "local_stock_write_allowed": {
+              "const": false
+            },
+            "provider_lifecycle": {
+              "type": "object",
+              "properties": {
+                "provider_fulfilled_quantity": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "assigned_pending_quantity": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "return_requested_quantity": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "return_processed_quantity": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "cancelled_unfulfilled_quantity": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 0
+                },
+                "review_reasons": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "provider_fulfilled_quantity",
+                "assigned_pending_quantity",
+                "return_requested_quantity",
+                "return_processed_quantity",
+                "cancelled_unfulfilled_quantity",
+                "review_reasons"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "provider_hash",
+            "provider_updated_at",
+            "observed_at",
+            "current_order_revision",
+            "assignment_count",
+            "unmapped_locations",
+            "inventory_authority",
+            "physical_commitment_verified",
+            "local_stock_write_allowed"
+          ],
+          "additionalProperties": false
         }
       },
       "required": [
