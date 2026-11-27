@@ -27,6 +27,8 @@
 
     {% include 'experience/_style_lab_switcher.html.twig' with {'style': 'origin-a'} only %}
 
+    <p><a class="cos-button" href="{{ path('cos_web_design_system_catalog', {quality:1}) }}">{{ 'catalog.back'|trans({}, 'cuw_quality') }}</a></p>
+    {% include 'experience/_cuw_quality_states.html.twig' only %}
     {% include 'experience/_ui_catalog_playground.html.twig' with {'uiCatalog': uiCatalog|default({})} only %}
 
     <section class="cos-ui-catalog__section" aria-labelledby="style-lab-heading">

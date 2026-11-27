@@ -23,7 +23,7 @@ kind: product
 | Federation | `1.0.0` | Опціональний канонічний обробник погодження Goal Plan через Action/Policy/Approval. Вимкнений за замовчуванням. Реальне міждоменне виконання та підтвердження Goal outcomes ще не завершені. |
 | Property | `1.0.0` | canonical Asset/Inventory/Listing/Publication runtime; legacy `tn_properties` ізольований як compatibility output |
 | Product_management | `0.1.0` | Пілотний E0–E4 Domain: каталог, рухи, базові ціни, CSV staging, Shopify read-only. Tenant-disabled, MySQL/production acceptance не підтверджені |
-| Marketing | `0.2.3` | M0/M1 Meta read-only + Finance-facing spend evidence, M2a Creative/Analyst Review, M2b Product Management live draft check у Workspace (ціна/варіант/tenant); немає Hermes runtime, stock/URL/ad-policy signoff, paid writes чи D3–D5 acceptance |
+| Marketing | `0.2.4` | M0/M1 Meta read-only + Finance-facing spend evidence, M2a Creative/Analyst Review, M2b Product Management live draft check у Workspace (ціна/варіант/tenant); керований Hermes Runs API для ізольованого профілю за окремим погодженням, LIVE не прийнято; немає stock/URL/ad-policy signoff, paid writes чи D3–D5 acceptance |
 | Finance | `0.2.3` | F1 бюджети, незалежно погоджені резерви, F1.2 source readback та F1.3 canonical Workflow source import із pinned revision/hash; окреме документальне врегулювання бюджету й order collection evidence. Немає підтвердження provider payment, бухгалтерської виручки або Meta write; disabled by default |
 | Procurement | `0.1.0` | встановлюваний V1 skeleton; runtime і persistence навмисно відкладені |
 | Service | `1.0.0` | V1-stable Request → Ticket → Assignment/SLA → Escalation → Resolution → Close runtime; schema `0.2.0`; lifecycle/idempotency/locking/event/audit release gates |

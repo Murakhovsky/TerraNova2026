@@ -28,6 +28,32 @@ final readonly class HermesAnalystProfileProbe
         return ['toolsets_reported'=>count($sets),'enabled_toolsets_with_tools'=>0];
     }
 
+    /** Read only advertised API capabilities; never submit or stop a run. */
+    public function inspectRunControls(HermesAnalystConnection $connection,string $token):array
+    {
+        $description=$this->transport->get($connection->profileBaseUrl.'/v1/capabilities',$token);
+        return self::projectRunControls($description);
+    }
+
+    /** @return array{run_submission:bool,run_status:bool,run_stop:bool} */
+    public static function projectRunControls(array $description):array
+    {
+        if(($description['object']??null)!=='hermes.api_server.capabilities'
+            ||($description['platform']??null)!=='hermes-agent'
+            ||!is_array($description['auth']??null)||($description['auth']['type']??null)!=='bearer'
+            ||($description['auth']['required']??null)!==true
+            ||!is_array($description['features']??null)){
+            throw new DomainException('Hermes authenticated capability discovery unavailable.');
+        }
+        $features=$description['features'];
+        $controls=[];
+        foreach(['run_submission','run_status','run_stop'] as $key){
+            if(!is_bool($features[$key]??null))throw new DomainException('Hermes run control capability unverifiable.');
+            $controls[$key]=$features[$key];
+        }
+        return $controls;
+    }
+
     public static function assertNoTools(array $sets):void
     {
         if(!array_is_list($sets))throw new DomainException('Hermes toolset discovery unavailable.');

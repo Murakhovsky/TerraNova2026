@@ -7,6 +7,7 @@ use RuntimeException;
 use DateTimeImmutable;
 use DateTimeZone;
 use Domains\Sales\Application\Contract\SalesOrderRepositoryInterface;
+use Domains\Sales\Application\Contract\SalesTeamScopeInterface;
 use Domains\Sales\Application\Contract\SalesMutationReceiptRepositoryInterface;
 use Domains\Sales\Application\Contract\SalesOfferReferencePort;
 use Domains\Sales\Domain\Policy\SalesOrderTerms;
@@ -16,7 +17,7 @@ use Domains\Finance\Application\Contract\CommerceOrderFinancialEvidenceReadPort;
 final readonly class SalesOrderService
 {
     public function __construct(private SalesOrderRepositoryInterface $orders,private SalesMutationReceiptRepositoryInterface $receipts,
-        private SalesMutationGuard $guard,private SalesEntityScopeService $scope,private SalesOfferReferencePort $references,private ?CommerceOrderFinancialEvidenceReadPort $finance=null){}
+        private SalesMutationGuard $guard,private SalesEntityScopeService $scope,private SalesOfferReferencePort $references,private ?CommerceOrderFinancialEvidenceReadPort $finance=null,private ?SalesTeamScopeInterface $teams=null){}
 
     public function create(string $org,int $actor,array $input,string $key,string $correlation):array
     {
@@ -70,6 +71,36 @@ final readonly class SalesOrderService
         $financial=$this->finance?->financialEvidence($org,$id);
         $this->authorize($org,$actor,$order);
         return ['order'=>$order,'financial_evidence'=>$financial];
+    }
+
+    /** No implicit director access: tenant scope must be granted live. */
+    public function list(string $org,int $actor,array $input):array
+    {
+        $mode=$input['scope']??'self';$owner=$input['owner_id']??null;
+        $query=$input['q']??'';$offset=$input['offset']??0;$limit=$input['limit']??20;
+        if(!in_array($mode,['self','owner','tenant','team','auto'],true)||($mode==='owner'&&(!is_int($owner)||$owner<1))||
+            ($mode!=='owner'&&array_key_exists('owner_id',$input))||!is_string($query)||mb_strlen($query)>120||
+            !is_int($offset)||$offset<0||$offset>200000||!is_int($limit)||$limit<1||$limit>100)
+            throw new DomainException('Invalid order scope or page.');
+        if($mode==='auto'){
+            try{$this->scope->resolve($org,$actor,'tenant');$mode='tenant';}
+            catch(DomainException){$mode='team';}
+        }
+        if($mode==='team'){
+            $self=$this->scope->resolve($org,$actor,'self');
+            $owners=$this->teams?->ledMembers($org,$actor)??[$self];
+            $mode=count($owners)>1?'team':'self';
+        }else{
+            $owner=$this->scope->resolve($org,$actor,$mode,$owner);
+            $owners=$owner===null?null:[$owner];
+        }
+        $rows=$this->orders->workspacePage($org,$owners,trim($query),$offset,$limit+1);
+        foreach($rows as $row){
+            // Fail closed on changed/mismatched live authorization. No partial page of private records.
+            if($owners!==null&&!in_array($row['owner_id'],$owners,true))throw new DomainException('Order page owner mismatch.');
+            $this->authorize($org,$actor,$row);
+        }
+        return ['items'=>array_slice($rows,0,$limit),'has_more'=>count($rows)>$limit,'scope'=>$mode];
     }
 
     private function authorize(string $org,int $actor,?array $order):void

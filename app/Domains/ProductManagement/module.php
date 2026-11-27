@@ -21,6 +21,7 @@ return [
             'web.search' => ['productManagementNavigationContributor'],
             'web.commands' => ['productManagementNavigationContributor'],
             'web.workspace' => ['productManagementNavigationContributor'],
+            'web.entity_links' => ['productManagementNavigationContributor'],
         ],
         'cross_domain_contracts' => [],
         'migration_files' => [

@@ -9,6 +9,8 @@ interface FinanceBudgetRepositoryInterface
     public function createDraft(string $organizationId,string $actorId,array $draft,string $idempotencyKey):array;
     /** @return array<string,mixed>|null */
     public function envelope(string $organizationId,string $envelopeId):?array;
+    /** @return list<array<string,mixed>> Redacted, tenant-scoped envelope page. */
+    public function workspacePage(string $organizationId,string $query,int $offset,int $limit):array;
     /** @return list<array<string,mixed>> */
     public function reservations(string $organizationId,string $envelopeId):array;
     /** @return array<string,mixed> */

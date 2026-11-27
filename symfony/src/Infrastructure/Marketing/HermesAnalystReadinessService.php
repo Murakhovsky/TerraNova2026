@@ -22,7 +22,7 @@ final readonly class HermesAnalystReadinessService
         if(!$actor->isManager()||!$actor->allows(TenantPermissions::ACCESS)||!$actor->allows(TenantPermissions::MANAGE)
             ||!$this->modules->isEnabled($org,'marketing'))throw new DomainException('Marketing manager and active module required.');
         $result=['status'=>'NOT_CONFIGURED','configuration_hash'=>null,'max_cost_usd'=>null,'daily_run_limit'=>null,
-            'budget_configured'=>false,'live_verified'=>false,'launch_available'=>false,'plan_available'=>false];
+            'budget_configured'=>false,'token_limits'=>null,'runs_mode_configured'=>false,'live_verified'=>false,'launch_available'=>false,'plan_available'=>false];
         try{
             $profile=$this->profiles->forTenant($org);
             if($profile===null)return $result;
@@ -30,6 +30,8 @@ final readonly class HermesAnalystReadinessService
             $result['max_cost_usd']=number_format($profile->maxCostUsd,4,'.','');
             $result['daily_run_limit']=$profile->admission->dailyRunLimit;
             $profile->assertAccepted($org);
+            $result['token_limits']=$profile->tokenBudget?->limits();
+            $result['runs_mode_configured']=$profile->runsControlEvidenceRef!==null;
         }catch(DomainException){
             $result['status']='CONFIGURATION_BLOCKED';return $result;
         }

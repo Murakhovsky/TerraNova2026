@@ -63,8 +63,8 @@ expectDomainSkeleton($financeDefinition->manifest->enabledByDefault === false,
     'Finance F1 must remain disabled until independent acceptance.');
 $financeIds=array_column((require dirname(__DIR__,2).'/app/Domains/Finance/module.php')['contributions']['capability_contracts'],'id');
 $financeF1=array_filter($financeIds,static fn(string $id):bool=>str_starts_with($id,'finance.budget.')||in_array($id,['finance.ad_spend.reconciliation.status','finance.ad_spend.marketing_snapshot.import'],true));
-expectDomainSkeleton(count($financeF1)===9,'Finance F1 retains nine typed capabilities, including approved source import.');
-expectDomainSkeleton(count($financeIds)===17 && in_array('finance.sales.commercial_evidence.read',$financeIds,true),
+expectDomainSkeleton(count($financeF1)===10 && in_array('finance.budget.envelope.list',$financeF1,true),'Finance F1 retains ten typed capabilities, including the scoped envelope list and approved source import.');
+expectDomainSkeleton(count($financeIds)===18 && in_array('finance.sales.commercial_evidence.read',$financeIds,true),
     'Finance additionally exposes accepted Sales evidence read-only.');
 foreach (['finance.order.payment.register','finance.order.payment.reconcile','finance.order.payment.operations.read','finance.order.financial_evidence.read'] as $id) {
     expectDomainSkeleton(in_array($id,$financeIds,true),'Missing Finance order contract: '.$id);

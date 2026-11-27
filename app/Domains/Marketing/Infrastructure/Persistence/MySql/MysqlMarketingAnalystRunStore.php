@@ -4,11 +4,12 @@ namespace Domains\Marketing\Infrastructure\Persistence\MySql;
 
 use DomainException;
 use Domains\Marketing\Application\Contract\MarketingAnalystRunStore;
+use Domains\Marketing\Application\Contract\MarketingAnalystRemoteRunJournal;
 use PDO;
 use Throwable;
 
 /** Serialize admissions per tenant; never hold the database transaction during a remote turn. */
-final readonly class MysqlMarketingAnalystRunStore implements MarketingAnalystRunStore
+final readonly class MysqlMarketingAnalystRunStore implements MarketingAnalystRunStore, MarketingAnalystRemoteRunJournal
 {
     public function __construct(private PDO $connection){}
 
@@ -147,6 +148,54 @@ final readonly class MysqlMarketingAnalystRunStore implements MarketingAnalystRu
         }
     }
 
+    public function beginRemoteSubmission(string $org,string $id,string $actor,string $profile,string $hash):void
+    {
+        $this->remoteUpdate("UPDATE marketing_analyst_runs SET remote_submission_started_at=UTC_TIMESTAMP(6)
+            WHERE organization_id=? AND id=? AND requested_by=? AND profile_ref=? AND context_hash=?
+            AND state='STARTED' AND remote_submission_started_at IS NULL",[$org,$id,$actor,$profile,$hash]);
+    }
+
+    public function attachRemoteRun(string $org,string $id,string $remoteId):void
+    {
+        if(!preg_match('/^run_[A-Za-z0-9_-]{1,124}$/D',$remoteId))throw new DomainException('Invalid remote run identity.');
+        $this->remoteUpdate("UPDATE marketing_analyst_runs SET remote_run_id=?,remote_status='started'
+            WHERE organization_id=? AND id=? AND state='STARTED' AND remote_submission_started_at IS NOT NULL
+            AND remote_run_id IS NULL",[$remoteId,$org,$id]);
+    }
+
+    public function observeRemoteRun(string $org,string $id,string $remoteId,string $status):void
+    {
+        if(!in_array($status,['started','queued','running','waiting_for_approval','stopping','completed','failed','cancelled','interrupted','unknown'],true))
+            throw new DomainException('Unrecognized remote run status.');
+        // The read is authenticated, but only its exact bound handle may update this receipt.
+        // Repeated identical observations are harmless (MySQL may return zero affected rows).
+        $this->remoteUpdate("UPDATE marketing_analyst_runs SET remote_status=?
+            WHERE organization_id=? AND id=? AND remote_run_id=? AND state='STARTED'
+            AND remote_status NOT IN ('completed','failed','cancelled','interrupted','unknown')",
+            [$status,$org,$id,$remoteId],true);
+    }
+
+    public function requestRemoteStop(string $org,string $id,string $remoteId):void
+    {
+        $this->remoteUpdate("UPDATE marketing_analyst_runs SET remote_stop_requested_at=UTC_TIMESTAMP(6)
+            WHERE organization_id=? AND id=? AND remote_run_id=? AND state='STARTED'
+            AND remote_stop_requested_at IS NULL AND remote_status IN ('started','queued','running','waiting_for_approval')",
+            [$org,$id,$remoteId]);
+    }
+
+    private function remoteUpdate(string $sql,array $values,bool $allowSame=false):void
+    {
+        if($this->connection->inTransaction())throw new DomainException('Nested analyst remote journal denied.');
+        $q=$this->connection->prepare($sql);$q->execute($values);
+        if($q->rowCount()===1)return;
+        if($allowSame){
+            [$status,$org,$id,$remoteId]=$values;
+            $row=$this->get($org,$id);
+            if($row!==null&&$row['state']==='STARTED'&&$row['remote_run_id']===$remoteId&&$row['remote_status']===$status)return;
+        }
+        throw new DomainException('Analyst remote journal transition denied.');
+    }
+
     public function finish(string $org,string $id,?array $advice):array
     {
         if($this->connection->inTransaction())throw new DomainException('Nested analyst completion denied.');
@@ -164,6 +213,7 @@ final readonly class MysqlMarketingAnalystRunStore implements MarketingAnalystRu
         if(!in_array($field,['id','idempotency_key'],true))throw new DomainException('Invalid analyst lookup.');
         $q=$this->connection->prepare('SELECT r.id,r.request_hash,r.requested_by,r.profile_ref,r.cost_control_ref,r.campaign_id,r.context_hash,
             r.source_pins_json,r.state,r.advice_json,r.failure_code,r.quota_day,r.created_at,r.completed_at,
+            r.remote_submission_started_at,r.remote_run_id,r.remote_status,r.remote_stop_requested_at,
             (r.created_at<=CURRENT_TIMESTAMP(6)-INTERVAL 15 MINUTE) AS recovery_age_met,
             d.decision,d.actor_id AS decision_actor_id,d.reason AS decision_reason,d.evidence_ref AS recovery_evidence_ref,d.created_at AS decision_at
             FROM marketing_analyst_runs r LEFT JOIN marketing_analyst_run_decisions d ON d.organization_id=r.organization_id AND d.run_id=r.id

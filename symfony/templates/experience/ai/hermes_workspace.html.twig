@@ -1,0 +1,137 @@
+<section class="cos-ai-context-card" aria-labelledby="cos-ai-runtime">
+    <h3 id="cos-ai-runtime">Hermes · {{ 'Business analysis'|trans }}</h3>
+    <p role="status"><strong>{{ binding.runtime.status }}</strong> · {{ 'Live execution not verified'|trans }}.</p>
+    <dl class="cos-ai-context-card__facts">
+        <div><dt>{{ 'Remote tools'|trans }}</dt><dd>{{ binding.runtime.tool_limit }} — {{ 'advisory only'|trans }}</dd></div>
+        <div><dt>{{ 'Timeout per HTTP request'|trans }}</dt><dd>{{ binding.runtime.request_timeout_seconds }} s</dd></div>
+        <div><dt>{{ 'Automatic retries'|trans }}</dt><dd>{{ binding.runtime.retry_limit }}</dd></div>
+        <div><dt>{{ 'Exact provider token budget'|trans }}</dt><dd>{{ 'Hard cap not live verified'|trans }}</dd></div>
+        {% if binding.runtime.token_limits is not null %}
+            <div><dt>{{ 'Configured prompt token limit'|trans }}</dt><dd>{{ binding.runtime.token_limits.max_prompt_tokens }}</dd></div>
+            <div><dt>{{ 'Configured completion token limit'|trans }}</dt><dd>{{ binding.runtime.token_limits.max_completion_tokens }}</dd></div>
+            <div><dt>{{ 'Configured total token limit'|trans }}</dt><dd>{{ binding.runtime.token_limits.max_total_tokens }}</dd></div>
+        {% else %}
+            <div><dt>{{ 'Exact token receipt checks'|trans }}</dt><dd>{{ 'Not configured for this legacy profile'|trans }}</dd></div>
+        {% endif %}
+        <div><dt>{{ 'Remote cancellation'|trans }}</dt><dd>{{ 'Unavailable'|trans }} (manual)</dd></div>
+        {% if binding.runtime.runs_mode_configured %}
+            <div><dt>Hermes Runs API</dt><dd>{{ 'Configured; not live verified'|trans }} · 5 s / request · 6 polls</dd></div>
+            <p>{{ 'The approved worker requests a bounded stop on deadline or tool approval wait. Acknowledgement is not cancellation.'|trans }}</p>
+        {% endif %}
+        {% if binding.runtime.max_cost_usd is not null %}
+            <div><dt>{{ 'Reserved cost ceiling'|trans }}</dt><dd>{{ binding.runtime.max_cost_usd }} USD / {{ 'turn'|trans }}</dd></div>
+            <div><dt>{{ 'Daily turn limit'|trans }}</dt><dd>{{ binding.runtime.daily_run_limit }}</dd></div>
+        {% endif %}
+    </dl>
+    <p>{{ 'Budget allowance is not an invoice. Configured token ceilings validate reported usage; actual provider enforcement and live isolation require operator acceptance.'|trans }}</p>
+    {% if binding.campaign is null %}
+        {% if not binding.choices_available %}
+            <p role="status">{{ 'Campaign list unavailable. Use Marketing manually.'|trans }}</p>
+            <a href="/marketing/campaigns" data-turbo-frame="_top">{{ 'Open Marketing'|trans }}</a>
+        {% elseif binding.choices is not empty %}
+            <form method="get" action="{{ path('cos_web_ai_panel') }}" class="cos-pattern-stack"
+                  {% if not standalone %}data-turbo-frame="cos-ai-panel-frame"{% endif %}>
+                <input type="hidden" name="workspace" value="marketing.campaigns">
+                {% if standalone %}<input type="hidden" name="view" value="workspace">{% endif %}
+                <label class="cos-field">
+                    <span>{{ 'Campaign'|trans }}</span>
+                    <select name="entity" class="cos-input" required>
+                        {% for campaign in binding.choices %}
+                            <option value="marketing_campaign:{{ campaign.id }}">{{ campaign.name }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <button class="cos-button cos-button--primary" type="submit">{{ 'Inspect campaign'|trans }}</button>
+            </form>
+        {% else %}
+            <p>{{ 'No accessible campaign context. Use Marketing manually.'|trans }}</p>
+            <a href="/marketing/campaigns" data-turbo-frame="_top">{{ 'Open Marketing'|trans }}</a>
+        {% endif %}
+    {% else %}
+        <section class="cos-panel">
+            <h4>{{ binding.campaign.name }} · r{{ binding.campaign.revision }}</h4>
+            <p>{{ 'Task: analyze the selected campaign and creative. Only pinned business facts and evidence aliases may be sent by the approved worker.'|trans }}</p>
+            {% if not binding.planning_available %}
+                <p role="status">{{ 'Planning data unavailable. Delegation is blocked.'|trans }}</p>
+            {% endif %}
+            {% if binding.runtime.plan_available and binding.planning_available and binding.journal_available and binding.campaign.status == 'DRAFT' and binding.creatives is not empty and csrfToken is not empty %}
+                <form method="post" action="/marketing/campaigns/{{ binding.campaign.id|url_encode }}/analyst-plans"
+                      data-turbo-frame="_top" class="cos-pattern-stack">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <input type="hidden" name="idempotency_key" value="mkt-analyst-plan-{{ planningKey }}">
+                    <input type="hidden" name="campaign_revision" value="{{ binding.campaign.revision }}">
+                    <input type="hidden" name="workspace_configuration_hash" value="{{ binding.runtime.configuration_hash }}">
+                    <label class="cos-field">
+                        <span>{{ 'Creative revision'|trans }}</span>
+                        <select name="creative_pin" class="cos-input" required>
+                            {% for creative in binding.creatives %}
+                                <option value="{{ creative.id }}:{{ creative.revision }}">{{ creative.content.headline }} · r{{ creative.revision }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label class="cos-field">
+                        <span>{{ 'Optional AdSet'|trans }}</span>
+                        <select name="adset_pin" class="cos-input">
+                            <option value="">{{ 'No AdSet'|trans }}</option>
+                            {% for adset in binding.adsets %}
+                                {% if not adset.pins_stale %}<option value="{{ adset.id }}:{{ adset.revision }}">{{ adset.content.name }} · r{{ adset.revision }}</option>{% endif %}
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <button class="cos-button cos-button--primary" type="submit">{{ 'Propose analysis in COS Goals'|trans }}</button>
+                    <p>{{ 'Creates a Plan only. Independent Plan and Action approvals are required. No remote call or paid activation occurs here.'|trans }}</p>
+                </form>
+            {% else %}
+                {% if binding.runtime.token_limits is null %}
+                    <p role="status">{{ 'AI Workspace delegation requires configured token ceilings and operator evidence. Manual Marketing remains available.'|trans }}</p>
+                {% endif %}
+                <p role="status">{{ 'Delegation blocked: check runtime readiness, draft status, creative revisions and session. No remote call attempted.'|trans }}</p>
+            {% endif %}
+        </section>
+        <section aria-labelledby="cos-hermes-journal">
+            <h4 id="cos-hermes-journal">{{ 'Hermes native run journal'|trans }}</h4>
+            {% if not binding.journal_available %}
+                <p role="status">{{ 'Native journal unavailable. Its state is unknown, not empty. Delegation is blocked.'|trans }}</p>
+            {% else %}
+            {% for run in binding.runs %}
+                <article class="cos-agent-run">
+                    <div><strong>{{ run.state }}</strong> · <code>{{ run.id }}</code></div>
+                    <small>{{ 'Native run / remote correlation ID'|trans }} · {{ 'Requested by'|trans }} {{ run.requested_by }}</small>
+                    <p>{{ run.created_at }} · {{ 'Context'|trans }} <code>{{ run.context_hash }}</code></p>
+                    {% if run.remote_submission_started_at|default(null) %}
+                        <p>Hermes Runs API · <code>{{ run.remote_run_id|default('—') }}</code> · {{ run.remote_status|default('UNKNOWN') }}</p>
+                        {% if run.remote_stop_requested_at|default(null) %}<p>{{ 'Stop requested'|trans }}: {{ run.remote_stop_requested_at }} · {{ 'Remote terminal state must be observed independently'|trans }}.</p>{% endif %}
+                    {% endif %}
+                    {% if run.advice %}
+                        <p><strong>{{ run.advice.recommendation }}</strong></p>
+                        <p>{{ run.advice.rationale }}</p>
+                        <p>{{ 'Advice references these source aliases'|trans }}: {{ run.advice.evidence|map(item => item.alias)|join(', ') }}.</p>
+                        <p>{{ 'Native runtime response (not business execution proof)'|trans }}: <code>{{ run.advice.runtime_response_id }}</code></p>
+                        {% if run.advice.token_usage is defined %}
+                            <dl class="cos-ai-context-card__facts" aria-label="{{ 'Runtime-reported usage'|trans }}">
+                                <div><dt>{{ 'Prompt tokens'|trans }}</dt><dd>{{ run.advice.token_usage.prompt_tokens }} / {{ run.advice.token_usage.limits.max_prompt_tokens }}</dd></div>
+                                <div><dt>{{ 'Completion tokens'|trans }}</dt><dd>{{ run.advice.token_usage.completion_tokens }} / {{ run.advice.token_usage.limits.max_completion_tokens }}</dd></div>
+                                <div><dt>{{ 'Total tokens'|trans }}</dt><dd>{{ run.advice.token_usage.total_tokens }} / {{ run.advice.token_usage.limits.max_total_tokens }}</dd></div>
+                            </dl>
+                            <p>{{ 'Hermes-reported token counts were checked against the approved limits when recording this receipt. Not independently billed or live-cap verified.'|trans }}</p>
+                        {% endif %}
+                    {% endif %}
+                    <details>
+                        <summary>{{ 'Evidence source revisions'|trans }}</summary>
+                        <ul>{% for pin in run.source_pins %}<li>{{ pin.alias }}: {{ pin.record_id }} · r{{ pin.revision }}</li>{% endfor %}</ul>
+                    </details>
+                    {% if run.failure_code %}<p role="alert">{{ run.failure_code }}. {{ 'No automatic retry. Reconcile unknown outcomes.'|trans }}</p>{% endif %}
+                    <p>{{ 'Finance cost confirmed'|trans }}: {{ 'No'|trans }} · {{ 'Paid activation authorized'|trans }}: {{ 'No'|trans }}</p>
+                    {% if run.decision %}<p>{{ 'Independent review'|trans }}: {{ run.decision }} · {{ run.decision_at }}</p>{% endif %}
+                </article>
+            {% else %}
+                <p>{{ 'No native Hermes runs for this campaign.'|trans }}</p>
+            {% endfor %}
+            {% endif %}
+            <a class="cos-button cos-button--ghost" href="/marketing/campaigns/{{ binding.campaign.id|url_encode }}" data-turbo-frame="_top">{{ 'Open owner journal for review or reconciliation'|trans }}</a>
+            <a class="cos-button cos-button--ghost" href="/workspace/goals" data-turbo-frame="_top">{{ 'Inspect Plan, approvals and verified outcomes'|trans }}</a>
+            <p>{{ 'Before execution, use the canonical approval rejection in Control Center. An uncertain or running remote turn needs independent reconciliation; rejection is not remote cancellation.'|trans }}</p>
+            <a class="cos-button cos-button--ghost" href="/cos/control-center" data-turbo-frame="_top">{{ 'Open Control Center for pending approvals'|trans }}</a>
+        </section>
+    {% endif %}
+</section>

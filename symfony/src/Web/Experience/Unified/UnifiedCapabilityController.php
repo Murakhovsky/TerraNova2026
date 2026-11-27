@@ -4,6 +4,8 @@ namespace App\Web\Experience\Unified;
 
 use App\Application\Capability\CanonicalCapabilityGateway;
 use App\Security\SessionCsrfValidator;
+use App\Web\Experience\Adaptive\AdaptivePagePresentation;
+use App\Web\Experience\Adaptive\ExperienceMode;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Shell\ShellBreadcrumb;
 use App\Web\Experience\Shell\WorkspaceShellFactory;
@@ -28,6 +30,7 @@ final readonly class UnifiedCapabilityController {
         private SessionCsrfValidator $csrf,
         private WorkspaceShellFactory $shells,
         private Environment $twig,
+        private AdaptivePagePresentation $adaptive,
     ) {}
     public function index(Request $request): Response {
         $actor=$this->actor();
@@ -46,8 +49,22 @@ final readonly class UnifiedCapabilityController {
             if (!$this->presenter->supports((string)($entry['id']??''))) continue;
             $operations[]=$this->presenter->describe($entry);
         }
+        $triggers=[];
+        $createAvailable=false;
+        foreach ($operations as $op) {
+            if ($op['needs_approval']) $triggers[]='approval_required';
+            if (!$op['ui_ready']) $triggers[]='permission_unavailable';
+            if ($op['id']==='property.asset.create' && $op['ui_ready'] && $op['status']==='direct_human') {
+                $createAvailable=true;
+            }
+        }
+        // Notice is only a legacy display hint, never authoritative success/permission.
+        $adaptive=$this->adaptive->prepare($request,$actor,'unified.actions',[
+            AdaptivePagePresentation::section('actions.details',ExperienceMode::Expert),
+        ],array_values(array_unique($triggers)),operationClass:'action');
+        if ($adaptive instanceof Response) return $adaptive;
         return $this->render($actor,'experience/unified/capabilities.html.twig',[
-            'operations'=>$operations,
+            'adaptive'=>$adaptive,'operations'=>$operations,'createAvailable'=>$createAvailable,
             'csrfToken'=>$this->csrf->token($request),
             'idempotencyKey'=>bin2hex(random_bytes(16)),
             'notice'=>in_array((string)$request->query->get('notice',''),
@@ -83,8 +100,15 @@ final readonly class UnifiedCapabilityController {
                 $error='Не вдалося підтвердити дані. Повторіть лише читання.';
             }
         }
+        $property=is_array($result) && is_array($result['property']??null) ? $result['property'] : null;
+        $sections=$property!==null ? [AdaptivePagePresentation::section('property.identifier',ExperienceMode::Expert)] : [];
+        $triggers=$error!==null ? ['failed'] : [];
+        if ($property!==null) $triggers[]='result_available';
+        $adaptive=$this->adaptive->prepare($request,$actor,'unified.property',$sections,$triggers,
+            entity: $property!==null ? (string)($property['asset_id']??'') : '');
+        if ($adaptive instanceof Response) return $adaptive;
         return $this->render($actor,'experience/unified/property_query.html.twig',[
-            'query'=>$query,'reference'=>$reference,
+            'adaptive'=>$adaptive,'query'=>$query,'reference'=>$reference,
             'page'=>$page,'perPage'=>$perPage,'data'=>is_array($result)?$result:null,
             'error'=>$error,
         ],'Пошук нерухомості');

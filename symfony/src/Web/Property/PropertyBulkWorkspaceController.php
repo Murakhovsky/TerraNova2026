@@ -7,6 +7,8 @@ use App\Application\Property\PropertyBulkCsvReader;
 use App\Persistence\Property\PropertyBulkIntakeService;
 use App\Persistence\Property\PropertyBulkPlanProposalService;
 use App\Security\SessionCsrfValidator;
+use App\Web\Experience\Adaptive\AdaptivePagePresentation;
+use App\Web\Experience\Adaptive\ExperienceMode;
 use DomainException;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
 use Kernel\Tenant\Model\TenantContext;
@@ -26,6 +28,7 @@ final readonly class PropertyBulkWorkspaceController
         private PropertyBulkPlanProposalService $plans,
         private PropertyBulkCsvReader $csv,
         private Environment $twig,
+        private AdaptivePagePresentation $adaptive,
     ) {}
 
     public function index(Request $request):Response
@@ -39,8 +42,31 @@ final readonly class PropertyBulkWorkspaceController
             try { $batch=$this->intake->preview($actor,$batchId); }
             catch (Throwable) { return new Response('Property batch not found.',404); }
         }
+        $sections=[];
+        $triggers=[];
+        if ($batch===null) {
+            $sections[]=AdaptivePagePresentation::section('bulk.json_input',ExperienceMode::Expert);
+        } else {
+            $sections[]=AdaptivePagePresentation::section('bulk.identifiers',ExperienceMode::Expert);
+            $verified=count(array_filter($batch['items'],static fn(array $item):bool =>
+                $item['status']==='verified' && !empty($item['native_asset_id'])));
+            if ($batch['state']==='staged') $triggers[]='manual_review';
+            if ($batch['state']==='planned') {
+                // An approval gate is required; the batch alone cannot prove
+                // whether an independent Plan/Action approval is already granted.
+                $triggers[]='approval_required';
+            }
+            if ($batch['state']==='executing') $triggers[]='running';
+            if ($verified!==$batch['count'] && $batch['state']!=='staged') $triggers[]='external_outcome_unknown';
+            if ($batch['state']==='verified' && $verified!==$batch['count']) $triggers[]='blocked';
+            if ($batch['state']==='verified' && $verified===$batch['count']) $triggers[]='result_available';
+        }
+        $adaptive=$this->adaptive->prepare($request,$actor,'unified.property.bulk',$sections,$triggers,
+            entity: $batch['batch_id']??'',operationClass:'action',
+            fallbackSections: $batch === null ? ['bulk.json_input'] : []);
+        if ($adaptive instanceof Response) return $adaptive;
         return new Response($this->twig->render('experience/property/bulk_intake.html.twig',[
-            'csrfToken'=>$this->csrf->token($request),
+            'adaptive'=>$adaptive,'csrfToken'=>$this->csrf->token($request),
             'batch'=>$batch,'notice'=>(string)$request->query->get('notice',''),
         ]),200,['Cache-Control'=>'private, no-store','X-Robots-Tag'=>'noindex,nofollow']);
     }

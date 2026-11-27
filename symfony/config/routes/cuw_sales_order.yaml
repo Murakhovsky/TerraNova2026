@@ -1,0 +1,4 @@
+cos_cuw_sales_order_confirm:
+  path: /workspace/unified/business/sales.order/confirm
+  controller: App\Web\Experience\Unified\Business\SalesOrderConfirmationController::confirm
+  methods: [POST]

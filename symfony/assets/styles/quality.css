@@ -1,0 +1,102 @@
+/* CUW-F: additive, canonical component quality rules. No Shell or domain selectors. */
+.cos-outcome-state {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--cos-space-3);
+  min-width: 0;
+  padding: var(--cos-space-3) var(--cos-space-4);
+  border: var(--cos-border-width) solid var(--cos-color-border);
+  border-inline-start: 3px solid var(--cos-color-text-muted);
+  border-radius: var(--cos-radius-control);
+  background: var(--cos-color-surface);
+  color: var(--cos-color-text);
+  overflow-wrap: anywhere;
+}
+.cos-outcome-state__content { min-width: 0; }
+.cos-outcome-state__content p {
+  margin: var(--cos-space-1) 0 0;
+  color: var(--cos-color-text-muted);
+  font-size: var(--cos-font-sm);
+}
+.cos-outcome-state .cos-spinner { flex: 0 0 auto; }
+.cos-outcome-state--positive { border-inline-start-color: var(--cos-color-positive); }
+.cos-outcome-state--warning { border-inline-start-color: var(--cos-color-warning); }
+.cos-outcome-state--danger { border-inline-start-color: var(--cos-color-danger); }
+.cos-outcome-state--info { border-inline-start-color: var(--cos-color-info); }
+
+:is(.cos-input, .cos-select, .cos-textarea):not(:disabled):not([aria-invalid="true"]) {
+  border-color: var(--cos-color-control-border);
+}
+:is(.cos-input, .cos-select, .cos-textarea)::placeholder {
+  color: var(--cos-color-text-muted);
+  opacity: 1;
+}
+:is(.cos-input, .cos-select, .cos-textarea, .cos-button, .cos-icon-button,
+    .cos-tabs__tab, .cos-data-grid__view, .cos-data-grid__sort,
+    .cos-entity-card, .cos-entity-list-item, .cos-choice input, .cos-switch input,
+    .cos-data-grid__columns summary, .cos-ui-catalog button):focus-visible {
+  outline: 2px solid var(--cos-focus-ring);
+  outline-offset: 2px;
+}
+.cos-switch input:focus-visible + .cos-switch__control {
+  outline: 2px solid var(--cos-focus-ring);
+  outline-offset: 2px;
+}
+.cos-switch__control { background: var(--cos-color-control-border); }
+
+:is(.cos-card, .cos-metric, .cos-entity-card, .cos-entity-list-item, .cos-entity-header,
+    .cos-entity-summary__item, .cos-agent-evidence, .cos-agent-action, .cos-agent-run,
+    .cos-data-grid__card, .cos-data-grid__card-head, .cos-data-grid__table td,
+    .cos-dialog__body, .cos-timeline__content, .cos-status) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+:is(.cos-entity-card__head, .cos-entity-header__identity-row) > * { min-width: 0; }
+:is(.cos-entity-card__meta, .cos-entity-header__meta) > div { min-width: 0; max-width: 100%; }
+.cos-agent-evidence pre {
+  max-width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow-x: auto;
+}
+.cos-agent-run__meta > * { min-width: 0; overflow-wrap: anywhere; }
+.cos-data-grid__bulk[hidden] { display: none; }
+.cos-data-grid__table th, .cos-data-grid__table td { overflow-wrap: anywhere; }
+.cos-data-grid__pages { flex-wrap: wrap; }
+.cos-data-grid__card-head { flex-wrap: wrap; }
+.cos-dialog__footer { flex-wrap: wrap; }
+.cos-dialog__body { overscroll-behavior: contain; }
+
+@media (max-width: 760px) {
+  :is(.cos-button, .cos-icon-button, .cos-input, .cos-select,
+      .cos-tabs__tab, .cos-data-grid__view, .cos-choice, .cos-switch,
+      .cos-style-lab__button, .cos-style-lab__density-button) {
+    min-height: var(--cos-touch-target-min);
+  }
+  .cos-icon-button { min-width: var(--cos-touch-target-min); }
+  :is(.cos-input, .cos-select, .cos-textarea) { font-size: var(--cos-font-base); }
+  :is(.cos-entity-card__head, .cos-entity-header__identity-row) {
+    flex-wrap: wrap;
+    gap: var(--cos-space-2);
+  }
+  .cos-data-grid__columns-panel {
+    position: static;
+    width: 100%;
+    max-width: 100%;
+  }
+  .cos-data-grid__columns { max-width: 100%; }
+  .cos-data-grid__pages .cos-button { min-height: var(--cos-touch-target-min); }
+  .cos-data-grid__card-field { grid-template-columns: minmax(0, 0.7fr) minmax(0, 1fr); }
+  .cos-agent-result__summary dl > div, .cos-ai-context-card__facts div { grid-template-columns: minmax(0, 1fr); }
+  .cos-dialog__body { scroll-padding-block: var(--cos-space-4); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.cos-button, .cos-icon-button, .cos-entity-card, .cos-input, .cos-select,
+      .cos-textarea, .cos-switch__control,
+      .cos-dialog, .cos-drawer, .cos-spinner, .cos-control-spinner), .cos-skeleton::after, .cos-switch__control::after {
+    animation: none;
+    transition: none;
+    scroll-behavior: auto;
+  }
+}

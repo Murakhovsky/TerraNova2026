@@ -22,9 +22,13 @@ final class CurlHermesAnalystTransport implements HermesAnalystTransport
     private function request(string $url,string $token,?string $key,?array $payload):array
     {
         $parts=parse_url($url);
-        $suffix=$payload===null?'toolsets':'chat/completions';
+        $path=(string)($parts['path']??'');
+        $read=$payload===null;
+        $suffix=$read?'(?:toolsets|capabilities|runs/run_[A-Za-z0-9_-]{1,124})'
+            :'(?:chat/completions|runs|runs/run_[A-Za-z0-9_-]{1,124}/stop)';
+        $isRuns=str_contains($path,'/v1/runs');
         if(!is_array($parts)||($parts['scheme']??null)!=='https'||!isset($parts['host'])
-            ||!preg_match('~^/p/[a-zA-Z0-9_-]{1,64}/v1/'.preg_quote($suffix,'~').'$~D',(string)($parts['path']??''))
+            ||!preg_match('~^/p/[a-zA-Z0-9_-]{1,64}/v1/'.$suffix.'$~D',$path)
             ||isset($parts['user'])||isset($parts['pass'])||isset($parts['query'])||isset($parts['fragment'])||isset($parts['port'])
             ||$token===''||strlen($token)>4096||preg_match('/[\\x00-\\x20\\x7f]/',$token)
             ||($key!==null&&!preg_match('/^cos-mkt-[a-f0-9]{64}$/D',$key))){
@@ -38,14 +42,14 @@ final class CurlHermesAnalystTransport implements HermesAnalystTransport
         $body='';
         try{
             curl_setopt_array($curl,[CURLOPT_RETURNTRANSFER=>false,CURLOPT_HEADER=>false,
-                CURLOPT_FOLLOWLOCATION=>false,CURLOPT_MAXREDIRS=>0,CURLOPT_CONNECTTIMEOUT=>5,CURLOPT_TIMEOUT=>45,
+                CURLOPT_FOLLOWLOCATION=>false,CURLOPT_MAXREDIRS=>0,CURLOPT_CONNECTTIMEOUT=>5,CURLOPT_TIMEOUT=>$isRuns?5:45,
                 CURLOPT_SSL_VERIFYPEER=>true,CURLOPT_SSL_VERIFYHOST=>2,CURLOPT_HTTPHEADER=>$headers,
                 CURLOPT_WRITEFUNCTION=>static function($handle,string $chunk)use(&$body):int{
                     if(strlen($body)+strlen($chunk)>262144)return 0;
                     $body.=$chunk;return strlen($chunk);
                 }]);
             if($payload!==null){
-                $encoded=json_encode($payload,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+                $encoded=json_encode($payload===[]?new \stdClass():$payload,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
                 if(strlen($encoded)>32768)throw new DomainException('Hermes request too large.');
                 curl_setopt_array($curl,[CURLOPT_POST=>true,CURLOPT_POSTFIELDS=>$encoded]);
             }
@@ -55,7 +59,7 @@ final class CurlHermesAnalystTransport implements HermesAnalystTransport
             }
             // Associative decoding otherwise conflates the empty JSON object with an empty list.
             $shape=ltrim($body);
-            if(!str_starts_with($shape,$payload===null?'[':'{'))throw new RuntimeException('Unexpected Hermes response shape.');
+            if(!str_starts_with($shape,str_ends_with($path,'/toolsets')?'[':'{'))throw new RuntimeException('Unexpected Hermes response shape.');
             $data=json_decode($body,true,32,JSON_THROW_ON_ERROR);
             if(!is_array($data)||isset($data['error']))throw new RuntimeException('Invalid Hermes response.');
             return $data;

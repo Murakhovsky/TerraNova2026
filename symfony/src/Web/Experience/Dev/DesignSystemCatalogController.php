@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Web\Experience\Dev;
 
+use App\Web\Experience\AI\AgentEvidence;
 use App\Web\Experience\DesignSystem\DesignSystemAuditService;
 use App\Web\Experience\Form\Reference\FormsCatalogInput;
 use App\Web\Experience\Form\Reference\FormsCatalogType;
@@ -25,6 +26,24 @@ final readonly class DesignSystemCatalogController
 
     public function __invoke(Request $request): Response
     {
+        if ($request->query->get('quality') === '1') {
+            return new Response(
+                $this->twig->render('experience/cuw_quality_catalog.html.twig', [
+                    'dataGridDemo' => $this->dataGrid->build($request),
+                    'qualityEvidence' => new AgentEvidence('DEMO evidence', [
+                        'source' => 'fixture-only',
+                        'reference' => 'DEMO-RECONCILIATION-2026-000001-A1234567890-B1234567890-C1234567890',
+                    ]),
+                ]),
+                Response::HTTP_OK,
+                [
+                    'Content-Type' => 'text/html; charset=UTF-8',
+                    'X-Robots-Tag' => 'noindex, nofollow',
+                    'Cache-Control' => 'no-store, private',
+                ],
+            );
+        }
+
         $form = $this->forms->create(FormsCatalogType::class, new FormsCatalogInput());
 
         return new Response(

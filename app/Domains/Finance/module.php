@@ -16,7 +16,15 @@ return [
         'job_handler_services' => [],
         'api_route_contributor_services' => [],
         'configuration_provisioner_services' => [],
-        'extension_services' => [],
+        'extension_services' => [
+            'web.navigation' => ['financeNavigationContributor'],
+            'web.search' => ['financeNavigationContributor'],
+            'web.commands' => ['financeNavigationContributor'],
+            'web.workspace' => ['financeNavigationContributor'],
+            'web.workspace.extensions' => ['financeNavigationContributor'],
+            'web.actions' => ['financeNavigationContributor'],
+            'web.entity_links' => ['financeNavigationContributor'],
+        ],
         'cross_domain_contracts' => [
             [
                 'contract'=>'Domains\\Sales\\Application\\Contract\\SalesCommerceOrderEvidencePort',
@@ -49,7 +57,7 @@ return [
             ],
         ],
         'migration_files' => ['app/migrations/20261119_000153_finance_budget_f1.sql','app/migrations/20261119_000155_finance_spend_observations.sql','app/migrations/20261120_000156_finance_spend_import_action_intents.sql','app/migrations/20261125_009010_finance_order_payments.sql','app/migrations/20261124_000166_finance_paid_exposure_claims.sql','app/migrations/20261124_000190_finance_paid_settlements.sql','app/migrations/20261124_000191_finance_paid_document_reviews.sql'],
-        'capabilities' => ['finance.order.payment.register','finance.order.payment.reconcile','finance.order.financial_evidence.read','finance.order.payment.operations.read','finance.sales.commercial_evidence.read','finance.budget.envelope.draft.create','finance.budget.envelope.get','finance.budget.reservation.list','finance.budget.envelope.activate','finance.budget.reservation.reserve','finance.budget.reservation.release','finance.budget.envelope.freeze','finance.ad_spend.reconciliation.status','finance.ad_spend.settlement.commit','finance.ad_spend.settlement.status','finance.ad_spend.settlement.review','finance.ad_spend.marketing_snapshot.import'],
+        'capabilities' => ['finance.order.payment.register','finance.order.payment.reconcile','finance.order.financial_evidence.read','finance.order.payment.operations.read','finance.sales.commercial_evidence.read','finance.budget.envelope.draft.create','finance.budget.envelope.get','finance.budget.envelope.list','finance.budget.reservation.list','finance.budget.envelope.activate','finance.budget.reservation.reserve','finance.budget.reservation.release','finance.budget.envelope.freeze','finance.ad_spend.reconciliation.status','finance.ad_spend.settlement.commit','finance.ad_spend.settlement.status','finance.ad_spend.settlement.review','finance.ad_spend.marketing_snapshot.import'],
         'capability_contracts' => [
             [
                 'id'=>'finance.ad_spend.marketing_snapshot.import',
@@ -229,6 +237,26 @@ return [
                 'failure_contract'=>'',
                 'lifecycle'=>'experimental',
                 'tests'=>['tests/unit/finance_budget_f1.php'],
+                'documentation'=>'docs/04-domains/finance/overview.md',
+            ],
+            [
+                'id'=>'finance.budget.envelope.list',
+                'version'=>'1.0.0',
+                'owner_domain'=>'finance',
+                'kind'=>'query',
+                'input_schema'=>'resources/contracts/finance/budget-envelope-list-input.schema.json',
+                'output_schema'=>'resources/contracts/finance/budget-envelope-list-output.schema.json',
+                'execution_binding'=>'query:finance.budget.envelope.list',
+                'async'=>false,
+                'side_effect_level'=>'none',
+                'permission'=>'cos.tenant.manage',
+                'approval_policy'=>'none',
+                'idempotency'=>'none',
+                'timeout_policy'=>[],
+                'retry_policy'=>[],
+                'failure_contract'=>'',
+                'lifecycle'=>'experimental',
+                'tests'=>['tests/unit/finance_budget_f1.php','tests/integration/finance_budget_f1_mysql.php'],
                 'documentation'=>'docs/04-domains/finance/overview.md',
             ],
             [

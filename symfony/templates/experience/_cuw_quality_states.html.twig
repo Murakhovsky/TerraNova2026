@@ -1,0 +1,8 @@
+<section id="cuw-quality-states" class="cos-ui-catalog__section" aria-labelledby="cuw-quality-states-title">
+    <h2 id="cuw-quality-states-title">{{ 'catalog.states'|trans({}, 'cuw_quality') }}</h2>
+    <div class="cos-section-grid">
+        {% for state in ['loading','empty','disabled','error','permission_denied','queued','running','waiting_approval','blocked','completed_unverified','completed_verified','external_outcome_unknown','reconciliation_required','failed','cancelled','stale_data'] %}
+            <twig:CosOutcomeState :state="state" />
+        {% endfor %}
+    </div>
+</section>

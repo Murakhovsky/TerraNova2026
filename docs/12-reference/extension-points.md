@@ -17,12 +17,13 @@ generated: true
 | `api.routes` | built-in | 0 |
 | `event.consumers` | module-defined | 2 |
 | `tenant.configuration` | built-in | 2 |
-| `web.actions` | module-defined | 1 |
-| `web.commands` | module-defined | 7 |
-| `web.navigation` | module-defined | 7 |
-| `web.search` | module-defined | 7 |
-| `web.workspace` | module-defined | 7 |
-| `web.workspace.extensions` | module-defined | 1 |
+| `web.actions` | module-defined | 2 |
+| `web.commands` | module-defined | 8 |
+| `web.entity_links` | module-defined | 5 |
+| `web.navigation` | module-defined | 8 |
+| `web.search` | module-defined | 8 |
+| `web.workspace` | module-defined | 8 |
+| `web.workspace.extensions` | module-defined | 2 |
 
 ## `api.routes`
 
@@ -54,6 +55,7 @@ generated: true
 
 | Модуль | Service |
 | --- | --- |
+| `finance` | `financeNavigationContributor` |
 | `sales` | `salesNavigationContributor` |
 
 ## `web.commands`
@@ -64,7 +66,20 @@ generated: true
 | --- | --- |
 | `capital_markets` | `capitalMarketsNavigationContributor` |
 | `diagnostic` | `diagnosticNavigationContributor` |
+| `finance` | `financeNavigationContributor` |
 | `growth` | `growthNavigationContributor` |
+| `marketing` | `marketingNavigationContributor` |
+| `product_management` | `productManagementNavigationContributor` |
+| `property` | `propertyNavigationContributor` |
+| `sales` | `salesNavigationContributor` |
+
+## `web.entity_links`
+
+Тип: **module-defined**.
+
+| Модуль | Service |
+| --- | --- |
+| `finance` | `financeNavigationContributor` |
 | `marketing` | `marketingNavigationContributor` |
 | `product_management` | `productManagementNavigationContributor` |
 | `property` | `propertyNavigationContributor` |
@@ -78,6 +93,7 @@ generated: true
 | --- | --- |
 | `capital_markets` | `capitalMarketsNavigationContributor` |
 | `diagnostic` | `diagnosticNavigationContributor` |
+| `finance` | `financeNavigationContributor` |
 | `growth` | `growthNavigationContributor` |
 | `marketing` | `marketingNavigationContributor` |
 | `product_management` | `productManagementNavigationContributor` |
@@ -92,6 +108,7 @@ generated: true
 | --- | --- |
 | `capital_markets` | `capitalMarketsNavigationContributor` |
 | `diagnostic` | `diagnosticNavigationContributor` |
+| `finance` | `financeNavigationContributor` |
 | `growth` | `growthNavigationContributor` |
 | `marketing` | `marketingNavigationContributor` |
 | `product_management` | `productManagementNavigationContributor` |
@@ -106,6 +123,7 @@ generated: true
 | --- | --- |
 | `capital_markets` | `capitalMarketsNavigationContributor` |
 | `diagnostic` | `diagnosticNavigationContributor` |
+| `finance` | `financeNavigationContributor` |
 | `growth` | `growthNavigationContributor` |
 | `marketing` | `marketingNavigationContributor` |
 | `product_management` | `productManagementNavigationContributor` |
@@ -118,6 +136,7 @@ generated: true
 
 | Модуль | Service |
 | --- | --- |
+| `finance` | `financeNavigationContributor` |
 | `sales` | `salesNavigationContributor` |
 
 ## Семантика реєстрації

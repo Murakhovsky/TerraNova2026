@@ -14,6 +14,7 @@ interface FinanceBudgetControlInterface
     public function createDraft(TenantContext $actor,array $input,string $key):array;
     /** @return array<string,mixed>|null */
     public function envelope(TenantContext $actor,string $envelopeId):?array;
+    public function list(TenantContext $actor,string $query,int $offset,int $limit):array;
     /** @return list<array<string,mixed>> */
     public function reservations(TenantContext $actor,string $envelopeId):array;
 }

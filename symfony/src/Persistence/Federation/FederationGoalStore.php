@@ -113,6 +113,7 @@ final readonly class FederationGoalStore
                 'version' => (int) $row['current_spec_version'],
                 'created_at' => $row['created_at'],
                 'desired_result' => $spec->desiredResult,
+                'deadline' => $spec->deadline,
                 'criteria' => $spec->criteria,
                 'allowed_capabilities' => $spec->allowedCapabilities,
             ];
@@ -197,6 +198,9 @@ final readonly class FederationGoalStore
                 'capability'=>(string)($step['capability_id']??''),
                 'target'=>(string)($step['input']['target_id']??''),
                 'title'=>(string)($step['input']['parameters']['title']??''),
+                'depends_on'=>(array)($step['depends_on']??[]),
+                'side_effect'=>(string)($step['side_effect_level']??'unknown'),
+                'version'=>(string)($step['capability_version']??''),
             ], is_array($json['steps']??null) ? $json['steps'] : []);
             unset($p['plan_json']);
             $p['approval'] = $this->planApprovalAction($actor,(string)$p['plan_id']);

@@ -25,6 +25,13 @@ final readonly class FinanceBudgetControlService implements FinanceBudgetControl
         $this->manager($actor);
         return $this->repository->envelope($actor->organizationId()->value(),BudgetControlPolicy::id($envelopeId));
     }
+    public function list(TenantContext $actor,string $query,int $offset,int $limit):array
+    {
+        $this->manager($actor);
+        if(mb_strlen($query)>120||$offset<0||$offset>200000||$limit<1||$limit>100)throw new DomainException('Invalid budget page.');
+        $rows=$this->repository->workspacePage($actor->organizationId()->value(),trim($query),$offset,$limit+1);
+        return ['items'=>array_slice($rows,0,$limit),'has_more'=>count($rows)>$limit];
+    }
     public function reservations(TenantContext $actor,string $envelopeId):array
     {
         $this->manager($actor);

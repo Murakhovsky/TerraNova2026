@@ -1,0 +1,17 @@
+# Isolated UX-05 routes. Shared routes.yaml + Shell navigation remain integrator-owned.
+cos_ux05_operations:
+  path: /workspace/operations
+  controller: App\Web\Operations\OperationsCenterController::index
+  methods: [GET, HEAD]
+
+cos_ux05_operations_decide:
+  path: /workspace/operations/approval/{id}/decide
+  controller: App\Web\Operations\OperationsCenterController::decide
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_ux05_operations_recovery_submit:
+  path: /workspace/operations/workflow/{runId}/recovery
+  controller: App\Web\Operations\OperationsRecoveryController::submit
+  methods: [POST]
+  requirements: { runId: '[A-Za-z0-9_.:-]{1,190}' }

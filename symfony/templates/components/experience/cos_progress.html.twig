@@ -3,14 +3,13 @@
     role="progressbar"
     aria-label="{{ label }}"
     aria-valuemin="0"
-    aria-valuemax="{{ max }}"
-    aria-valuenow="{{ value }}"
+    {% if max > 0 %}aria-valuemax="{{ max }}" aria-valuenow="{{ this.clampedValue() }}"{% endif %}
 >
     <div class="cos-progress__track">
         <div class="cos-progress__bar" style="--cos-progress: {{ this.percent() }}%"></div>
     </div>
     <div class="cos-progress__meta">
         <span>{{ label }}</span>
-        <span>{{ this.percent() }}%</span>
+        {% if max > 0 %}<span>{{ this.percent() }}%</span>{% endif %}
     </div>
 </div>

@@ -24,11 +24,19 @@ final readonly class MarketingAnalystPlanProposalService
 
     /** @return array<string,mixed> */
     public function propose(TenantContext $actor,string $campaignId,int $campaignRevision,string $creativeId,int $creativeRevision,
-        ?string $adsetId,?int $adsetRevision,string $key,?string $paidPlanId=null,?string $snapshotRef=null):array
+        ?string $adsetId,?int $adsetRevision,string $key,?string $paidPlanId=null,?string $snapshotRef=null,
+        ?string $workspaceConfigurationHash=null):array
     {
         MarketingPlanningPolicy::key($key);
         $status=$this->readiness->status($actor);
         if(!$status['plan_available']||!$this->workflow->newRunsEnabled($actor))throw new DomainException('Canonical Marketing analysis planning is not enabled.');
+        // UX-06 submits a configuration pin. Never silently substitute a
+        // changed or legacy profile after showing exact token bounds to the user.
+        if($workspaceConfigurationHash!==null&&(!preg_match('/^[a-f0-9]{64}$/D',$workspaceConfigurationHash)
+            ||!is_string($status['configuration_hash'])||!hash_equals($status['configuration_hash'],$workspaceConfigurationHash)
+            ||$status['token_limits']===null)){
+            throw new DomainException('AI Workspace analyst configuration changed or token limits are missing.');
+        }
         $envelope=$this->contexts->build($actor,$campaignId,$campaignRevision,$creativeId,$creativeRevision,$adsetId,$adsetRevision,$paidPlanId,$snapshotRef);
         $org=$actor->organizationId()->value();
         $suffix=substr(hash('sha256',json_encode([$org,$actor->userId()->value(),$key],JSON_THROW_ON_ERROR)),0,24);

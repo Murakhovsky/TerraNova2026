@@ -35,6 +35,22 @@ catch(DomainException){$conflict=true;}
 $assert($conflict??false,'Finance draft key/payload mismatch was accepted');
 
 $assert($repo->envelope($orgB,$id)===null,'Tenant B read tenant A Finance budget');
+$otherDraft=$repo->createDraft($orgA,'101',[...$draft,'name'=>'Marketing budget second'],'finance-draft-2');
+$foreignDraft=$repo->createDraft($orgB,'101',$draft,'finance-draft-1');
+$service=new \Domains\Finance\Application\Service\FinanceBudgetControlService($repo,new \Domains\Finance\Domain\BudgetControlPolicy());
+$actor=static fn(string $org,string $role='manager')=>new \Kernel\Tenant\Model\TenantContext(
+    \Kernel\Shared\Domain\UserId::fromString('101'),\Kernel\Shared\Domain\OrganizationId::fromString($org),
+    \Kernel\Identity\Model\OrganizationRole::fromString($role),[
+        \Kernel\Tenant\Model\Permission::fromString(\Kernel\Tenant\Model\TenantPermissions::ACCESS),
+        \Kernel\Tenant\Model\Permission::fromString(\Kernel\Tenant\Model\TenantPermissions::MANAGE)]);
+$first=$service->list($actor($orgA),'Marketing budget',0,1);
+$second=$service->list($actor($orgA),'Marketing budget',1,1);
+$assert($first['has_more']&&!$second['has_more']&&count($first['items'])===1&&count($second['items'])===1
+    &&$first['items'][0]['id']!==$second['items'][0]['id'],'Budget paging not stable.');
+$assert($service->list($actor($orgB),$id,0,20)['items']===[]&&$service->list($actor($orgA),$foreignDraft['id'],0,20)['items']===[],'Finance list leaked another tenant.');
+$assert($service->list($actor($orgA),'%',0,20)['items']===[],'Budget search interpreted wildcard.');
+try{$service->list($actor($orgA,'viewer'),'',0,20);}catch(DomainException){$viewerDenied=true;}
+$assert($viewerDenied??false,'Viewer listed Finance budgets.');
 try{$repo->reservations($orgB,$id);}catch(DomainException){$tenantBlocked=true;}
 $assert($tenantBlocked??false,'Cross-tenant reservation listing must not return silent emptiness');
 
