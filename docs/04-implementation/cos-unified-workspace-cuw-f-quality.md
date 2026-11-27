@@ -6,7 +6,7 @@ updated: 2026-11-27
 kind: implementation
 ---
 
-# CUW-F: Design System & Quality
+# CUW-F: дизайн-система та якість
 
 [Issue #524](https://github.com/Murakhovsky/TerraNova2026/issues/524), [parent #518](https://github.com/Murakhovsky/TerraNova2026/issues/518).
 База: `10fc649df6aafdca432ec329ebd737f6a4abd1ec`. Master Spec §13–16, §19 UX-09 foundation, AC-12/13/17.
