@@ -1000,8 +1000,13 @@ try {
     const bad=await admin.request.post(confirmationUrl,{form:{...post,csrf_token:'bad'},maxRedirects:0});
     assert(bad.status()===403,'CUW-E order confirmation accepted invalid CSRF');
     await confirmForm.locator('input[name="confirm"]').check();
-    await Promise.all([page.waitForURL(url=>url.pathname.endsWith('/sales.order/confirm')),confirmForm.locator('button[type="submit"]').click()]);
-    assert(await page.locator('[data-cos-order-confirmed]').count()===1,'CUW-E confirmation independent receipt unavailable');
+    const [confirmationResponse]=await Promise.all([
+      page.waitForResponse(response=>response.request().method()==='POST'&&new URL(response.url()).pathname.endsWith('/sales.order/confirm')),
+      confirmForm.locator('button[type="submit"]').click()
+    ]);
+    assert(confirmationResponse.status()===200,'CUW-E human confirmation returned non-success response');
+    await page.locator('[data-cos-order-confirmed]').waitFor({state:'visible'});
+    assert(new URL(page.url()).pathname.endsWith('/sales.order/confirm'),'CUW-E confirmation receipt is not displayed on its native page');
     const verified=await invoke(admin,'sales.order.lifecycle.read',{order_id:orderId},csrf);
     assert(verified.data?.status==='confirmed'&&verified.data?.revision===2&&verified.data?.fulfilled_quantity===0,'CUW-E confirmation did not preserve native lifecycle/fulfillment');
     const replay=await admin.request.post(confirmationUrl,{form:post,maxRedirects:0});

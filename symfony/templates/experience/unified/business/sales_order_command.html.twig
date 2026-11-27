@@ -8,7 +8,7 @@
   {% if action.id == 'sales.order.confirm' %}
     <h2 class="cos-card__title">{{ action.label|trans({}, 'cuw_business')|trans }}</h2>
     {% if action.enabled and status == 'placed' and revision and csrfToken and idempotencyKey %}
-      <form method="post" action="{{ path('cos_cuw_sales_order_confirm') }}" class="cos-uw__search" data-cos-order-confirm>
+      <form method="post" action="{{ path('cos_cuw_sales_order_confirm') }}" class="cos-uw__search" data-turbo="false" data-cos-order-confirm>
         <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
         <input type="hidden" name="order_id" value="{{ workspace.entity.id }}">
         <input type="hidden" name="expected_revision" value="{{ revision }}">
