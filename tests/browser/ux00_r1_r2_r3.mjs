@@ -746,8 +746,10 @@ try {
     await plan.waitFor({ state: 'visible', timeout: 15000 });
     assert((await plan.innerText()).includes('Очікує погодження'),
       'S4: unapproved Plan silently changed state in ' + mode + ' mode');
-    assert((await plan.innerText()).includes('property.bulk.create'),
-      'S4: canonical Domain capability missing from Plan in ' + mode + ' mode');
+    assert((await plan.innerText()).includes('Імпорт об’єктів нерухомості'),
+      'S4: human business operation missing from Plan in ' + mode + ' mode');
+    assert((await plan.innerText()).includes('property.bulk.create') === (mode === 'expert'),
+      'S4: machine capability disclosed outside Expert');
     assert(await plan.locator('form[action="/workspace/goals/plans/' + planId
       + '/request-approval"]').count() === 1,
       'S4: independent approval entry missing in ' + mode + ' mode');
@@ -772,6 +774,63 @@ try {
     plan_actions: initialActions, workflow_runs: initialRuns,
     native_writes: 0,
   });
+
+  // UX-07: real Goal draft creation, semantic metric choice and replay fence.
+  {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const modeForm = page.locator('form[action="/workspace/goals/mode"]');
+  await Promise.all([
+    page.waitForURL(url => url.pathname === '/workspace/goals'),
+    modeForm.locator('button[value="result"]').click(),
+  ]);
+  await page.waitForLoadState('networkidle');
+  const draftForm = page.locator('form[action="/workspace/goals/create"]');
+  await draftForm.locator('xpath=ancestor::details/summary').click();
+  const picker = draftForm.locator('[data-goal-metric-picker]');
+  assert(await picker.locator('input[name="criterion"][type="radio"]').count() >= 1,
+    'UX07: no human metric picker');
+  assert(await picker.locator('input[name="criterion"]:not([type="radio"])').count() === 0
+    && !(await picker.innerText()).includes('sales.local_tasks_created'),
+    'UX07: ordinary user must not enter machine metric code');
+  await draftForm.locator('textarea[name="desired_result"]').fill('UX07 CRM tasks ' + uid);
+  await picker.locator('[value="sales.local_tasks_created"]').check();
+  await draftForm.locator('input[name="target"]').fill('1');
+  const date = '2099-11-27';
+  await draftForm.locator('input[name="deadline"]').fill(date);
+  const goalDraftKey = await draftForm.locator('input[name="draft_key"]').inputValue();
+  const payload = {csrf_token:csrf, draft_key:goalDraftKey, desired_result:'UX07 CRM tasks '+uid,
+    criterion:'sales.local_tasks_created', target:'1', deadline:date};
+  const deniedDraft = await admin.request.post(abs('/workspace/goals/create'), {
+    form:{...payload, csrf_token:'invalid'}, maxRedirects:0,
+  });
+  assert(deniedDraft.status() === 400, 'UX07: draft creation accepted invalid CSRF');
+  const unknownMetric = await admin.request.post(abs('/workspace/goals/create'), {
+    form:{...payload, criterion:'fake.metric'}, maxRedirects:0,
+  });
+  assert(unknownMetric.status() === 303 && (unknownMetric.headers()['location'] || '').includes('error=invalid_input'),
+    'UX07: arbitrary metric accepted');
+  await page.screenshot({path:evidenceDir+'/goals-metric-picker-mobile.png', fullPage:true, animations:'disabled'});
+  const goalScan = await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21a','wcag21aa']).analyze();
+  assert(goalScan.violations.filter(v=>['critical','serious'].includes(v.impact)).length===0,
+    'UX07: critical/serious accessibility violation');
+  const actionsBeforeDraft = Number(sqlExecute("SELECT COUNT(*) FROM cos_actions WHERE organization_id='default'"));
+  const runsBeforeDraft = Number(sqlExecute("SELECT COUNT(*) FROM cos_workflow_runs WHERE organization_id='default'"));
+  const saved = await admin.request.post(abs('/workspace/goals/create'), {form:payload,maxRedirects:0});
+  const replay = await admin.request.post(abs('/workspace/goals/create'), {form:payload,maxRedirects:0});
+  assert([saved,replay].every(r=>r.status()===303 && (r.headers()['location']||'').includes('created=1')),
+    'UX07: valid draft or idempotent replay failed');
+  const draftCount = Number(sqlExecute("SELECT COUNT(*) FROM cos_federation_goal_specs WHERE organization_id='default' AND JSON_UNQUOTE(JSON_EXTRACT(specification,'$.desired_result'))='UX07 CRM tasks "+uid+"'"));
+  assert(draftCount === 1 && Number(sqlExecute("SELECT COUNT(*) FROM cos_actions WHERE organization_id='default'"))===actionsBeforeDraft
+    && Number(sqlExecute("SELECT COUNT(*) FROM cos_workflow_runs WHERE organization_id='default'"))===runsBeforeDraft,
+    'UX07: draft replay duplicated a Goal or performed a side effect');
+  await page.goto(abs('/workspace/goals'), {waitUntil:'networkidle'});
+  const renderedDraft=page.locator('[data-goal-id]').filter({hasText:'UX07 CRM tasks '+uid});
+  assert(await renderedDraft.count()===1 && (await renderedDraft.innerText()).includes(date),
+    'UX07: persisted draft or deadline missing');
+  add('UX07.semantic_picker_draft_replay_and_mobile',{goal_drafts:1,actions_created:0,runs_created:0});
+  await page.setViewportSize({width:1440,height:1000});
+
+  }
 
   // AC-08: The operation must be bookmarkable; pending items are not
   // announced as verified native assets until independent receipts exist.

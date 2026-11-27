@@ -144,8 +144,9 @@ final class FederationPersistenceSmokeCommand extends Command
                 ExperienceMode::Process->value => ['data-experience-mode="process"', 'data-goal-process'],
                 ExperienceMode::Expert->value => ['data-experience-mode="expert"', 'data-goal-expert'],
             ] as $mode => $markers) {
-                $html = $this->twig->render('experience/federation/goals.html.twig', [
+                $html = $this->twig->load('experience/federation/goals.html.twig')->renderBlock('workspace_content', [
                     'mode' => $mode,
+                    'metrics' => \App\Web\Federation\GoalMetricPresentation::definitions(),
                     'goals' => $this->goals->listGoals($actor),
                     'runs' => [],
                     'reconciled' => false,
@@ -733,8 +734,8 @@ final class FederationPersistenceSmokeCommand extends Command
                 ]],
             ];
             foreach (['result', 'process', 'expert'] as $displayMode) {
-                $view = $this->twig->render('experience/federation/goals.html.twig', [
-                    'mode' => $displayMode, 'goals' => [],
+                $view = $this->twig->load('experience/federation/goals.html.twig')->renderBlock('workspace_content', [
+                    'mode' => $displayMode, 'metrics' => \App\Web\Federation\GoalMetricPresentation::definitions(), 'goals' => [],
                     'runs' => [[
                         'run_id' => $salesRunId, 'goal_id' => $salesGoalId,
                         'plan_id' => $salesPlanId, 'state' => 'completed',
@@ -942,7 +943,7 @@ final class FederationPersistenceSmokeCommand extends Command
                 'process' => [true, false],
                 'expert' => [true, true],
             ] as $mode => [$showSteps, $showActionId]) {
-                $html = $this->twig->render('experience/federation/goals.html.twig', [
+                $html = $this->twig->load('experience/federation/goals.html.twig')->renderBlock('workspace_content', [
                     'mode' => $mode, 'runs' => [$runView],
                     'goals' => $this->goals->listGoals($actor),
                     'csrfToken' => 'smoke-csrf-token',
@@ -1040,7 +1041,7 @@ final class FederationPersistenceSmokeCommand extends Command
             self::assert($pendingRecovery['recoverable_count'] === 1
                 && $pendingRecovery['attention_count'] === 0,
                 'Completed Federation Action was not eligible for receipt-only reconciliation.');
-            $recoveryHtml = $this->twig->render('experience/federation/goals.html.twig', [
+            $recoveryHtml = $this->twig->load('experience/federation/goals.html.twig')->renderBlock('workspace_content', [
                 'mode' => 'process',
                 'runs' => [[
                     'run_id' => $linearRun, 'goal_id' => $linearGoal,

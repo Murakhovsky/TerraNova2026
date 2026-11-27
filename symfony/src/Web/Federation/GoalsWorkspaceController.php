@@ -12,6 +12,17 @@ use App\Persistence\Federation\FederationCanonicalWorkflowBridge;
 use Platform\Orchestration\Goal\FederationSmallTaskPlanFactory;
 use App\Security\SessionCsrfValidator;
 use App\Web\Experience\Adaptive\ExperienceMode;
+use App\Web\Experience\Extension\Model\WebExtensionContext;
+use App\Web\Experience\Shell\ShellBreadcrumb;
+use App\Web\Experience\Shell\ShellConnectionState;
+use App\Web\Experience\Shell\WorkspaceShellFactory;
+use App\Persistence\Federation\FederationTrustedOutcomeEvidenceResolver;
+use App\Persistence\Federation\FederationCapabilityBindingResolver;
+use App\Application\Sales\Query\GetSalesDealsCollectionQuery;
+use Kernel\Application\Bus\QueryBusInterface;
+use Domains\Growth\Application\Contract\GrowthMarketDiscoveryBoundary;
+use DateTimeImmutable;
+use DateTimeZone;
 use DomainException;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
 use Kernel\Tenant\Model\TenantContext;
@@ -40,6 +51,11 @@ final readonly class GoalsWorkspaceController
         private FederationDiscoveryPlanProposalService $discoveryPlans,
         private FederationPlanApprovalCoordinator $planApprovals,
         private FederationCanonicalWorkflowBridge $canonical,
+        private WorkspaceShellFactory $shells,
+        private FederationTrustedOutcomeEvidenceResolver $outcomes,
+        private FederationCapabilityBindingResolver $bindings,
+        private QueryBusInterface $queries,
+        private GrowthMarketDiscoveryBoundary $growth,
     ) {
     }
 
@@ -49,9 +65,27 @@ final readonly class GoalsWorkspaceController
         if ($tenant === null) return self::denied();
 
         $state = $this->experience->workspace($tenant, 'cos.goals');
-        $runs = $this->goals->listRuns($tenant);
+        $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+        $metrics = GoalMetricPresentation::catalog($tenant, $this->outcomes, $this->bindings, $now);
+        $goals = $this->goals->listGoals($tenant);
+        $goalTitles = array_column($goals, 'desired_result', 'id');
+        $runs = $this->goals->listRuns($tenant, 20);
+        $context = new WebExtensionContext(
+            organizationId: $tenant->organizationId()->value(),
+            role: $tenant->role()->value(),
+            surface: 'workspace', activeSection: 'cos', activeItem: 'goals',
+        );
+        $shell = $this->shells->create($tenant, $context, 'Бізнес-цілі',
+            [new ShellBreadcrumb('Робочі простори', '/workspace/unified'), new ShellBreadcrumb('Цілі')],
+            aiAvailable: false, connectionState: ShellConnectionState::Stale,
+        );
+        $targets = $this->planningTargets($tenant, $metrics);
+        $capabilityLabels = [];
         $plansByGoal = [];
         foreach ($this->goals->listGoalPlans($tenant) as $plan) {
+            foreach ($plan['steps'] as $step) {
+                $capabilityLabels[$step['capability']] = GoalMetricPresentation::capabilityLabel($step['capability']);
+            }
             $plansByGoal[(string)$plan['goal_id']][] = $plan;
         }
         $runsByGoal = [];
@@ -67,6 +101,7 @@ final readonly class GoalsWorkspaceController
                     $run['canonical'] = true;
                     $status = $this->canonical->status($tenant, (string)$run['run_id']);
                     $run['steps'] = $status['steps'];
+                    $run['state'] = $status['state'];
                     $run['recovery'] = null; // legacy recovery may never touch canonical Steps
                 } else {
                     $legacy = $this->goals->run($tenant, (string)$run['run_id']);
@@ -80,7 +115,10 @@ final readonly class GoalsWorkspaceController
                 $run['recovery'] = null;
                 $run['progress_error'] = true;
             }
-            $run['total_steps'] = count($run['steps']);
+            foreach ($run['steps'] as $step) {
+                $capabilityLabels[$step['capability_id']] = GoalMetricPresentation::capabilityLabel($step['capability_id']);
+            }
+            $run['total_steps'] = $run['progress_error'] ? null : count($run['steps']);
             $run['completed_steps'] = count(array_filter($run['steps'],
                 static fn(array $step):bool => ($step['state']??null)==='completed'));
             $run['approval'] = $this->goals->planApprovalAction($tenant, (string)$run['plan_id']);
@@ -109,7 +147,15 @@ final readonly class GoalsWorkspaceController
         unset($run);
         return new Response(
             $this->twig->render('experience/federation/goals.html.twig', [
-                'goals' => $this->goals->listGoals($tenant),
+                'shell' => $shell,
+                'goals' => $goals,
+                'metrics' => $metrics,
+                'goalTitles' => $goalTitles,
+                'capabilityLabels' => $capabilityLabels,
+                'actorId' => $tenant->userId()->value(),
+                'draftKey' => bin2hex(random_bytes(16)),
+                'today' => $now->setTimezone(new DateTimeZone('Europe/Kyiv'))->format('Y-m-d'),
+                'planningTargets' => $targets,
                 'runs' => $runs,
                 'plansByGoal' => $plansByGoal,
                 'runsByGoal' => $runsByGoal,
@@ -192,11 +238,15 @@ final readonly class GoalsWorkspaceController
         if (!$this->csrf->isValid($request)) return new Response('Invalid CSRF token.', 400);
 
         $desired = trim((string) $request->request->get('desired_result', ''));
-        $criterion = trim((string) $request->request->get('criterion', 'sales.won_deals'));
+        $criterion = trim((string) $request->request->get('criterion', ''));
+        $deadline = (string) $request->request->get('deadline', '');
+        $draftKey = (string) $request->request->get('draft_key', '');
         $rawTarget = $request->request->get('target', '');
         $target = is_string($rawTarget) && ctype_digit($rawTarget) ? (int) $rawTarget : 0;
         if ($desired === '' || mb_strlen($desired) > 1200
-            || !preg_match('/^[a-z][a-z0-9_.-]{0,63}$/', $criterion)
+            || !preg_match('/^[a-f0-9]{32}$/D', $draftKey)
+            || !GoalMetricPresentation::supports($criterion)
+            || !GoalMetricPresentation::validDeadline($deadline, new DateTimeImmutable('now'))
             || $target < 1 || $target > 1000000) {
             return new RedirectResponse('/workspace/goals?error=invalid_input', 303);
         }
@@ -212,14 +262,27 @@ final readonly class GoalsWorkspaceController
 
         try {
             $goal = new GoalSpecification(
-                goalId: 'goal-' . bin2hex(random_bytes(12)),
+                goalId: 'goal-' . substr(hash('sha256', implode("\0", [
+                    $tenant->organizationId()->value(), $tenant->userId()->value(), $draftKey,
+                ])), 0, 24),
                 organizationId: $tenant->organizationId()->value(),
                 ownerId: $tenant->userId()->value(),
                 desiredResult: $desired,
                 criteria: [['id' => $criterion, 'operator' => 'at_least', 'expected' => $target]],
                 allowedCapabilities: $allowedCapabilities,
+                deadline: $deadline,
             );
-            $this->goals->createGoal($tenant, $goal);
+            try {
+                $this->goals->createGoal($tenant, $goal);
+            } catch (\Doctrine\DBAL\Exception\UniqueConstraintViolationException) {
+                // Duplicate form submit is a read-back, never a second draft.
+                $existing = $this->goals->specification($tenant, $goal->goalId);
+                if ($existing === null || $existing->ownerId !== $goal->ownerId
+                    || $existing->desiredResult !== $goal->desiredResult
+                    || $existing->criteria !== $goal->criteria || $existing->deadline !== $goal->deadline) {
+                    return new RedirectResponse('/workspace/goals?error=invalid_input', 303);
+                }
+            }
             return new RedirectResponse('/workspace/goals?created=1', 303);
         } catch (DomainException) {
             return self::denied();
@@ -261,11 +324,14 @@ final readonly class GoalsWorkspaceController
                     throw new DomainException('Choose one, two or three operations.');
                 }
                 $tasks=[];
+                $targets = $this->salesTargets($actor);
                 for ($i=1;$i<=(int)$count;$i++) {
                     $minutes=(string)$request->request->get('minutes_'.$i,'');
                     if (!ctype_digit($minutes)) throw new DomainException('A task deadline is invalid.');
+                    $deal = trim((string)$request->request->get('deal_'.$i,''));
+                    if (!isset($targets[$deal])) throw new DomainException('Task deal is unavailable in tenant.');
                     $tasks[]=[
-                        'deal_id'=>trim((string)$request->request->get('deal_'.$i,'')),
+                        'deal_id'=>$deal,
                         'title'=>trim((string)$request->request->get('title_'.$i,'')),
                         'due_in_minutes'=>(int)$minutes,
                     ];
@@ -356,6 +422,49 @@ final readonly class GoalsWorkspaceController
         } catch (Throwable) {
             return self::back('blocker','advance_unavailable');
         }
+    }
+
+    /** Read only through the existing scoped Sales collection query. */
+    private function salesTargets(TenantContext $actor): array
+    {
+        $this->bindings->requireExecutable($actor, FederationSmallTaskPlanFactory::CAPABILITY);
+        $data = $this->queries->ask(new GetSalesDealsCollectionQuery(
+            $actor->organizationId(), '', [], 1, 200,
+        ));
+        $result = [];
+        foreach ($data['items'] ?? [] as $deal) {
+            $id = (string) ($deal['id'] ?? '');
+            if (ctype_digit($id) && (int)$id > 0 && (string) ($deal['title'] ?? '') !== '') {
+                $result[$id] = (string) $deal['title'];
+            }
+        }
+        return $result;
+    }
+
+    private function planningTargets(TenantContext $actor, array $metrics): array
+    {
+        $targets = ['deals' => [], 'universes' => []];
+        if ($metrics['sales.local_tasks_created']['plan_ready']) {
+            try {
+                $targets['deals'] = $this->salesTargets($actor);
+            } catch (Throwable) {
+                // Missing read source: no arbitrary target input.
+            }
+        }
+        if ($metrics[FederationGolden50GoalProfile::METRIC]['plan_ready']) {
+            try {
+                foreach ($this->growth->universes($actor->organizationId()->value()) as $item) {
+                    if (($item['enabled'] ?? false) && ($item['organization_id'] ?? '') === $actor->organizationId()->value()
+                        && ($item['target_domain'] ?? '') === 'sales'
+                        && is_string($item['universe_id'] ?? null) && is_string($item['name'] ?? null)) {
+                        $targets['universes'][$item['universe_id']] = $item['name'];
+                    }
+                }
+            } catch (Throwable) {
+                // A failed read cannot enable discovery execution.
+            }
+        }
+        return $targets;
     }
 
     private static function back(string $kind,string $code): RedirectResponse
