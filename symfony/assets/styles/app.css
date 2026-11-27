@@ -23,6 +23,7 @@
 @import './shell.css';
 @import './mobile-foundation.css';
 @import './unified-workspace.css';
+@import './quality.css';
 
 :root {
   font-family: var(--cos-font-sans);

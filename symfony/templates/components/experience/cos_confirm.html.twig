@@ -18,7 +18,7 @@
         data-controller="dialog confirm"
         data-dialog-dismissible-value="true"
         data-confirm-step-up-value="{{ stepUp ? 'true' : 'false' }}"
-        data-action="cancel->dialog#cancel click->dialog#backdrop"
+        data-action="cancel->dialog#cancel click->dialog#backdrop cos:dialog-opened->confirm#reset"
     >
         <div class="cos-dialog__panel" data-dialog-target="panel">
             <header class="cos-dialog__header">
@@ -28,7 +28,7 @@
                 <p id="{{ id }}-message" class="cos-confirm__message">{{ message }}</p>
                 {% if stepUp %}
                     <label class="cos-field">
-                        <span class="cos-field__label">Type CONFIRM to continue</span>
+                        <span class="cos-field__label">{{ 'confirm.step_up'|trans({}, 'cuw_quality') }}</span>
                         <input
                             class="cos-input"
                             type="text"
@@ -41,7 +41,7 @@
                 {% block content %}{% endblock %}
             </div>
             <footer class="cos-dialog__footer">
-                <button class="cos-button cos-button--ghost" type="button" data-action="click->dialog#close">{{ cancelLabel }}</button>
+                <button class="cos-button cos-button--ghost" type="button" autofocus data-action="click->dialog#close">{{ cancelLabel }}</button>
                 <button
                     class="cos-button {{ tone == 'danger' ? 'cos-button--danger' : 'cos-button--primary' }}"
                     type="button"

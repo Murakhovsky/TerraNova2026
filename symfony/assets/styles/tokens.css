@@ -46,7 +46,7 @@ html[data-cos-theme="system"] {
   --cos-color-surface-raised: #fafbfc;
   --cos-color-text: #17191c;
   --cos-color-text-soft: #343940;
-  --cos-color-text-muted: #68707b;
+  --cos-color-text-muted: #5c6572;
   --cos-color-text-inverse: #f7f8fa;
   --cos-color-on-primary: #ffffff;
   --cos-color-border: #dfe3e8;
@@ -58,7 +58,7 @@ html[data-cos-theme="system"] {
   --cos-color-shell-hover: rgba(255, 255, 255, 0.06);
   --cos-color-shell-active: rgba(125, 140, 255, 0.16);
 
-  --cos-color-primary: #5367ff;
+  --cos-color-primary: #4052e8;
   --cos-color-primary-hover: #4052e8;
   --cos-color-primary-strong: #3144d8;
   --cos-color-primary-soft: #eef0ff;
@@ -66,7 +66,7 @@ html[data-cos-theme="system"] {
 
   --cos-color-positive: #267451;
   --cos-color-positive-soft: #e9f6ef;
-  --cos-color-warning: #9b6818;
+  --cos-color-warning: #875609;
   --cos-color-warning-soft: #fff5df;
   --cos-color-danger: #b13b46;
   --cos-color-danger-soft: #fff0f1;
@@ -90,7 +90,8 @@ html[data-cos-theme="system"] {
   --cos-surface-floating-shadow: var(--cos-shadow-raised);
   --cos-surface-overlay-shadow: var(--cos-shadow-overlay);
 
-  --cos-focus-ring: rgba(83, 103, 255, 0.28);
+  --cos-focus-ring: var(--cos-color-primary-strong);
+  --cos-color-control-border: #767f8a;
   --cos-overlay: rgba(12, 15, 20, 0.52);
 
   /* PHASE 6 canonical component state grammar. */
@@ -231,7 +232,8 @@ html[data-cos-theme="dark"] {
   --cos-color-info: #74b5e3;
   --cos-color-info-soft: #183349;
 
-  --cos-focus-ring: rgba(125, 140, 255, 0.34);
+  --cos-focus-ring: var(--cos-color-primary-strong);
+  --cos-color-control-border: #9299a3;
   --cos-overlay: rgba(0, 0, 0, 0.72);
 
   --cos-shadow-ui: 0 1px 2px rgba(0, 0, 0, 0.18);
@@ -270,6 +272,12 @@ html[data-cos-density="comfortable"] {
     --cos-color-on-primary: #10131a;
     --cos-color-border: #2e343d;
     --cos-color-border-strong: #414955;
+    --cos-color-shell: #101216;
+    --cos-color-shell-text: #f3f5f7;
+    --cos-color-shell-muted: rgba(243, 245, 247, 0.62);
+    --cos-color-shell-border: rgba(255, 255, 255, 0.08);
+    --cos-color-shell-hover: rgba(255, 255, 255, 0.06);
+    --cos-color-shell-active: rgba(125, 140, 255, 0.18);
 
     --cos-color-primary: #7d8cff;
     --cos-color-primary-hover: #919dff;
@@ -286,7 +294,8 @@ html[data-cos-density="comfortable"] {
     --cos-color-info: #74b5e3;
     --cos-color-info-soft: #183349;
 
-    --cos-focus-ring: rgba(125, 140, 255, 0.34);
+    --cos-focus-ring: var(--cos-color-primary-strong);
+    --cos-color-control-border: #9299a3;
     --cos-overlay: rgba(0, 0, 0, 0.72);
     --cos-shadow-ui: 0 1px 2px rgba(0, 0, 0, 0.18);
     --cos-shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.22), 0 8px 24px rgba(0, 0, 0, 0.16);

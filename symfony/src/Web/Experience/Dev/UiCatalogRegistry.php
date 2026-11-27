@@ -39,6 +39,7 @@ final class UiCatalogRegistry
             $this->entry('CosBadge', 'Status', 'Compact semantic status label.', ['neutral', 'positive', 'warning', 'danger', 'info'], '#status-heading'),
             $this->entry('CosStatus', 'Status', 'Compact system state signal with textual and shape semantics.', ['neutral', 'positive', 'warning', 'danger', 'info'], '#phase6-primitives-heading'),
 
+            $this->entry('CosOutcomeState', 'Feedback', 'Read-only, localized outcome feedback; unknown or unverified results never look verified.', ['loading', 'empty', 'disabled', 'error', 'permission_denied', 'queued', 'running', 'waiting_approval', 'blocked', 'completed_unverified', 'completed_verified', 'external_outcome_unknown', 'reconciliation_required', 'failed', 'cancelled', 'stale_data'], '#cuw-quality-states'),
             $this->entry('CosAlert', 'Feedback', 'Persistent semantic feedback message.', ['info', 'positive', 'warning', 'danger'], '#catalog-feedback-primitives'),
             $this->entry('CosEmptyState', 'Feedback', 'Explicit zero-result or first-use state.', ['default'], '#empty-heading'),
             $this->entry('CosProgress', 'Feedback', 'Determinate operation progress.', ['0', 'partial', 'complete'], '#catalog-feedback-primitives'),

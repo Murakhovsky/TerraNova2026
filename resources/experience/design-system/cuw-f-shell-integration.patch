@@ -1,0 +1,88 @@
+diff --git a/symfony/assets/styles/shell.css b/symfony/assets/styles/shell.css
+index 9b4ba30..2e08129 100644
+--- a/symfony/assets/styles/shell.css
++++ b/symfony/assets/styles/shell.css
+@@ -31,7 +31,7 @@
+   width: 2rem;
+   height: 2rem;
+   border-radius: var(--cos-radius-sm);
+-  color: var(--cos-foundation-white);
++  color: var(--cos-color-on-primary);
+   background: var(--cos-color-primary-strong);
+   font-size: var(--cos-font-sm);
+   font-weight: 800;
+@@ -257,7 +257,7 @@
+   min-width: 1.15rem;
+   height: 1.15rem;
+   padding: 0 0.25rem;
+-  color: var(--cos-foundation-white);
++  color: var(--cos-color-on-primary);
+   background: var(--cos-color-primary-strong);
+   border: 2px solid var(--cos-color-surface);
+   border-radius: var(--cos-radius-pill);
+@@ -311,7 +311,7 @@
+   place-items: center;
+   width: 2rem;
+   height: 2rem;
+-  color: var(--cos-foundation-white);
++  color: var(--cos-color-on-primary);
+   background: var(--cos-color-primary-strong);
+   border-radius: var(--cos-radius-pill);
+   font-size: var(--cos-font-xs);
+@@ -642,3 +642,26 @@ turbo-frame[aria-busy="true"] .cos-command__list {
+     padding-inline: 0.25rem;
+   }
+ }
++
++/* CUW-F integration: avoid clipped/overlapping mobile topbar controls. */
++@media (max-width: 650px) {
++  .cos-shell__topbar {
++    grid-template-columns: minmax(var(--cos-touch-target-min), 1fr) auto;
++    gap: var(--cos-space-2);
++    padding-block: var(--cos-space-2);
++  }
++  .cos-shell__actions {
++    min-width: 0;
++    flex-wrap: wrap;
++    justify-content: flex-end;
++  }
++  .cos-shell__locale-select {
++    min-height: var(--cos-touch-target-min);
++  }
++  .cos-shell__activity-label { display: inline; }
++  .cos-shell__sidebar:not(.is-mobile-open) { visibility: hidden; }
++}
++@media (max-width: 500px) {
++  .cos-shell__topbar { grid-template-columns: auto minmax(0, 1fr); }
++  .cos-shell__title-block { display: none; }
++}
+diff --git a/symfony/templates/experience/workspace_shell.html.twig b/symfony/templates/experience/workspace_shell.html.twig
+index 88b66e1..8cca4bd 100644
+--- a/symfony/templates/experience/workspace_shell.html.twig
++++ b/symfony/templates/experience/workspace_shell.html.twig
+@@ -101,6 +101,7 @@
+                     type="button"
+                     aria-haspopup="dialog"
+                     aria-controls="cos-command-palette"
++                    aria-label="{{ 'shell.search_workspace'|trans }}"
+                     data-action="click->workspace-shell#openPalette"
+                 >
+                     <span>{{ 'shell.search_workspace'|trans }}</span>
+@@ -110,7 +111,7 @@
+                 <form class="cos-shell__locale-form" method="post" action="{{ path('cos_web_locale_switch') }}" data-turbo="false" data-action="change->workspace-shell#submitLocale">
+                     <input type="hidden" name="_token" value="{{ csrf_token('cos_locale_switch') }}">
+                     <input type="hidden" name="csrf_token" value="{{ app.request.session.get('cos_csrf_token') }}">
+-                    <label class="cos-visually-hidden" for="cos-shell-locale">{{ 'shell.language'|trans }}</label>
++                    <label class="visually-hidden" for="cos-shell-locale">{{ 'shell.language'|trans }}</label>
+                     <select id="cos-shell-locale" class="cos-shell__locale-select" name="locale" aria-label="{{ 'shell.language'|trans }}">
+                         <option value="uk"{% if app.request.locale == 'uk' %} selected{% endif %}>УКР</option>
+                         <option value="en"{% if app.request.locale == 'en' %} selected{% endif %}>English</option>
+@@ -170,7 +171,7 @@
+                     >{{ shell.activityCount > 99 ? '99+' : shell.activityCount }}</span>
+                 </button>
+
+-                <a class="cos-shell__profile" href="/cabinet">
++                <a class="cos-shell__profile" href="/cabinet" aria-label="{{ shell.userLabel }}">
+                     <span class="cos-shell__profile-mark" aria-hidden="true">{{ shell.userInitials }}</span>
+                     <span class="cos-shell__profile-copy">
+                         <strong>{{ shell.userLabel }}</strong>

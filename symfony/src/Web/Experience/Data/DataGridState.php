@@ -10,4 +10,5 @@ enum DataGridState: string
     case Loading = 'loading';
     case Empty = 'empty';
     case Error = 'error';
+    case Denied = 'permission_denied';
 }

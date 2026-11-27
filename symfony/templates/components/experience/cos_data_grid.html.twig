@@ -5,16 +5,20 @@
     data-controller="data-grid"
     data-selection-count="0"
 >
+    {% if state.value == 'permission_denied' %}
+        <twig:CosOutcomeState state="permission_denied" />
+    {% else %}
     <form class="cos-data-grid__toolbar" method="get" action="{{ baseUrl }}">
+        {% for key, value in this.fixedQueryParameters() %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
         <label class="cos-data-grid__search">
-            <span class="cos-field__label">Search</span>
+            <span class="cos-field__label">{{ 'grid.search'|trans({}, 'cuw_quality') }}</span>
             <input
                 class="cos-input"
                 type="search"
                 name="q"
                 value="{{ query.search }}"
                 autocomplete="off"
-                placeholder="Search this view"
+                placeholder="{{ 'grid.placeholder'|trans({}, 'cuw_quality') }}"
             >
         </label>
 
@@ -55,16 +59,16 @@
             <input type="hidden" name="columns[]" value="{{ column }}">
         {% endfor %}
 
-        <button class="cos-button cos-button--primary" type="submit">Apply</button>
+        <button class="cos-button cos-button--primary" type="submit">{{ 'grid.apply'|trans({}, 'cuw_quality') }}</button>
 
         {% if this.exportLink() %}
-            <a class="cos-button cos-button--ghost" href="{{ this.exportLink() }}">Export CSV</a>
+            <a class="cos-button cos-button--ghost" href="{{ this.exportLink() }}">{{ 'grid.export'|trans({}, 'cuw_quality') }}</a>
         {% endif %}
 
         <details class="cos-data-grid__columns">
-            <summary class="cos-button cos-button--ghost">Columns</summary>
+            <summary class="cos-button cos-button--ghost">{{ 'grid.columns'|trans({}, 'cuw_quality') }}</summary>
             <div class="cos-data-grid__columns-panel">
-                <p class="cos-card__eyebrow">Visible columns</p>
+                <p class="cos-card__eyebrow">{{ 'grid.visible'|trans({}, 'cuw_quality') }}</p>
                 {% for column in columns %}
                     <label class="cos-choice">
                         <input
@@ -77,12 +81,13 @@
                         <span>{{ column.label }}</span>
                     </label>
                 {% endfor %}
-                <button class="cos-button cos-button--sm" form="{{ id }}-columns-form" type="submit">Apply columns</button>
+                <button class="cos-button cos-button--sm" form="{{ id }}-columns-form" type="submit">{{ 'grid.apply_columns'|trans({}, 'cuw_quality') }}</button>
             </div>
         </details>
     </form>
 
     <form id="{{ id }}-columns-form" method="get" action="{{ baseUrl }}" hidden>
+        {% for key, value in this.fixedQueryParameters() %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
         {% if query.search %}<input type="hidden" name="q" value="{{ query.search }}">{% endif %}
         {% if query.sort %}
             <input type="hidden" name="sort" value="{{ query.sort }}">
@@ -96,7 +101,7 @@
     </form>
 
     {% if savedViews is not empty %}
-        <nav class="cos-data-grid__saved-views" aria-label="Saved views">
+        <nav class="cos-data-grid__saved-views" aria-label="{{ 'grid.saved_views'|trans({}, 'cuw_quality') }}">
             {% for view in savedViews %}
                 <a
                     class="cos-data-grid__view"
@@ -109,7 +114,7 @@
 
     {% if selectable and bulkActions is not empty %}
         <div class="cos-data-grid__bulk" data-data-grid-target="bulkBar" hidden>
-            <strong><span data-data-grid-target="selectedCount">0</span> selected</strong>
+            <strong><span data-data-grid-target="selectedCount">0</span> {{ 'grid.selected'|trans({}, 'cuw_quality') }}</strong>
             {% for action in bulkActions %}
                 <button
                     class="cos-button cos-button--sm {{ action.dangerLevel > 0 ? 'cos-button--danger' : '' }}"
@@ -123,22 +128,16 @@
     {% endif %}
 
     {% if state.value == 'loading' %}
-        <div class="cos-data-grid__state" aria-live="polite">
-            <span class="cos-spinner" aria-hidden="true"></span>
-            <span>Loading {{ label|lower }}…</span>
-        </div>
+        <twig:CosOutcomeState state="loading" />
     {% elseif state.value == 'error' %}
-        <div class="cos-data-grid__state" role="alert">
-            <strong>Data could not be loaded.</strong>
-            <span>{{ errorMessage ?: 'Try the operation again.' }}</span>
-        </div>
+        <twig:CosOutcomeState state="error" :detail="errorMessage" />
     {% elseif this.isEmpty() %}
         <twig:CosEmptyState
-            title="No records match this view"
-            copy="Change search, filters or saved view."
+            :title="'grid.empty_title'|trans({}, 'cuw_quality')"
+            :copy="'grid.empty_detail'|trans({}, 'cuw_quality')"
         />
     {% else %}
-        <div class="cos-data-grid__table-wrap">
+        <div class="cos-data-grid__table-wrap" tabindex="0" role="region" aria-label="{{ label }}">
             <table class="cos-data-grid__table">
                 <thead>
                     <tr>
@@ -146,7 +145,7 @@
                             <th class="cos-data-grid__select" scope="col">
                                 <input
                                     type="checkbox"
-                                    aria-label="Select all visible rows"
+                                    aria-label="{{ 'grid.select_all'|trans({}, 'cuw_quality') }}"
                                     data-data-grid-target="selectAll"
                                     data-action="change->data-grid#toggleAll"
                                 >
@@ -170,7 +169,7 @@
                                 {% endif %}
                             </th>
                         {% endfor %}
-                        {% if rowActions is not empty %}<th scope="col"><span class="visually-hidden">Actions</span></th>{% endif %}
+                        {% if rowActions is not empty %}<th scope="col"><span class="visually-hidden">{{ 'grid.actions'|trans({}, 'cuw_quality') }}</span></th>{% endif %}
                     </tr>
                 </thead>
                 <tbody>
@@ -182,7 +181,7 @@
                                     <input
                                         type="checkbox"
                                         value="{{ rowId }}"
-                                        aria-label="Select {{ rowId }}"
+                                        aria-label="{{ 'grid.select'|trans({'%id%': rowId}, 'cuw_quality') }}"
                                         data-data-grid-target="rowCheckbox"
                                         data-action="change->data-grid#selectionChanged"
                                     >
@@ -226,7 +225,7 @@
                                     data-data-grid-target="rowCheckbox"
                                     data-action="change->data-grid#selectionChanged"
                                 >
-                                <span>Select</span>
+                                <span>{{ 'grid.select'|trans({'%id%': rowId}, 'cuw_quality') }}</span>
                             </label>
                         {% endif %}
                         <strong>{{ rowId }}</strong>
@@ -243,7 +242,7 @@
                         <footer class="cos-data-grid__actions">
                             {% for action in rowActions %}
                                 <button
-                                    class="cos-button cos-button--sm cos-button--ghost"
+                                    class="cos-button cos-button--sm cos-button--ghost {{ action.dangerLevel > 0 ? 'cos-button--danger' : '' }}"
                                     type="button"
                                     data-action="click->data-grid#rowAction"
                                     data-action-id="{{ action.id }}"
@@ -257,21 +256,22 @@
             {% endfor %}
         </div>
 
-        <nav class="cos-data-grid__pagination" aria-label="{{ label }} pagination">
-            <span>Showing {{ page.from() }}–{{ page.to() }} of {{ page.total }}</span>
+        <nav class="cos-data-grid__pagination" aria-label="{{ label }} · {{ 'grid.pagination'|trans({}, 'cuw_quality') }}">
+            <span>{{ 'grid.showing'|trans({'%from%': page.from(), '%to%': page.to(), '%total%': page.total}, 'cuw_quality') }}</span>
             <div class="cos-data-grid__pages">
                 {% if page.page > 1 %}
-                    <a class="cos-button cos-button--sm" href="{{ this.url({'page': page.page - 1}) }}">Previous</a>
+                    <a class="cos-button cos-button--sm" href="{{ this.url({'page': page.page - 1}) }}">{{ 'grid.previous'|trans({}, 'cuw_quality') }}</a>
                 {% else %}
-                    <span class="cos-button cos-button--sm" aria-disabled="true">Previous</span>
+                    <span class="cos-button cos-button--sm" aria-disabled="true">{{ 'grid.previous'|trans({}, 'cuw_quality') }}</span>
                 {% endif %}
-                <span>Page {{ page.page }} / {{ page.pageCount() }}</span>
+                <span>{{ 'grid.page'|trans({'%page%': page.page, '%count%': page.pageCount()}, 'cuw_quality') }}</span>
                 {% if page.page < page.pageCount() %}
-                    <a class="cos-button cos-button--sm" href="{{ this.url({'page': page.page + 1}) }}">Next</a>
+                    <a class="cos-button cos-button--sm" href="{{ this.url({'page': page.page + 1}) }}">{{ 'grid.next'|trans({}, 'cuw_quality') }}</a>
                 {% else %}
-                    <span class="cos-button cos-button--sm" aria-disabled="true">Next</span>
+                    <span class="cos-button cos-button--sm" aria-disabled="true">{{ 'grid.next'|trans({}, 'cuw_quality') }}</span>
                 {% endif %}
             </div>
         </nav>
+    {% endif %}
     {% endif %}
 </section>

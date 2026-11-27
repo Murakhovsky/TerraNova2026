@@ -1,0 +1,293 @@
+{
+  "ok": true,
+  "scope": "synthetic Twig fixtures",
+  "shellAcceptance": false,
+  "shellFindings": [
+    {
+      "profile": "desktop-light-en",
+      "overlaps": [],
+      "axe": []
+    },
+    {
+      "profile": "desktop-dark-uk",
+      "overlaps": [],
+      "axe": [
+        {
+          "id": "color-contrast",
+          "nodes": [
+            {
+              "target": [
+                ".cos-shell__brand-mark"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 1.92 (foreground color: #ffffff, background color: #aeb6ff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".cos-shell__profile-mark"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 1.92 (foreground color: #ffffff, background color: #aeb6ff, font size: 9.0pt (12px), font weight: bold). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "profile": "desktop-system-dark-en",
+      "overlaps": [],
+      "axe": [
+        {
+          "id": "color-contrast",
+          "nodes": [
+            {
+              "target": [
+                ".cos-shell__brand-mark"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 1.92 (foreground color: #ffffff, background color: #aeb6ff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "target": [
+                ".cos-shell__profile-mark"
+              ],
+              "summary": "Fix any of the following:\n  Element has insufficient color contrast of 1.92 (foreground color: #ffffff, background color: #aeb6ff, font size: 9.0pt (12px), font weight: bold). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "profile": "desktop-system-light-uk",
+      "overlaps": [],
+      "axe": []
+    },
+    {
+      "profile": "mobile-light-uk",
+      "overlaps": [
+        [
+          "",
+          "cos-shell__search-trigger"
+        ],
+        [
+          "",
+          "cos-shell__locale-select"
+        ],
+        [
+          "",
+          "cos-shell__locale-select"
+        ],
+        [
+          "",
+          "cos-shell__icon-button"
+        ]
+      ],
+      "axe": []
+    },
+    {
+      "profile": "mobile-dark-en",
+      "overlaps": [
+        [
+          "cos-shell__menu",
+          "cos-shell__search-trigger"
+        ],
+        [
+          "",
+          "cos-shell__search-trigger"
+        ],
+        [
+          "",
+          "cos-shell__locale-select"
+        ]
+      ],
+      "axe": [
+        {
+          "id": "target-size",
+          "nodes": [
+            {
+              "target": [
+                ".cos-shell__menu"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size because it is partially obscured (smallest space is 23.2px by 44px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 23.2px instead of at least 24px."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "profile": "mobile-system-dark-uk",
+      "overlaps": [
+        [
+          "",
+          "cos-shell__search-trigger"
+        ],
+        [
+          "",
+          "cos-shell__locale-select"
+        ],
+        [
+          "",
+          "cos-shell__locale-select"
+        ],
+        [
+          "",
+          "cos-shell__icon-button"
+        ]
+      ],
+      "axe": []
+    },
+    {
+      "profile": "mobile-system-light-en",
+      "overlaps": [
+        [
+          "cos-shell__menu",
+          "cos-shell__search-trigger"
+        ],
+        [
+          "",
+          "cos-shell__search-trigger"
+        ],
+        [
+          "",
+          "cos-shell__locale-select"
+        ]
+      ],
+      "axe": [
+        {
+          "id": "target-size",
+          "nodes": [
+            {
+              "target": [
+                ".cos-shell__menu"
+              ],
+              "summary": "Fix any of the following:\n  Target has insufficient size because it is partially obscured (smallest space is 23.2px by 44px, should be at least 24px by 24px)\n  Target has insufficient space to its closest neighbors. Safe clickable space has a diameter of 23.2px instead of at least 24px."
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "browser": "156.0.8078.79",
+  "budgets": {
+    "domNodes": 2500,
+    "jsBytes": 1536000,
+    "cssBytes": 1048576,
+    "decodedJsBytes": 3145728,
+    "transferBytes": 4194304,
+    "resources": 180,
+    "ttfbMs": 1000,
+    "navigationMs": 3500
+  },
+  "results": [
+    {
+      "profile": "desktop-light-en",
+      "metrics": {
+        "domNodes": 760,
+        "resources": 167,
+        "transferBytes": 728600,
+        "jsBytes": 623857,
+        "decodedJsBytes": 2082171,
+        "cssBytes": 94686,
+        "ttfbMs": 7,
+        "navigationMs": 269
+      },
+      "passed": true
+    },
+    {
+      "profile": "desktop-dark-uk",
+      "metrics": {
+        "domNodes": 760,
+        "resources": 167,
+        "transferBytes": 729602,
+        "jsBytes": 623857,
+        "decodedJsBytes": 2082171,
+        "cssBytes": 94686,
+        "ttfbMs": 3,
+        "navigationMs": 161
+      },
+      "passed": true
+    },
+    {
+      "profile": "desktop-system-dark-en",
+      "metrics": {
+        "domNodes": 760,
+        "resources": 167,
+        "transferBytes": 728600,
+        "jsBytes": 623857,
+        "decodedJsBytes": 2082171,
+        "cssBytes": 94686,
+        "ttfbMs": 3,
+        "navigationMs": 166
+      },
+      "passed": true
+    },
+    {
+      "profile": "desktop-system-light-uk",
+      "metrics": {
+        "domNodes": 760,
+        "resources": 167,
+        "transferBytes": 729602,
+        "jsBytes": 623857,
+        "decodedJsBytes": 2082171,
+        "cssBytes": 94686,
+        "ttfbMs": 3,
+        "navigationMs": 148
+      },
+      "passed": true
+    },
+    {
+      "profile": "mobile-light-uk",
+      "metrics": {
+        "domNodes": 760,
+        "resources": 167,
+        "transferBytes": 729602,
+        "jsBytes": 623857,
+        "decodedJsBytes": 2082171,
+        "cssBytes": 94686,
+        "ttfbMs": 3,
+        "navigationMs": 158
+      },
+      "passed": true
+    },
+    {
+      "profile": "mobile-dark-en",
+      "metrics": {
+        "domNodes": 760,
+        "resources": 167,
+        "transferBytes": 728600,
+        "jsBytes": 623857,
+        "decodedJsBytes": 2082171,
+        "cssBytes": 94686,
+        "ttfbMs": 3,
+        "navigationMs": 155
+      },
+      "passed": true
+    },
+    {
+      "profile": "mobile-system-dark-uk",
+      "metrics": {
+        "domNodes": 760,
+        "resources": 167,
+        "transferBytes": 729602,
+        "jsBytes": 623857,
+        "decodedJsBytes": 2082171,
+        "cssBytes": 94686,
+        "ttfbMs": 3,
+        "navigationMs": 154
+      },
+      "passed": true
+    },
+    {
+      "profile": "mobile-system-light-en",
+      "metrics": {
+        "domNodes": 760,
+        "resources": 167,
+        "transferBytes": 728600,
+        "jsBytes": 623857,
+        "decodedJsBytes": 2082171,
+        "cssBytes": 94686,
+        "ttfbMs": 2,
+        "navigationMs": 163
+      },
+      "passed": true
+    }
+  ],
+  "failures": []
+}

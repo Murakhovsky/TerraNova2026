@@ -157,6 +157,23 @@ final class CosDataGrid
         return $this->exportUrl . (str_contains($this->exportUrl, '?') ? '&' : '?') . http_build_query($query);
     }
 
+
+    /** @return array<string,string> Trusted, fixed parameters in the server-provided base URL. */
+    public function fixedQueryParameters(): array
+    {
+        $query = parse_url($this->baseUrl, PHP_URL_QUERY);
+        if (!is_string($query)) {
+            return [];
+        }
+        parse_str($query, $parameters);
+        $managed = ['q', 'search', 'sort', 'dir', 'page', 'per_page', 'view', 'filter', 'columns'];
+        return array_filter(
+            $parameters,
+            static fn ($value, $key): bool => is_string($value) && !in_array($key, $managed, true),
+            ARRAY_FILTER_USE_BOTH,
+        );
+    }
+
     public function isEmpty(): bool
     {
         return $this->state === DataGridState::Empty || ($this->state === DataGridState::Ready && $this->page->total === 0);

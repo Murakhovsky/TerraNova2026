@@ -39,6 +39,14 @@ states:
     - loading
     - empty
     - error
+    - permission_denied
+    - waiting_approval
+    - completed_unverified
+    - completed_verified
+    - external_outcome_unknown
+    - reconciliation_required
+    - blocked
+    - stale_data
 
 patterns:
   status: frozen
