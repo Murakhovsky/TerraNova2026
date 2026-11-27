@@ -878,6 +878,16 @@ try {
   const mobileBatch = await page.goto(abs('/workspace/property/bulk?batch=' + batchId),
     { waitUntil: 'networkidle' });
   assert(mobileBatch?.status() === 200, 'S3-M: Property Bulk mobile detail unavailable');
+  for (const mode of ['process','expert','result']) {
+    await page.locator('[data-cos-adaptive-mode] button[value="'+mode+'"]').click();
+    await page.waitForLoadState('networkidle');
+    assert(await page.locator('[data-cos-adaptive][data-experience-mode="'+mode+'"]').count()===1
+      && await page.locator('[data-cos-adaptive-trigger="external_outcome_unknown"]').isVisible(),
+      'UX04: mobile mode lost critical outcome');
+    assert(await page.evaluate(()=>Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)
+      -document.documentElement.clientWidth)<=2,'UX04: mobile mode horizontal overflow '+mode);
+    await page.screenshot({path:evidenceDir+'/ux04-mobile-bulk-'+mode+'.png',fullPage:true,animations:'disabled'});
+  }
   const mobileOperation = page.locator('[data-property-bulk-operation="' + batchId + '"]');
   await mobileOperation.waitFor({ state: 'visible', timeout: 15000 });
   assert(await mobileOperation.locator('[data-property-bulk-item-pending]').count() === 2
@@ -908,6 +918,20 @@ try {
   const reviewerCtx = await browser.newContext({ viewport: { width: 1200, height: 900 } });
   try {
     const reviewerPage = await login(reviewerCtx, reviewerEmail, reviewerPassword);
+    // Distinct authenticated user, same tenant: preferences must not bleed
+    // across profiles, nor can Expert mode confer approval authority.
+    await reviewerPage.goto(abs('/workspace/unified'),{waitUntil:'networkidle'});
+    await reviewerPage.locator('[data-cos-adaptive-mode] button[value="expert"]').click();
+    await reviewerPage.waitForLoadState('networkidle');
+    assert(await reviewerPage.locator('[data-cos-adaptive][data-experience-mode="expert"]').count()===1,
+      'UX04: reviewer mode did not persist');
+    await page.goto(abs('/workspace/unified'),{waitUntil:'networkidle'});
+    assert(await page.locator('[data-cos-adaptive][data-experience-mode="result"]').count()===1,
+      'UX04: reviewer preference leaked to owner in same organization');
+    await reviewerPage.locator('[data-cos-adaptive-mode] button[value="result"]').click();
+    await reviewerPage.waitForLoadState('networkidle');
+    add('UX04.authenticated_actor_profile_isolation',{users:2});
+
     assert((await page.goto(abs('/workspace/goals'), { waitUntil: 'networkidle' }))?.status()===200,
       'R3-P: Goal owner cannot open Approval workspace');
     const planApprovalForm = page.locator('form[action="/workspace/goals/plans/' + planId

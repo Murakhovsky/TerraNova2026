@@ -1,33 +1,33 @@
 ---
-title: ADR — UX-04 Adaptive Progressive Disclosure vNext
-description: One authorized business state; deterministic display depth and scoped preferences.
+title: ADR — UX-04 Адаптивний досвід
+description: Єдиний авторизований бізнес-стан, детерміноване розкриття деталей і персональні налаштування.
 status: isolated-pilot
 updated: 2026-11-27
 kind: architecture
 ---
 
-# UX-04 — Adaptive Experience
+# UX-04 — Адаптивний досвід
 
-## Reuse / adapt / new
+## Повторне використання, адаптація та нові компоненти
 
-- **Reuse** the same Application Query/Command, UIActionResolver, Workspace provider, Property Bulk Intake and Federation Plan/Workflow; no business repository or execution path is added.
-- **Adapt** ExperienceContext and ExperienceSemantic additively: optional fixed trusted signals and server-derived workspace/entity/operation/surface context; existing section arrays, v1 schema, action filtering and serialization remain compatible. Resolver evaluates capabilities before visibility, then critical/always/contextual triggers, explicit expansion, mode default. Resolved decision actions remain primary; duplicates and permissionless/disabled mutations never become controls.
-- **Reuse** FederationExperiencePreferenceStore and its existing tenant/user scoped tables. The account default applies consistently across the Unified pilot screens; expanded sections are scoped to workspace and positively read-back entity/batch. Legacy Federation workspace overrides retain their existing behavior. No schema migration required. Corrupt/unavailable settings fall back to Result without granting authority.
-- **New adapter** AdaptivePagePresentation is an SSR-only adapter for the canonical resolver and existing preference store, not another adaptive engine. Same-page CSRF-protected POST accepts only fixed mode or section expansion operations and redirects to the verified current internal route; GET reads native state. Browser cannot supply trigger, capability, tenant, owner or redirect authority. Mode POST never calls an Action or Plan mutation.
-- **Shared Twig controls** render one page model, not three UI implementations. Desktop/mobile use wrapping CSS, accessible buttons and native server forms; no AI or JS dependence. Critical approval, risk, failure, stale/unknown and permission signals remain visible; a triggered section cannot be collapsed. Expert exposes identifiers only from existing authorized reads, not raw payloads or arbitrary logs.
+- **Reuse:** ті самі Application Query/Command, UIActionResolver, Workspace provider, Property Bulk Intake та Federation Plan/Workflow; не додаємо бізнесового сховища чи шляху виконання.
+- **Adapt:** адитивно розширюємо ExperienceContext і ExperienceSemantic фіксованими довіреними сигналами та серверним контекстом Workspace, сутності, операції й surface. Збережено сумісність масивів секцій, схеми v1, фільтрації actions і серіалізації. Resolver перевіряє доступність capability перед розкриттям, потім critical/always/contextual signals, явне розкриття та mode default. Дозволені рішення лишаються первинними, дублікати й недозволені mutations не стають контролами.
+- **Reuse:** FederationExperiencePreferenceStore та наявні таблиці з tenant/user scope. Загальний режим діє на всі пілотні Unified-екрани; розкриті секції належать Workspace і позитивно підтвердженому EntityRef або пакету. Legacy Federation Workspace overrides збережено. Міграція не потрібна. Недоступні або пошкоджені налаштування дають безпечний Result.
+- **New adapter:** AdaptivePagePresentation — SSR-адаптер канонічного resolver і наявного preference store, а не альтернативний рушій. POST на тому самому екрані перевіряє CSRF та вузький allowlist mode/section і повертає до перевіреного внутрішнього маршруту. GET читає native state. Браузер не задає trigger, capability, tenant, owner або redirect authority. POST не викликає Action або Plan mutation.
+- **Спільні Twig-контроли:** одна модель сторінки замість трьох UI. Desktop/mobile використовують responsive CSS, доступні кнопки і нативні серверні форми; без залежності від AI або JS. Критичні погодження, ризики, помилки, неактуальні чи невідомі результати та недоступність залишаються видимими. Тригерну секцію не можна згорнути. Expert показує додаткові ідентифікатори з авторизованого читання, не довільні логи чи raw payloads.
 
-## Scope and acceptance
+## Межі та приймання
 
-| Pilot | Result | Process | Expert |
+| Пілот | Result | Process | Expert |
 |---|---|---|---|
-| R1 Home and Property/Sales workspace | Same search/summary, canonical link | Activity, related entities and secondary action affordances | Verified entity/workspace identifiers, correlation for visible activity |
-| R2 Property query and human create | Same typed read and canonical authorized form | Action readiness reasons | Contract identity/status/risk and entity reference |
-| R3 Property bulk | Native per-item progress, unknown outcome, review/approval gate | Lifecycle state and per-item truth | Same batch/Goal/Plan identifiers and snapshot digest; explicit JSON input available |
+| R1 Home та Property/Sales Workspace | Той самий пошук, summary, канонічне посилання | Активність, пов'язані сутності, додаткові дії | Підтверджені ідентифікатори та correlation ID видимої активності |
+| R2 Property Query і людська форма | Той самий typed read і дозволена форма | Причини доступності операцій | Contract ID/status/risk та EntityRef |
+| R3 Property bulk | Native per-item progress, невідомий outcome, перевірка й обов'язкові погодження | Lifecycle status і стан кожної позиції | Ті самі Batch/Goal/Plan ID та digest; явне розкриття JSON input |
 
-Activity lifecycle is the provider's status, not evidence of business success. A planned bulk batch does not prove an actual pending or granted approval: the warning describes the mandatory independent approval gate and routes to canonical Goals instead of inventing approver state. Verified native item count is not a final Goal evaluation.
+Lifecycle активності — статус провайдера, а не доказ бізнес-успіху. Стан planned пакета не доводить фактичне очікування чи отримання approval: попередження описує обов'язковий gate і веде до канонічного Goals без вигаданого стану погоджувача. Verified native item count не є фінальним Goal Outcome.
 
-Tests: unit matrix for all ten signals, rule behavior, permission fence, action set/mode parity, decision visibility, deduplication. Existing isolated browser R1/R2/R3 suite extended with mode/expansion persistence, CSRF/forged input/role rejection, canonical entity and progress parity, no Action/Run/native writes from preference changes, and screenshot evidence. No PASS asserted until jobs run on the PR SHA.
+Тести: unit matrix усіх десяти сигналів, правил розкриття, capability fence, mode/action parity, видимості рішень і дедуплікації. Існуючий ізольований R1/R2/R3 browser suite розширено збереженням mode/section, CSRF/forged input/role негативами, незмінністю EntityRef і progress, відсутністю нових Action/Run/native writes від preference changes, screen evidence. PASS потребує фактичного CI на SHA PR.
 
-## Rollback and residual scope
+## Відкат і залишкові межі
 
-Revert the adapter/routes/templates without data migration; persisted presentation preferences may remain safely unused. Existing Domain writes/eligibility remain canonical. Full UX-04 acceptance still depends on isolated browser/runtime evidence, cross-device/tenant checks, accessibility and existing R3 worker/receipt gate; no production enablement. UX-05 operation aggregation and UX-07 Goal composition remain separate work.
+Відкат adapter/routes/templates без міграції даних; персистентні UI preferences можуть лишатися невикористаними. Доменні зміни й eligibility залишаються канонічними. Повний UX-04 acceptance залежить від реального browser/runtime evidence, cross-device/tenant, accessibility та наявного R3 worker/receipt gate. Production enablement не здійснювався. UX-05 operation aggregation та UX-07 Goal composition — окремі пакети.
