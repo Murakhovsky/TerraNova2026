@@ -431,8 +431,14 @@ try {
       && forgedIdentity.status()===422,
     'UX04: invalid mode, CSRF or unauthorized section accepted');
   for (const mode of ['result','process','expert','result']) {
-    await modeForm.locator('button[name="mode"][value="'+mode+'"]').click();
+    const modeButton=modeForm.locator('button[name="mode"][value="'+mode+'"]');
+    await modeButton.focus();
+    await page.keyboard.press('Enter');
+    await page.waitForURL(url=>url.hash==='#cos-adaptive-mode-'+mode);
     await page.waitForLoadState('networkidle');
+    assert(await modeButton.getAttribute('aria-pressed')==='true'
+      && await modeButton.evaluate(el=>document.activeElement===el),
+      'UX04: keyboard mode activation did not restore focus or selected state');
     assert(await page.locator('[data-cos-adaptive][data-experience-mode="'+mode+'"]').count()===1,
       'UX04: mode was not persisted');
     assert(await page.locator('[data-cos-native-property="'+assetId+'"]').count()===1 && sqlCount(assetId)===1,
@@ -440,9 +446,35 @@ try {
     assert((await page.locator('[data-cos-expert-ids]').count()>0)===(mode==='expert'),
       'UX04: query diagnostic disclosure incorrect');
   }
-  const expand=page.locator('[data-cos-section-toggle="property.identifier"]');
-  await expand.click();
+  // Same actor IDs in another tenant must never affect the active tenant.
+  // Clone only identities from disposable CI, not their actual preferences.
+  const ux04ForeignTenant='ux04-isolation-'+uid;
+  const scopedProfiles=" FROM cos_experience_profiles WHERE organization_id='"+ux04ForeignTenant+"'";
+  sqlExecute("INSERT INTO cos_experience_profiles (organization_id,user_id,default_mode,profile_version,settings_json,updated_at) "
+    + "SELECT '"+ux04ForeignTenant+"',user_id,'expert',1,JSON_OBJECT('schema_version','1.0.0'),NOW(6) "
+    + "FROM cos_experience_profiles WHERE organization_id='default'");
+  const foreignProfiles=sqlExecute("SELECT COUNT(*)"+scopedProfiles);
+  assert(Number(foreignProfiles)>0,'UX04: missing real profile fixture');
+  sqlExecute("INSERT INTO cos_workspace_experience_states "
+    + "(organization_id,user_id,workspace_key,entity_key,selected_mode,state_version,state_json,updated_at) "
+    + "SELECT organization_id,user_id,'unified.property','"+assetId+"','expert',1,"
+    + "JSON_OBJECT('schema_version','1.0.0','expanded_sections',JSON_ARRAY('property.identifier')),NOW(6)"+scopedProfiles);
+  await page.reload({waitUntil:'networkidle'});
+  assert(await page.locator('[data-cos-adaptive][data-experience-mode="result"]').count()===1
+    && await page.locator('[data-cos-expert-ids]').count()===0,
+    'UX04: same actor ID leaked foreign tenant profile or entity expansion');
+  const resultButton=modeForm.locator('button[value="result"]');
+  await resultButton.click();
   await page.waitForLoadState('networkidle');
+  const expand=page.locator('[data-cos-section-toggle="property.identifier"]');
+  await expand.focus();
+  await page.keyboard.press('Space');
+  await page.waitForURL(url=>url.hash==='#cos-adaptive-section-property.identifier');
+  await page.waitForLoadState('networkidle');
+  assert(await expand.getAttribute('aria-expanded')==='true'
+    && await expand.evaluate(el=>document.activeElement===el),
+    'UX04: keyboard section expansion did not restore focus or expansion state');
+  await page.screenshot({path:evidenceDir+'/ux04-keyboard-expansion.png',fullPage:true});
   await page.reload({waitUntil:'networkidle'});
   assert(await page.locator('[data-cos-adaptive][data-experience-mode="result"]').count()===1
     && await page.locator('[data-cos-expert-ids]').count()===1,
@@ -451,6 +483,14 @@ try {
   await page.waitForLoadState('networkidle');
   assert(await page.locator('[data-cos-expert-ids]').count()===0,
     'UX04: expansion collapse failed');
+  assert(sqlExecute("SELECT COUNT(*)"+scopedProfiles+" AND default_mode='expert' AND profile_version=1")===foreignProfiles
+    && sqlExecute("SELECT COUNT(*) FROM cos_workspace_experience_states WHERE organization_id='"+ux04ForeignTenant
+      +"' AND selected_mode='expert' AND state_version=1 AND JSON_CONTAINS(state_json,JSON_QUOTE('property.identifier'),'$.expanded_sections')")===foreignProfiles,
+    'UX04: active actor changed another tenant preference rows');
+  sqlExecute("DELETE FROM cos_workspace_experience_states WHERE organization_id='"+ux04ForeignTenant+"'");
+  sqlExecute("DELETE FROM cos_experience_profiles WHERE organization_id='"+ux04ForeignTenant+"'");
+  add('UX04.same_actor_id_tenant_preference_isolation',{foreign_profiles:Number(foreignProfiles)});
+  add('UX04.keyboard_focus_and_aria',{mode:'Enter',section:'Space'});
   add('UX04.query_modes_preference_expansion_security',{asset_id:assetId,native_rows:1});
 
   const actionPage = await page.goto(abs('/workspace/unified/actions'), { waitUntil: 'networkidle' });
@@ -1036,7 +1076,7 @@ try {
 
   const report = { schema: 1, suite: 'COS UX-00 R1/R2/R3 browser acceptance',
     environment: 'GitHub Actions disposable localhost MySQL', run_id: uid,
-    tenant_scope: 'Authenticated default tenant vs foreign-tenant native fixtures; multi-org login not offered by this deployment',
+    tenant_scope: 'Authenticated default tenant vs foreign-tenant native and same-actor-ID preference fixtures; multi-org login not offered by this deployment',
     checks, tested_at: new Date().toISOString(),
     remaining_gate: 'Buyer role denial requires exact-head CI; external Property Step approval, production fail-closed worker admission and completed Run UI staging remain unverified' };
   writeFileSync(evidenceDir + '/results.json', JSON.stringify(report, null, 2) + '\n');

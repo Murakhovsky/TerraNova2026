@@ -6,7 +6,7 @@ foreach ([
     'Action/UIActionIntent.php','Action/UIActionDangerLevel.php','Action/UIActionPlacement.php',
     'Action/UIActionConfirmation.php','Action/UIAction.php',
     'Adaptive/ExperienceMode.php','Adaptive/ExperienceSemantic.php','Adaptive/ExperienceContext.php',
-    'Adaptive/ExperienceComposition.php','Adaptive/AdaptiveExperienceResolver.php',
+    'Adaptive/ExperienceComposition.php','Adaptive/AdaptiveExperienceResolver.php','Adaptive/ExperienceState.php',
 ] as $file) require_once $ui.$file;
 
 use App\Web\Experience\Action\UIAction;
@@ -15,6 +15,7 @@ use App\Web\Experience\Adaptive\AdaptiveExperienceResolver;
 use App\Web\Experience\Adaptive\ExperienceContext;
 use App\Web\Experience\Adaptive\ExperienceMode;
 use App\Web\Experience\Adaptive\ExperienceSemantic;
+use App\Web\Experience\Adaptive\ExperienceState;
 
 $signals=['approval_required','blocked','failed','running','result_available','risk_attention',
     'manual_review','stale_data','external_outcome_unknown','permission_unavailable'];
@@ -83,5 +84,24 @@ foreach ([
 ] as $invalid) {
     try { $invalid(); throw new RuntimeException('Invalid trigger or descriptor accepted.'); }
     catch (InvalidArgumentException) {}
+}
+$stored=ExperienceState::fromStored('unified.property','asset-1',[
+    'selected_mode'=>'unknown','state_version'=>7,
+    'state_json'=>'{"expanded_sections":["ux.trace","ux.trace","Invalid",42,"ux.explicit"]}',
+]);
+if ($stored->selectedMode!==ExperienceMode::Result || $stored->expandedSections!==['ux.trace','ux.explicit']
+    || $stored->version!==7 || $stored->withSection('ux.trace',true)!==$stored) {
+    throw new RuntimeException('Invalid persisted preference fallback or replay.');
+}
+$updated=$stored->withSection('ux.trace',false)->withSection('ux.timeline',true);
+if ($updated->expandedSections!==['ux.explicit','ux.timeline'] || $updated->version!==9
+    || $updated->workspaceKey!=='unified.property' || $updated->entityKey!=='asset-1') {
+    throw new RuntimeException('Section update lost unrelated preference or scope.');
+}
+$triggered=$resolver->compose(new ExperienceContext('actor','tenant',ExperienceMode::Result,
+    sections:$sections,triggers:['blocked','stale_data','external_outcome_unknown','approval_required']),$actions);
+if ($triggered->activeTriggers!==['blocked','stale_data','external_outcome_unknown','approval_required']
+    || $triggered->disclosureReasons['ux.stale_data']!=='contextual_trigger') {
+    throw new RuntimeException('Trusted signal composition diverged from disclosure.');
 }
 echo "UX-04: ten trusted triggers, mode parity, explicit expansion, capability fence, action dedup and decision visibility PASS.\n";

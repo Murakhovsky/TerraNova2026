@@ -29,12 +29,14 @@ final readonly class AdaptivePagePresentation
      * @param list<string> $triggers Trusted read-model signals, never request input.
      * @param list<UIAction> $actions Already authorized UIActionResolver output.
      * @param list<string> $availableCapabilities Already resolved capabilities.
+     * @param list<string> $fallbackSections Safe, explicitly declared legacy inputs.
      * @return array<string,mixed>|Response
      */
     public function prepare(
         Request $request, TenantContext $actor, string $workspace,
         array $descriptors, array $triggers = [], array $actions = [],
         string $entity = '', array $availableCapabilities = [], string $operationClass = 'query',
+        array $fallbackSections = [],
     ): array|Response {
         $catalog = new ExperienceSemanticsCatalog($descriptors);
         $sections = array_map(static fn (ExperienceSemantic $s): array => [
@@ -49,7 +51,7 @@ final readonly class AdaptivePagePresentation
         } catch (\Throwable) {
             // Invalid/unavailable preferences cannot block native business reads.
             $mode = ExperienceMode::Result;
-            $expanded = [];
+            $expanded = $fallbackSections;
             $available = false;
         }
         $composition = $this->resolver->compose(new ExperienceContext(
@@ -82,6 +84,7 @@ final readonly class AdaptivePagePresentation
                         return new Response('Invalid experience mode.', 422);
                     }
                     $this->preferences->saveDefaultMode($actor, $requested);
+                    $return .= '#cos-adaptive-mode-' . $requested->value;
                 } elseif (!isset($input['mode']) && is_string($input['section'] ?? null)
                     && in_array($input['expand'] ?? null, ['0', '1'], true)) {
                     $id = $input['section'];
@@ -90,9 +93,8 @@ final readonly class AdaptivePagePresentation
                         return new Response('Section is unavailable or cannot be collapsed.', 422);
                     }
                     // Explicit set (not toggle) is replay-safe. Never collapse a triggered section.
-                    $expanded = array_values(array_filter($expanded, static fn (string $v): bool => $v !== $id));
-                    if ($input['expand'] === '1') $expanded[] = $id;
-                    $this->preferences->saveWorkspace($actor, $workspace, $entity, $mode, $expanded);
+                    $this->preferences->setWorkspaceSection($actor, $workspace, $entity, $mode, $id, $input['expand'] === '1');
+                    $return .= '#cos-adaptive-section-' . rawurlencode($id);
                 } else {
                     return new Response('Invalid experience preference.', 422);
                 }
@@ -106,7 +108,7 @@ final readonly class AdaptivePagePresentation
         return [
             'composition' => $composition, 'mode' => $mode->value, 'available' => $available,
             'url' => $return, 'csrf' => $this->csrf->token($request),
-            'triggers' => array_values(array_unique($triggers)),
+            'triggers' => $composition->activeTriggers,
         ];
     }
 

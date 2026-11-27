@@ -98,6 +98,7 @@ final readonly class AdaptiveExperienceResolver
             array_slice($actions, $count),
             $context->decisionRequests,
             $context->blockingRisks,
+            activeTriggers: array_values(array_unique($context->triggers)),
         );
     }
 }

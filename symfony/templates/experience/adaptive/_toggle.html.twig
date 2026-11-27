@@ -5,6 +5,6 @@
     <input type="hidden" name="section" value="{{ sectionId }}">
     <button type="submit" name="expand" value="{{ reason == 'collapsed_by_mode' ? '1' : '0' }}"
             class="cos-button cos-button--ghost" aria-expanded="{{ reason == 'explicit_expansion' ? 'true' : 'false' }}"
-            data-cos-section-toggle="{{ sectionId }}">{{ (reason == 'collapsed_by_mode' ? 'uw.adaptive.expand' : 'uw.adaptive.collapse')|trans }} · {{ sectionLabel|trans }}</button>
+            id="cos-adaptive-section-{{ sectionId }}" data-cos-section-toggle="{{ sectionId }}">{{ (reason == 'collapsed_by_mode' ? 'uw.adaptive.expand' : 'uw.adaptive.collapse')|trans }} · {{ sectionLabel|trans }}</button>
   </form>
 {% endif %}

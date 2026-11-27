@@ -5,7 +5,7 @@
     <strong>{{ 'uw.adaptive.label'|trans }}</strong>
     {% for mode in ['result','process','expert'] %}
       <button type="submit" class="cos-button {{ adaptive.mode == mode ? 'cos-button--primary' : 'cos-button--ghost' }}"
-              name="mode" value="{{ mode }}" aria-pressed="{{ adaptive.mode == mode ? 'true' : 'false' }}"
+              name="mode" value="{{ mode }}" id="cos-adaptive-mode-{{ mode }}" aria-pressed="{{ adaptive.mode == mode ? 'true' : 'false' }}"
               {% if not adaptive.available %}disabled{% endif %}>{{ ('uw.adaptive.mode.'~mode)|trans }}</button>
     {% endfor %}
   </form>

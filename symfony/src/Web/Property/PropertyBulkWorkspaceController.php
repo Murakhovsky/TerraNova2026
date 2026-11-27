@@ -62,7 +62,8 @@ final readonly class PropertyBulkWorkspaceController
             if ($batch['state']==='verified' && $verified===$batch['count']) $triggers[]='result_available';
         }
         $adaptive=$this->adaptive->prepare($request,$actor,'unified.property.bulk',$sections,$triggers,
-            entity: $batch['batch_id']??'',operationClass:'action');
+            entity: $batch['batch_id']??'',operationClass:'action',
+            fallbackSections: $batch === null ? ['bulk.json_input'] : []);
         if ($adaptive instanceof Response) return $adaptive;
         return new Response($this->twig->render('experience/property/bulk_intake.html.twig',[
             'adaptive'=>$adaptive,'csrfToken'=>$this->csrf->token($request),
