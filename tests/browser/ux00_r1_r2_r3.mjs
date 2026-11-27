@@ -101,6 +101,14 @@ const browser = await chromium.launch({ headless: true, ...(chrome ? { executabl
 let admin, page;
 let assetId = '', batchId = '', planId = '';
 try {
+  const componentEvidence=JSON.parse(execFileSync('docker',[
+    'compose','exec','-T','-e','UX04_COMPONENT_FIXTURE_SAFE=1','php','php','tests/cuw_adaptive_page_contract.php',
+  ],{encoding:'utf8',timeout:45000}).trim());
+  assert(componentEvidence.checks?.length===4
+    && componentEvidence.checks.every(check=>check.status==='PASS'),
+    'UX04: real SSR component contract did not pass');
+  writeFileSync(evidenceDir+'/ux04-component.json',JSON.stringify(componentEvidence,null,2)+'\n');
+  add('UX04.ssr_component_contract',{checks:componentEvidence.checks});
   admin = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
   page = await login(admin, email, password);
 
@@ -388,10 +396,17 @@ try {
     'UX01: server locale changed but Unified screen stayed Ukrainian');
   assert((await page.locator('[data-cos-provider-workspaces]').innerText())
     .includes('Property Workspace'),'UX01: Domain Workspace label not localized');
+  assert((await page.locator('[data-cos-adaptive-mode] button[value="expert"]').innerText()).trim()==='Expert',
+    'UX04: separate English translation catalog not resolved');
+  assert(await page.locator('link[rel="stylesheet"][href*="cuw-adaptive"]').count()===1,
+    'UX04: dedicated stylesheet missing');
   await page.locator('#cos-shell-locale').selectOption('uk');
   await page.waitForFunction(()=>document.documentElement.lang==='uk');
   assert((await page.locator('[data-cos-unified-home] h1').innerText()).trim()==='Мої робочі простори',
     'UX01: Ukrainian locale not restored');
+  assert((await page.locator('[data-cos-adaptive-mode] button[value="expert"]').innerText()).trim()==='Експерт',
+    'UX04: separate Ukrainian translation catalog not resolved');
+  add('UX04.dedicated_localized_assets',{locales:['en','uk']});
   add('UX01.english_ukrainian_locale_real_server_switch',{locales:['en','uk']});
   await page.locator('button[data-action="click->appearance#setTheme"][data-theme="light"]').click();
   await page.waitForFunction(()=>document.documentElement.dataset.cosTheme==='light');
@@ -968,8 +983,40 @@ try {
     await page.goto(abs('/workspace/unified'),{waitUntil:'networkidle'});
     assert(await page.locator('[data-cos-adaptive][data-experience-mode="result"]').count()===1,
       'UX04: reviewer preference leaked to owner in same organization');
-    await reviewerPage.locator('[data-cos-adaptive-mode] button[value="result"]').click();
-    await reviewerPage.waitForLoadState('networkidle');
+    // New authenticated session, not a copied cookie/localStorage. The
+    // same actor sees the mode saved from desktop and can persist changes
+    // from a phone without modifying the owner's session or canonical data.
+    const secondSession=await browser.newContext({viewport:{width:390,height:844}});
+    try {
+      const mobile=await login(secondSession,reviewerEmail,reviewerPassword);
+      const detail=await mobile.goto(abs(ux04Detail),{waitUntil:'networkidle'});
+      assert(detail?.status()===200
+        && await mobile.locator('[data-cos-adaptive][data-experience-mode="expert"]').count()===1
+        && await mobile.locator('[data-cos-native-property="'+assetId+'"]').count()===1
+        && await mobile.locator('[data-cos-expert-ids]').count()===1,
+        'UX04: independent authenticated session did not restore server mode and entity');
+      const modeButton=mobile.locator('[data-cos-adaptive-mode] button[value="result"]');
+      const targetHeight=await modeButton.evaluate(el=>el.getBoundingClientRect().height);
+      assert(targetHeight>=40,'UX04: dedicated mobile control lost token-based touch target');
+      await modeButton.click();
+      await mobile.waitForLoadState('networkidle');
+      await mobile.locator('[data-cos-section-toggle="property.identifier"]').click();
+      await mobile.waitForLoadState('networkidle');
+      assert(await mobile.locator('[data-cos-expert-ids]').count()===1
+        && await mobile.evaluate(()=>Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)
+          -document.documentElement.clientWidth)<=2,'UX04: mobile explicit expansion or layout regressed');
+      await mobile.screenshot({path:evidenceDir+'/ux04-independent-mobile-session.png',fullPage:true,animations:'disabled'});
+      await reviewerPage.goto(abs(ux04Detail),{waitUntil:'networkidle'});
+      assert(await reviewerPage.locator('[data-cos-adaptive][data-experience-mode="result"]').count()===1
+        && await reviewerPage.locator('[data-cos-expert-ids]').count()===1,
+        'UX04: mobile mode and section preferences did not reach desktop session');
+      await reviewerPage.locator('[data-cos-section-toggle="property.identifier"]').click();
+      await reviewerPage.waitForLoadState('networkidle');
+      await mobile.reload({waitUntil:'networkidle'});
+      assert(await mobile.locator('[data-cos-expert-ids]').count()===0 && sqlCount(assetId)===1,
+        'UX04: desktop collapse not reflected on phone or Property changed');
+      add('UX04.cross_session_desktop_mobile_preferences',{sessions:2,viewport:'390x844',native_rows:1});
+    } finally { await secondSession.close(); }
     add('UX04.authenticated_actor_profile_isolation',{users:2});
 
     assert((await page.goto(abs('/workspace/goals'), { waitUntil: 'networkidle' }))?.status()===200,
@@ -1076,9 +1123,9 @@ try {
 
   const report = { schema: 1, suite: 'COS UX-00 R1/R2/R3 browser acceptance',
     environment: 'GitHub Actions disposable localhost MySQL', run_id: uid,
-    tenant_scope: 'Authenticated default tenant vs foreign-tenant native and same-actor-ID preference fixtures; multi-org login not offered by this deployment',
+    tenant_scope: 'Authenticated default browser tenant vs foreign native and same-actor-ID preference fixtures; independent configured-tenant password/identity/SSR component test; multi-org switch not offered by this web host',
     checks, tested_at: new Date().toISOString(),
-    remaining_gate: 'Buyer role denial requires exact-head CI; external Property Step approval, production fail-closed worker admission and completed Run UI staging remain unverified' };
+    remaining_gate: 'External Property Step approval, production fail-closed worker admission and completed Run UI staging remain unverified' };
   writeFileSync(evidenceDir + '/results.json', JSON.stringify(report, null, 2) + '\n');
   console.log(JSON.stringify({ ok: true, ...report }, null, 2));
 } catch (error) {

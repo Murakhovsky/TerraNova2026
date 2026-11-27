@@ -27,9 +27,3 @@
 @media(max-width:650px){.cos-uw__business-grid{display:block}.cos-uw__business-grid > aside{margin-top:var(--cos-space-5)}.cos-uw__tabs{max-width:100%;overflow-x:auto}}
 
 .cos-uw__relations{list-style:none;margin:0;padding:0;display:grid;gap:var(--cos-space-3)}
-
-.cos-adaptive-controls{min-width:0;overflow-wrap:anywhere}
-.cos-adaptive-controls form{display:flex;flex-wrap:wrap;align-items:center;gap:var(--cos-space-2)}
-.cos-adaptive-controls button,.cos-adaptive-toggle button{min-height:var(--cos-touch-target-min);white-space:normal;max-width:100%}
-.cos-adaptive-toggle{margin-block:var(--cos-space-2)}
-[data-cos-expert-ids]{overflow-wrap:anywhere}

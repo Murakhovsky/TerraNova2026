@@ -1,4 +1,8 @@
 {% extends 'experience/portal_shell.html.twig' %}
+{% block stylesheets %}
+    {{ parent() }}
+    {% include 'experience/adaptive/_styles.html.twig' %}
+{% endblock %}
 {% block title %}Імпорт Property Assets | COS{% endblock %}
 {% block portal_content %}
 <section class="cos-page__stack" data-cos-property-bulk>
@@ -52,7 +56,7 @@
       <a class="cos-button cos-button--ghost" data-property-bulk-deep-link
          href="/workspace/property/bulk?batch={{ batch.batch_id|url_encode }}">Постійне посилання на пакет</a>
       {% if adaptive.mode != 'result' %}
-        <p class="cos-card__copy" data-cos-bulk-process>{{ 'uw.adaptive.bulk_process'|trans }} · {{ batch.state }}</p>
+        <p class="cos-card__copy" data-cos-bulk-process>{{ 'uw.adaptive.bulk_process'|trans({}, 'cuw_adaptive') }} · {{ batch.state }}</p>
       {% endif %}
       {% for item in batch.items %}
         <div class="cos-card" data-property-bulk-item="{{ item.index }}" data-property-bulk-item-state="{{ item.status }}">

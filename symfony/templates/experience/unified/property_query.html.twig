@@ -1,4 +1,8 @@
 {% extends 'experience/workspace_shell.html.twig' %}
+{% block stylesheets %}
+    {{ parent() }}
+    {% include 'experience/adaptive/_styles.html.twig' %}
+{% endblock %}
 {% block title %}Пошук нерухомості | COS{% endblock %}
 {% block workspace_content %}
 <section class="cos-uw cos-page__stack" data-cos-unified-property-query>

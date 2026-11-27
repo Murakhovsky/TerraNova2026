@@ -1,4 +1,8 @@
 {% extends 'experience/workspace_shell.html.twig' %}
+{% block stylesheets %}
+    {{ parent() }}
+    {% include 'experience/adaptive/_styles.html.twig' %}
+{% endblock %}
 {% block title %}{{ workspace.definition.label }} | COS{% endblock %}
 {% block workspace_content %}
 <section class="cos-uw cos-page__stack" data-cos-unified-business data-workspace-id="{{ workspace.definition.id }}"
@@ -181,7 +185,7 @@
           <div class="cos-uw__action">
             <strong>{{ action.label|trans }}</strong>
             <small>{{ 'uw.business.open_domain_action'|trans }}</small>
-            {% if action.dangerLevel > 0 %}<small>{{ 'uw.adaptive.trigger.risk_attention'|trans }}</small>{% endif %}
+            {% if action.dangerLevel > 0 %}<small>{{ 'uw.adaptive.trigger.risk_attention'|trans({}, 'cuw_adaptive') }}</small>{% endif %}
           </div>
         {% else %}
           <p class="cos-card__copy">{{ 'uw.business.no_actions'|trans }}</p>
