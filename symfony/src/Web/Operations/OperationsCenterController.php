@@ -72,7 +72,13 @@ final readonly class OperationsCenterController
         try { $cursor = OperationsHistoryCursor::decode($cursorValue); }
         catch (\InvalidArgumentException) { return new Response('Invalid history cursor.', 400); }
         $statusFilter = OperationStatus::tryFrom((string)$request->query->get('status', ''));
-        $snapshot = $this->snapshots->read($actor, $entity, $correlation, $source, $selected, $cursor, $statusFilter);
+        $itemAfterValue = (string)$request->query->get('item_after', '');
+        if ($itemAfterValue !== '' && (!preg_match('/^(0|[1-9][0-9]{0,9})$/D', $itemAfterValue)
+            || (float)$itemAfterValue > 4294967295 || !str_starts_with($selected, 'import:'))) {
+            return new Response('Invalid item cursor.', 400);
+        }
+        $itemAfter = $itemAfterValue === '' ? -1 : (int)$itemAfterValue;
+        $snapshot = $this->snapshots->read($actor, $entity, $correlation, $source, $selected, $cursor, $statusFilter, $itemAfter);
         $detail = $snapshot['detail'];
         $actions = $detail !== null ? $this->decisions->available($actor, $context, $detail) : [];
         $outcome = null; $outcomeUnavailable = false;
@@ -106,7 +112,7 @@ final readonly class OperationsCenterController
             'snapshot'=>$snapshot, 'mode'=>$mode->value, 'statusFilter'=>$statusFilter?->value ?? '',
             'statuses'=>OperationStatus::cases(), 'source'=>$source, 'sources'=>OperationsSnapshot::SOURCES,
             'entity'=>$entity?->key() ?? '', 'correlation'=>$correlation, 'selected'=>$selected,
-            'cursor'=>$cursorValue, 'outcome'=>$outcome, 'outcomeUnavailable'=>$outcomeUnavailable,
+            'cursor'=>$cursorValue, 'itemAfter'=>$itemAfterValue, 'outcome'=>$outcome, 'outcomeUnavailable'=>$outcomeUnavailable,
             'actions'=>$actions, 'entityUrl'=>$entityUrl,
             'recovery'=>$recovery, 'recoveryUnavailable'=>$recoveryUnavailable, 'recoveryControls'=>$recoveryControls,
             'topic'=>$this->topics->organization($actor->organizationId()->value()),

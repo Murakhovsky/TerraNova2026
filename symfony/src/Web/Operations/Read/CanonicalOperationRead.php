@@ -142,13 +142,13 @@ final readonly class CanonicalOperationRead implements OperationListReadInterfac
     }
 
     /** @return list<array<string,mixed>> */
-    public function importItems(string $org, string $batch): array
+    public function importItems(string $org, string $batch, int $after = -1): array
     {
         if (!$this->modules->isEnabled($org, 'product_management')) return [];
         return $this->db->fetchAllAssociative(
             'SELECT row_no,sku,status,error_code,product_id,receipt_key FROM pm_import_rows
-             WHERE organization_id=:org AND batch_id=:id ORDER BY row_no LIMIT 100',
-            ['org'=>$org,'id'=>$batch],
+             WHERE organization_id=:org AND batch_id=:id AND row_no>:after ORDER BY row_no LIMIT 101',
+            ['org'=>$org,'id'=>$batch,'after'=>$after],
         );
     }
 }

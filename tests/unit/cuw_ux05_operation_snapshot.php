@@ -30,7 +30,12 @@ use Platform\Workflow\Model\{WorkflowRunDraft,WorkflowRunIdentity,WorkflowRunSna
 
 $read = new class implements OperationListReadInterface {
     public function rows(string $org, string $source, int $limit, ?string $id = null, ?array $before = null, string $correlation = '', ?EntityRef $entity = null, ?S $status = null): array {
-        if ($source === 'import') throw new RuntimeException('Provider unavailable');
+        if ($source === 'import') {
+            if ($id === null) throw new RuntimeException('Provider unavailable');
+            if ($org !== 'tenant-a' || $id !== 'batch-1') return [];
+            return [['id'=>'batch-1','title'=>'CSV','native_status'=>'applied','total_steps'=>205,'completed_steps'=>205,
+                'created_at'=>'2026-11-27 10:00:00','updated_at'=>'2026-11-27 10:01:00']];
+        }
         if ($source === 'async' && $org === 'tenant-a') {
             // The typed model still fences tenant ownership independently.
             return [['id'=>'job-1'],['id'=>'foreign']];
@@ -57,7 +62,14 @@ $read = new class implements OperationListReadInterface {
     public function workflowProof(string $org, string $run): array {
         return ['status'=>'drift','verified_steps'=>1,'total_steps'=>2];
     }
-    public function importItems(string $org, string $batch): array { return []; }
+    public function importItems(string $org, string $batch, int $after = -1): array {
+        if ($org !== 'tenant-a' || $batch !== 'batch-1') throw new LogicException('Foreign item read attempted');
+        $rows = [];
+        for ($i=max(1,$after+1); $i<=205 && count($rows)<101; ++$i) {
+            $rows[]=['row_no'=>$i,'sku'=>'sku-'.$i,'status'=>'applied','receipt_key'=>'receipt-'.$i,'error_code'=>null,'product_id'=>str_repeat('a',32)];
+        }
+        return $rows;
+    }
 };
 $async = new class implements AsyncOperationReadModelInterface {
     public function recentForOrganization(string $org, int $limit = 50): array {
@@ -127,5 +139,16 @@ try {
     OperationsHistoryCursor::decode('not-a-cursor');
     throw new RuntimeException('Invalid cursor accepted.');
 } catch (InvalidArgumentException) {}
-echo "UX-05 archive cursor and stable pagination passed.\n";
+$import = $snap->read($a,null,'','import','import:batch-1');
+$next = $snap->read($a,null,'','import','import:batch-1',itemAfter:$import['detail']['nextItemAfter']);
+$last = $snap->read($a,null,'','import','import:batch-1',itemAfter:$next['detail']['nextItemAfter']);
+$ids = array_merge(...array_map(static fn(array $p):array=>array_column($p['detail']['items'],'rowNo'),[$import,$next,$last]));
+if ($ids!==range(1,205) || $import['detail']['nextItemAfter']!==100 || $next['detail']['nextItemAfter']!==200
+    || $last['detail']['nextItemAfter']!==null || $last['detail']['items'][4]['receipt']!=='receipt-205') {
+    throw new RuntimeException('Import keyset skipped/duplicated items or receipt.');
+}
+if ($snap->read($other,null,'','import','import:batch-1',itemAfter:100)['detail']!==null) {
+    throw new RuntimeException('Forged item cursor leaked foreign batch.');
+}
+echo "UX-05 archive and per-item receipt pagination passed.\n";
 echo "UX-05 snapshot role, tenant, detail, provider failure and no-false-success contract passed.\n";

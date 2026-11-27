@@ -257,3 +257,65 @@ Remaining: shared global UIAction + navigation wiring, critical step-up,
 explicit safe queue retry classification, full domain outcome coverage,
 integrated CI and staging evidence at exact SHA. No merge/deploy or Issue
 closure claimed.
+
+## Iteration 4 — complete import item inspection and integrator handoff
+
+The independent stream now pages all durable Product import rows, not just
+the first 100. The keyset cursor is the immutable native row number, scoped
+to the selected, independently authorized batch and authenticated organization.
+Each page reads 101 rows (100 plus lookahead), keeps the registry history
+cursor independent, and renders each recorded native receipt, product link
+and error code. Initial and next page links work without JS. The full
+item section opens in Result mode too. An invalid (negative, oversized,
+non-numeric, or non-import) item cursor receives 400. This is a read-only
+cursor, not entitlement or evidence of an external result.
+
+Two reviewable, **unapplied** patches are in this stream's documentation:
+1. `cuw-ux05-integrator.patch`: parent integration of platform-wide
+   UIAction contribution independent of domain module enablement,
+   existing resolver/duplicate-ID checks preserved; shell and shared
+   command/search catalog entry only for current tenant manager with access
+   and manage permissions; PHP unit and frontend realtime CI wiring;
+   registry and navigation negative cases. An absent authenticated context
+   hides the entry. Integrator must review with other streams before applying.
+2. `cuw-ux05-ux04-integration.patch`: apply only after UX-04's
+   `AdaptivePagePresentation` and extended `ExperienceSemantic` contracts
+   are present. Compared UX-04 remote branch
+   `feat/cuw-ux04-adaptive-experience-20261127` against common base:
+   four commits ahead; verified adapter, semantic trigger vocabulary and
+   shared control templates by GitHub read. Composer/runtime tests must
+   validate this dependency at the final integrated SHA. Uses its actual
+   shared profile, CSRF-protected preference POST, canonical resolver,
+   section toggles, and trusted server-derived status triggers.
+   The visible sections and action sets are composed from the same snapshot;
+   critical history cannot be collapsed, and mode changes do not run work.
+   The existing browser fixture switches modes through the real UX-04
+   controls instead of query overrides. Both shared and UX-04 patch checks
+   passed against this stream's local working tree; no common shell,
+   registry, DI or CI file was altered directly in the independent branch.
+
+Parent integration sequence: merge/rebase compatible A and B commits into
+the integrator's branch; review both patches, run `git apply --check`
+then apply (resolve overlaps with other streams under #518); verify container
+and routes, including preference-only POST on the existing UX-05 index and
+exact approval/recovery POST routes; execute CI, then isolated staging
+read/write fixtures and 390px screenshot acceptance. Verify own/foreign
+batch with >200 native rows and the same receipt sequence across modes;
+check that denied manager/member see no shell/search command nor direct
+route grant. Readback and no-replay controls must stay fail-closed.
+
+Local evidence for iteration 4:
+- whitespace check, both patch apply checks, and JavaScript realtime
+  simulation plus browser syntax checks passed.
+- Executed the exact import keyset SQL against a SQLite fixture containing
+  205 records per batch/tenant including a shared batch ID and row zero:
+  page sizes 100/100/5, complete ordered IDs and own-tenant receipts only.
+  This is SQL fixture evidence, not MySQL production evidence.
+- Added native PHP snapshot test for 205 rows, exact final receipt and
+  foreign cursor denial; PHP/Composer/MySQL and live browser staging
+  are not installed/available in this workspace.
+
+Remaining gates: exact integrated SHA build + live runtime/staging evidence;
+canonical step-up authority for critical approval, explicit safe owner
+classification for queue retry, domain outcome contracts beyond the verified
+Goal read model. No remote publication, merge, deployment, or closure.

@@ -10,5 +10,5 @@ interface OperationListReadInterface
     public function workflowGraph(string $org, string $run): array;
     public function actionAttempts(string $org, string $action): array;
     public function workflowProof(string $org, string $run): array;
-    public function importItems(string $org, string $batch): array;
+    public function importItems(string $org, string $batch, int $after = -1): array;
 }

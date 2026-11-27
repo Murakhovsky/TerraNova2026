@@ -28,7 +28,7 @@ final readonly class OperationsSnapshot
         private WorkflowExecutionStoreInterface $workflows,
     ) {}
 
-    public function read(TenantContext $actor, ?EntityRef $entity, string $correlation, string $source, string $selected, array $cursor = [], ?OperationStatus $status = null): array
+    public function read(TenantContext $actor, ?EntityRef $entity, string $correlation, string $source, string $selected, array $cursor = [], ?OperationStatus $status = null, int $itemAfter = -1): array
     {
         self::authorize($actor);
         $org = $actor->organizationId()->value();
@@ -70,7 +70,12 @@ final readonly class OperationsSnapshot
                     if ($candidate !== null && self::matches($candidate, $entity, $correlation)) {
                         $detail = $candidate;
                         $detail['items'] = [];
-                        $detail['items'] = $this->items($org, $kind, $id);
+                        $detail['nextItemAfter'] = null;
+                        $detail['items'] = $this->items($org, $kind, $id, $itemAfter);
+                        if ($kind === 'import' && count($detail['items']) > 100) {
+                            $detail['items'] = array_slice($detail['items'], 0, 100);
+                            $detail['nextItemAfter'] = $detail['items'][99]['rowNo'];
+                        }
                         // A direct detail does not change the archive window or its cursor.
                     }
                 } catch (Throwable $e) {
@@ -199,7 +204,7 @@ final readonly class OperationsSnapshot
         ];
     }
 
-    private function items(string $org, string $kind, string $id): array
+    private function items(string $org, string $kind, string $id, int $itemAfter): array
     {
         if ($kind === 'workflow') {
             $steps = $this->workflows->steps(new WorkflowRunIdentity($org, $id));
@@ -233,8 +238,8 @@ final readonly class OperationsSnapshot
                 static fn($a): bool=>$a->organizationId === $org && $a->runId === $id)));
         }
         if ($kind === 'import') {
-            return array_map(static fn(array $r): array => ['title'=>($r['row_no'].' · '.($r['sku'] ?? '')), 'native'=>$r['status'],
-                'receipt'=>$r['receipt_key'], 'error'=>$r['error_code'], 'product'=>$r['product_id'], 'productLink'=>is_string($r['product_id']) && preg_match('/^[a-f0-9]{32}$/D',$r['product_id'])], $this->canonical->importItems($org, $id));
+            return array_map(static fn(array $r): array => ['rowNo'=>(int)$r['row_no'], 'title'=>($r['row_no'].' · '.($r['sku'] ?? '')), 'native'=>$r['status'],
+                'receipt'=>$r['receipt_key'], 'error'=>$r['error_code'], 'product'=>$r['product_id'], 'productLink'=>is_string($r['product_id']) && preg_match('/^[a-f0-9]{32}$/D',$r['product_id'])], $this->canonical->importItems($org, $id, $itemAfter));
         }
         return [];
     }

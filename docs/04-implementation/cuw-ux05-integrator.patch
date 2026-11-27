@@ -1,0 +1,200 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 932491f..7951ad6 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -58,6 +58,12 @@ jobs:
+         run: python3 -m py_compile bin/ci/step_timings.py
+       - name: Current contracts and unit behavior
+         run: bash bin/verify fast
++      - name: UX-05 operations lifecycle, recovery and status predicates
++        run: |
++          php tests/unit/cuw_ux05_operation_status.php
++          php tests/unit/cuw_ux05_operation_snapshot.php
++          php tests/unit/cuw_ux05_recovery_actions.php
++          php tests/unit/cuw_ux05_status_predicate.php
+       - name: UX-03 verified Business Entity Summary
+         run: php tests/unit/cos_unified_entity_summary.php
+       - name: UX-03 verified Sales to Property relationships
+diff --git a/.github/workflows/frontend.yml b/.github/workflows/frontend.yml
+index 338dcfe..8ccd74c 100644
+--- a/.github/workflows/frontend.yml
++++ b/.github/workflows/frontend.yml
+@@ -31,5 +31,7 @@ jobs:
+           cache: npm
+       - run: npm ci
+       - run: npm run build
++      - name: UX-05 snapshot realtime and connection truth
++        run: node tests/unit/cuw_ux05_realtime.mjs
+       - name: Browser test syntax
+         run: find tests/browser -maxdepth 1 -type f -name '*.mjs' -print0 | xargs -0 -n1 node --check
+diff --git a/symfony/config/services.yaml b/symfony/config/services.yaml
+index da61a2a..949cb3d 100644
+--- a/symfony/config/services.yaml
++++ b/symfony/config/services.yaml
+@@ -2765,6 +2765,15 @@ services:
+     arguments:
+       $catalog: '@Kernel\Module\ModuleCatalog'
+
++  # Platform-level Operations Center is independent of tenant module switches.
++  App\Web\Experience\Action\UIActionRegistry:
++    arguments:
++      $platformProviders: ['@App\Web\Operations\OperationsRecoveryActionProvider']
++
++  App\Web\Experience\Shell\CoreCommandCatalog:
++    arguments:
++      $tenants: '@Kernel\Tenant\Contract\TenantContextProviderInterface'
++
+   App\Web\Experience\Extension\WebExtensionProviderRegistry:
+     arguments:
+       $extensions: '@Kernel\Module\ModuleExtensionRegistry'
+diff --git a/symfony/src/Web/Experience/Action/UIActionRegistry.php b/symfony/src/Web/Experience/Action/UIActionRegistry.php
+index 8c3f18b..542b802 100644
+--- a/symfony/src/Web/Experience/Action/UIActionRegistry.php
++++ b/symfony/src/Web/Experience/Action/UIActionRegistry.php
+@@ -4,6 +4,7 @@ declare(strict_types=1);
+
+ namespace App\Web\Experience\Action;
+
++use App\Web\Experience\Extension\Contract\ActionProviderInterface;
+ use App\Web\Experience\Extension\Model\WebExtensionContext;
+ use App\Web\Experience\Extension\WebExtensionCatalog;
+ use App\Web\Experience\Model\EntityRef;
+@@ -14,6 +15,8 @@ final readonly class UIActionRegistry
+     public function __construct(
+         private WebExtensionCatalog $extensions,
+         private RuntimeUIActionProvider $runtimeActions,
++        /** @var iterable<ActionProviderInterface> */
++        private iterable $platformProviders = [],
+     ) {
+     }
+
+@@ -27,6 +30,11 @@ final readonly class UIActionRegistry
+             ...$this->runtimeActions->actions($context, $entity),
+         ];
+
++        // Platform-wide capabilities are not conditional on a domain module manifest.
++        foreach ($this->platformProviders as $provider) {
++            array_push($sources, ...$provider->actions($context, $entity));
++        }
++
+         foreach ($sources as $action) {
+             if (isset($byId[$action->id])) {
+                 throw new LogicException(sprintf(
+diff --git a/symfony/src/Web/Experience/Extension/ProviderBackedShellNavigation.php b/symfony/src/Web/Experience/Extension/ProviderBackedShellNavigation.php
+index 5b3da3a..7ec0520 100644
+--- a/symfony/src/Web/Experience/Extension/ProviderBackedShellNavigation.php
++++ b/symfony/src/Web/Experience/Extension/ProviderBackedShellNavigation.php
+@@ -40,6 +40,10 @@ final readonly class ProviderBackedShellNavigation
+             new NavigationContribution('content', 'Content', '/admin/content', priority: 20, parentKey: 'administration'),
+         ];
+
++        if ($this->coreCommands->canOpenOperations($context)) {
++            $contributions[] = new NavigationContribution('operations', 'Центр виконання', '/workspace/operations', 'OP', 35);
++        }
++
+         if (in_array($context->role, ['manager', 'admin'], true)) {
+             $contributions[] = new NavigationContribution(
+                 'engineering',
+diff --git a/symfony/src/Web/Experience/Shell/CoreCommandCatalog.php b/symfony/src/Web/Experience/Shell/CoreCommandCatalog.php
+index e2d5add..212f183 100644
+--- a/symfony/src/Web/Experience/Shell/CoreCommandCatalog.php
++++ b/symfony/src/Web/Experience/Shell/CoreCommandCatalog.php
+@@ -5,9 +5,24 @@ declare(strict_types=1);
+ namespace App\Web\Experience\Shell;
+
+ use App\Web\Experience\Extension\Model\WebExtensionContext;
++use Kernel\Tenant\Contract\TenantContextProviderInterface;
++use Kernel\Tenant\Model\TenantPermissions;
+
+ final readonly class CoreCommandCatalog
+ {
++    public function __construct(private ?TenantContextProviderInterface $tenants = null) {}
++
++    public function canOpenOperations(WebExtensionContext $context): bool
++    {
++        $actor = $this->tenants?->current();
++        return $actor !== null
++            && $actor->organizationId()->value() === $context->organizationId
++            && $actor->role()->value() === $context->role
++            && $actor->isManager()
++            && $actor->allows(TenantPermissions::ACCESS)
++            && $actor->allows(TenantPermissions::MANAGE);
++    }
++
+     /** @return list<ShellCommandItem> */
+     public function commands(WebExtensionContext $context): array
+     {
+@@ -19,6 +34,10 @@ final readonly class CoreCommandCatalog
+             new ShellCommandItem('core.administration', 'Open Administration', '/admin/content', 'command', 'Core'),
+         ];
+
++        if ($this->canOpenOperations($context)) {
++            $commands[] = new ShellCommandItem('core.operations', 'Центр виконання / Operations Center', '/workspace/operations', 'navigation', 'COS');
++        }
++
+         if (in_array($context->role, ['manager', 'admin'], true)) {
+             $commands[] = new ShellCommandItem(
+                 'core.engineering',
+diff --git a/tests/unit/cuw_ux05_recovery_actions.php b/tests/unit/cuw_ux05_recovery_actions.php
+index 70f39e8..3b5f31c 100644
+--- a/tests/unit/cuw_ux05_recovery_actions.php
++++ b/tests/unit/cuw_ux05_recovery_actions.php
+@@ -25,6 +25,9 @@ use Kernel\Module\Contract\ModuleStateRepositoryInterface;
+ use Kernel\Identity\Model\OrganizationRole;
+ use Kernel\Shared\Domain\{OrganizationId,UserId};
+ use Kernel\Tenant\Model\{Permission,TenantContext,TenantPermissions};
++use Kernel\Tenant\Contract\TenantContextProviderInterface;
++use App\Web\Experience\Shell\CoreCommandCatalog;
++use App\Web\Experience\Extension\ProviderBackedShellNavigation;
+
+ function check(bool $ok,string $message):void {
+     if (!$ok) throw new RuntimeException($message);
+@@ -75,11 +78,11 @@ $async=new class implements AsyncOperationReadModelInterface {
+     public function recentForOrganization(string $organizationId,int $limit=50):array{return [];}
+     public function find(string $organizationId,string $operationId):?AsyncOperationProjection{return null;}
+ };
+-$buildResolver=static function(bool $registered)use($provider,$states,$runtime,$async):UIActionResolver{
++$buildResolver=static function(bool $registered,bool $platform=false)use($provider,$states,$runtime,$async):UIActionResolver{
+     $contributions=new ModuleContributions(extensionServices:$registered?[ModuleExtensionPoint::WEB_ACTIONS=>[$provider->serviceId()]]:[]);
+     $catalog=new ModuleCatalog([new ModuleDefinition(new ModuleManifest('ops_fixture','Operations fixture','1.0.0',enabledByDefault:true),$contributions)]);
+     $registry=new WebExtensionProviderRegistry(new ModuleExtensionRegistry($catalog),new ActiveModuleResolver($catalog,$states),[$provider]);
+-    return new UIActionResolver(new UIActionRegistry(new WebExtensionCatalog($registry,new AsyncOperationWebProvider($async)),new RuntimeUIActionProvider($runtime)),
++    return new UIActionResolver(new UIActionRegistry(new WebExtensionCatalog($registry,new AsyncOperationWebProvider($async)),new RuntimeUIActionProvider($runtime),$platform?[$provider]:[]),
+         new UIActionPermissionResolver([new TenantUIActionPermissionChecker()]));
+ };
+ $actor=static fn(string $org,array $permissions):TenantContext=>new TenantContext(UserId::fromString('2'),OrganizationId::fromString($org),
+@@ -95,4 +98,33 @@ $denied=$resolver->resolve($actor('tenant-a',[TenantPermissions::ACCESS]),$conte
+ check(count($denied)===1 && !$denied[0]->enabled,'Missing manage permission did not deny action.');
+ check($resolver->resolve($actor('tenant-b',[TenantPermissions::ACCESS,TenantPermissions::MANAGE]),
+     new WebExtensionContext('tenant-b','manager','workspace','operations','operations'),$entity,UIActionPlacement::WORKSPACE_SECONDARY)===[],'Foreign descriptor leaked.');
+-echo "UX-05 recovery action fences, independent approval and resolver registration/permission contract passed.\n";
++// Global provider must work even with no domain manifest contribution.
++$global=$buildResolver(false,true)->resolve($allowed,$context,$entity,UIActionPlacement::WORKSPACE_SECONDARY);
++check(count($global)===1 && $global[0]->enabled,'Platform registration depends on a domain module.');
++$globalDenied=$buildResolver(false,true)->resolve($actor('tenant-a',[TenantPermissions::ACCESS]),$context,$entity,UIActionPlacement::WORKSPACE_SECONDARY);
++check(count($globalDenied)===1 && !$globalDenied[0]->enabled,'Global registration bypassed permissions.');
++$duplicateRejected=false;
++try { $buildResolver(true,true)->resolve($allowed,$context,$entity,UIActionPlacement::WORKSPACE_SECONDARY); }
++catch (LogicException) { $duplicateRejected=true; }
++check($duplicateRejected,'Duplicate module/platform contribution was not rejected.');
++
++$tenantProvider=new class($allowed) implements TenantContextProviderInterface {
++    public function __construct(public ?TenantContext $actor){}
++    public function current():?TenantContext { return $this->actor; }
++};
++$commands=new CoreCommandCatalog($tenantProvider);
++$emptyCatalog=new ModuleCatalog([]);
++$webRegistry=new WebExtensionProviderRegistry(new ModuleExtensionRegistry($emptyCatalog),new ActiveModuleResolver($emptyCatalog,$states),[]);
++$navigation=new ProviderBackedShellNavigation(new WebExtensionCatalog($webRegistry,new AsyncOperationWebProvider($async)),$commands);
++$hasNavigation=static fn(WebExtensionContext $c):bool=>in_array('operations',array_column($navigation->compose($c)['primary'],'key'),true);
++$hasCommand=static fn(WebExtensionContext $c):bool=>in_array('core.operations',array_column($commands->commands($c),'id'),true);
++check($hasNavigation($context) && $hasCommand($context),'Operations not discoverable independently of modules.');
++check(!$hasNavigation(new WebExtensionContext('tenant-b','manager')) && !$hasCommand(new WebExtensionContext('tenant-b','manager')),'Foreign tenant navigation leaked.');
++$tenantProvider->actor=$actor('tenant-a',[TenantPermissions::ACCESS]);
++check(!$hasNavigation($context) && !$hasCommand($context),'Manage permission absent but navigation exposed.');
++$tenantProvider->actor=new TenantContext(UserId::fromString('2'),OrganizationId::fromString('tenant-a'),OrganizationRole::fromString('member'),[Permission::fromString(TenantPermissions::ACCESS)]);
++$member=new WebExtensionContext('tenant-a','member');
++check(!$hasNavigation($member) && !$hasCommand($member),'Member navigation leaked.');
++$tenantProvider->actor=null;
++check(!$hasNavigation($context) && !$hasCommand($context),'Unauthenticated navigation leaked.');
++echo "UX-05 recovery action fences, independent approval, platform registration, tenant-safe navigation and resolver permission contract passed.\n";

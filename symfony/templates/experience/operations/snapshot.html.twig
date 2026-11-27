@@ -123,7 +123,7 @@
             <p>Дія недоступна: немає дозволеного UIAction або потрібна додаткова авторизація.</p>
           {% endfor %}
         {% endif %}
-        <details {% if mode != 'result' or item.status.needsAttention() %}open{% endif %}>
+        <details {% if mode != 'result' or item.status.needsAttention() or item.source == 'import' %}open{% endif %}>
           <summary>Кроки, квитанції та історія</summary>
           {% if item.receipt %}<p>Квитанція спроби: {{ item.receiptStatus }} · спроба {{ item.attempt }}. Це не доказ бізнес-ефекту.</p>{% endif %}
           {% for step in item.items %}<div class="cos-card">
@@ -141,7 +141,13 @@
             {% if step.receipt %}<p>Посилання на квитанцію: <code class="text-break">{{ step.receipt }}</code></p>{% endif %}
           </div>{% else %}<p>Додаткові кроки відсутні або не надаються джерелом.</p>{% endfor %}
           {% if item.source == 'action' and item.items|length > 100 %}<p>Показані останні 101 спроба (вікно історії).</p>{% endif %}
-          {% if item.source == 'import' and item.total > 100 %}<p>Перші 100 рядків. Повний звіт доступний у джерелі.</p>{% endif %}
+          {% if item.source == 'import' and not snapshot.detailUnavailable %}
+            <p>До 100 позицій на сторінку. Показано {{ item.items|length }} з {{ item.total }} записаних позицій пакета.</p>
+            <nav class="cos-uw__row" aria-label="Позиції пакета">
+              {% if itemAfter != '' %}<a class="cos-button cos-button--ghost" href="{{ path('cos_ux05_operations',filters|merge({operation:item.key,item_after:''})) }}" data-turbo-frame="_top">Перші позиції</a>{% endif %}
+              {% if item.nextItemAfter is not null %}<a class="cos-button cos-button--ghost" href="{{ path('cos_ux05_operations',filters|merge({operation:item.key,item_after:item.nextItemAfter})) }}" data-turbo-frame="_top">Наступні позиції</a>{% endif %}
+            </nav>
+          {% endif %}
         </details>
         <details {% if mode == 'expert' %}open{% endif %}>
           <summary>Походження та ідентифікатори</summary>
