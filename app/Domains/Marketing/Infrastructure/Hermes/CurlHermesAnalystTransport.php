@@ -22,7 +22,10 @@ final class CurlHermesAnalystTransport implements HermesAnalystTransport
     private function request(string $url,string $token,?string $key,?array $payload):array
     {
         $parts=parse_url($url);
-        $suffix=$payload===null?'toolsets':'chat/completions';
+        $path=(string)($parts['path']??'');
+        // A second explicitly allowed READ diagnostic only. The only POST
+        // remains the approved advisory Chat Completions path.
+        $suffix=$payload===null?(str_ends_with($path,'/v1/capabilities')?'capabilities':'toolsets'):'chat/completions';
         if(!is_array($parts)||($parts['scheme']??null)!=='https'||!isset($parts['host'])
             ||!preg_match('~^/p/[a-zA-Z0-9_-]{1,64}/v1/'.preg_quote($suffix,'~').'$~D',(string)($parts['path']??''))
             ||isset($parts['user'])||isset($parts['pass'])||isset($parts['query'])||isset($parts['fragment'])||isset($parts['port'])
@@ -55,7 +58,7 @@ final class CurlHermesAnalystTransport implements HermesAnalystTransport
             }
             // Associative decoding otherwise conflates the empty JSON object with an empty list.
             $shape=ltrim($body);
-            if(!str_starts_with($shape,$payload===null?'[':'{'))throw new RuntimeException('Unexpected Hermes response shape.');
+            if(!str_starts_with($shape,$suffix==='toolsets'?'[':'{'))throw new RuntimeException('Unexpected Hermes response shape.');
             $data=json_decode($body,true,32,JSON_THROW_ON_ERROR);
             if(!is_array($data)||isset($data['error']))throw new RuntimeException('Invalid Hermes response.');
             return $data;

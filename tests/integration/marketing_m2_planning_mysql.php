@@ -157,6 +157,8 @@ $vault=new class implements \Platform\Integration\Contract\CredentialVaultInterf
 $transport=new class implements \Domains\Marketing\Infrastructure\Hermes\HermesAnalystTransport {
     public bool $tools=false;
     public bool $incomplete=false;
+    public bool $timeout=false;
+    public mixed $usage=null;
     public int $posts=0;
     public array $payload=[];
     public string $key='';
@@ -167,8 +169,9 @@ $transport=new class implements \Domains\Marketing\Infrastructure\Hermes\HermesA
     public function post(string $url,string $token,string $key,array $payload):array {
         if(!str_ends_with($url,'/p/marketing-fixture/v1/chat/completions')||$token!=='fixture-token')throw new RuntimeException('Wrong endpoint/auth.');
         $this->posts++;$this->payload=$payload;$this->key=$key;
+        if($this->timeout)throw new RuntimeException('Fixture remote timeout.');
         $facts=json_decode($payload['messages'][1]['content'],true,32,JSON_THROW_ON_ERROR);
-        return ['id'=>'chatcmpl-fixture','choices'=>[['finish_reason'=>$this->incomplete?'length':'stop','message'=>[
+        return ['id'=>'chatcmpl-fixture','usage'=>$this->usage,'choices'=>[['finish_reason'=>$this->incomplete?'length':'stop','message'=>[
             'role'=>'assistant','content'=>json_encode(['context_hash'=>$facts['context_hash'],'recommendation'=>'Improve draft headline',
                 'rationale'=>'Creative wording needs review','evidence_aliases'=>['creative']],JSON_THROW_ON_ERROR)]]]];
     }
@@ -196,6 +199,48 @@ $closed=new \Domains\Marketing\Infrastructure\Hermes\HermesMarketingAnalystAdapt
     new \Domains\Marketing\Infrastructure\Hermes\HermesAnalystConnection('https://hermes.example.com/p/marketing-fixture',$credential),
     $vault,$transport,new \Domains\Marketing\Domain\MarketingAnalystRecommendationPolicy());
 $denied(static fn()=> $closed->recommend($actor,$envelope,'fixture-correlation-06'),'Unaccepted Hermes profile admitted.');
+// UX-06 exact integer readback limits; this is an isolated transport fixture,
+// not a claim that the live gateway enforces a generation-time cap.
+$limits=new \Domains\Marketing\Domain\MarketingAnalystTokenBudget(800,400,1000,'fixture-token-cap');
+$strictRuntime=new \Domains\Marketing\Infrastructure\Hermes\HermesMarketingAnalystAdapter($contexts,$connection,$vault,$transport,
+    new \Domains\Marketing\Domain\MarketingAnalystRecommendationPolicy(),$limits);
+$transport->incomplete=false;
+$transport->usage=['prompt_tokens'=>800,'completion_tokens'=>200,'total_tokens'=>1000,'private_extra'=>'discard'];
+$bounded=$strictRuntime->recommend($actor,$envelope,'strict-fixture-exact01');
+$assert($bounded['token_usage']['total_tokens']===1000&&$bounded['token_usage']['prompt_tokens']===800
+    &&$bounded['token_usage']['hard_cap_verified']===false&&!isset($bounded['token_usage']['private_extra']),'Exact ceiling receipt rejected or leaked metadata.');
+$transport->usage=['prompt_tokens'=>600,'completion_tokens'=>400,'total_tokens'=>1000];
+$bounded=$strictRuntime->recommend($actor,$envelope,'strict-fixture-exact02');
+$assert($bounded['token_usage']['completion_tokens']===400,'Exact completion ceiling rejected.');
+foreach([
+    null,
+    ['prompt_tokens'=>801,'completion_tokens'=>199,'total_tokens'=>1000],
+    ['prompt_tokens'=>599,'completion_tokens'=>401,'total_tokens'=>1000],
+    ['prompt_tokens'=>700,'completion_tokens'=>301,'total_tokens'=>1001],
+    ['prompt_tokens'=>600,'completion_tokens'=>399,'total_tokens'=>1000],
+    ['prompt_tokens'=>600,'completion_tokens'=>400],
+    ['prompt_tokens'=>'600','completion_tokens'=>400,'total_tokens'=>1000],
+    ['prompt_tokens'=>600.0,'completion_tokens'=>400,'total_tokens'=>1000],
+    ['prompt_tokens'=>0,'completion_tokens'=>400,'total_tokens'=>400],
+    ['prompt_tokens'=>600,'completion_tokens'=>-1,'total_tokens'=>599],
+    ['prompt_tokens'=>PHP_INT_MAX,'completion_tokens'=>PHP_INT_MAX,'total_tokens'=>1000],
+] as $index=>$invalidUsage){
+    $transport->usage=$invalidUsage;
+    $priorPosts=$transport->posts;
+    $denied(static fn()=> $strictRuntime->recommend($actor,$envelope,'strict-fixture-invalid-'.$index),'Invalid exact token receipt accepted.');
+    $assert($transport->posts===$priorPosts+1,'Invalid usage was retried.');
+}
+$transport->timeout=true;$priorPosts=$transport->posts;
+try{
+    $strictRuntime->recommend($actor,$envelope,'strict-fixture-timeout01');
+    throw new LogicException('Timeout became advice.');
+}catch(RuntimeException $error){
+    $assert($error->getMessage()==='Fixture remote timeout.','Unexpected fixture timeout failure.');
+}
+$assert($transport->posts===$priorPosts+1,'Remote timeout was retried.');
+$transport->timeout=false;$transport->usage=null;
+echo "UX06 exact token receipt ceilings, malformed counts, timeout and no retry PASS.\n";
+
 $catalog=new \Kernel\Module\ModuleCatalog([\Kernel\Module\ModuleDefinition::fromArray(require $root.'/app/Domains/Marketing/module.php')]);
 $state=new class($orgA) implements \Kernel\Module\Contract\ModuleStateRepositoryInterface {
     public function __construct(private string $org){}
@@ -205,20 +250,22 @@ $state=new class($orgA) implements \Kernel\Module\Contract\ModuleStateRepository
 $modules=new \Kernel\Module\ActiveModuleResolver($catalog,$state);
 $runStore=new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingAnalystRunStore($db);
 $admission=new \Domains\Marketing\Domain\MarketingAnalystAdmissionPolicy($orgA,'hermes-fixture',2,'fixture-provider-cap',true);
-$execution=new \Domains\Marketing\Application\Service\MarketingAnalystExecutionService($contexts,$runtime,$runStore,$admission,
-    new \Domains\Marketing\Domain\MarketingAnalystRecommendationPolicy(),$modules);
+$execution=new \Domains\Marketing\Application\Service\MarketingAnalystExecutionService($contexts,$strictRuntime,$runStore,$admission,
+    new \Domains\Marketing\Domain\MarketingAnalystRecommendationPolicy(),$modules,$limits);
 $transport->incomplete=false;$beforePosts=$transport->posts;
+$transport->usage=['prompt_tokens'=>800,'completion_tokens'=>200,'total_tokens'=>1000];
 $run=$execution->request($actor,$campaignId,1,$creativeId,3,$set['id'],2,'hermes-run-01');
 $assert($run['state']==='SUCCEEDED'&&$run['advice']['status']==='UNREVIEWED_ADVICE'&&!$run['finance_cost_confirmed']
+    &&$run['advice']['token_usage']['total_tokens']===1000
     &&!$run['paid_activation_approved']&&$transport->posts===$beforePosts+1,'Durable Hermes receipt failed.');
 $again=$execution->request($actor,$campaignId,1,$creativeId,3,$set['id'],2,'hermes-run-01');
 $assert($again['id']===$run['id']&&$transport->posts===$beforePosts+1,'Replay issued another remote turn.');
 $denied(static fn()=> $execution->request($actor,$campaignId,1,$creativeId,3,null,null,'hermes-run-01'),'Different pins reused an execution key.');
 $denied(static fn()=> $execution->request($contextActor($orgB),$campaignId,1,$creativeId,3,null,null,'hermes-run-01'),'Foreign run receipt leaked.');
-$transport->incomplete=true;
+$transport->usage=['prompt_tokens'=>700,'completion_tokens'=>301,'total_tokens'=>1001];
 $uncertain=$execution->request($actor,$campaignId,1,$creativeId,3,$set['id'],2,'hermes-run-02');
 $assert($uncertain['state']==='UNCERTAIN'&&$uncertain['advice']===null&&$uncertain['failure_code']==='REMOTE_OUTCOME_UNCERTAIN'
-    &&$transport->posts===$beforePosts+2,'Uncertain remote turn did not consume a durable slot.');
+    &&$transport->posts===$beforePosts+2,'Over-budget remote turn did not consume a durable uncertain slot.');
 $again=$execution->request($actor,$campaignId,1,$creativeId,3,$set['id'],2,'hermes-run-02');
 $assert($again['state']==='UNCERTAIN'&&$transport->posts===$beforePosts+2,'Uncertain outcome was retried.');
 $denied(static fn()=> $execution->request($actor,$campaignId,1,$creativeId,3,$set['id'],2,'hermes-run-03'),'Daily quota bypassed.');
@@ -256,7 +303,7 @@ $age->execute([$orgA,$pending['run']['id']]);
 $recovered=$reviews->recover($reviewer,$campaignId,$pending['run']['id'],'Worker and profile stopped','operator-check-02',true,'recover-ai-02');
 $assert($recovered['state']==='UNCERTAIN'&&$recovered['failure_code']==='OPERATOR_RECOVERED_UNCERTAIN','STARTED recovery failed.');
 $denied(static fn()=> $runStore->finish($orgA,$pending['run']['id'],$advice),'Late runtime completion overwrote recovery.');
-$transport->incomplete=false;
+$transport->incomplete=false;$transport->usage=null;
 $extended=new \Domains\Marketing\Application\Service\MarketingAnalystExecutionService($contexts,$runtime,$runStore,
     new \Domains\Marketing\Domain\MarketingAnalystAdmissionPolicy($orgA,'hermes-fixture',4,'fixture-provider-cap',true),
     new \Domains\Marketing\Domain\MarketingAnalystRecommendationPolicy(),$modules);

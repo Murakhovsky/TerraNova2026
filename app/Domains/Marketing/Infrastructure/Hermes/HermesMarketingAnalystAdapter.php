@@ -7,6 +7,7 @@ use DateTimeImmutable;
 use Domains\Marketing\Application\Contract\MarketingAnalystRuntimePort;
 use Domains\Marketing\Application\Service\MarketingAnalystContextService;
 use Domains\Marketing\Domain\MarketingAnalystRecommendationPolicy;
+use Domains\Marketing\Domain\MarketingAnalystTokenBudget;
 use Kernel\Tenant\Model\TenantContext;
 use Platform\Integration\Contract\CredentialVaultInterface;
 
@@ -18,7 +19,7 @@ final readonly class HermesMarketingAnalystAdapter implements MarketingAnalystRu
 {
     public function __construct(private MarketingAnalystContextService $contexts,private HermesAnalystConnection $connection,
         private CredentialVaultInterface $vault,private HermesAnalystTransport $transport,
-        private MarketingAnalystRecommendationPolicy $policy){}
+        private MarketingAnalystRecommendationPolicy $policy,private ?MarketingAnalystTokenBudget $tokenBudget=null){}
 
     public function recommend(TenantContext $actor,array $envelope,string $correlationId):array
     {
@@ -43,6 +44,11 @@ final readonly class HermesMarketingAnalystAdapter implements MarketingAnalystRu
             ]
         ]);
         $advice=$this->decode($fresh,$response);
+        if($this->tokenBudget!==null){
+            // The gateway reports usage, but does not guarantee an aggregate
+            // request-side max_tokens cap. Operator attestation is separate.
+            $advice['token_usage']=$this->tokenBudget->receipt($response['usage']??null);
+        }
         // Refuse advice based on data which changed during the remote turn.
         $this->rebuild($actor,$fresh);
         return $advice;

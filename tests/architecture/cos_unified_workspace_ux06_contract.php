@@ -30,7 +30,7 @@ foreach (['AutowireIterator','Ambiguous Agent runtime binding','AgentWorkspaceAc
 if (str_contains($controller, "['campaign']") || !str_contains($panel, "runtime.presentation == 'hermes_marketing'")) {
     throw new RuntimeException('UX06 runtime-neutral controller or server-owned presentation selection regressed');
 }
-foreach (['/analyst-plans','csrf_token','idempotency_key','Independent Plan and Action approvals','No automatic retry','Native journal unavailable','Exact provider token budget','Remote cancellation'] as $marker) {
+foreach (['/analyst-plans','csrf_token','idempotency_key','Independent Plan and Action approvals','No automatic retry','Native journal unavailable','Exact provider token budget','Remote cancellation','workspace_configuration_hash','token_usage','canonical approval rejection'] as $marker) {
     if (!str_contains($hermes,$marker)) throw new RuntimeException('UX06 guarded delegation missing: '.$marker);
 }
 foreach ([$panel,$hermes,$get($twig.'workspace.html.twig'),$get('symfony/templates/components/experience/cos_agent_action.html.twig')] as $source) {
@@ -42,5 +42,17 @@ if (!str_contains($get('symfony/config/routes.yaml'),'path: /marketing/campaigns
     || !str_contains($get('symfony/src/Web/Marketing/MarketingPageController.php'),'$this->csrf->isValid($request)')
     || !str_contains($get('app/Domains/Marketing/Automation/Action/MarketingAnalystRunHandler.php'),'$this->workerAdmission->assertAuthorized($action)')) {
     throw new RuntimeException('UX06 canonical owner delegation path changed');
+}
+$profile=$get('app/Domains/Marketing/Infrastructure/Hermes/HermesAnalystRuntimeConfiguration.php');
+$tokenBudget=$get('app/Domains/Marketing/Domain/MarketingAnalystTokenBudget.php');
+$ownerPlan=$get('symfony/src/Persistence/Marketing/MarketingAnalystPlanProposalService.php');
+foreach (['tokenBudget','configurationHash','token_budget'] as $marker) {
+    if (!str_contains($profile,$marker)) throw new RuntimeException('UX06 operator token contract missing: '.$marker);
+}
+foreach (['maxPromptTokens','maxTotalTokens','maxCompletionTokens','is_int','hard_cap_verified'] as $marker) {
+    if (!str_contains($tokenBudget,$marker)) throw new RuntimeException('UX06 exact token guard missing: '.$marker);
+}
+if (!str_contains($ownerPlan,'$workspaceConfigurationHash') || !str_contains($ownerPlan,'hash_equals')) {
+    throw new RuntimeException('UX06 plan does not pin the displayed runtime configuration');
 }
 echo "UX06 canonical AI workspace contract PASS.\n";

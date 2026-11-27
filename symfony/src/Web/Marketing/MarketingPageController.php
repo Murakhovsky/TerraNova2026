@@ -301,7 +301,9 @@ final readonly class MarketingPageController
             $adset=MarketingWorkspacePlanningInput::field($form,'adset_pin');
             $pin=$adset===''?[null,null]:MarketingWorkspacePlanningInput::analystPin($form,'adset_pin','mkas-');
             $this->analystPlans->propose($actor,$id,MarketingWorkspacePlanningInput::revision($form,'campaign_revision'),
-                $creative[0],$creative[1],$pin[0],$pin[1],MarketingWorkspacePlanningInput::field($form,'idempotency_key'));
+                $creative[0],$creative[1],$pin[0],$pin[1],MarketingWorkspacePlanningInput::field($form,'idempotency_key'),
+                workspaceConfigurationHash:array_key_exists('workspace_configuration_hash',$form)
+                    ? MarketingWorkspacePlanningInput::field($form,'workspace_configuration_hash') : null);
             return new RedirectResponse('/workspace/goals',303);
         }catch(DomainException $e){return new Response('Analyst plan denied: '.$e->getMessage(),422);}
         catch(Throwable $e){error_log('marketing.workspace.analyst_plan_failed '.$e::class);return new Response('Plan uncertain; inspect Goals.',503);}

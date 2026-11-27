@@ -26,8 +26,8 @@ final readonly class HermesAnalystExecutionFactory
         }
         $configuration->assertAccepted($org);
         $policy=new MarketingAnalystRecommendationPolicy();
-        $adapter=new HermesMarketingAnalystAdapter($this->contexts,$configuration->connection,$this->vault,$this->transport,$policy);
+        $adapter=new HermesMarketingAnalystAdapter($this->contexts,$configuration->connection,$this->vault,$this->transport,$policy,$configuration->tokenBudget);
         $runtime=new KernelBudgetedHermesAnalystRuntime($adapter,$configuration,$this->governance);
-        return new MarketingAnalystExecutionService($this->contexts,$runtime,$this->runs,$configuration->admission,$policy,$this->modules);
+        return new MarketingAnalystExecutionService($this->contexts,$runtime,$this->runs,$configuration->admission,$policy,$this->modules,$configuration->tokenBudget);
     }
 }

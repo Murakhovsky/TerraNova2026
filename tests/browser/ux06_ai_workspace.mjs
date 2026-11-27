@@ -40,10 +40,22 @@ const login = async (context, user, secret) => {
   assert(response?.status() === 200, 'Login unavailable');
   await page.locator('input[name="email"]').fill(user);
   await page.locator('input[name="password"]').fill(secret);
-  const submitted = page.waitForResponse(response => new URL(response.url()).pathname === '/auth/login'
-    && response.request().method() === 'POST');
-  await page.locator('button[type="submit"]').click();
-  const result = await submitted;
+  const submit = async () => {
+    const submitted = page.waitForResponse(response => new URL(response.url()).pathname === '/auth/login'
+      && response.request().method() === 'POST');
+    await page.locator('button[type="submit"]').click();
+    return submitted;
+  };
+  let result = await submit();
+  if (result.status() === 429 && env.GITHUB_ACTIONS === 'true') {
+    const seconds = Number(result.headers()['retry-after']);
+    assert(Number.isInteger(seconds) && seconds >= 1 && seconds <= 300, 'Invalid auth Retry-After');
+    await new Promise(resolve => setTimeout(resolve, (seconds + 1) * 1000));
+    await page.goto(url('/auth/login'), { waitUntil: 'domcontentloaded' });
+    await page.locator('input[name="email"]').fill(user);
+    await page.locator('input[name="password"]').fill(secret);
+    result = await submit();
+  }
   assert([302, 303].includes(result.status()), 'Disposable fixture login rejected');
   await page.waitForURL(location => !location.pathname.startsWith('/auth/login'));
   return page;
@@ -71,10 +83,14 @@ try {
   assert(await page.locator('#cos-hermes-journal').count() === 1, 'Native journal missing');
   assert(await page.locator('a[href="/workspace/goals"]').count() > 0, 'Canonical Goals unavailable');
   const forms = page.locator('form[action$="/analyst-plans"]');
+  if (env.UX06_E2E_EXPECT_BLOCKED === '1') {
+    assert(await forms.count() === 0, 'Unconfigured disposable tenant can propose Hermes work');
+  }
   if (await forms.count()) {
     assert(await forms.locator('input[name="csrf_token"]').count() === 1, 'Missing CSRF');
     assert(await forms.locator('input[name="campaign_revision"]').count() === 1, 'Missing revision pin');
     assert(await forms.locator('input[name="idempotency_key"]').count() === 1, 'Missing idempotency');
+    assert(/^[a-f0-9]{64}$/.test(await forms.locator('input[name="workspace_configuration_hash"]').inputValue()), 'Missing approved configuration pin');
   }
   pass('Owned context and governed Plan-or-blocked state', { delegationFormAvailable: await forms.count() === 1 });
 
@@ -101,6 +117,8 @@ try {
     'Foreign scope not explicitly withheld');
   assert(await page.locator('#cos-hermes-journal, form[action$="/analyst-plans"], .cos-agent-run').count() === 0,
     'Foreign campaign leaked evidence or delegation');
+  assert(!(await page.locator('[data-cos-ai-center]').textContent()).includes('UX06 PRIVATE FOREIGN campaign'),
+    'Foreign campaign name disclosed');
   const invalid = await page.goto(url('/workspace/ai?view=workspace&workspace=unknown&entity=marketing_campaign%3A' + campaign));
   assert(invalid?.status() === 200 && await page.locator('.cos-agent-warning[role="alert"]').count() > 0,
     'Invalid scope not withheld');

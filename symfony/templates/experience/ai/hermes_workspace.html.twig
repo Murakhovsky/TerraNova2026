@@ -5,14 +5,21 @@
         <div><dt>{{ 'Remote tools'|trans }}</dt><dd>{{ binding.runtime.tool_limit }} — {{ 'advisory only'|trans }}</dd></div>
         <div><dt>{{ 'Timeout per HTTP request'|trans }}</dt><dd>{{ binding.runtime.request_timeout_seconds }} s</dd></div>
         <div><dt>{{ 'Automatic retries'|trans }}</dt><dd>{{ binding.runtime.retry_limit }}</dd></div>
-        <div><dt>{{ 'Exact provider token budget'|trans }}</dt><dd>{{ 'Not verified'|trans }}</dd></div>
+        <div><dt>{{ 'Exact provider token budget'|trans }}</dt><dd>{{ 'Hard cap not live verified'|trans }}</dd></div>
+        {% if binding.runtime.token_limits is not null %}
+            <div><dt>{{ 'Configured prompt token limit'|trans }}</dt><dd>{{ binding.runtime.token_limits.max_prompt_tokens }}</dd></div>
+            <div><dt>{{ 'Configured completion token limit'|trans }}</dt><dd>{{ binding.runtime.token_limits.max_completion_tokens }}</dd></div>
+            <div><dt>{{ 'Configured total token limit'|trans }}</dt><dd>{{ binding.runtime.token_limits.max_total_tokens }}</dd></div>
+        {% else %}
+            <div><dt>{{ 'Exact token receipt checks'|trans }}</dt><dd>{{ 'Not configured for this legacy profile'|trans }}</dd></div>
+        {% endif %}
         <div><dt>{{ 'Remote cancellation'|trans }}</dt><dd>{{ 'Unavailable'|trans }}</dd></div>
         {% if binding.runtime.max_cost_usd is not null %}
             <div><dt>{{ 'Reserved cost ceiling'|trans }}</dt><dd>{{ binding.runtime.max_cost_usd }} USD / {{ 'turn'|trans }}</dd></div>
             <div><dt>{{ 'Daily turn limit'|trans }}</dt><dd>{{ binding.runtime.daily_run_limit }}</dd></div>
         {% endif %}
     </dl>
-    <p>{{ 'Budget allowance is not an invoice. Provider token limits and live isolation require operator acceptance.'|trans }}</p>
+    <p>{{ 'Budget allowance is not an invoice. Configured token ceilings validate reported usage; actual provider enforcement and live isolation require operator acceptance.'|trans }}</p>
     {% if binding.campaign is null %}
         {% if not binding.choices_available %}
             <p role="status">{{ 'Campaign list unavailable. Use Marketing manually.'|trans }}</p>
@@ -49,6 +56,7 @@
                     <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                     <input type="hidden" name="idempotency_key" value="mkt-analyst-plan-{{ planningKey }}">
                     <input type="hidden" name="campaign_revision" value="{{ binding.campaign.revision }}">
+                    <input type="hidden" name="workspace_configuration_hash" value="{{ binding.runtime.configuration_hash }}">
                     <label class="cos-field">
                         <span>{{ 'Creative revision'|trans }}</span>
                         <select name="creative_pin" class="cos-input" required>
@@ -70,6 +78,9 @@
                     <p>{{ 'Creates a Plan only. Independent Plan and Action approvals are required. No remote call or paid activation occurs here.'|trans }}</p>
                 </form>
             {% else %}
+                {% if binding.runtime.token_limits is null %}
+                    <p role="status">{{ 'AI Workspace delegation requires configured token ceilings and operator evidence. Manual Marketing remains available.'|trans }}</p>
+                {% endif %}
                 <p role="status">{{ 'Delegation blocked: check runtime readiness, draft status, creative revisions and session. No remote call attempted.'|trans }}</p>
             {% endif %}
         </section>
@@ -88,6 +99,14 @@
                         <p>{{ run.advice.rationale }}</p>
                         <p>{{ 'Advice references these source aliases'|trans }}: {{ run.advice.evidence|map(item => item.alias)|join(', ') }}.</p>
                         <p>{{ 'Native runtime response (not business execution proof)'|trans }}: <code>{{ run.advice.runtime_response_id }}</code></p>
+                        {% if run.advice.token_usage is defined %}
+                            <dl class="cos-ai-context-card__facts" aria-label="{{ 'Runtime-reported usage'|trans }}">
+                                <div><dt>{{ 'Prompt tokens'|trans }}</dt><dd>{{ run.advice.token_usage.prompt_tokens }} / {{ run.advice.token_usage.limits.max_prompt_tokens }}</dd></div>
+                                <div><dt>{{ 'Completion tokens'|trans }}</dt><dd>{{ run.advice.token_usage.completion_tokens }} / {{ run.advice.token_usage.limits.max_completion_tokens }}</dd></div>
+                                <div><dt>{{ 'Total tokens'|trans }}</dt><dd>{{ run.advice.token_usage.total_tokens }} / {{ run.advice.token_usage.limits.max_total_tokens }}</dd></div>
+                            </dl>
+                            <p>{{ 'Hermes-reported token counts were checked against the approved limits when recording this receipt. Not independently billed or live-cap verified.'|trans }}</p>
+                        {% endif %}
                     {% endif %}
                     <details>
                         <summary>{{ 'Evidence source revisions'|trans }}</summary>
@@ -103,6 +122,8 @@
             {% endif %}
             <a class="cos-button cos-button--ghost" href="/marketing/campaigns/{{ binding.campaign.id|url_encode }}" data-turbo-frame="_top">{{ 'Open owner journal for review or reconciliation'|trans }}</a>
             <a class="cos-button cos-button--ghost" href="/workspace/goals" data-turbo-frame="_top">{{ 'Inspect Plan, approvals and verified outcomes'|trans }}</a>
+            <p>{{ 'Before execution, use the canonical approval rejection in Control Center. An uncertain or running remote turn needs independent reconciliation; rejection is not remote cancellation.'|trans }}</p>
+            <a class="cos-button cos-button--ghost" href="/cos/control-center" data-turbo-frame="_top">{{ 'Open Control Center for pending approvals'|trans }}</a>
         </section>
     {% endif %}
 </section>

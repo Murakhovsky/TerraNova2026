@@ -137,20 +137,32 @@ try {
     $runs=new \Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingAnalystRunStore($pdo);
     $budget=new \Infrastructure\Llm\MysqlLlmGovernanceRepository($pdo);
     $pdo->prepare("INSERT INTO cos_llm_budgets (organization_id,currency,monthly_limit) VALUES (?,'USD',0.2500)")->execute([$org]);
-    $profiles=new \Domains\Marketing\Infrastructure\Hermes\HermesAnalystConfigurationRegistry(json_encode([$org=>[
+    $profileData=[
         'enabled'=>true,'profile_ref'=>'mkt-e2e','profile_url'=>'https://hermes.example.com/p/mkt-e2e',
         'credential_ref'=>'env://TEST_HERMES_SECRET','daily_run_limit'=>2,'cost_control_ref'=>'fixture-provider-cap',
-        'isolation_evidence_ref'=>'fixture-isolation','accepted_until'=>gmdate('Y-m-d\\TH:i:s\\Z',time()+86400),'max_cost_usd'=>'0.2500'
-    ]],JSON_THROW_ON_ERROR));
+        'isolation_evidence_ref'=>'fixture-isolation','accepted_until'=>gmdate('Y-m-d\\TH:i:s\\Z',time()+86400),'max_cost_usd'=>'0.2500',
+        'token_budget'=>['max_prompt_tokens'=>800,'max_completion_tokens'=>400,'max_total_tokens'=>1000,
+            'control_evidence_ref'=>'fixture-token-cap']
+    ];
+    $profiles=new \Domains\Marketing\Infrastructure\Hermes\HermesAnalystConfigurationRegistry(json_encode([$org=>$profileData],JSON_THROW_ON_ERROR));
     $vault=new class implements \Platform\Integration\Contract\CredentialVaultInterface{
         public function resolve(\Platform\Integration\Model\Credential $credential):array{return ['access_token'=>'fixture-token'];}
     };
     $transport=new class($budget,$org) implements \Domains\Marketing\Infrastructure\Hermes\HermesAnalystTransport {
         public int $posts=0;
         public int $reads=0;
+        public bool $invalidControls=false;
         public function __construct(private \Infrastructure\Llm\MysqlLlmGovernanceRepository $budget,private string $org){}
         public function get(string $url,string $token):array{
-            if($url!=='https://hermes.example.com/p/mkt-e2e/v1/toolsets'||$token!=='fixture-token')throw new RuntimeException('Unexpected fixture profile.');
+            if($token!=='fixture-token')throw new RuntimeException('Unexpected fixture credential.');
+            if($url==='https://hermes.example.com/p/mkt-e2e/v1/capabilities'){
+                ++$this->reads;
+                return ['object'=>'hermes.api_server.capabilities','platform'=>'hermes-agent',
+                    'auth'=>['type'=>'bearer','required'=>true],'features'=>[
+                        'run_submission'=>true,'run_status'=>true,'run_stop'=>$this->invalidControls?'true':true],
+                    'private_extra'=>'must-not-persist'];
+            }
+            if($url!=='https://hermes.example.com/p/mkt-e2e/v1/toolsets')throw new RuntimeException('Unexpected fixture profile.');
             ++$this->reads;return [];
         }
         public function post(string $url,string $token,string $key,array $payload):array{
@@ -163,7 +175,7 @@ try {
             if(str_contains($payload['messages'][1]['content'],'destination_url')||str_contains($payload['messages'][1]['content'],'fixture-token')){
                 throw new RuntimeException('Unnecessary data sent to runtime.');
             }
-            return ['id'=>'chatcmpl-marketing-e2e','choices'=>[['finish_reason'=>'stop','message'=>['role'=>'assistant',
+            return ['id'=>'chatcmpl-marketing-e2e','usage'=>['prompt_tokens'=>800,'completion_tokens'=>200,'total_tokens'=>1000,'private_extra'=>'must-not-persist'],'choices'=>[['finish_reason'=>'stop','message'=>['role'=>'assistant',
                 'content'=>json_encode(['context_hash'=>$facts['context_hash'],'recommendation'=>'Test a shorter headline',
                     'rationale'=>'Planning hypothesis without verified performance evidence','evidence_aliases'=>['creative']],JSON_THROW_ON_ERROR)]]]];
         }
@@ -246,6 +258,21 @@ try {
         &&!$remote['isolation_verified']&&!$remote['provider_cost_cap_verified']&&!$remote['release_authorized']
         &&$transport->reads===1&&$transport->posts===0&&$budget->monthlySpend($org,'USD')===0.0,
         'Remote preflight claimed acceptance or consumed generation budget.');
+    $unrequested=$preflight->inspect($org,false,true);
+    $assert($unrequested['status']==='BLOCKED'&&$transport->reads===1,'Run-control discovery executed without explicit remote probe.');
+    $controls=$preflight->inspect($org,true,true);
+    $assert($controls['status']==='REMOTE_PREFLIGHT_PASSED_NOT_ACCEPTED'
+        &&$controls['run_controls_probe_passed']
+        &&$controls['run_controls']===['run_submission'=>true,'run_status'=>true,'run_stop'=>true]
+        &&!$controls['remote_cancel_available']&&!$controls['provider_token_cap_verified']
+        &&!$controls['release_authorized']&&$transport->reads===3&&$transport->posts===0,
+        'Run-control discovery overclaimed cancellation authority or contacted a mutation path.');
+    $transport->invalidControls=true;
+    $invalidControls=$preflight->inspect($org,true,true);
+    $assert($invalidControls['status']==='BLOCKED'&&!$invalidControls['run_controls_probe_passed']
+        &&$invalidControls['run_controls']===null&&$transport->reads===5&&$transport->posts===0,
+        'Malformed run control advertisement was accepted.');
+    $transport->invalidControls=false;
     $transport->reads=0;
     $campaign=$campaigns->createDraft($org,$owner,(new \Domains\Marketing\Domain\MarketingDraftPolicy())->validate([
         'name'=>'Canonical analyst acceptance','business_objective'=>'Improve product headline',
@@ -274,6 +301,8 @@ try {
         &&$uxBefore->binding['journal_available']&&$uxBefore->binding['runs']===[]
         &&$uxBefore->binding['runtime']['tool_limit']===0&&$uxBefore->binding['runtime']['retry_limit']===0
         &&$uxBefore->binding['runtime']['request_timeout_seconds']===45
+        &&$uxBefore->binding['runtime']['token_limits']===['max_prompt_tokens'=>800,'max_completion_tokens'=>400,'max_total_tokens'=>1000]
+        &&$uxBefore->binding['runtime']['configuration_hash']===$profiles->forTenant($org)->configurationHash
         &&!$uxBefore->binding['runtime']['token_budget_verified']&&!$uxBefore->binding['runtime']['remote_cancel_available'],
         'UX06 readiness or capability boundary did not reflect the owner contract.');
     $foreignActor=new TenantContext(UserId::fromString($owner),OrganizationId::fromString('foreign-'.$token),
@@ -317,9 +346,35 @@ try {
         'UX06 unknown journal state was mistaken for an empty journal or enabled delegation.');
     $assert($transport->reads===0&&$transport->posts===0&&$budget->monthlySpend($org,'USD')===0.0,
         'UX06 inspection called Hermes or reserved a budget.');
-    $proposal=$planner->propose($actor,$campaignId,1,$creativeId,1,null,null,'mkt-goal-key-'.$token);
+    // Exact token contract: profile hash binds the operator declaration; a stale
+    // or downgraded selection cannot silently turn into a different Plan.
+    $strictHash=$profiles->forTenant($org)->configurationHash;
+    $reordered=$profileData;
+    $reordered['token_budget']=array_reverse($reordered['token_budget'],true);
+    $assert((new \Domains\Marketing\Infrastructure\Hermes\HermesAnalystRuntimeConfiguration($org,$reordered))->configurationHash===$strictHash,
+        'UX06 token declaration ordering changed the approved hash.');
+    $changed=$profileData;$changed['token_budget']['max_total_tokens']=999;
+    $assert((new \Domains\Marketing\Infrastructure\Hermes\HermesAnalystRuntimeConfiguration($org,$changed))->configurationHash!==$strictHash,
+        'UX06 token ceiling change did not invalidate approval.');
+    $invalid=$profileData;$invalid['token_budget']['max_total_tokens']='1000';
+    $deny(fn()=>new \Domains\Marketing\Infrastructure\Hermes\HermesAnalystRuntimeConfiguration($org,$invalid),'UX06 accepted a non-integer token ceiling.');
+    $legacy=$profileData;unset($legacy['token_budget']);
+    $legacyProfiles=new \Domains\Marketing\Infrastructure\Hermes\HermesAnalystConfigurationRegistry(json_encode([$org=>$legacy],JSON_THROW_ON_ERROR));
+    $legacyReadiness=new HermesAnalystReadinessService($legacyProfiles,$budget,$modules);
+    $legacyUx=(new HermesWorkspaceAdapter($legacyReadiness,$campaignService,$uxPlanning,$reviewService,$modules))->inspect($actor,$uxContext);
+    $assert($legacyReadiness->status($actor)['plan_available']&&$legacyUx->scopeResolved
+        &&!$legacyUx->binding['runtime']['plan_available']&&$legacyUx->binding['runtime']['token_limits']===null,
+        'UX06 legacy profile bypassed the strict token contract or owner compatibility was lost.');
+    $legacyPlanner=new MarketingAnalystPlanProposalService($db,$goals,$bridge,$contexts,$legacyReadiness);
+    $deny(fn()=>$legacyPlanner->propose($actor,$campaignId,1,$creativeId,1,null,null,'mkt-legacy-key-'.$token,
+        workspaceConfigurationHash:$legacyProfiles->forTenant($org)->configurationHash),
+        'UX06 accepted a legacy profile pin.');
+    $deny(fn()=>$planner->propose($actor,$campaignId,1,$creativeId,1,null,null,'mkt-stale-key-'.$token,
+        workspaceConfigurationHash:str_repeat('f',64)),'UX06 accepted stale configuration pin.');
+    $assert($transport->posts===0&&$transport->reads===0,'UX06 configuration admission contacted Hermes.');
+    $proposal=$planner->propose($actor,$campaignId,1,$creativeId,1,null,null,'mkt-goal-key-'.$token,workspaceConfigurationHash:$strictHash);
     $assert($proposal['state']==='proposed','Canonical Marketing Plan was not created.');
-    $replay=$planner->propose($actor,$campaignId,1,$creativeId,1,null,null,'mkt-goal-key-'.$token);
+    $replay=$planner->propose($actor,$campaignId,1,$creativeId,1,null,null,'mkt-goal-key-'.$token,workspaceConfigurationHash:$strictHash);
     $assert($replay['plan_id']===$proposal['plan_id']&&$replay['state']==='existing','Plan replay created a duplicate.');
     $goalId=$proposal['goal_id'];$planId=$proposal['plan_id'];
     $assert($transport->posts===0&&$transport->reads===0&&$runs->listRuns($org,$campaignId)===[],'Plan creation executed Hermes.');
@@ -419,11 +474,17 @@ try {
         &&$uxAfter->binding['runs'][0]['context_hash']===$native[0]['context_hash']
         &&$uxAfter->binding['runs'][0]['decision']==='ACCEPT'
         &&$uxAfter->binding['runs'][0]['advice']['runtime_response_id']==='chatcmpl-marketing-e2e'
+        &&$uxAfter->binding['runs'][0]['advice']['token_usage']['prompt_tokens']===800
+        &&$uxAfter->binding['runs'][0]['advice']['token_usage']['completion_tokens']===200
+        &&$uxAfter->binding['runs'][0]['advice']['token_usage']['total_tokens']===1000
+        &&$uxAfter->binding['runs'][0]['advice']['token_usage']['source']==='HERMES_REPORTED'
+        &&$uxAfter->binding['runs'][0]['advice']['token_usage']['hard_cap_verified']===false
         &&!$uxAfter->binding['runs'][0]['paid_activation_approved']
         &&!$uxAfter->binding['runs'][0]['finance_cost_confirmed']
         &&$uxAfterOutage->binding['journal_available']&&count($uxAfterOutage->binding['runs'])===1
         &&!$uxAfterOutage->binding['runtime']['plan_available'],'UX06 lost verified owner evidence or claimed execution authority.');
     $assert(!str_contains(json_encode($uxAfter->binding,JSON_THROW_ON_ERROR),'fixture-token')
+        &&!str_contains(json_encode($uxAfter->binding,JSON_THROW_ON_ERROR),'must-not-persist')
         &&$transport->reads===1&&$transport->posts===1,'UX06 readback leaked a credential or retried the remote call.');
     echo "UX06 Hermes scoped inspection, fail-closed outage, native evidence and independent Action outcome PASS.\n";
     // Native receipt tamper is deliberately introduced only in this disposable fixture.

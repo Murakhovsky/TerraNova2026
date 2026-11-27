@@ -43,7 +43,7 @@ final readonly class HermesWorkspaceAdapter implements AgentRuntimeAdapterInterf
             'runtime' => ['status' => 'UNAVAILABLE', 'max_cost_usd' => null,
                 'daily_run_limit' => null, 'plan_available' => false, 'live_verified' => false,
                 'tool_limit' => 0, 'retry_limit' => 0, 'request_timeout_seconds' => 45,
-                'token_budget_verified' => false, 'remote_cancel_available' => false],
+                'token_budget_verified' => false, 'token_limits' => null, 'configuration_hash' => null, 'remote_cancel_available' => false],
             'choices' => [], 'campaign' => null, 'creatives' => [], 'adsets' => [], 'runs' => [],
             'choices_available' => false, 'planning_available' => false, 'journal_available' => false,
         ];
@@ -75,7 +75,13 @@ final readonly class HermesWorkspaceAdapter implements AgentRuntimeAdapterInterf
             $binding['runtime']['status'] = $status['status'];
             $binding['runtime']['max_cost_usd'] = $status['max_cost_usd'];
             $binding['runtime']['daily_run_limit'] = $status['daily_run_limit'];
-            $binding['runtime']['plan_available'] = $status['plan_available'] === true;
+            $binding['runtime']['token_limits'] = $status['token_limits'];
+            $binding['runtime']['configuration_hash'] = $status['configuration_hash'];
+            // Older Marketing profiles still work in their owner flow, but the
+            // new AI Workspace requires a declared exact token contract.
+            $binding['runtime']['plan_available'] = $status['plan_available'] === true
+                && $status['token_limits'] !== null
+                && is_string($status['configuration_hash']);
         } catch (Throwable) {
             // Keep UNAVAILABLE, never display exception text or provider metadata.
         }

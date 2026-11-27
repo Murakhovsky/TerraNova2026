@@ -7,6 +7,7 @@ use Domains\Marketing\Application\Contract\MarketingAnalystRunStore;
 use Domains\Marketing\Application\Contract\MarketingAnalystRuntimePort;
 use Domains\Marketing\Domain\MarketingAnalystAdmissionPolicy;
 use Domains\Marketing\Domain\MarketingAnalystRecommendationPolicy;
+use Domains\Marketing\Domain\MarketingAnalystTokenBudget;
 use Domains\Marketing\Domain\MarketingPlanningPolicy;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Tenant\Model\TenantContext;
@@ -18,7 +19,8 @@ final readonly class MarketingAnalystExecutionService
 {
     public function __construct(private MarketingAnalystContextService $contexts,private MarketingAnalystRuntimePort $runtime,
         private MarketingAnalystRunStore $runs,private MarketingAnalystAdmissionPolicy $admission,
-        private MarketingAnalystRecommendationPolicy $recommendations,private ActiveModuleResolver $modules){}
+        private MarketingAnalystRecommendationPolicy $recommendations,private ActiveModuleResolver $modules,
+        private ?MarketingAnalystTokenBudget $tokenBudget=null){}
 
     /** @return array<string,mixed> */
     public function request(TenantContext $actor,string $campaignId,int $campaignRevision,string $creativeId,int $creativeRevision,
@@ -85,10 +87,16 @@ final readonly class MarketingAnalystExecutionService
             $aliases[]=$item['alias'];
         }
         // Reconstruct evidence from native context, never persist runtime-supplied record IDs.
-        return [...$this->recommendations->validate($envelope,[
+        $advice=[...$this->recommendations->validate($envelope,[
             'context_hash'=>$response['context_hash']??null,'recommendation'=>$response['recommendation']??null,
             'rationale'=>$response['rationale']??null,'evidence_aliases'=>$aliases
         ]),'runtime'=>'HERMES_AGENT','runtime_response_id'=>$id];
+        // Revalidate against the approved profile, not runtime-supplied limits,
+        // labels or claims. Legacy profiles retain their existing receipt shape.
+        if($this->tokenBudget!==null){
+            $advice['token_usage']=$this->tokenBudget->receipt($response['token_usage']??null);
+        }
+        return $advice;
     }
 
     private function publicReceipt(array $run):array
