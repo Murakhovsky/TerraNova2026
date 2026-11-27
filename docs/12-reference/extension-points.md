@@ -17,13 +17,13 @@ generated: true
 | `api.routes` | built-in | 0 |
 | `event.consumers` | module-defined | 2 |
 | `tenant.configuration` | built-in | 2 |
-| `web.actions` | module-defined | 1 |
+| `web.actions` | module-defined | 2 |
 | `web.commands` | module-defined | 8 |
 | `web.entity_links` | module-defined | 5 |
 | `web.navigation` | module-defined | 8 |
 | `web.search` | module-defined | 8 |
 | `web.workspace` | module-defined | 8 |
-| `web.workspace.extensions` | module-defined | 1 |
+| `web.workspace.extensions` | module-defined | 2 |
 
 ## `api.routes`
 
@@ -55,6 +55,7 @@ generated: true
 
 | Модуль | Service |
 | --- | --- |
+| `finance` | `financeNavigationContributor` |
 | `sales` | `salesNavigationContributor` |
 
 ## `web.commands`
@@ -135,6 +136,7 @@ generated: true
 
 | Модуль | Service |
 | --- | --- |
+| `finance` | `financeNavigationContributor` |
 | `sales` | `salesNavigationContributor` |
 
 ## Семантика реєстрації

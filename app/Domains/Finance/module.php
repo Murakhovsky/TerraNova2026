@@ -21,6 +21,8 @@ return [
             'web.search' => ['financeNavigationContributor'],
             'web.commands' => ['financeNavigationContributor'],
             'web.workspace' => ['financeNavigationContributor'],
+            'web.workspace.extensions' => ['financeNavigationContributor'],
+            'web.actions' => ['financeNavigationContributor'],
             'web.entity_links' => ['financeNavigationContributor'],
         ],
         'cross_domain_contracts' => [

@@ -3,6 +3,13 @@ declare(strict_types=1);
 
 namespace App\Web\Experience\Extension\Provider;
 
+use App\Web\Experience\Action\UIAction;
+use App\Web\Experience\Action\UIActionIntent;
+use App\Web\Experience\Action\UIActionPlacement;
+use App\Web\Experience\Extension\Contract\ActionProviderInterface;
+use App\Web\Experience\Extension\Contract\WorkspaceExtensionProviderInterface;
+use App\Web\Experience\Extension\Model\WorkspaceExtension;
+use App\Web\Experience\Workspace\WorkspaceSlot;
 use App\Web\Experience\Extension\Contract\CommandProviderInterface;
 use App\Web\Experience\Extension\Contract\EntityLinkProviderInterface;
 use App\Web\Experience\Extension\Contract\NavigationProviderInterface;
@@ -20,8 +27,8 @@ use App\Web\Experience\Unified\Business\BusinessRecordProvider;
 use App\Web\Experience\Unified\Business\WorkspaceCapabilityRead;
 use DomainException;
 
-/** Finance web surface is a read projection. Monetary writes remain approved Actions. */
-final readonly class FinanceWebProvider implements NavigationProviderInterface, SearchProviderInterface, CommandProviderInterface, WorkspaceProviderInterface, BusinessRecordProvider, EntityLinkProviderInterface
+/** Finance web surface projects native reads and internal drafts. Monetary writes remain approved Actions. */
+final readonly class FinanceWebProvider implements NavigationProviderInterface, SearchProviderInterface, CommandProviderInterface, WorkspaceProviderInterface, BusinessRecordProvider, EntityLinkProviderInterface, ActionProviderInterface, WorkspaceExtensionProviderInterface
 {
     public function __construct(private SearchResultMatcher $matcher,private WorkspaceCapabilityRead $read) {}
 
@@ -68,6 +75,34 @@ final readonly class FinanceWebProvider implements NavigationProviderInterface, 
             new WorkspaceDefinition('finance.budget','Budget envelopes',WorkspaceCapabilityRead::workspacePath('finance.budget'),'finance.budget',10),
             new WorkspaceDefinition('finance.payments','Order payment reconciliation',WorkspaceCapabilityRead::workspacePath('finance.payments'),'finance.order_payment',20),
         ];
+    }
+
+    public function actions(WebExtensionContext $context,?EntityRef $entity=null):array
+    {
+        // A dedicated form context—not a global action in every Workspace.
+        if ($entity!==null||$context->surface!=='workspace'||$context->activeItem!=='finance-budget-draft') return [];
+        $available=$this->draftAvailable($context);
+        return [new UIAction(
+            id:'finance.budget.draft.create',label:'Create budget draft',intent:UIActionIntent::Execute,
+            permission:'cos.tenant.manage',enabled:$available,
+            disabledReason:$available?null:'Canonical human command binding unavailable.',
+            command:'finance.budget.envelope.draft.create',
+            placements:[UIActionPlacement::WORKSPACE_PRIMARY,UIActionPlacement::MOBILE_PRIMARY],
+        )];
+    }
+
+    public function extensions(WebExtensionContext $context,string $workspaceId):array
+    {
+        if ($workspaceId!=='finance.budget') return [];
+        return [new WorkspaceExtension($workspaceId,WorkspaceSlot::Sidebar,
+            'experience/unified/business/finance_budget_draft_link.html.twig',10,
+            ['createAvailable'=>$this->draftAvailable($context)])];
+    }
+
+    private function draftAvailable(WebExtensionContext $context):bool
+    {
+        return $this->read->offersHumanCommand($context,'finance.budget.envelope.draft.create')
+            &&$this->read->offersReadQuery($context,'marketing.campaign.get');
     }
 
     public function supportsRecords(string $workspaceId):bool

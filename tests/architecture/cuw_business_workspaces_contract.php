@@ -14,6 +14,10 @@ foreach (['TenantPermissions::MANAGE',"'read_only'","'query'","'trusted_read'",'
 foreach (['SessionCsrfValidator','UIActionResolver','expected_revision','idempotency_key','sales.order.lifecycle.read',"'human_ui'","'unknown'"] as $part) {
     if(!str_contains($confirm,$part))throw new RuntimeException('Missing command fence '.$part);
 }
+$draft=$get('symfony/src/Web/Experience/Unified/Business/FinanceBudgetDraftController.php');
+foreach (['SessionCsrfValidator','UIActionResolver','marketing.campaign.get','finance.budget.envelope.get',"'human_ui'","'DRAFT'","'reserved_minor'","'committed_minor'"] as $part) {
+    if(!str_contains($draft,$part))throw new RuntimeException('Missing Finance draft fence '.$part);
+}
 foreach (['Finance','Marketing','ProductManagement','Property','Sales'] as $domain) {
     $manifest=require $root.'/app/Domains/'.$domain.'/module.php';
     $services=$manifest['contributions']['extension_services'];

@@ -49,6 +49,19 @@ final readonly class WorkspaceCapabilityRead
         }
     }
 
+    /** Availability checks are metadata only; the exact source read is repeated on POST. */
+    public function offersReadQuery(WebExtensionContext $context,string $capability):bool
+    {
+        try {
+            $entry=$this->gateway->describe($this->actor($context),$capability);
+            return ($entry['status']??null)==='read_only'
+                &&($entry['contract']['kind']??null)==='query'
+                &&($entry['contract']['side_effect_level']??null)==='none';
+        } catch (DomainException) {
+            return false;
+        }
+    }
+
     private function actor(WebExtensionContext $context):\Kernel\Tenant\Model\TenantContext
     {
         $actor = $this->tenants->current();

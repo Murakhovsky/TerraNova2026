@@ -27,6 +27,7 @@ $presentation=[
     'marketing.campaign.search'=>'/workspace/unified/business/marketing.campaigns',
     'marketing.campaign.get'=>'/workspace/unified/business/marketing.campaigns',
     'marketing.campaign.create'=>'/marketing/campaigns',
+    'finance.budget.envelope.draft.create'=>'/workspace/unified/business/finance.budget/new',
     'finance.budget.envelope.list'=>'/workspace/unified/business/finance.budget',
     'finance.budget.envelope.get'=>'/workspace/unified/business/finance.budget',
     'finance.budget.reservation.list'=>'/workspace/unified/business/finance.budget',

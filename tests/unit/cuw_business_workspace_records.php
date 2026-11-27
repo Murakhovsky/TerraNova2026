@@ -70,6 +70,7 @@ $fixtures=[
     'query:sales.order.read'=>['order'=>['order_id'=>$id,'status'=>'placed']],
     'query:finance.order.financial_evidence.read'=>['evidence'=>null],
     'query:finance.order.payment.operations.read'=>['order_id'=>$id,'operations'=>[['operation_id'=>'pay-op','kind'=>'capture','amount'=>'12.00','state'=>'pending_registration']],'has_more'=>false],
+    'command:finance.budget.envelope.draft.create'=>['id'=>$budget,'state'=>'DRAFT','revision'=>1],
     'command:property.asset.create'=>['asset_id'=>'must-not-run'],
 ];
 $adapters=[];
@@ -97,6 +98,12 @@ $denied=static function(callable $run):void{
     try{$run();}catch(DomainException){return;}
     throw new RuntimeException('Unauthorized workspace read reached adapter.');
 };
+$draftContext=new WebExtensionContext('tenant-a','manager','workspace','workspaces','finance-budget-draft');
+$check($finance->actions($ctx)===[]&&$finance->actions($draftContext,new EntityRef('finance.budget',$budget))===[],'Budget draft command escaped its dedicated form context.');
+$draftActions=$finance->actions($draftContext);
+$check(count($draftActions)===1&&$draftActions[0]->command==='finance.budget.envelope.draft.create'&&$draftActions[0]->enabled,'Missing canonical Finance draft UIAction.');
+$check(count($finance->extensions($ctx,'finance.budget'))===1&&$finance->extensions($ctx,'finance.payments')===[],'Finance form link escaped its Workspace.');
+$check($adapters['command:finance.budget.envelope.draft.create']->calls===0,'Presentation dispatched a Finance draft.');
 $page=$pm->records($ctx,'pm.catalog','',2);
 $check(count($page['items'])===20&&$page['has_more']&&$adapters['query:product_management.product.search']->last['offset']===20,'Native pagination lost.');
 $entity=new EntityRef('product_management.product',$id);

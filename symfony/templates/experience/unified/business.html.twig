@@ -34,7 +34,7 @@
           <label for="cos-uw-business-q">{{ 'uw.business.filter_label'|trans }}</label>
           <input id="cos-uw-business-q" name="q" type="search" maxlength="120" value="{{ query }}" class="cos-input">
           <div class="cos-uw__row">
-            <label for="cos-uw-sort">{{ 'uw.business.sort'|trans }}</label>
+            <label for="cos-uw-sort">{{ nativeRecords ? ('Sort on current page'|trans({}, 'cuw_business')|trans) : ('uw.business.sort'|trans) }}</label>
             <select id="cos-uw-sort" class="cos-input" name="sort">
               <option value="relevance" {% if sort == 'relevance' %}selected{% endif %}>{{ 'uw.business.relevance'|trans }}</option>
               <option value="label" {% if sort == 'label' %}selected{% endif %}>{{ 'uw.business.name'|trans }}</option>
@@ -88,7 +88,7 @@
             {{ 'uw.business.result_count'|trans }} {{ results|length }}
           </p>
           {% if view == 'list' and results is not empty %}
-            <div class="table-responsive" data-cos-business-results role="region" aria-label="{{ 'uw.business.records'|trans }}" tabindex="0">
+            <div class="table-responsive cos-uw__responsive-records" data-cos-business-results role="region" aria-label="{{ 'uw.business.records'|trans }}" tabindex="0">
               <table class="table">
                 <thead><tr><th scope="col">{{ 'uw.business.name'|trans }}</th><th scope="col">{{ 'Details'|trans({}, 'cuw_business')|trans }}</th><th scope="col">{{ 'uw.business.actions'|trans }}</th></tr></thead>
                 <tbody>
@@ -241,7 +241,7 @@
           <a class="cos-button cos-button--primary" href="{{ selectedUrl }}">{{ 'uw.business.open_canonical'|trans }}</a>
         {% elseif workspace.definition.path != path('cos_unified_business_workspace',{workspaceId:workspace.definition.id}) %}
           <a class="cos-button cos-button--ghost" href="{{ workspace.definition.path }}">{{ 'uw.business.domain'|trans }}</a>
-        {% else %}
+        {% elseif not workspace.hasSlot('sidebar') %}
           <p class="cos-card__copy" role="status">{{ 'No direct command form is available here. Governed changes require approved execution.'|trans({}, 'cuw_business')|trans }}</p>
         {% endif %}
       </section>

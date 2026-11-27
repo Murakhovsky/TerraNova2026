@@ -252,6 +252,7 @@ try {
   const restrictedEmail = process.env.UX00_E2E_RESTRICTED_EMAIL || '';
   const restrictedPassword = process.env.UX00_E2E_RESTRICTED_PASSWORD || '';
   assert(restrictedEmail && restrictedPassword, 'S2-N: missing restricted fixture');
+  let restrictedStorage, restrictedCsrf;
   const restrictedCtx = await browser.newContext({ viewport: { width: 390, height: 844 } });
   try {
     const restrictedPage = await login(restrictedCtx, restrictedEmail, restrictedPassword);
@@ -259,6 +260,8 @@ try {
     assert(access?.status() === 200, 'S2-N: buyer account lacks legitimate account access');
     const buyerToken = await restrictedPage.locator('input[name="csrf_token"]').first().inputValue();
     assert(buyerToken.length > 10, 'S2-N: no valid buyer-session CSRF token');
+    restrictedStorage=await restrictedCtx.storageState();
+    restrictedCsrf=buyerToken;
     const deniedPage = await restrictedCtx.request.get(abs('/workspace/capabilities'));
     const deniedCatalog = await restrictedCtx.request.get(abs('/api/v1/capabilities'));
     assert(deniedPage.status() === 403 && deniedCatalog.status() === 403,
@@ -946,21 +949,74 @@ try {
   }
   try {
     await page.setViewportSize({width:1440,height:1000});
-    const product = await invoke(admin,'product_management.product.create',
-      {name:'CUW E Product '+uid,sku:'CUWE-'+uid,type:'stock'},csrf,'cuwe-product-'+uid);
-    const productId=product.data?.product_id;
-    assert(product.ok&&/^[a-f0-9]{32}$/.test(productId||''),'CUW-E native product draft missing');
-    const campaign = await invoke(admin,'marketing.campaign.create',
-      {name:'CUW E Campaign '+uid,business_objective:'CI local read projection',brief:'No provider execution',product_refs:[productId]},
-      csrf,'cuwe-campaign-'+uid);
-    const campaignId=campaign.data?.id;
-    assert(campaign.ok&&/^mkt-[a-f0-9]{24}$/.test(campaignId||''),'CUW-E native campaign draft missing');
-    const budget = await invoke(admin,'finance.budget.envelope.draft.create',
-      {name:'CUW E Budget '+uid,source_domain:'marketing',source_ref:campaignId,currency:'EUR',
-        period_start:'2026-11-01',period_end:'2026-12-31',limit_minor:10000},
-      csrf,'cuwe-budget-'+uid);
-    const budgetId=budget.data?.id;
-    assert(budget.ok&&/^finb-[a-f0-9]{24}$/.test(budgetId||''),'CUW-E native budget draft missing');
+    // Use the existing native Product and Marketing forms from the canonical
+    // Workspace routes, then read the results independently through Capability.
+    const productPage=await page.goto(abs('/product-management'),{waitUntil:'domcontentloaded'});
+    assert(productPage?.status()===200,'CUW-E native Product catalog unavailable');
+    const productForm=page.locator('form[method="post"][action="/product-management/products"]');
+    assert(await productForm.count()===1,'CUW-E native Product create form unavailable');
+    const productCreate=await admin.request.post(abs('/product-management/products'),{form:{
+      csrf_token:await productForm.locator('input[name="csrf_token"]').inputValue(),
+      idempotency_key:await productForm.locator('input[name="idempotency_key"]').inputValue(),
+      name:'CUW E Product '+uid,sku:'CUWE-'+uid,type:'stock',uom:'pcs',track_inventory:'1'
+    },maxRedirects:0});
+    const productId=(productCreate.headers()['location']||'').match(/products\/([a-f0-9]{32})/)?.[1];
+    assert(productCreate.status()===303&&productId,'CUW-E native Product form failed');
+    const product=await invoke(admin,'product_management.product.get',{product_id:productId},csrf);
+    assert(product.data?.product?.product_id===productId,'CUW-E native product independent readback failed');
+    await page.goto(abs('/marketing/campaigns'),{waitUntil:'domcontentloaded'});
+    const campaignForm=page.locator('form[method="post"][action="/marketing/campaigns"]');
+    assert(await campaignForm.count()===1,'CUW-E native Marketing create form unavailable');
+    const campaignCreate=await admin.request.post(abs('/marketing/campaigns'),{form:{
+      csrf_token:await campaignForm.locator('input[name="csrf_token"]').inputValue(),
+      idempotency_key:await campaignForm.locator('input[name="idempotency_key"]').inputValue(),
+      name:'CUW E Campaign '+uid,business_objective:'CI local read projection',brief:'No provider execution',product_refs:productId
+    },maxRedirects:0});
+    const campaignId=(campaignCreate.headers()['location']||'').match(/campaigns\/(mkt-[a-f0-9]{24})/)?.[1];
+    assert(campaignCreate.status()===303&&campaignId,'CUW-E native Marketing form failed');
+    const campaign=await invoke(admin,'marketing.campaign.get',{id:campaignId},csrf);
+    assert(campaign.data?.campaign?.id===campaignId,'CUW-E native campaign independent readback failed');
+    add('CUWE.native_product_marketing_forms',{product_id:productId,campaign_id:campaignId});
+
+    await page.goto(abs('/workspace/unified/business/finance.budget'),{waitUntil:'domcontentloaded'});
+    const budgetPath='/workspace/unified/business/finance.budget/new';
+    const draftLink=page.locator('a[href="'+budgetPath+'"]');
+    assert(await draftLink.count()===1,'CUW-E Finance draft link missing');
+    await draftLink.click();
+    const budgetForm=page.locator('[data-cos-budget-draft-form]');
+    await budgetForm.waitFor({state:'visible'});
+    const budgetPost={csrf_token:await budgetForm.locator('input[name="csrf_token"]').inputValue(),
+      idempotency_key:await budgetForm.locator('input[name="idempotency_key"]').inputValue(),
+      name:'CUW E Budget '+uid,source_ref:campaignId,currency:'EUR',period_start:'2026-11-01',
+      period_end:'2026-12-31',limit_minor:'10000'};
+    const budgetBad=await admin.request.post(abs(budgetPath),{form:{...budgetPost,csrf_token:'bad'},maxRedirects:0});
+    assert(budgetBad.status()===403,'CUW-E Finance draft accepted invalid CSRF');
+    const budgetWrong=await admin.request.post(abs(budgetPath),{form:{...budgetPost,source_ref:'mkt-'+'f'.repeat(24)},maxRedirects:0});
+    assert(budgetWrong.status()===422,'CUW-E Finance draft accepted unavailable source');
+    const budgetInvalid=await admin.request.post(abs(budgetPath),{form:{...budgetPost,limit_minor:'-1'},maxRedirects:0});
+    assert(budgetInvalid.status()===422,'CUW-E Finance accepted negative budget');
+    for(const field of ['name','source_ref','currency','period_start','period_end','limit_minor']){
+      await budgetForm.locator('input[name="'+field+'"]').fill(budgetPost[field]);
+    }
+    const [budgetResponse]=await Promise.all([
+      page.waitForResponse(r=>r.request().method()==='POST'&&new URL(r.url()).pathname===budgetPath),
+      budgetForm.locator('button[type="submit"]').click()
+    ]);
+    assert(budgetResponse.status()===200,'CUW-E Finance draft returned '+budgetResponse.status());
+    const budgetReceipt=page.locator('[data-cos-budget-draft-verified]');
+    await budgetReceipt.waitFor({state:'visible'});
+    const budgetId=await budgetReceipt.getAttribute('data-cos-budget-draft-verified');
+    assert(/^finb-[a-f0-9]{24}$/.test(budgetId||''),'CUW-E verified native budget missing');
+    const budget=await invoke(admin,'finance.budget.envelope.get',{id:budgetId},csrf);
+    assert(budget.data?.envelope?.state==='DRAFT'&&budget.data.envelope.revision===1
+      &&budget.data.envelope.reserved_minor===0&&budget.data.envelope.committed_minor===0,
+      'CUW-E draft activated, reserved or committed a budget');
+    const budgetReplay=await admin.request.post(abs(budgetPath),{form:budgetPost,maxRedirects:0});
+    assert(budgetReplay.status()===200&&(await budgetReplay.text()).includes('data-cos-budget-draft-verified="'+budgetId+'"'),
+      'CUW-E Finance draft replay did not reconcile original receipt');
+    assert(sqlExecute("SELECT COUNT(*) FROM cos_finance_budget_envelopes WHERE organization_id='default' AND name='"+budgetPost.name+"'")==='1',
+      'CUW-E Finance duplicate budget draft or invalid submission wrote');
+    add('CUWE.finance_human_draft_and_receipt',{budget_id:budgetId,revision:1,csrf:'denied',invalid:'denied',replay:'verified',reserved:0,committed:0});
     const order=await invoke(admin,'sales.order.create',
       {currency:'EUR',lines:[{sku:'CUWE-'+uid,title:'CI native order',quantity:1,unit_price:'12.00'}],total:'12.00'},
       csrf,'cuwe-order-'+uid);
@@ -981,11 +1037,16 @@ try {
       assert(selected?.status()===200&&await page.locator('[data-cos-selected-entity="'+type+':'+id+'"] [data-cos-business-summary] .cos-entity-summary__item').count()>0,
         'CUW-E exact detail unavailable: '+workspace);
       await page.setViewportSize({width:390,height:844});
+      assert(await page.locator(locator).evaluate(el=>getComputedStyle(el).display)==='grid','CUW-E mobile list is not laid out as entity cards: '+workspace);
       const overflow=await page.evaluate(()=>Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-document.documentElement.clientWidth);
       assert(overflow<=2,'CUW-E mobile overflow for '+workspace+': '+overflow);
       await page.screenshot({path:evidenceDir+'/cuw-e-'+workspace.replace('.','-')+'-mobile.png',animations:'disabled'});
       await page.setViewportSize({width:1440,height:1000});
-      add('CUWE.native_list_detail_mobile.'+workspace,{entity_id:id,document_overflow:overflow});
+      const unavailable=type+':'+(type==='finance.budget'?'finb-'+'f'.repeat(24):type==='marketing.campaign'?'mkt-'+'f'.repeat(24):'f'.repeat(32));
+      const forbidden=await page.goto(abs('/workspace/unified/business/'+workspace+'?q='+encodeURIComponent(query)+'&selected='+encodeURIComponent(unavailable)),{waitUntil:'domcontentloaded'});
+      assert(forbidden?.status()===200&&await page.locator('[data-cos-selected-entity]').count()===0&&await page.locator('[data-cos-order-confirm]').count()===0,
+        'CUW-E unavailable selection exposed detail or mutation: '+workspace);
+      add('CUWE.native_list_detail_mobile.'+workspace,{entity_id:id,document_overflow:overflow,unavailable_selection:'denied'});
     }
     // Explicit human confirmation, not payment, stock/fulfillment or provider execution.
     await page.goto(abs('/workspace/unified/business/sales.order?q='+orderId+'&selected=sales.order:'+orderId),{waitUntil:'domcontentloaded'});
@@ -999,6 +1060,19 @@ try {
     const confirmationUrl=abs('/workspace/unified/business/sales.order/confirm');
     const bad=await admin.request.post(confirmationUrl,{form:{...post,csrf_token:'bad'},maxRedirects:0});
     assert(bad.status()===403,'CUW-E order confirmation accepted invalid CSRF');
+    const buyer=await browser.newContext({storageState:restrictedStorage});
+    try {
+      for(const [workspace,type,id] of samples){
+        const forbidden=await buyer.request.get(abs('/workspace/unified/business/'+workspace+'?selected='+encodeURIComponent(type+':'+id)),{maxRedirects:0});
+        assert(forbidden.status()===403,'CUW-E buyer accessed active workspace '+workspace);
+      }
+      const deniedBudget=await buyer.request.post(abs(budgetPath),{form:{...budgetPost,csrf_token:restrictedCsrf,idempotency_key:'cuw-'+'d'.repeat(32)},maxRedirects:0});
+      const deniedOrder=await buyer.request.post(confirmationUrl,{form:{...post,csrf_token:restrictedCsrf},maxRedirects:0});
+      assert(deniedBudget.status()===403&&deniedOrder.status()===403,'CUW-E buyer executed a controlled command');
+      const beforeConfirm=await invoke(admin,'sales.order.lifecycle.read',{order_id:orderId},csrf);
+      assert(beforeConfirm.data?.status==='placed'&&beforeConfirm.data.revision===1,'CUW-E denied buyer changed order');
+      add('CUWE.active_workspace_and_commands_buyer_denied',{role:'buyer',workspaces:samples.length,budget:403,order:403});
+    } finally {await buyer.close();}
     await confirmForm.locator('input[name="confirm"]').check();
     const [confirmationResponse]=await Promise.all([
       page.waitForResponse(response=>response.request().method()==='POST'&&new URL(response.url()).pathname.endsWith('/sales.order/confirm')),

@@ -1,0 +1,4 @@
+cos_cuw_finance_budget_draft:
+  path: /workspace/unified/business/finance.budget/new
+  controller: App\Web\Experience\Unified\Business\FinanceBudgetDraftController::draft
+  methods: [GET, POST]

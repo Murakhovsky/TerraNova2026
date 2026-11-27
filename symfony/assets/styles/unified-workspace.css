@@ -27,3 +27,14 @@
 @media(max-width:650px){.cos-uw__business-grid{display:block}.cos-uw__business-grid > aside{margin-top:var(--cos-space-5)}.cos-uw__tabs{max-width:100%;overflow-x:auto}}
 
 .cos-uw__relations{list-style:none;margin:0;padding:0;display:grid;gap:var(--cos-space-3)}
+
+/* UX03 business list: preserve a single server-rendered entity tree, but lay
+   each table row out as an accessible card on narrow viewports. */
+@media(max-width:650px){
+  .cos-uw__responsive-records{overflow:visible}
+  .cos-uw__responsive-records table,.cos-uw__responsive-records tbody{display:block;width:100%;min-width:0}
+  .cos-uw__responsive-records thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  .cos-uw__responsive-records tbody tr{display:grid;gap:var(--cos-space-2);margin-block:var(--cos-space-3);padding:var(--cos-space-3);border:1px solid var(--cos-color-border);border-radius:var(--cos-radius-md);min-width:0}
+  .cos-uw__responsive-records tbody th,.cos-uw__responsive-records tbody td{display:block;min-width:0;border:0;padding:0;white-space:normal;overflow-wrap:anywhere}
+  .cos-uw__responsive-records .cos-uw__row{flex-wrap:wrap}
+}
