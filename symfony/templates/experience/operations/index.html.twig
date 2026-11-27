@@ -11,6 +11,9 @@
         <nav class="cos-uw__row" aria-label="Розділи">
             <a class="cos-button cos-button--ghost" href="{{ path('cos_web_activity_center') }}" data-turbo-frame="_top">Activity</a>
             <a class="cos-button cos-button--ghost" href="{{ path('cos_federation_goals_index') }}">Goals</a>
+            <a class="cos-button cos-button--ghost" href="{{ path('cos_ux05_operations',{source:'approval',status:'waiting_approval',mode:mode}) }}">Approvals</a>
+            <a class="cos-button cos-button--ghost" href="{{ path('cos_ux05_operations',{source:'workflow',mode:mode}) }}">Workflow Monitor</a>
+            <a class="cos-button cos-button--ghost" href="{{ path('cos_workflow_recovery_worklist') }}">Recovery worklist (read-only)</a>
             {% if admin %}<a class="cos-button cos-button--ghost" href="{{ path('cos_web_cos_control_center') }}">Audit / Control Center</a>{% endif %}
         </nav>
     </header>

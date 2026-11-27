@@ -5,6 +5,7 @@ namespace App\Web\Operations;
 
 use App\Application\Operations\Command\OperationsMutationCommand;
 use App\Persistence\Federation\FederationExperiencePreferenceStore;
+use App\Persistence\Federation\FederationGoalStore;
 use App\Security\SessionCsrfValidator;
 use App\Web\Experience\Adaptive\ExperienceMode;
 use App\Web\Experience\Extension\EntityLinkResolver;
@@ -41,6 +42,8 @@ final readonly class OperationsCenterController
         private SessionCsrfValidator $csrf,
         private CommandBusInterface $commands,
         private Environment $twig,
+        private FederationGoalStore $goals,
+        private OperationsRecoveryRead $recovery,
     ) {}
 
     public function index(Request $request): Response
@@ -64,13 +67,29 @@ final readonly class OperationsCenterController
                 $entity = EntityRef::fromKey($key);
             } catch (\InvalidArgumentException) { return new Response('Invalid entity context.', 400); }
         }
-        $snapshot = $this->snapshots->read($actor, $entity, $correlation, $source, $selected);
+        $cursorValue = (string)$request->query->get('cursor', '');
+        try { $cursor = OperationsHistoryCursor::decode($cursorValue); }
+        catch (\InvalidArgumentException) { return new Response('Invalid history cursor.', 400); }
         $statusFilter = OperationStatus::tryFrom((string)$request->query->get('status', ''));
-        if ($statusFilter !== null) {
-            $snapshot['rows'] = array_values(array_filter($snapshot['rows'], static fn(array $r): bool => $r['status'] === $statusFilter));
-        }
+        $snapshot = $this->snapshots->read($actor, $entity, $correlation, $source, $selected, $cursor, $statusFilter);
         $detail = $snapshot['detail'];
         $actions = $detail !== null ? $this->decisions->available($actor, $context, $detail) : [];
+        $outcome = null; $outcomeUnavailable = false;
+        if ($detail !== null && $detail['source'] === 'workflow' && $detail['goal'] !== null) {
+            try {
+                // Persisted, run-scoped domain contract. No evaluation is triggered by a GET.
+                $evaluation = $this->goals->latestTrustedEvaluation($actor, $detail['id']);
+                if ($evaluation !== null) {
+                    $outcome = ['result'=>$evaluation['result'], 'id'=>$evaluation['evaluation_id'],
+                        'recorded'=>$evaluation['recorded_at']];
+                }
+            } catch (Throwable) { $outcomeUnavailable = true; }
+        }
+        $recovery = null; $recoveryUnavailable = false;
+        if ($detail !== null && $detail['source'] === 'workflow' && $detail['status']->needsAttention()) {
+            try { $recovery = $this->recovery->inspect($actor, $detail); }
+            catch (Throwable) { $recoveryUnavailable = true; }
+        }
         $entityUrl = null;
         if ($detail !== null && $detail['entity'] !== null) {
             try {
@@ -85,7 +104,9 @@ final readonly class OperationsCenterController
             'snapshot'=>$snapshot, 'mode'=>$mode->value, 'statusFilter'=>$statusFilter?->value ?? '',
             'statuses'=>OperationStatus::cases(), 'source'=>$source, 'sources'=>OperationsSnapshot::SOURCES,
             'entity'=>$entity?->key() ?? '', 'correlation'=>$correlation, 'selected'=>$selected,
+            'cursor'=>$cursorValue, 'outcome'=>$outcome, 'outcomeUnavailable'=>$outcomeUnavailable,
             'actions'=>$actions, 'entityUrl'=>$entityUrl,
+            'recovery'=>$recovery, 'recoveryUnavailable'=>$recoveryUnavailable,
             'topic'=>$this->topics->organization($actor->organizationId()->value()),
             'csrfToken'=>$this->csrf->token($request), 'admin'=>$actor->isAdmin() && $actor->allows(TenantPermissions::ADMIN),
         ]), 200, ['Cache-Control'=>'no-store, private','X-Robots-Tag'=>'noindex, nofollow','Content-Type'=>'text/html; charset=UTF-8']);

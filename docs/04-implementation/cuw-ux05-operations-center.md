@@ -73,3 +73,95 @@ Test scripts: `php tests/unit/cuw_ux05_operation_status.php`,
 Local environment has no PHP/Composer; JS syntax and git whitespace checks only.
 CI and integrated runtime/browser acceptance are outstanding. This is a start
 of the independent workstream, **not** D3/D4/D5 or completed Issue #520.
+
+## Iteration 2 — independent workstream B1–B8
+
+This paragraph supersedes the initial 50-record history limitation above.
+The registry now uses a per-source keyset cursor on immutable
+`created_at,id`, 50 records per source plus one lookahead. A deep link is
+independent of the history page. A cursor is navigation data, not an authority:
+each SQL page and direct lookup still binds the authenticated organization.
+Exhausted sources are skipped; unavailable sources retain their cursor when
+another page exists. The UI explicitly reports empty filtered pages, and
+provides next and first-page navigation. Correlation and exact EntityRef
+(Action/approval/Agent/import/Goal) are applied before pagination; import
+correlation is joined only by the native Action idempotency key AND native batch
+target. Pending approvals have a pre-pagination predicate with expiry and
+Action lifecycle guards. Other projected status filters and async EntityRef
+are evaluated after the current page; users can advance to older pages.
+
+Workflow detail projects the persisted step list against the immutable
+definition's checked digest and canonical dependency graph. Dependency/step
+mismatches fail closed. Prerequisite state, revision, attempt, effect level and
+receipt reference are displayed without exposing input, claim token, or
+idempotency key. Action detail includes up to 101 recent attempts (status,
+receipt identity, timing, error presence); Agent detail links its tenant-owned
+Actions; Product import exposes recorded per-row receipt key, product identity
+and safe error code. Goal and native import/Workflow/Action links retain the
+tenant boundary. A completed state is never upgraded based on a receipt
+reference alone.
+
+Selected non-healthy Workflow details use the same canonical recovery
+inspection as the existing API, including the kernel Agent/Tool variant and
+the expected Run revision. The projection displays disposition/reason and
+up to 50 recorded recovery requests, with the native worklist, inspect and
+request-history GET links. No request, approval, apply or retry is issued from
+GET. Canonical recovery retains its two-person CAS and no-external-replay
+contract. Approval inbox exposes assignee, expiry and decision identity/time;
+the existing resolver and authority still gate each POST on a fresh canonical
+row and CSRF. A critical approval requiring step-up remains unavailable;
+a checkbox is not step-up authentication.
+
+Business outcome is separate: selected Goal-linked Workflow reads
+`FederationGoalStore::latestTrustedEvaluation` (stored run-scoped
+`domain_read_model_v1` only). Displays historical result, evaluation ID and
+recording time, or explicit absence/unavailability. No evaluator or domain
+writer is called by the page. This does not attest undocumented domains,
+non-Goal jobs, or currently changed business facts.
+
+Realtime now coalesces invalidations during an in-flight read and defers them
+while a decision form is focused. Missing SSR content, partial evidence,
+timeout or offline never grants a live badge. A successful polling refresh
+without a signal remains stale (realtime not attested). The controller unit
+simulation covers repeated signals, missing or partial snapshots, offline and
+reconnect, watchdog timeout, and focused decision forms.
+
+### Integrator-owned prerequisites and remaining acceptance
+
+| Area | Implemented on independent branch | Remaining before acceptance |
+|---|---|---|
+| B1 registry | Keyset history, six canonical sources, exact detail, correlation/EntityRef/Goal | Real MySQL pagination, performance/index plans, unmigrated legacy and other native imports decision; status and async EntityRef search currently traverse pages |
+| B2 Workflow | Revision, attempts, pinned dependencies and blockers, step receipt details | Actual durable Workflow, concurrent transitions, missing/drifted receipt fixture |
+| B3 execution control | Read-only canonical recovery assessment/history and existing queue/recovery source links | Shared UIAction contracts for eligible retry and recovery request/approve/apply, admission and independent approval; no direct retry button in UX-05 |
+| B4 approvals | Pending inbox before pagination, assignee/expiry/history, authority/CSRF/reread gated actions | Canonical server-backed critical step-up contract, concurrent duplicate submission fixture |
+| B5 outcomes | Stored trusted Goal evaluation, separate technical evidence and per-item receipt IDs | Additional domain-specific outcome contracts and live staging native readback; no business-success inference |
+| B6 realtime | Signal + SSR, polling, partial/offline/focus/race unit simulation | Actual private Mercure reconnect/provider-down browser proof |
+| B7 integration | Isolated route, canonical shell, links to Activity, Goals, privileged Audit/Control, workflow/approval/recovery | Integrator adds shared shell nav and shared UX-04/06 trigger/notification descriptors; verifies tenant firewall and service wiring |
+| B8 acceptance | PHP status/snapshot/history/step tests; JS simulation; staging read-only browser test | PHP/Composer/DB, safe write fixture for approve/reject and recovery CAS, CI same integrated SHA, mobile 390px, staging D5 |
+
+Integrator must register new retry/recovery UIActions through the existing
+registry/resolver with exact resource ID and tenant/actor permission checks,
+using the existing command/API contracts only. Recheck eligibility and CAS
+revision on POST. Critical confirmation must use the existing server-backed
+step-up mechanism when available; no synthetic step-up. Preserve no replay
+when the external effect is uncertain. Do not expose direct Action/queue
+replay merely because a row is marked FAILED or canRetry.
+
+Local executable checks:
+- `node tests/unit/cuw_ux05_realtime.mjs`: passed.
+- `node --input-type=module --check < symfony/assets/controllers/operations_snapshot_controller.js`: passed.
+- `node --check tests/browser/cuw_ux05_operations.mjs`: passed (syntax only).
+- `git diff --check`: passed.
+- PHP tests and Symfony Twig/DI lint: not executable in this workspace (PHP
+  and Composer absent). Browser script requires a disposable staging
+  environment, manager/member in tenant A, a known foreign operation from
+  tenant B, and fixture approval ID. Configure `UX05_E2E_*` according to the
+  script and run `node tests/browser/cuw_ux05_operations.mjs`; captures 390px
+  result/process/expert screenshots and tests role/tenant isolation, invalid
+  CSRF, offline/reconnect without successful mutations. This is a test plan
+  and runnable harness, not proof of executed browser acceptance.
+- Integrator should wire the JS simulation into the combined CI gate; existing
+  PHP unit discovery does not include mjs. No shared CI/config modifications.
+
+No D3/D4/D5 or Issue closure claimed. No remote publication or deployment
+included in this iteration.

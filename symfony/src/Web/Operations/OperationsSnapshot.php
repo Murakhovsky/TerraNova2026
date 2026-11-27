@@ -28,19 +28,36 @@ final readonly class OperationsSnapshot
         private WorkflowExecutionStoreInterface $workflows,
     ) {}
 
-    public function read(TenantContext $actor, ?EntityRef $entity, string $correlation, string $source, string $selected): array
+    public function read(TenantContext $actor, ?EntityRef $entity, string $correlation, string $source, string $selected, array $cursor = [], ?OperationStatus $status = null): array
     {
         self::authorize($actor);
         $org = $actor->organizationId()->value();
-        $rows = []; $unavailable = []; $detail = null; $detailUnavailable = false;
+        $rows = []; $unavailable = []; $detail = null; $detailUnavailable = false; $next = []; $more = false;
         foreach (self::SOURCES as $kind) {
             if ($source !== '' && $source !== $kind) continue;
+            if (array_key_exists($kind, $cursor) && $cursor[$kind] === null) {
+                $next[$kind] = null;
+                continue;
+            }
             try {
-                foreach ($this->source($org, $kind) as $row) {
-                    if (self::matches($row, $entity, $correlation)) $rows[$row['key']] = $row;
+                $raw = $this->canonical->rows($org, $kind, 51, null, $cursor[$kind] ?? null, $correlation, $entity, $status);
+                $page = array_slice($raw, 0, 50);
+                foreach ($page as $record) {
+                    $projected = in_array($kind, ['agent','async'], true)
+                        ? $this->source($org, $kind, (string)$record['id'])
+                        : [$this->canonicalRow($org, $kind, $record)];
+                    foreach ($projected as $row) {
+                        if (self::matches($row, $entity, $correlation) && ($status === null || $row['status'] === $status)) $rows[$row['key']] = $row;
+                    }
                 }
+                $last = end($page);
+                $next[$kind] = count($raw) > 50
+                    ? ['date'=>(string)$last['created_at'], 'id'=>(string)$last['id']] : null;
+                $more = $more || $next[$kind] !== null;
             } catch (Throwable $e) {
                 $unavailable[] = $kind;
+                // Preserve an unavailable source's cursor instead of silently losing its history.
+                if (isset($cursor[$kind])) $next[$kind] = $cursor[$kind];
                 error_log('cos.operations.snapshot.unavailable '.$kind.' '.$e::class);
             }
         }
@@ -51,10 +68,10 @@ final readonly class OperationsSnapshot
                 try {
                     $candidate = $this->source($org, $kind, $id)[0] ?? null;
                     if ($candidate !== null && self::matches($candidate, $entity, $correlation)) {
-                        $items = $this->items($org, $kind, $id);
                         $detail = $candidate;
-                        $detail['items'] = $items;
-                        $rows[$detail['key']] = $candidate;
+                        $detail['items'] = [];
+                        $detail['items'] = $this->items($org, $kind, $id);
+                        // A direct detail does not change the archive window or its cursor.
                     }
                 } catch (Throwable $e) {
                     $detailUnavailable = true;
@@ -66,7 +83,8 @@ final readonly class OperationsSnapshot
         usort($rows, static fn(array $a, array $b): int =>
             [$b['status']->needsAttention(), $b['updated'], $b['key']] <=> [$a['status']->needsAttention(), $a['updated'], $a['key']]);
         return ['rows'=>$rows, 'unavailable'=>$unavailable, 'detail'=>$detail,
-            'detailUnavailable'=>$detailUnavailable, 'updated'=>new \DateTimeImmutable()];
+            'detailUnavailable'=>$detailUnavailable, 'updated'=>new \DateTimeImmutable(),
+            'nextCursor'=>$more ? OperationsHistoryCursor::encode($next) : ''];
     }
 
     public function one(TenantContext $actor, string $kind, string $id): ?array
@@ -85,17 +103,18 @@ final readonly class OperationsSnapshot
 
     private static function matches(array $row, ?EntityRef $entity, string $correlation): bool
     {
-        return ($entity === null || $row['entity']?->key() === $entity->key())
+        return ($entity === null || $row['entity']?->key() === $entity->key()
+                || ($entity->type === 'goal' && ($row['goal'] ?? null) === $entity->id))
             && ($correlation === '' || $row['correlation'] === $correlation);
     }
 
-    private function source(string $org, string $kind, ?string $id = null): array
+    private function source(string $org, string $kind, string $id): array
     {
         if ($kind === 'agent') {
-            $values = $id === null ? $this->agents->recentForOrganization($org, 50) : array_filter([$this->agents->find($org, $id)]);
+            $values = array_filter([$this->agents->find($org, $id)]);
             $rows = [];
             foreach ($values as $run) {
-                if ($run->organizationId !== $org) continue;
+                if ($run->organizationId !== $org || $run->id !== $id) continue;
                 $rows[] = $this->row($kind, [
                     'id'=>$run->id, 'title'=>$run->agentName, 'native_status'=>$run->status->value,
                     'target_type'=>$run->subjectType, 'target_id'=>$run->subjectId,
@@ -108,10 +127,10 @@ final readonly class OperationsSnapshot
             return $rows;
         }
         if ($kind === 'async') {
-            $values = $id === null ? $this->async->recentForOrganization($org, 50) : array_filter([$this->async->find($org, $id)]);
+            $values = array_filter([$this->async->find($org, $id)]);
             $rows = [];
             foreach ($values as $job) {
-                if ($job->organizationId !== $org) continue;
+                if ($job->organizationId !== $org || $job->id !== $id) continue;
                 $rows[] = $this->row($kind, [
                     'id'=>$job->id, 'title'=>$job->type, 'native_status'=>$job->status->value,
                     'target_type'=>$job->entityType, 'target_id'=>$job->entityId,
@@ -124,21 +143,23 @@ final readonly class OperationsSnapshot
             }
             return $rows;
         }
-        $rows = [];
-        foreach ($this->canonical->rows($org, $kind, 50, $id) as $raw) {
-            if ($kind === 'workflow' && $raw['native_status'] === 'completed' && $raw['title'] === 'federation.approved-plan') {
-                try {
-                    $proof = $this->canonical->workflowProof($org, (string)$raw['id']);
-                    $raw['verified'] = ($proof['status'] ?? '') === 'verified'
-                        && (int)($proof['total_steps'] ?? 0) > 0
-                        && $proof['verified_steps'] === $proof['total_steps'];
-                } catch (Throwable) {
-                    $raw['verified'] = false;
-                }
+        return array_map(fn(array $raw): array => $this->canonicalRow($org, $kind, $raw),
+            $this->canonical->rows($org, $kind, 50, $id));
+    }
+
+    private function canonicalRow(string $org, string $kind, array $raw): array
+    {
+        if ($kind === 'workflow' && $raw['native_status'] === 'completed' && $raw['title'] === 'federation.approved-plan') {
+            try {
+                $proof = $this->canonical->workflowProof($org, (string)$raw['id']);
+                $raw['verified'] = ($proof['status'] ?? '') === 'verified'
+                    && (int)($proof['total_steps'] ?? 0) > 0
+                    && (int)$proof['verified_steps'] === (int)$proof['total_steps'];
+            } catch (Throwable) {
+                $raw['verified'] = false;
             }
-            $rows[] = $this->row($kind, $raw);
         }
-        return $rows;
+        return $this->row($kind, $raw);
     }
 
     private function row(string $kind, array $raw): array
@@ -169,21 +190,49 @@ final readonly class OperationsSnapshot
             'revision'=>$raw['revision'] ?? null, 'risk'=>$raw['risk_level'] ?? null,
             'progress'=>$progress, 'total'=>$total, 'done'=>$done, 'attempt'=>$raw['attempt'] ?? null,
             'receipt'=>$raw['receipt_id'] ?? null, 'receiptStatus'=>$raw['receipt_status'] ?? null,
-            'actionId'=>$raw['action_id'] ?? null, 'approvalId'=>$raw['approval_id'] ?? null,
+            'actionId'=>$raw['action_id'] ?? null, 'approvalId'=>$raw['approval_id'] ?? null, 'linkedRun'=>$raw['linked_run'] ?? null,
+            'approver'=>trim(($raw['approver_type'] ?? '').' '.($raw['approver_id'] ?? '')),
+            'expires'=>$raw['expires_at'] ?? null, 'decided'=>$raw['decided_at'] ?? null,
+            'decidedBy'=>trim(($raw['decided_by_type'] ?? '').' '.($raw['decided_by_id'] ?? '')),
             'retryScheduled'=>$raw['retry_scheduled'] ?? false, 'canRetry'=>$raw['can_retry'] ?? false,
-            'hasError'=>$raw['has_error'] ?? false,
+            'hasError'=>(bool)($raw['has_error'] ?? false),
         ];
     }
 
     private function items(string $org, string $kind, string $id): array
     {
         if ($kind === 'workflow') {
-            return array_map(static fn($s): array => ['title'=>$s->capabilityId, 'native'=>$s->state, 'receipt'=>$s->resultReference],
-                $this->workflows->steps(new WorkflowRunIdentity($org, $id)));
+            $steps = $this->workflows->steps(new WorkflowRunIdentity($org, $id));
+            $graph = $this->canonical->workflowGraph($org, $id);
+            $states = [];
+            foreach ($steps as $step) $states[$step->stepId] = $step->state;
+            if (count($graph) !== count($states) || array_diff_key($graph, $states) !== []) {
+                throw new \DomainException('Pinned graph and execution steps differ.');
+            }
+            return array_map(static fn($s): array => [
+                'title'=>$s->stepId.' · '.$s->capabilityId, 'native'=>$s->state,
+                'receipt'=>$s->resultReference, 'attempt'=>$s->attempts, 'revision'=>$s->revision,
+                'dependencies'=>$graph[$s->stepId],
+                'blockers'=>array_values(array_filter($graph[$s->stepId],
+                    static fn(string $dependency): bool => ($states[$dependency] ?? '') !== 'completed')),
+                'effect'=>$s->sideEffectLevel,
+            ], $steps);
+        }
+        if ($kind === 'action') {
+            return array_map(static fn(array $r): array => [
+                'title'=>'Attempt '.$r['attempt'], 'native'=>$r['status'], 'receipt'=>(string)$r['id'],
+                'started'=>$r['started_at'], 'finished'=>$r['finished_at'], 'hasError'=>(bool)$r['has_error'],
+            ], $this->canonical->actionAttempts($org,$id));
+        }
+        if ($kind === 'agent') {
+            return array_values(array_map(static fn($a): array => [
+                'title'=>$a->type,'native'=>$a->status->value,'receipt'=>null,'operation'=>'action:'.$a->id,
+            ], array_filter($this->agents->actionsForRun($org,$id),
+                static fn($a): bool=>$a->organizationId === $org && $a->runId === $id)));
         }
         if ($kind === 'import') {
             return array_map(static fn(array $r): array => ['title'=>($r['row_no'].' · '.($r['sku'] ?? '')), 'native'=>$r['status'],
-                'receipt'=>$r['product_id'], 'error'=>$r['error_code']], $this->canonical->importItems($org, $id));
+                'receipt'=>$r['receipt_key'], 'error'=>$r['error_code'], 'product'=>$r['product_id']], $this->canonical->importItems($org, $id));
         }
         return [];
     }
