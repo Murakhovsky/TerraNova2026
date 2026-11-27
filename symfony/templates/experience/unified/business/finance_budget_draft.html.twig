@@ -12,7 +12,7 @@
     {% else %}
       {% if error %}<p class="cos-alert" role="alert">{{ error|trans({}, 'cuw_business')|trans }}</p>{% endif %}
       {% if retryAllowed %}
-      <form method="post" action="{{ path('cos_cuw_finance_budget_draft') }}" class="cos-page__stack" data-turbo="false" data-cos-budget-draft-form>
+      <form method="post" action="{{ path('cos_cuw_finance_budget_create') }}" class="cos-page__stack" data-turbo="false" data-cos-budget-draft-form>
         <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
         <input type="hidden" name="idempotency_key" value="{{ idempotencyKey }}">
         <label>{{ 'Budget name'|trans({}, 'cuw_business')|trans }} <input class="cos-input" name="name" minlength="3" maxlength="190" value="{{ form.name }}" required></label>

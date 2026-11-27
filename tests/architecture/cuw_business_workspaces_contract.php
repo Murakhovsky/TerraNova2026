@@ -31,4 +31,10 @@ foreach (['Finance','Marketing','ProductManagement','Property','Sales'] as $doma
     }
 }
 if(!str_contains($get('symfony/config/routes/cuw_sales_order.yaml'),'methods: [POST]'))throw new RuntimeException('Command must be POST only.');
+$financeRoute=$get('symfony/config/routes/cuw_finance_budget.yaml');
+$financePage=$get('resources/experience/pages/finance/budget-draft.yaml');
+if(!str_contains($financeRoute,'methods: [GET, HEAD]')||!str_contains($financeRoute,'methods: [POST]')
+    ||!str_contains($financePage,'cos_cuw_finance_budget_draft')||!str_contains($financePage,'status: CONTRACTED')) {
+    throw new RuntimeException('Finance requires separate contracted GET and governed POST.');
+}
 echo "CUW-E registered providers and canonical human command boundary PASS.\n";
