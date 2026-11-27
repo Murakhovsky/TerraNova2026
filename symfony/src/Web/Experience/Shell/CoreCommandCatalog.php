@@ -8,6 +8,8 @@ use Kernel\Tenant\Contract\TenantContextProviderInterface;
 use Kernel\Tenant\Model\TenantPermissions;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 
+final readonly class CoreCommandCatalog
+{
     public function __construct(private ?TenantContextProviderInterface $tenants = null) {}
 
     public function canOpenOperations(WebExtensionContext $context): bool
@@ -21,8 +23,6 @@ use App\Web\Experience\Extension\Model\WebExtensionContext;
             && $actor->allows(TenantPermissions::MANAGE);
     }
 
-final readonly class CoreCommandCatalog
-{
     /** @return list<ShellCommandItem> */
     public function commands(WebExtensionContext $context): array
     {

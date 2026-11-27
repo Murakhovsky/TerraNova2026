@@ -3,13 +3,23 @@
 declare(strict_types=1);
 
 $root = dirname(__DIR__, 2);
-require $root . '/symfony/vendor/autoload.php';
+// Unit tests also run before Symfony dependencies are installed in Runtime CI.
+$autoload = $root . '/symfony/vendor/autoload.php';
+if (is_file($autoload)) {
+    require $autoload;
+} else {
+    require $root . '/vendor/autoload.php';
+    spl_autoload_register(static function (string $name) use ($root): void {
+        if (!str_starts_with($name, 'App\\')) return;
+        $path = $root . '/symfony/src/' . str_replace('\\', '/', substr($name, 4)) . '.php';
+        if (is_file($path)) require $path;
+    });
+}
 
 use App\Web\Experience\Component\CosDataGrid;
 use App\Web\Experience\Component\CosOutcomeState;
 use App\Web\Experience\Component\CosProgress;
 use App\Web\Experience\Data\DataGridState;
-use Symfony\Component\Yaml\Yaml;
 
 function requireCondition(bool $condition, string $message): void
 {
@@ -18,8 +28,20 @@ function requireCondition(bool $condition, string $message): void
     }
 }
 
-$en = Yaml::parseFile($root . '/symfony/translations/cuw_quality.en.yaml');
-$uk = Yaml::parseFile($root . '/symfony/translations/cuw_quality.uk.yaml');
+// Flat translation catalog is validated without requiring Symfony/Yaml in host fast CI.
+$readLocale = static function (string $file): array {
+    $values = [];
+    foreach (file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [] as $line) {
+        if (!preg_match('/^([a-z][a-z0-9_.-]*):[ \\t]+"(.*)"[ \\t]*$/u', $line, $match)) {
+            throw new RuntimeException('Unexpected CUW quality catalog format: ' . $file);
+        }
+        if (isset($values[$match[1]])) throw new RuntimeException('Duplicate locale key: ' . $match[1]);
+        $values[$match[1]] = $match[2];
+    }
+    return $values;
+};
+$en = $readLocale($root . '/symfony/translations/cuw_quality.en.yaml');
+$uk = $readLocale($root . '/symfony/translations/cuw_quality.uk.yaml');
 requireCondition(array_keys($en) === array_keys($uk), 'UK/EN key parity');
 $states = [
     'loading', 'empty', 'disabled', 'error', 'permission_denied', 'queued', 'running',

@@ -1,11 +1,19 @@
-# CUW-B · UX-05 Operations Center — initial vertical slice
+---
+title: UX-05 · Центр виконання COS
+description: Технічна реалізація, контрольовані дії, статуси й докази інтеграції Operations Center.
+status: active
+updated: 2026-11-27
+kind: implementation
+---
+
+# CUW-B · UX-05 Центр виконання — початкова вертикальна реалізація
 
 Issue #520; parent #518. Pinned base: `10fc649df6aafdca432ec329ebd737f6a4abd1ec`.
 Normative references: Master Spec §10, §19, §20, AC-02/04/06/07/08/11/16;
 existing async-operations-platform, realtime-platform, unified-action-platform,
 cos-execution-contract-consolidation-p0, audit-history, UX-01/02/03 ADRs.
 
-## Reuse / adapt / new
+## Повторне використання, адаптація та нові компоненти
 
 - **Reuse:** tenant manager/access/manage policy, AgentRunReadModelInterface,
   AsyncOperationReadModelInterface, WorkflowExecutionStoreInterface (step read),
@@ -20,7 +28,7 @@ cos-execution-contract-consolidation-p0, audit-history, UX-01/02/03 ADRs.
   snapshot refresh controller and contract tests; no migration, table, worker, scheduler,
   alternate execution authority, or external provider activation.
 
-## Route and integration ownership
+## Відповідальність за маршрути та інтеграцію
 
 `/workspace/operations` is protected by the existing workspace firewall and
 explicit controller role/permission checks. The new *isolated* route resource is
@@ -30,7 +38,7 @@ entry pointing at this route; confirm route and DI registration; add functional,
 browser and DB acceptance coverage to combined gates. Rollback: remove route /
 navigation, no persisted business state or schema changes.
 
-## Status contract
+## Контракт статусів виконання
 
 - Proposed/staged/waiting are blocked or queued as native semantics permit.
 - Approval pending is not Action execution; expired/invalid lifecycle is blocked.
@@ -46,7 +54,7 @@ navigation, no persisted business state or schema changes.
   or provider secret surfaced. Result/Process/Expert use the same rows and
   approvals, critical statuses always visible.
 
-## Evidence and remaining gates
+## Докази та залишкові критерії приймання
 
 | AC / area | Initial implementation | Verification still required |
 |---|---|---|
@@ -74,7 +82,7 @@ Local environment has no PHP/Composer; JS syntax and git whitespace checks only.
 CI and integrated runtime/browser acceptance are outstanding. This is a start
 of the independent workstream, **not** D3/D4/D5 or completed Issue #520.
 
-## Iteration 2 — independent workstream B1–B8
+## Ітерація 2 — незалежні етапи B1–B8
 
 This paragraph supersedes the initial 50-record history limitation above.
 The registry now uses a per-source keyset cursor on immutable
@@ -126,7 +134,7 @@ without a signal remains stale (realtime not attested). The controller unit
 simulation covers repeated signals, missing or partial snapshots, offline and
 reconnect, watchdog timeout, and focused decision forms.
 
-### Integrator-owned prerequisites and remaining acceptance
+### Передумови інтегратора та залишкове приймання
 
 | Area | Implemented on independent branch | Remaining before acceptance |
 |---|---|---|
@@ -166,7 +174,7 @@ Local executable checks:
 No D3/D4/D5 or Issue closure claimed. No remote publication or deployment
 included in this iteration.
 
-## Iteration 3 — fenced recovery UIAction contribution and complete status candidate filtering
+## Ітерація 3 — контрольоване відновлення та фільтрація статусів
 
 This supersedes the earlier statement that UX-05 contains only read-only
 recovery diagnostics. The independent branch now includes the actual
@@ -213,7 +221,7 @@ Twig nor the POST controller can synthesize/enable an unregistered descriptor.
   typed projection and is checked per page. Receipt links to canonical Action
   and native Product are available in step/import detail, not as proof by fiat.
 
-### Required shared integration (in parent integrator PR only)
+### Обов’язкова спільна інтеграція (лише в PR інтегратора)
 
 Register `App\Web\Operations\OperationsRecoveryActionProvider` (service ID
 `operationsRecoveryActionProvider`) with the shared UIActionRegistry, consistently
@@ -230,7 +238,7 @@ Critical approval requires a genuine server-backed step-up authorization
 contract; generic queue replay requires explicit safe owner classification.
 Neither is invented in UX-05.
 
-### Acceptance artifacts added in this iteration
+### Артефакти приймання поточної ітерації
 
 - `php tests/unit/cuw_ux05_recovery_actions.php`: tests stable/stale revisions,
   independent approval, duplicate/request lifecycle, receipt/mode denial,
@@ -258,7 +266,7 @@ explicit safe queue retry classification, full domain outcome coverage,
 integrated CI and staging evidence at exact SHA. No merge/deploy or Issue
 closure claimed.
 
-## Iteration 4 — complete import item inspection and integrator handoff
+## Ітерація 4 — детальна перевірка імпорту та передача інтегратору
 
 The independent stream now pages all durable Product import rows, not just
 the first 100. The keyset cursor is the immutable native row number, scoped

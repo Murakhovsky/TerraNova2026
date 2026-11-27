@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use App\Web\Experience\Extension\Contract\ActionProviderInterface;
 namespace App\Web\Experience\Action;
 
+use App\Web\Experience\Extension\Contract\ActionProviderInterface;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Extension\WebExtensionCatalog;
 use App\Web\Experience\Model\EntityRef;
