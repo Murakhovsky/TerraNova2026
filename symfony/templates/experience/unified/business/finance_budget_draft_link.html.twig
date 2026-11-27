@@ -1,0 +1,7 @@
+<h2 class="cos-card__title">{{ 'Create budget draft'|trans({}, 'cuw_business')|trans }}</h2>
+{% if createAvailable %}
+  <a class="cos-button cos-button--primary" href="{{ path('cos_cuw_finance_budget_draft') }}">{{ 'Create budget draft'|trans({}, 'cuw_business')|trans }}</a>
+{% else %}
+  <p role="status" class="cos-card__copy">{{ 'Canonical human command binding unavailable.'|trans({}, 'cuw_business')|trans }}</p>
+{% endif %}
+<p class="cos-card__copy">{{ 'Only an internal draft is created; no budget is activated, reserved or spent.'|trans({}, 'cuw_business')|trans }}</p>

@@ -39,6 +39,10 @@ final readonly class ProviderBackedShellNavigation
             new NavigationContribution('administration', 'Administration', '/admin/content', 'AD', 70),
             new NavigationContribution('content', 'Content', '/admin/content', priority: 20, parentKey: 'administration'),
         ];
+        if ($this->coreCommands->canOpenOperations($context)) {
+            $contributions[] = new NavigationContribution('operations', 'Центр виконання', '/workspace/operations', 'OP', 35);
+        }
+
 
         if (in_array($context->role, ['manager', 'admin'], true)) {
             $contributions[] = new NavigationContribution(

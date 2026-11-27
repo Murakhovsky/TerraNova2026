@@ -58,10 +58,13 @@ final readonly class MysqlMarketingCampaignRepository implements MarketingCampai
         return is_array($row) ? self::normalize($row) : null;
     }
 
-    public function search(string $organizationId, string $query = '', int $limit = 50): array
+    public function search(string $organizationId, string $query = '', int $limit = 50, int $offset = 0): array
     {
-        $stmt=$this->connection->prepare('SELECT id,owner_id,name,business_objective,brief,product_refs_json,status,revision,created_at,updated_at FROM marketing_campaigns WHERE organization_id=? AND name LIKE ? ORDER BY updated_at DESC,id DESC LIMIT '.(int)$limit);
-        $stmt->execute([$organizationId,'%'.str_replace(['%','_'],['\%','\_'],$query).'%']);
+        if($organizationId===''||$limit<1||$limit>100||$offset<0||$offset>200000||mb_strlen($query)>180)throw new DomainException('Invalid campaign page.');
+        $stmt=$this->connection->prepare("SELECT id,owner_id,name,business_objective,brief,product_refs_json,status,revision,created_at,updated_at
+            FROM marketing_campaigns WHERE organization_id=? AND BINARY organization_id=BINARY ? AND name LIKE ? ESCAPE '!'
+            ORDER BY updated_at DESC,id DESC LIMIT ".$limit.' OFFSET '.$offset);
+        $stmt->execute([$organizationId,$organizationId,'%'.strtr($query,['!'=>'!!','%'=>'!%','_'=>'!_']).'%']);
         return array_map(self::normalize(...),$stmt->fetchAll(PDO::FETCH_ASSOC));
     }
 

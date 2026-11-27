@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Web\Experience\Action;
 
+use App\Web\Experience\Extension\Contract\ActionProviderInterface;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Extension\WebExtensionCatalog;
 use App\Web\Experience\Model\EntityRef;
@@ -14,6 +15,8 @@ final readonly class UIActionRegistry
     public function __construct(
         private WebExtensionCatalog $extensions,
         private RuntimeUIActionProvider $runtimeActions,
+        /** @var iterable<ActionProviderInterface> */
+        private iterable $platformProviders = [],
     ) {
     }
 
@@ -26,6 +29,11 @@ final readonly class UIActionRegistry
             ...$this->extensions->forContext($context)->actions($entity),
             ...$this->runtimeActions->actions($context, $entity),
         ];
+        // Platform-wide capabilities are not conditional on a domain module manifest.
+        foreach ($this->platformProviders as $provider) {
+            array_push($sources, ...$provider->actions($context, $entity));
+        }
+
 
         foreach ($sources as $action) {
             if (isset($byId[$action->id])) {

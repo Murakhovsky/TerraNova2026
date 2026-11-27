@@ -14,6 +14,7 @@ final readonly class ExperienceComposition
      * @param list<UIAction> $primaryActions
      * @param list<UIAction> $secondaryActions
      * @param list<array<string,mixed>> $decisionRequests
+     * @param list<string> $activeTriggers
      * @param list<array<string,mixed>> $blockingRisks
      */
     public function __construct(
@@ -26,6 +27,7 @@ final readonly class ExperienceComposition
         public array $decisionRequests,
         public array $blockingRisks,
         public string $schemaVersion = '1.0.0',
+        public array $activeTriggers = [],
     ) {
     }
 

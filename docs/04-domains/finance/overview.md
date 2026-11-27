@@ -38,7 +38,7 @@ FROZEN --[approved release]--> RELEASED reservation
 
 Модуль декларує чотири Action types: `finance.budget.envelope.activate`, `finance.budget.reservation.reserve`, `finance.budget.reservation.release` та `finance.budget.envelope.freeze`. Для кожного діє `PolicyDecision::ApprovalRequired` і canonical Kernel Action/Policy/Approval runtime. Окремого executor немає.
 
-Чернетка й читання конвертів доступні виключно менеджеру tenant через три типізовані Gateway-контракти: `finance.budget.envelope.draft.create`, `finance.budget.envelope.get`, `finance.budget.reservation.list`. AI/CRON не можуть викликати прямі фінансові зміни.
+Чернетка й читання конвертів доступні виключно менеджеру tenant через типізовані Gateway-контракти: `finance.budget.envelope.draft.create`, `finance.budget.envelope.get`, `finance.budget.envelope.list`, `finance.budget.reservation.list`. AI/CRON не можуть викликати прямі фінансові зміни.
 
 ## Структура й докази
 

@@ -1,0 +1,52 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+{% block title %}Operations Center | COS{% endblock %}
+{% block workspace_content %}
+<section class="cos-page__stack" data-controller="operations-snapshot"
+    data-action="online@window->operations-snapshot#online offline@window->operations-snapshot#offline cos:realtime-update->operations-snapshot#signal turbo:frame-load->operations-snapshot#loaded turbo:fetch-request-error->operations-snapshot#failed turbo:frame-missing->operations-snapshot#failed">
+    <header class="cos-card">
+        <p class="cos-card__eyebrow">COS / Operations</p>
+        <h1 class="cos-card__title">Центр виконання</h1>
+        <p>Операції, рішення, черги, помилки та докази виконання в одному місці.</p>
+        <p role="status" aria-live="polite" data-operations-snapshot-target="state">Знімок даних · realtime не підтверджено</p>
+        <nav class="cos-uw__row" aria-label="Розділи">
+            <a class="cos-button cos-button--ghost" href="{{ path('cos_web_activity_center') }}" data-turbo-frame="_top">Activity</a>
+            <a class="cos-button cos-button--ghost" href="{{ path('cos_federation_goals_index') }}">Goals</a>
+            <a class="cos-button cos-button--ghost" href="{{ path('cos_ux05_operations',{source:'approval',status:'waiting_approval',mode:mode}) }}">Approvals</a>
+            <a class="cos-button cos-button--ghost" href="{{ path('cos_ux05_operations',{source:'workflow',mode:mode}) }}">Workflow Monitor</a>
+            <a class="cos-button cos-button--ghost" href="{{ path('cos_workflow_recovery_worklist') }}">Recovery worklist (read-only)</a>
+            {% if admin %}<a class="cos-button cos-button--ghost" href="{{ path('cos_web_cos_control_center') }}">Audit / Control Center</a>{% endif %}
+        </nav>
+    </header>
+    <twig:CosRealtimeSubscription :topic="topic" signalTarget="cos-async-operation-signal" />
+    <form class="cos-card cos-page__stack" method="get" action="{{ path('cos_ux05_operations') }}">
+        <div class="cos-uw__row">
+            <label for="ops-source">Джерело</label>
+            <select id="ops-source" name="source" class="cos-input">
+                <option value="">Усі джерела</option>
+                {% for kind in sources %}<option value="{{ kind }}" {% if source == kind %}selected{% endif %}>{{ kind|capitalize }}</option>{% endfor %}
+            </select>
+            <label for="ops-status">Статус</label>
+            <select id="ops-status" name="status" class="cos-input">
+                <option value="">Усі статуси</option>
+                {% for status in statuses %}<option value="{{ status.value }}" {% if statusFilter == status.value %}selected{% endif %}>{{ status.label() }}</option>{% endfor %}
+            </select>
+            <label for="ops-mode">Режим</label>
+            <select id="ops-mode" name="mode" class="cos-input">
+                {% for option in ['result','process','expert'] %}<option value="{{ option }}" {% if mode == option %}selected{% endif %}>{{ option|capitalize }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="cos-uw__row">
+            <label for="ops-entity">Сутність</label>
+            <input class="cos-input" id="ops-entity" name="entity" value="{{ entity }}" maxlength="190" placeholder="type:id">
+            <label for="ops-correlation">Кореляція</label>
+            <input class="cos-input" id="ops-correlation" name="correlation" value="{{ correlation }}" maxlength="190">
+            <button class="cos-button cos-button--primary">Застосувати</button>
+            <a class="cos-button cos-button--ghost" href="{{ path('cos_ux05_operations',{mode:mode}) }}">Скинути</a>
+        </div>
+    </form>
+
+    <turbo-frame id="cos-operations-snapshot" data-operations-snapshot-target="frame">
+        {% include 'experience/operations/snapshot.html.twig' %}
+    </turbo-frame>
+</section>
+{% endblock %}

@@ -1,0 +1,9 @@
+{% set key = this.stateKey() %}
+<div class="cos-outcome-state cos-outcome-state--{{ this.tone() }}" data-cos-outcome-state="{{ key }}" role="{{ this.tone() == 'danger' ? 'alert' : 'status' }}">
+    {% if key in ['loading', 'running'] %}<span class="cos-spinner" aria-hidden="true"></span>{% endif %}
+    <div class="cos-outcome-state__content">
+        <strong>{{ ('state.' ~ key ~ '.title')|trans({}, 'cuw_quality') }}</strong>
+        <p>{{ ('state.' ~ key ~ '.detail')|trans({}, 'cuw_quality') }}</p>
+        {% if detail is not null and detail != '' %}<p>{{ detail }}</p>{% endif %}
+    </div>
+</div>

@@ -6,7 +6,7 @@ namespace App\Web\Experience\Adaptive;
 use InvalidArgumentException;
 
 /**
- * Foundation-only, versioned presentation metadata for Workspaces, UIActions
+ * Versioned presentation metadata for Workspaces, UIActions
  * and components. It is NEVER an entitlement or runtime command binding.
  */
 final readonly class ExperienceSemantic
@@ -15,9 +15,10 @@ final readonly class ExperienceSemantic
     private const KINDS = ['workspace', 'ui_action', 'component'];
     private const ROLES = ['primary', 'supporting', 'contextual', 'expert'];
     private const RULES = ['mode_default', 'on_trigger', 'explicit', 'always'];
-    private const TRIGGERS = [
+    public const TRIGGERS = [
         'approval_required', 'blocked', 'failed', 'running',
         'result_available', 'risk_attention', 'manual_review',
+        'stale_data', 'external_outcome_unknown', 'permission_unavailable',
     ];
 
     /** @param list<string> $contextualTriggers */

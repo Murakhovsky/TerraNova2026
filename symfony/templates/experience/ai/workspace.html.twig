@@ -1,0 +1,8 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+{% block title %}AI Workspace | COS{% endblock %}
+{% block workspace_content %}
+<section class="cos-ai-workspace" aria-label="{{ 'AI Workspace'|trans }}">
+    <h1>{{ 'AI Workspace'|trans }}</h1>
+    {% include 'experience/ai/ai_panel_frame.html.twig' %}
+</section>
+{% endblock %}

@@ -2764,6 +2764,15 @@ services:
   Kernel\Module\ModuleExtensionRegistry:
     arguments:
       $catalog: '@Kernel\Module\ModuleCatalog'
+  # Platform-level Operations Center is independent of tenant module switches.
+  App\Web\Experience\Action\UIActionRegistry:
+    arguments:
+      $platformProviders: ['@App\Web\Operations\OperationsRecoveryActionProvider']
+
+  App\Web\Experience\Shell\CoreCommandCatalog:
+    arguments:
+      $tenants: '@Kernel\Tenant\Contract\TenantContextProviderInterface'
+
 
   App\Web\Experience\Extension\WebExtensionProviderRegistry:
     arguments:

@@ -48,8 +48,9 @@ if ($declaredEntries !== count($canonical)) {
     ));
 }
 
+// CUW-F adds canonical CosOutcomeState; keep catalog count and maturity checks strict.
 // CM-DECISION-WORKSPACE adds stable reusable CosDecisionTrace and CosExplainability components.
-if (count($componentFiles) !== 67 || count($canonical) !== 65 || count($helpers) !== 2) {
+if (count($componentFiles) !== 68 || count($canonical) !== 66 || count($helpers) !== 2) {
     throw new RuntimeException(sprintf(
         'EX-002 baseline changed unexpectedly: files=%d canonical=%d helpers=%d.',
         count($componentFiles),

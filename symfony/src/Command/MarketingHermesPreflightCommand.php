@@ -17,7 +17,8 @@ final class MarketingHermesPreflightCommand extends Command
     protected function configure():void
     {
         $this->addArgument('organization',InputArgument::REQUIRED,'Explicit tenant ID')
-            ->addOption('probe',null,InputOption::VALUE_NONE,'Explicitly allow authenticated HTTPS GET toolset discovery');
+            ->addOption('probe',null,InputOption::VALUE_NONE,'Explicitly allow authenticated HTTPS GET toolset discovery')
+            ->addOption('run-controls',null,InputOption::VALUE_NONE,'With --probe, discover authenticated Hermes run control capabilities (read only)');
     }
     protected function execute(InputInterface $input,OutputInterface $output):int
     {
@@ -25,7 +26,10 @@ final class MarketingHermesPreflightCommand extends Command
         if(!preg_match('/^[A-Za-z0-9_.:-]{1,40}$/D',$org)){
             $output->writeln('Invalid tenant identifier.');return Command::INVALID;
         }
-        $report=$this->preflight->inspect($org,(bool)$input->getOption('probe'));
+        if($input->getOption('run-controls')&&!$input->getOption('probe')){
+            $output->writeln('--run-controls requires explicit --probe.');return Command::INVALID;
+        }
+        $report=$this->preflight->inspect($org,(bool)$input->getOption('probe'),(bool)$input->getOption('run-controls'));
         $output->writeln(json_encode($report,JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES));
         return $report['status']==='BLOCKED'?Command::FAILURE:Command::SUCCESS;
     }

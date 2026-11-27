@@ -9,6 +9,7 @@ use App\Web\Experience\Action\UIActionResolver;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Model\EntityRef;
 use InvalidArgumentException;
+use LogicException;
 use Kernel\Action\ActionStatus;
 use Kernel\Agent\AgentActionProjection;
 use Kernel\Agent\AgentRunProjection;
@@ -29,19 +30,26 @@ final readonly class AgentRunViewFactory
         WebExtensionContext $context,
         AgentRunProjection $run,
     ): AgentRunViewModel {
-        $agentActions = $this->runs->actionsForRun($run->organizationId, $run->id);
-        $uiActionsByResource = [];
-
-        foreach ($this->actionsByEntity($tenant, $context, $agentActions) as $resourceId => $uiActions) {
-            $uiActionsByResource[$resourceId] = $uiActions;
+        if (!AgentWorkspaceAccess::allows($tenant)
+            || $tenant->organizationId()->value() !== $run->organizationId
+            || $context->organizationId !== $run->organizationId
+            || $context->role !== $tenant->role()->value()) {
+            throw new LogicException('Agent run scope denied.');
         }
+        $agentActions = array_values(array_filter(
+            $this->runs->actionsForRun($tenant->organizationId()->value(), $run->id),
+            static fn (AgentActionProjection $action): bool =>
+                $action->organizationId === $run->organizationId && $action->runId === $run->id,
+        ));
+        $uiActionsByResource = $this->actionsByEntity($tenant, $context, $agentActions);
 
         $actionViews = [];
         foreach ($agentActions as $action) {
+            $entityKey = strtolower((string) $action->targetType) . ':' . $action->targetId;
             $resourceIds = array_filter([$action->id, $action->approvalId]);
             $resolved = [];
             foreach ($resourceIds as $resourceId) {
-                foreach ($uiActionsByResource[$resourceId] ?? [] as $uiAction) {
+                foreach ($uiActionsByResource[$entityKey][$resourceId] ?? [] as $uiAction) {
                     $resolved[$uiAction->id] = $uiAction;
                 }
             }
@@ -62,7 +70,7 @@ final readonly class AgentRunViewFactory
 
     /**
      * @param list<AgentActionProjection> $agentActions
-     * @return array<string,list<\App\Web\Experience\Action\UIAction>>
+     * @return array<string,array<string,list<\App\Web\Experience\Action\UIAction>>>
      */
     private function actionsByEntity(
         TenantContext $tenant,
@@ -94,7 +102,7 @@ final readonly class AgentRunViewFactory
                 UIActionPlacement::AI_PROPOSAL,
             ) as $uiAction) {
                 if ($uiAction->resourceId !== null) {
-                    $byResource[$uiAction->resourceId][] = $uiAction;
+                    $byResource[$entity->key()][$uiAction->resourceId][] = $uiAction;
                 }
             }
         }

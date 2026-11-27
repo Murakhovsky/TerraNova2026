@@ -53,7 +53,7 @@ $manifest=require $root.'/app/Domains/Finance/module.php';
 $module=ModuleDefinition::fromArray($manifest);
 $assert($module->manifest->id==='finance'&&!$module->manifest->enabledByDefault,'Finance F1 must be disabled by default');
 $assert($module->contributions->runtimeModuleService==='financeDomainModule','Finance F1 missing runtime owner');
-$assert(count($module->contributions->capabilityContracts)===17,'Expected seven budget, three source-evidence, four order collection and three settlement Finance capabilities');
+$assert(count($module->contributions->capabilityContracts)===18,'Expected eight budget, three source-evidence, four order collection and three settlement Finance capabilities');
 $typed=[];
 foreach($module->contributions->capabilityContracts as $c){
     $typed[$c->id]=$c;
@@ -67,6 +67,13 @@ foreach($module->contributions->capabilityContracts as $c){
 }
 $assert($typed['finance.sales.commercial_evidence.read']->executionBinding==='query:finance.sales.commercial_evidence.read' && $typed['finance.sales.commercial_evidence.read']->sideEffectLevel==='none','Sales evidence must remain read-only');
 $validator=new CapabilityJsonInputValidator();
+$assert($typed['finance.budget.envelope.list']->executionBinding==='query:finance.budget.envelope.list'
+    &&$typed['finance.budget.envelope.list']->sideEffectLevel==='none','Budget envelope list must remain read-only');
+$validator->validate($typed['finance.budget.envelope.list'],['q'=>'budget','offset'=>20,'limit'=>20]);
+try{$validator->validate($typed['finance.budget.envelope.list'],['organization_id'=>'foreign']);}
+catch(DomainException){$listScopeBlocked=true;}
+$assert($listScopeBlocked??false,'Budget list must not accept caller tenant.');
+
 $validator->validate($typed['finance.budget.envelope.draft.create'],$valid);
 $validator->validate($typed['finance.budget.reservation.reserve'],[
     'envelope_id'=>'finb-'.str_repeat('a',24),'amount_minor'=>100,

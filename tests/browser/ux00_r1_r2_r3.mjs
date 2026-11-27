@@ -101,6 +101,14 @@ const browser = await chromium.launch({ headless: true, ...(chrome ? { executabl
 let admin, page;
 let assetId = '', batchId = '', planId = '';
 try {
+  const componentEvidence=JSON.parse(execFileSync('docker',[
+    'compose','exec','-T','-e','UX04_COMPONENT_FIXTURE_SAFE=1','php','php','tests/cuw_adaptive_page_contract.php',
+  ],{encoding:'utf8',timeout:45000}).trim());
+  assert(componentEvidence.checks?.length===4
+    && componentEvidence.checks.every(check=>check.status==='PASS'),
+    'UX04: real SSR component contract did not pass');
+  writeFileSync(evidenceDir+'/ux04-component.json',JSON.stringify(componentEvidence,null,2)+'\n');
+  add('UX04.ssr_component_contract',{checks:componentEvidence.checks});
   admin = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
   page = await login(admin, email, password);
 
@@ -252,6 +260,7 @@ try {
   const restrictedEmail = process.env.UX00_E2E_RESTRICTED_EMAIL || '';
   const restrictedPassword = process.env.UX00_E2E_RESTRICTED_PASSWORD || '';
   assert(restrictedEmail && restrictedPassword, 'S2-N: missing restricted fixture');
+  let restrictedStorage, restrictedCsrf;
   const restrictedCtx = await browser.newContext({ viewport: { width: 390, height: 844 } });
   try {
     const restrictedPage = await login(restrictedCtx, restrictedEmail, restrictedPassword);
@@ -259,6 +268,8 @@ try {
     assert(access?.status() === 200, 'S2-N: buyer account lacks legitimate account access');
     const buyerToken = await restrictedPage.locator('input[name="csrf_token"]').first().inputValue();
     assert(buyerToken.length > 10, 'S2-N: no valid buyer-session CSRF token');
+    restrictedStorage=await restrictedCtx.storageState();
+    restrictedCsrf=buyerToken;
     const deniedPage = await restrictedCtx.request.get(abs('/workspace/capabilities'));
     const deniedCatalog = await restrictedCtx.request.get(abs('/api/v1/capabilities'));
     assert(deniedPage.status() === 403 && deniedCatalog.status() === 403,
@@ -314,6 +325,10 @@ try {
           q:assetId,view:'cards',sort:'relevance'},
         maxRedirects:0,
       });
+    const deniedAdaptive=await restrictedCtx.request.post(abs('/workspace/unified'),{
+      form:{csrf_token:buyerToken,mode:'expert'},maxRedirects:0,
+    });
+    assert(deniedAdaptive.status()===403,'UX04: buyer preference write escaped Workspace authorization');
     assert(deniedUx03.status()===403 && deniedSavedView.status()===403,
       'UX03: buyer role escaped Business Workspace or saved-view ACL');
     assert(Number(sqlExecute(
@@ -368,6 +383,7 @@ try {
   await paletteTrigger.focus();
   await page.keyboard.press('Control+k');
   const palette=page.locator('#cos-command-palette');
+  await page.waitForFunction(()=>document.querySelector('.cos-command__input')===document.activeElement);
   assert(!(await palette.isHidden())
     && await page.locator('.cos-command__input').evaluate(
       el => el === document.activeElement),
@@ -384,10 +400,17 @@ try {
     'UX01: server locale changed but Unified screen stayed Ukrainian');
   assert((await page.locator('[data-cos-provider-workspaces]').innerText())
     .includes('Property Workspace'),'UX01: Domain Workspace label not localized');
+  assert((await page.locator('[data-cos-adaptive-mode] button[value="expert"]').innerText()).trim()==='Expert',
+    'UX04: separate English translation catalog not resolved');
+  assert(await page.locator('link[rel="stylesheet"][href*="cuw-adaptive"]').count()===1,
+    'UX04: dedicated stylesheet missing');
   await page.locator('#cos-shell-locale').selectOption('uk');
   await page.waitForFunction(()=>document.documentElement.lang==='uk');
   assert((await page.locator('[data-cos-unified-home] h1').innerText()).trim()==='Мої робочі простори',
     'UX01: Ukrainian locale not restored');
+  assert((await page.locator('[data-cos-adaptive-mode] button[value="expert"]').innerText()).trim()==='Експерт',
+    'UX04: separate Ukrainian translation catalog not resolved');
+  add('UX04.dedicated_localized_assets',{locales:['en','uk']});
   add('UX01.english_ukrainian_locale_real_server_switch',{locales:['en','uk']});
   await page.locator('button[data-action="click->appearance#setTheme"][data-theme="light"]').click();
   await page.waitForFunction(()=>document.documentElement.dataset.cosTheme==='light');
@@ -400,13 +423,95 @@ try {
     { waitUntil: 'networkidle' });
   assert(queryPage?.status() === 200, 'UX02: typed Property search page unavailable');
   assert(await page.locator('[data-cos-property-results]').count() === 1
-      && (await page.locator('[data-cos-property-results]').innerText()).includes(assetId),
+      && await page.locator('[data-cos-property-results] a[href*="reference=' + assetId + '"]').count() === 1,
       'UX02: actual typed Property Query item missing');
   const detailPage = await page.goto(abs('/workspace/unified/property?reference=' + assetId),
     { waitUntil: 'networkidle' });
   assert(detailPage?.status() === 200
       && await page.locator('[data-cos-native-property="' + assetId + '"]').count() === 1,
       'UX02: tenant-bound native Property Get readback absent');
+  // UX-04: canonical readback must survive mode changes, reload and a
+  // persisted per-section expansion; no Property mutation or implicit Run.
+  const ux04Detail='/workspace/unified/property?reference='+assetId;
+  const modeForm=page.locator('[data-cos-adaptive-mode]');
+  const invalidMode=await admin.request.post(abs(ux04Detail),{
+    form:{csrf_token:csrf,mode:'administrator'},maxRedirects:0,
+  });
+  const invalidCsrf=await admin.request.post(abs(ux04Detail),{
+    form:{csrf_token:'invalid',mode:'expert'},maxRedirects:0,
+  });
+  const spoofedSection=await admin.request.post(abs(ux04Detail),{
+    form:{csrf_token:csrf,section:'ux.private',expand:'1'},maxRedirects:0,
+  });
+  const forgedIdentity=await admin.request.post(abs(ux04Detail),{
+    form:{csrf_token:csrf,mode:'expert',organization_id:'foreign-tenant',user_id:'other'},maxRedirects:0,
+  });
+  assert(invalidMode.status()===422 && invalidCsrf.status()===403 && spoofedSection.status()===422
+      && forgedIdentity.status()===422,
+    'UX04: invalid mode, CSRF or unauthorized section accepted');
+  for (const mode of ['result','process','expert','result']) {
+    const modeButton=modeForm.locator('button[name="mode"][value="'+mode+'"]');
+    await modeButton.focus();
+    await page.keyboard.press('Enter');
+    await page.waitForURL(url=>url.hash==='#cos-adaptive-mode-'+mode);
+    await page.waitForLoadState('networkidle');
+    assert(await modeButton.getAttribute('aria-pressed')==='true'
+      && await modeButton.evaluate(el=>document.activeElement===el),
+      'UX04: keyboard mode activation did not restore focus or selected state');
+    assert(await page.locator('[data-cos-adaptive][data-experience-mode="'+mode+'"]').count()===1,
+      'UX04: mode was not persisted');
+    assert(await page.locator('[data-cos-native-property="'+assetId+'"]').count()===1 && sqlCount(assetId)===1,
+      'UX04: mode changed canonical entity or wrote Property');
+    assert((await page.locator('[data-cos-expert-ids]').count()>0)===(mode==='expert'),
+      'UX04: query diagnostic disclosure incorrect');
+  }
+  // Same actor IDs in another tenant must never affect the active tenant.
+  // Clone only identities from disposable CI, not their actual preferences.
+  const ux04ForeignTenant='ux04-isolation-'+uid;
+  const scopedProfiles=" FROM cos_experience_profiles WHERE organization_id='"+ux04ForeignTenant+"'";
+  sqlExecute("INSERT INTO cos_experience_profiles (organization_id,user_id,default_mode,profile_version,settings_json,updated_at) "
+    + "SELECT '"+ux04ForeignTenant+"',user_id,'expert',1,JSON_OBJECT('schema_version','1.0.0'),NOW(6) "
+    + "FROM cos_experience_profiles WHERE organization_id='default'");
+  const foreignProfiles=sqlExecute("SELECT COUNT(*)"+scopedProfiles);
+  assert(Number(foreignProfiles)>0,'UX04: missing real profile fixture');
+  sqlExecute("INSERT INTO cos_workspace_experience_states "
+    + "(organization_id,user_id,workspace_key,entity_key,selected_mode,state_version,state_json,updated_at) "
+    + "SELECT organization_id,user_id,'unified.property','"+assetId+"','expert',1,"
+    + "JSON_OBJECT('schema_version','1.0.0','expanded_sections',JSON_ARRAY('property.identifier')),NOW(6)"+scopedProfiles);
+  await page.reload({waitUntil:'networkidle'});
+  assert(await page.locator('[data-cos-adaptive][data-experience-mode="result"]').count()===1
+    && await page.locator('[data-cos-expert-ids]').count()===0,
+    'UX04: same actor ID leaked foreign tenant profile or entity expansion');
+  const resultButton=modeForm.locator('button[value="result"]');
+  await resultButton.click();
+  await page.waitForLoadState('networkidle');
+  const expand=page.locator('[data-cos-section-toggle="property.identifier"]');
+  await expand.focus();
+  await page.keyboard.press('Space');
+  await page.waitForURL(url=>url.hash==='#cos-adaptive-section-property.identifier');
+  await page.waitForLoadState('networkidle');
+  assert(await expand.getAttribute('aria-expanded')==='true'
+    && await expand.evaluate(el=>document.activeElement===el),
+    'UX04: keyboard section expansion did not restore focus or expansion state');
+  await page.screenshot({path:evidenceDir+'/ux04-keyboard-expansion.png',fullPage:true});
+  await page.reload({waitUntil:'networkidle'});
+  assert(await page.locator('[data-cos-adaptive][data-experience-mode="result"]').count()===1
+    && await page.locator('[data-cos-expert-ids]').count()===1,
+    'UX04: explicit expansion did not persist independently of mode');
+  await expand.click();
+  await page.waitForLoadState('networkidle');
+  assert(await page.locator('[data-cos-expert-ids]').count()===0,
+    'UX04: expansion collapse failed');
+  assert(sqlExecute("SELECT COUNT(*)"+scopedProfiles+" AND default_mode='expert' AND profile_version=1")===foreignProfiles
+    && sqlExecute("SELECT COUNT(*) FROM cos_workspace_experience_states WHERE organization_id='"+ux04ForeignTenant
+      +"' AND selected_mode='expert' AND state_version=1 AND JSON_CONTAINS(state_json,JSON_QUOTE('property.identifier'),'$.expanded_sections')")===foreignProfiles,
+    'UX04: active actor changed another tenant preference rows');
+  sqlExecute("DELETE FROM cos_workspace_experience_states WHERE organization_id='"+ux04ForeignTenant+"'");
+  sqlExecute("DELETE FROM cos_experience_profiles WHERE organization_id='"+ux04ForeignTenant+"'");
+  add('UX04.same_actor_id_tenant_preference_isolation',{foreign_profiles:Number(foreignProfiles)});
+  add('UX04.keyboard_focus_and_aria',{mode:'Enter',section:'Space'});
+  add('UX04.query_modes_preference_expansion_security',{asset_id:assetId,native_rows:1});
+
   const actionPage = await page.goto(abs('/workspace/unified/actions'), { waitUntil: 'networkidle' });
   assert(actionPage?.status() === 200
       && await page.locator('form[action="/workspace/capabilities/property/create"]').count() === 1,
@@ -416,6 +521,16 @@ try {
 
   // R2 through the Unified form and the EXISTING canonical human Command,
   // with genuine native Domain readback and same idempotency key replay.
+  for (const mode of ['process','expert','result']) {
+    await page.locator('[data-cos-adaptive-mode] button[value="'+mode+'"]').click();
+    await page.waitForLoadState('networkidle');
+    assert(await page.locator('[data-cos-adaptive][data-experience-mode="'+mode+'"]').count()===1
+      && await page.locator('form[action="/workspace/capabilities/property/create"]').count()===1,
+      'UX04: presentation mode changed authorized human action availability');
+    assert(await page.locator('[data-cos-adaptive-trigger="approval_required"]').isVisible(),
+      'UX04: approval gate disappeared in '+mode);
+    await page.screenshot({path:evidenceDir+'/ux04-actions-'+mode+'.png',fullPage:true,animations:'disabled'});
+  }
   const unifiedForm = page.locator('form[action="/workspace/capabilities/property/create"]');
   const unifiedKey = await unifiedForm.locator('input[name="idempotency_key"]').inputValue();
   const unifiedAddress = 'UX02 human form '+uid;
@@ -746,8 +861,10 @@ try {
     await plan.waitFor({ state: 'visible', timeout: 15000 });
     assert((await plan.innerText()).includes('Очікує погодження'),
       'S4: unapproved Plan silently changed state in ' + mode + ' mode');
-    assert((await plan.innerText()).includes('property.bulk.create'),
-      'S4: canonical Domain capability missing from Plan in ' + mode + ' mode');
+    assert((await plan.innerText()).includes('Імпорт об’єктів нерухомості'),
+      'S4: human business operation missing from Plan in ' + mode + ' mode');
+    assert((await plan.innerText()).includes('property.bulk.create') === (mode === 'expert'),
+      'S4: machine capability disclosed outside Expert');
     assert(await plan.locator('form[action="/workspace/goals/plans/' + planId
       + '/request-approval"]').count() === 1,
       'S4: independent approval entry missing in ' + mode + ' mode');
@@ -773,11 +890,95 @@ try {
     native_writes: 0,
   });
 
+  // UX-07: real Goal draft creation, semantic metric choice and replay fence.
+  {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const modeForm = page.locator('form[action="/workspace/goals/mode"]');
+  await Promise.all([
+    page.waitForResponse(r => new URL(r.url()).pathname === '/workspace/goals/mode'
+      && r.request().method() === 'POST'),
+    page.waitForResponse(r => new URL(r.url()).pathname === '/workspace/goals'
+      && r.request().method() === 'GET'),
+    modeForm.locator('button[value="result"]').click(),
+  ]);
+  await page.waitForLoadState('networkidle');
+  await page.locator('[data-cos-federation-goals][data-experience-mode="result"]').waitFor({state:'visible'});
+  const draftForm = page.locator('form[action="/workspace/goals/create"]');
+  await draftForm.locator('xpath=ancestor::details/summary').click();
+  const picker = draftForm.locator('[data-goal-metric-picker]');
+  assert(await picker.locator('input[name="criterion"][type="radio"]').count() >= 1,
+    'UX07: no human metric picker');
+  assert(await picker.locator('input[name="criterion"]:not([type="radio"])').count() === 0
+    && !(await picker.innerText()).includes('sales.local_tasks_created'),
+    'UX07: ordinary user must not enter machine metric code');
+  await draftForm.locator('textarea[name="desired_result"]').fill('UX07 CRM tasks ' + uid);
+  await picker.locator('[value="sales.local_tasks_created"]').check();
+  await draftForm.locator('input[name="target"]').fill('1');
+  const date = '2099-11-27';
+  await draftForm.locator('input[name="deadline"]').fill(date);
+  const goalDraftKey = await draftForm.locator('input[name="draft_key"]').inputValue();
+  const payload = {csrf_token:csrf, draft_key:goalDraftKey, desired_result:'UX07 CRM tasks '+uid,
+    criterion:'sales.local_tasks_created', target:'1', deadline:date};
+  const deniedDraft = await admin.request.post(abs('/workspace/goals/create'), {
+    form:{...payload, csrf_token:'invalid'}, maxRedirects:0,
+  });
+  assert([400,403].includes(deniedDraft.status()), 'UX07: draft creation did not reject invalid CSRF: HTTP '+deniedDraft.status()
+    +' '+(await deniedDraft.text()).slice(0,200));
+  const unknownMetric = await admin.request.post(abs('/workspace/goals/create'), {
+    form:{...payload, criterion:'fake.metric'}, maxRedirects:0,
+  });
+  assert(unknownMetric.status() === 303 && (unknownMetric.headers()['location'] || '').includes('error=invalid_input'),
+    'UX07: arbitrary metric accepted');
+  const negativeDraftCount = Number(sqlExecute("SELECT COUNT(*) FROM cos_federation_goal_specs WHERE organization_id='default' AND JSON_UNQUOTE(JSON_EXTRACT(specification,'$.desired_result'))='UX07 CRM tasks "+uid+"'"));
+  assert(negativeDraftCount===0,'UX07: denied draft mutated business state');
+  await page.screenshot({path:evidenceDir+'/goals-metric-picker-mobile.png', fullPage:true, animations:'disabled'});
+  const goalScan = await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21a','wcag21aa']).analyze();
+  assert(goalScan.violations.filter(v=>['critical','serious'].includes(v.impact)).length===0,
+    'UX07: critical/serious accessibility violation '+JSON.stringify(goalScan.violations.filter(v=>['critical','serious'].includes(v.impact)).map(v=>({id:v.id,nodes:v.nodes.slice(0,4).map(n=>({target:n.target,reason:n.failureSummary}))}))));
+  const actionsBeforeDraft = Number(sqlExecute("SELECT COUNT(*) FROM cos_actions WHERE organization_id='default'"));
+  const runsBeforeDraft = Number(sqlExecute("SELECT COUNT(*) FROM cos_workflow_runs WHERE organization_id='default'"));
+  const saved = await admin.request.post(abs('/workspace/goals/create'), {form:payload,maxRedirects:0});
+  const replay = await admin.request.post(abs('/workspace/goals/create'), {form:payload,maxRedirects:0});
+  assert([saved,replay].every(r=>r.status()===303 && (r.headers()['location']||'').includes('created=1')),
+    'UX07: valid draft or idempotent replay failed');
+  const draftCount = Number(sqlExecute("SELECT COUNT(*) FROM cos_federation_goal_specs WHERE organization_id='default' AND JSON_UNQUOTE(JSON_EXTRACT(specification,'$.desired_result'))='UX07 CRM tasks "+uid+"'"));
+  assert(draftCount === 1 && Number(sqlExecute("SELECT COUNT(*) FROM cos_actions WHERE organization_id='default'"))===actionsBeforeDraft
+    && Number(sqlExecute("SELECT COUNT(*) FROM cos_workflow_runs WHERE organization_id='default'"))===runsBeforeDraft,
+    'UX07: draft replay duplicated a Goal or performed a side effect');
+  await page.goto(abs('/workspace/goals'), {waitUntil:'networkidle'});
+  const renderedDraft=page.locator('[data-goal-id]').filter({hasText:'UX07 CRM tasks '+uid});
+  assert(await renderedDraft.count()===1 && (await renderedDraft.innerText()).includes(date),
+    'UX07: persisted draft or deadline missing');
+  add('UX07.semantic_picker_draft_replay_and_mobile',{goal_drafts:1,actions_created:0,runs_created:0});
+  await page.setViewportSize({width:1440,height:1000});
+
+  }
+
   // AC-08: The operation must be bookmarkable; pending items are not
   // announced as verified native assets until independent receipts exist.
   const pendingPage = await page.goto(abs('/workspace/property/bulk?batch=' + batchId),
     { waitUntil: 'networkidle' });
   assert(pendingPage?.status() === 200, 'R3: deep-linked batch is not readable');
+  for (const mode of ['result','process','expert','result']) {
+    await page.locator('[data-cos-adaptive-mode] button[value="'+mode+'"]').click();
+    await page.waitForLoadState('networkidle');
+    assert(await page.locator('[data-cos-adaptive][data-experience-mode="'+mode+'"]').count()===1
+      && await page.locator('[data-property-bulk-operation="'+batchId+'"]').count()===1
+      && await page.locator('[data-cos-adaptive-trigger="approval_required"]').isVisible()
+      && await page.locator('[data-cos-adaptive-trigger="external_outcome_unknown"]').isVisible(),
+      'UX04: pending batch lost identity or critical approval/outcome in '+mode);
+    assert((await page.locator('[data-cos-expert-ids]').count()>0)===(mode==='expert')
+      && (await page.locator('[data-cos-bulk-process]').count()>0)===(mode!=='result'),
+      'UX04: batch diagnostic/process disclosure incorrect');
+    await page.screenshot({path:evidenceDir+'/ux04-bulk-'+mode+'.png',fullPage:true,animations:'disabled'});
+  }
+  const readAfterUx04=await json(await admin.request.get(abs('/api/v1/property/bulk/'+batchId)),'UX04 batch parity');
+  assert(readAfterUx04.state==='planned' && readAfterUx04.plan_id===planId
+    && readAfterUx04.items.every(item=>item.native_asset_id===null)
+    && Number(sqlExecute(planActionsSql))===initialActions
+    && Number(sqlExecute(planRunsSql))===initialRuns,
+    'UX04: preference changes mutated batch, Action, or Run');
+  add('UX04.bulk_modes_critical_visibility_no_execution',{batch_id:batchId,plan_id:planId});
   const operation = page.locator('[data-property-bulk-operation="' + batchId + '"]');
   await operation.waitFor({ state: 'visible', timeout: 15000 });
   assert(await operation.locator('[data-property-bulk-progress="0/2"]').count() === 1,
@@ -802,6 +1003,16 @@ try {
   const mobileBatch = await page.goto(abs('/workspace/property/bulk?batch=' + batchId),
     { waitUntil: 'networkidle' });
   assert(mobileBatch?.status() === 200, 'S3-M: Property Bulk mobile detail unavailable');
+  for (const mode of ['process','expert','result']) {
+    await page.locator('[data-cos-adaptive-mode] button[value="'+mode+'"]').click();
+    await page.waitForLoadState('networkidle');
+    assert(await page.locator('[data-cos-adaptive][data-experience-mode="'+mode+'"]').count()===1
+      && await page.locator('[data-cos-adaptive-trigger="external_outcome_unknown"]').isVisible(),
+      'UX04: mobile mode lost critical outcome');
+    assert(await page.evaluate(()=>Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)
+      -document.documentElement.clientWidth)<=2,'UX04: mobile mode horizontal overflow '+mode);
+    await page.screenshot({path:evidenceDir+'/ux04-mobile-bulk-'+mode+'.png',fullPage:true,animations:'disabled'});
+  }
   const mobileOperation = page.locator('[data-property-bulk-operation="' + batchId + '"]');
   await mobileOperation.waitFor({ state: 'visible', timeout: 15000 });
   assert(await mobileOperation.locator('[data-property-bulk-item-pending]').count() === 2
@@ -832,6 +1043,52 @@ try {
   const reviewerCtx = await browser.newContext({ viewport: { width: 1200, height: 900 } });
   try {
     const reviewerPage = await login(reviewerCtx, reviewerEmail, reviewerPassword);
+    // Distinct authenticated user, same tenant: preferences must not bleed
+    // across profiles, nor can Expert mode confer approval authority.
+    await reviewerPage.goto(abs('/workspace/unified'),{waitUntil:'networkidle'});
+    await reviewerPage.locator('[data-cos-adaptive-mode] button[value="expert"]').click();
+    await reviewerPage.waitForLoadState('networkidle');
+    assert(await reviewerPage.locator('[data-cos-adaptive][data-experience-mode="expert"]').count()===1,
+      'UX04: reviewer mode did not persist');
+    await page.goto(abs('/workspace/unified'),{waitUntil:'networkidle'});
+    assert(await page.locator('[data-cos-adaptive][data-experience-mode="result"]').count()===1,
+      'UX04: reviewer preference leaked to owner in same organization');
+    // New authenticated session, not a copied cookie/localStorage. The
+    // same actor sees the mode saved from desktop and can persist changes
+    // from a phone without modifying the owner's session or canonical data.
+    const secondSession=await browser.newContext({viewport:{width:390,height:844}});
+    try {
+      const mobile=await login(secondSession,reviewerEmail,reviewerPassword);
+      const detail=await mobile.goto(abs(ux04Detail),{waitUntil:'networkidle'});
+      assert(detail?.status()===200
+        && await mobile.locator('[data-cos-adaptive][data-experience-mode="expert"]').count()===1
+        && await mobile.locator('[data-cos-native-property="'+assetId+'"]').count()===1
+        && await mobile.locator('[data-cos-expert-ids]').count()===1,
+        'UX04: independent authenticated session did not restore server mode and entity');
+      const modeButton=mobile.locator('[data-cos-adaptive-mode] button[value="result"]');
+      const targetHeight=await modeButton.evaluate(el=>el.getBoundingClientRect().height);
+      assert(targetHeight>=40,'UX04: dedicated mobile control lost token-based touch target');
+      await modeButton.click();
+      await mobile.waitForLoadState('networkidle');
+      await mobile.locator('[data-cos-section-toggle="property.identifier"]').click();
+      await mobile.waitForLoadState('networkidle');
+      assert(await mobile.locator('[data-cos-expert-ids]').count()===1
+        && await mobile.evaluate(()=>Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)
+          -document.documentElement.clientWidth)<=2,'UX04: mobile explicit expansion or layout regressed');
+      await mobile.screenshot({path:evidenceDir+'/ux04-independent-mobile-session.png',fullPage:true,animations:'disabled'});
+      await reviewerPage.goto(abs(ux04Detail),{waitUntil:'networkidle'});
+      assert(await reviewerPage.locator('[data-cos-adaptive][data-experience-mode="result"]').count()===1
+        && await reviewerPage.locator('[data-cos-expert-ids]').count()===1,
+        'UX04: mobile mode and section preferences did not reach desktop session');
+      await reviewerPage.locator('[data-cos-section-toggle="property.identifier"]').click();
+      await reviewerPage.waitForLoadState('networkidle');
+      await mobile.reload({waitUntil:'networkidle'});
+      assert(await mobile.locator('[data-cos-expert-ids]').count()===0 && sqlCount(assetId)===1,
+        'UX04: desktop collapse not reflected on phone or Property changed');
+      add('UX04.cross_session_desktop_mobile_preferences',{sessions:2,viewport:'390x844',native_rows:1});
+    } finally { await secondSession.close(); }
+    add('UX04.authenticated_actor_profile_isolation',{users:2});
+
     assert((await page.goto(abs('/workspace/goals'), { waitUntil: 'networkidle' }))?.status()===200,
       'R3-P: Goal owner cannot open Approval workspace');
     const planApprovalForm = page.locator('form[action="/workspace/goals/plans/' + planId
@@ -934,11 +1191,184 @@ try {
     await reviewerCtx.close();
   }
 
+  // CUW-E: activate the three optional domains only in this disposable CI
+  // database, exercise the actual Domain APIs and UI, and restore overrides.
+  const optionalModules = ['finance','marketing','product_management'];
+  const previousModules = new Map();
+  for (const module of optionalModules) {
+    const state = sqlExecute("SELECT enabled FROM cos_organization_modules WHERE organization_id='default' AND module_id='"+module+"'");
+    assert(['','0','1'].includes(state),'Unexpected module override');
+    previousModules.set(module,state);
+    sqlExecute("INSERT INTO cos_organization_modules(organization_id,module_id,enabled) VALUES ('default','"+module+"',1) ON DUPLICATE KEY UPDATE enabled=1");
+  }
+  try {
+    await page.setViewportSize({width:1440,height:1000});
+    // Use the existing native Product and Marketing forms from the canonical
+    // Workspace routes, then read the results independently through Capability.
+    const productPage=await page.goto(abs('/product-management'),{waitUntil:'domcontentloaded'});
+    assert(productPage?.status()===200,'CUW-E native Product catalog unavailable');
+    const productForm=page.locator('form[method="post"][action="/product-management/products"]');
+    assert(await productForm.count()===1,'CUW-E native Product create form unavailable');
+    const productCreate=await admin.request.post(abs('/product-management/products'),{form:{
+      csrf_token:await productForm.locator('input[name="csrf_token"]').inputValue(),
+      idempotency_key:await productForm.locator('input[name="idempotency_key"]').inputValue(),
+      name:'CUW E Product '+uid,sku:'CUWE-'+uid,type:'stock',uom:'pcs',track_inventory:'1'
+    },maxRedirects:0});
+    const productId=(productCreate.headers()['location']||'').match(/products\/([a-f0-9]{32})/)?.[1];
+    assert(productCreate.status()===303&&productId,'CUW-E native Product form failed');
+    const product=await invoke(admin,'product_management.product.get',{product_id:productId},csrf);
+    assert(product.data?.product?.product_id===productId,'CUW-E native product independent readback failed');
+    const nativeMarketing=await page.goto(abs('/marketing/campaigns'),{waitUntil:'domcontentloaded'});
+    assert(nativeMarketing?.status()===200&&new URL(page.url()).pathname==='/marketing/campaigns','CUW-E native Marketing authentication/route unavailable');
+    const campaignForm=page.locator('form[method="post"][action="/marketing/campaigns"]');
+    assert(await campaignForm.count()===1,'CUW-E native Marketing create form unavailable');
+    const campaignCreate=await admin.request.post(abs('/marketing/campaigns'),{form:{
+      csrf_token:await campaignForm.locator('input[name="csrf_token"]').inputValue(),
+      idempotency_key:await campaignForm.locator('input[name="idempotency_key"]').inputValue(),
+      name:'CUW E Campaign '+uid,business_objective:'CI local read projection',brief:'No provider execution',product_refs:productId
+    },maxRedirects:0});
+    const campaignId=(campaignCreate.headers()['location']||'').match(/campaigns\/(mkt-[a-f0-9]{24})/)?.[1];
+    assert(campaignCreate.status()===303&&campaignId,'CUW-E native Marketing form failed');
+    const campaign=await invoke(admin,'marketing.campaign.get',{id:campaignId},csrf);
+    assert(campaign.data?.campaign?.id===campaignId,'CUW-E native campaign independent readback failed');
+    add('CUWE.native_product_marketing_forms',{product_id:productId,campaign_id:campaignId});
+
+    await page.goto(abs('/workspace/unified/business/finance.budget'),{waitUntil:'domcontentloaded'});
+    const budgetPath='/workspace/unified/business/finance.budget/new';
+    const draftLink=page.locator('a[href="'+budgetPath+'"]');
+    assert(await draftLink.count()===1,'CUW-E Finance draft link missing');
+    await draftLink.click();
+    const budgetForm=page.locator('[data-cos-budget-draft-form]');
+    await budgetForm.waitFor({state:'visible'});
+    const budgetPost={csrf_token:await budgetForm.locator('input[name="csrf_token"]').inputValue(),
+      idempotency_key:await budgetForm.locator('input[name="idempotency_key"]').inputValue(),
+      name:'CUW E Budget '+uid,source_ref:campaignId,currency:'EUR',period_start:'2026-11-01',
+      period_end:'2026-12-31',limit_minor:'10000'};
+    const budgetBad=await admin.request.post(abs(budgetPath),{form:{...budgetPost,csrf_token:'bad'},maxRedirects:0});
+    assert(budgetBad.status()===403,'CUW-E Finance draft accepted invalid CSRF');
+    const budgetWrong=await admin.request.post(abs(budgetPath),{form:{...budgetPost,source_ref:'mkt-'+'f'.repeat(24)},maxRedirects:0});
+    assert(budgetWrong.status()===422,'CUW-E Finance draft accepted unavailable source');
+    const budgetInvalid=await admin.request.post(abs(budgetPath),{form:{...budgetPost,limit_minor:'-1'},maxRedirects:0});
+    assert(budgetInvalid.status()===422,'CUW-E Finance accepted negative budget');
+    for(const field of ['name','source_ref','currency','period_start','period_end','limit_minor']){
+      await budgetForm.locator('input[name="'+field+'"]').fill(budgetPost[field]);
+    }
+    const [budgetResponse]=await Promise.all([
+      page.waitForResponse(r=>r.request().method()==='POST'&&new URL(r.url()).pathname===budgetPath),
+      budgetForm.locator('button[type="submit"]').click()
+    ]);
+    assert(budgetResponse.status()===200,'CUW-E Finance draft returned '+budgetResponse.status());
+    const budgetReceipt=page.locator('[data-cos-budget-draft-verified]');
+    await budgetReceipt.waitFor({state:'visible'});
+    const budgetId=await budgetReceipt.getAttribute('data-cos-budget-draft-verified');
+    assert(/^finb-[a-f0-9]{24}$/.test(budgetId||''),'CUW-E verified native budget missing');
+    const budget=await invoke(admin,'finance.budget.envelope.get',{id:budgetId},csrf);
+    assert(budget.data?.envelope?.state==='DRAFT'&&budget.data.envelope.revision===1
+      &&budget.data.envelope.reserved_minor===0&&budget.data.envelope.committed_minor===0,
+      'CUW-E draft activated, reserved or committed a budget');
+    const budgetReplay=await admin.request.post(abs(budgetPath),{form:budgetPost,maxRedirects:0});
+    assert(budgetReplay.status()===200&&(await budgetReplay.text()).includes('data-cos-budget-draft-verified="'+budgetId+'"'),
+      'CUW-E Finance draft replay did not reconcile original receipt');
+    assert(sqlExecute("SELECT COUNT(*) FROM cos_finance_budget_envelopes WHERE organization_id='default' AND name='"+budgetPost.name+"'")==='1',
+      'CUW-E Finance duplicate budget draft or invalid submission wrote');
+    add('CUWE.finance_human_draft_and_receipt',{budget_id:budgetId,revision:1,csrf:'denied',invalid:'denied',replay:'verified',reserved:0,committed:0});
+    const order=await invoke(admin,'sales.order.create',
+      {currency:'EUR',lines:[{sku:'CUWE-'+uid,title:'CI native order',quantity:1,unit_price:'12.00'}],total:'12.00'},
+      csrf,'cuwe-order-'+uid);
+    const orderId=order.data?.order?.order_id;
+    assert(order.ok&&/^[a-f0-9]{32}$/.test(orderId||''),'CUW-E native order draft missing');
+    const samples=[
+      ['pm.catalog','product_management.product',productId,'CUWE-'+uid],
+      ['marketing.campaigns','marketing.campaign',campaignId,'CUW E Campaign '+uid],
+      ['finance.budget','finance.budget',budgetId,'CUW E Budget '+uid],
+      ['sales.order','sales.order',orderId,orderId],
+      ['finance.payments','finance.order_payment',orderId,orderId]
+    ];
+    for(const [workspace,type,id,query] of samples){
+      const locator='[data-entity-ref="'+type+':'+id+'"]';
+      const search=await page.goto(abs('/workspace/unified/business/'+workspace+'?q='+encodeURIComponent(query)),{waitUntil:'domcontentloaded'});
+      assert(search?.status()===200&&await page.locator(locator).count()===1,'CUW-E native list unavailable: '+workspace);
+      const selected=await page.goto(abs('/workspace/unified/business/'+workspace+'?q='+encodeURIComponent(query)+'&selected='+encodeURIComponent(type+':'+id)),{waitUntil:'domcontentloaded'});
+      assert(selected?.status()===200&&await page.locator('[data-cos-selected-entity="'+type+':'+id+'"] [data-cos-business-summary] .cos-entity-summary__item').count()>0,
+        'CUW-E exact detail unavailable: '+workspace);
+      await page.setViewportSize({width:390,height:844});
+      assert(await page.locator(locator).evaluate(el=>getComputedStyle(el).display)==='grid','CUW-E mobile list is not laid out as entity cards: '+workspace);
+      const overflow=await page.evaluate(()=>Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-document.documentElement.clientWidth);
+      assert(overflow<=2,'CUW-E mobile overflow for '+workspace+': '+overflow);
+      await page.screenshot({path:evidenceDir+'/cuw-e-'+workspace.replace('.','-')+'-mobile.png',animations:'disabled'});
+      await page.setViewportSize({width:1440,height:1000});
+      const unavailable=type+':'+(type==='finance.budget'?'finb-'+'f'.repeat(24):type==='marketing.campaign'?'mkt-'+'f'.repeat(24):'f'.repeat(32));
+      const forbidden=await page.goto(abs('/workspace/unified/business/'+workspace+'?q='+encodeURIComponent(query)+'&selected='+encodeURIComponent(unavailable)),{waitUntil:'domcontentloaded'});
+      assert(forbidden?.status()===200&&await page.locator('[data-cos-selected-entity]').count()===0&&await page.locator('[data-cos-order-confirm]').count()===0,
+        'CUW-E unavailable selection exposed detail or mutation: '+workspace);
+      add('CUWE.native_list_detail_mobile.'+workspace,{entity_id:id,document_overflow:overflow,unavailable_selection:'denied'});
+    }
+    // Explicit human confirmation, not payment, stock/fulfillment or provider execution.
+    await page.goto(abs('/workspace/unified/business/sales.order?q='+orderId+'&selected=sales.order:'+orderId),{waitUntil:'domcontentloaded'});
+    const confirmForm=page.locator('form[data-cos-order-confirm]');
+    assert(await confirmForm.count()===1,'CUW-E controlled Sales order command form missing');
+    const post={
+      csrf_token:await confirmForm.locator('input[name="csrf_token"]').inputValue(),
+      order_id:orderId,expected_revision:await confirmForm.locator('input[name="expected_revision"]').inputValue(),
+      idempotency_key:await confirmForm.locator('input[name="idempotency_key"]').inputValue(),confirm:'yes'
+    };
+    const confirmationUrl=abs('/workspace/unified/business/sales.order/confirm');
+    const bad=await admin.request.post(confirmationUrl,{form:{...post,csrf_token:'bad'},maxRedirects:0});
+    assert(bad.status()===403,'CUW-E order confirmation accepted invalid CSRF');
+    const guest=await browser.newContext();
+    try {
+      const anonymousMarketing=await guest.request.get(abs('/marketing/campaigns'),{maxRedirects:0});
+      assert(anonymousMarketing.status()===302&&(anonymousMarketing.headers()['location']||'').includes('/auth/login'),
+        'CUW-E unauthenticated Marketing route escaped firewall');
+    } finally {await guest.close();}
+    const buyer=await browser.newContext({storageState:restrictedStorage});
+    try {
+      for(const [workspace,type,id] of samples){
+        const forbidden=await buyer.request.get(abs('/workspace/unified/business/'+workspace+'?selected='+encodeURIComponent(type+':'+id)),{maxRedirects:0});
+        assert(forbidden.status()===403,'CUW-E buyer accessed active workspace '+workspace);
+      }
+      const buyerMarketing=await buyer.request.get(abs('/marketing/campaigns'),{maxRedirects:0});
+      assert(buyerMarketing.status()===403,'CUW-E buyer escaped native Marketing gate');
+      const deniedCampaign=await buyer.request.post(abs('/marketing/campaigns'),{form:{
+        csrf_token:restrictedCsrf,idempotency_key:'cuwe-buyer-'+uid,name:'Blocked buyer '+uid,business_objective:'Forbidden'
+      },maxRedirects:0});
+      assert(deniedCampaign.status()===403,'CUW-E buyer created native Marketing campaign');
+      const deniedBudget=await buyer.request.post(abs(budgetPath),{form:{...budgetPost,csrf_token:restrictedCsrf,idempotency_key:'cuw-'+'d'.repeat(32)},maxRedirects:0});
+      const deniedOrder=await buyer.request.post(confirmationUrl,{form:{...post,csrf_token:restrictedCsrf},maxRedirects:0});
+      assert(deniedBudget.status()===403&&deniedOrder.status()===403,'CUW-E buyer executed a controlled command');
+      const beforeConfirm=await invoke(admin,'sales.order.lifecycle.read',{order_id:orderId},csrf);
+      assert(beforeConfirm.data?.status==='placed'&&beforeConfirm.data.revision===1,'CUW-E denied buyer changed order');
+      add('CUWE.active_workspace_and_commands_buyer_denied',{role:'buyer',workspaces:samples.length,budget:403,order:403});
+    } finally {await buyer.close();}
+    await confirmForm.locator('input[name="confirm"]').check();
+    const [confirmationResponse]=await Promise.all([
+      page.waitForResponse(response=>response.request().method()==='POST'&&new URL(response.url()).pathname.endsWith('/sales.order/confirm')),
+      confirmForm.locator('button[type="submit"]').click()
+    ]);
+    assert(confirmationResponse.status()===200,'CUW-E human confirmation returned non-success response');
+    await page.locator('[data-cos-order-confirmed]').waitFor({state:'visible'});
+    assert(new URL(page.url()).pathname.endsWith('/sales.order/confirm'),'CUW-E confirmation receipt is not displayed on its native page');
+    const verified=await invoke(admin,'sales.order.lifecycle.read',{order_id:orderId},csrf);
+    assert(verified.data?.status==='confirmed'&&verified.data?.revision===2&&verified.data?.fulfilled_quantity===0,'CUW-E confirmation did not preserve native lifecycle/fulfillment');
+    const replay=await admin.request.post(confirmationUrl,{form:post,maxRedirects:0});
+    assert(replay.status()===200,'CUW-E duplicate confirmation did not reconcile original receipt');
+    const stale=await admin.request.post(confirmationUrl,{form:{...post,idempotency_key:'cuw-'+(orderId==='f'.repeat(32)?'e':'f').repeat(32)},maxRedirects:0});
+    assert(stale.status()===503,'CUW-E stale revision unexpectedly accepted');
+    const after=await invoke(admin,'sales.order.lifecycle.read',{order_id:orderId},csrf);
+    assert(after.data?.revision===2&&after.data?.fulfilled_quantity===0,'CUW-E replay/stale confirmation changed native order');
+    add('CUWE.sales_order_human_command_and_receipt',{order_id:orderId,revision:2,csrf:'denied',replay:'verified',stale:'unverified'});
+  } finally {
+    for(const [module,state] of previousModules){
+      if(state==='')sqlExecute("DELETE FROM cos_organization_modules WHERE organization_id='default' AND module_id='"+module+"'");
+      else sqlExecute("UPDATE cos_organization_modules SET enabled="+state+" WHERE organization_id='default' AND module_id='"+module+"'");
+    }
+  }
+
   const report = { schema: 1, suite: 'COS UX-00 R1/R2/R3 browser acceptance',
     environment: 'GitHub Actions disposable localhost MySQL', run_id: uid,
-    tenant_scope: 'Authenticated default tenant vs foreign-tenant native fixtures; multi-org login not offered by this deployment',
+    tenant_scope: 'Authenticated default browser tenant vs foreign native and same-actor-ID preference fixtures; independent configured-tenant password/identity/SSR component test; multi-org switch not offered by this web host',
     checks, tested_at: new Date().toISOString(),
-    remaining_gate: 'Buyer role denial requires exact-head CI; external Property Step approval, production fail-closed worker admission and completed Run UI staging remain unverified' };
+    remaining_gate: 'External Property Step approval, production fail-closed worker admission and completed Run UI staging remain unverified' };
   writeFileSync(evidenceDir + '/results.json', JSON.stringify(report, null, 2) + '\n');
   console.log(JSON.stringify({ ok: true, ...report }, null, 2));
 } catch (error) {

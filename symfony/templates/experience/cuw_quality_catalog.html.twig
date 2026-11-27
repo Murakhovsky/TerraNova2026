@@ -1,0 +1,124 @@
+{% extends 'base.html.twig' %}
+{% trans_default_domain 'cuw_quality' %}
+{% block title %}COS · {{ 'catalog.title'|trans }}{% endblock %}
+{% block meta %}<meta name="robots" content="noindex,nofollow">{% endblock %}
+{% block body %}
+<main class="cos-ui-catalog" id="cuw-quality-catalog">
+    <header class="cos-ui-catalog__header">
+        <div>
+            <p class="cos-ui-catalog__kicker">COS · CUW-F · #524</p>
+            <h1 class="cos-ui-catalog__title">{{ 'catalog.title'|trans }}</h1>
+            <p class="cos-ui-catalog__lede">{{ 'catalog.disclaimer'|trans }}</p>
+            <p><a class="cos-button cos-button--ghost" href="{{ path('cos_web_design_system_catalog') }}">{{ 'catalog.full'|trans }}</a></p>
+        </div>
+    </header>
+    <section class="cos-ui-catalog__section" data-controller="appearance" data-appearance-style-value="light" aria-label="{{ 'catalog.theme'|trans }}">
+        <div class="cos-action-bar" role="group" aria-label="{{ 'catalog.theme'|trans }}">
+            {% for theme in ['light', 'dark', 'system'] %}
+                <button type="button" class="cos-button" data-appearance-target="styleButton" data-action="click->appearance#setStyle" data-style="{{ theme }}" aria-pressed="false">{{ ('catalog.' ~ theme)|trans }}</button>
+            {% endfor %}
+        </div>
+        <div class="cos-action-bar" role="group" aria-label="{{ 'catalog.density'|trans }}">
+            {% for density in ['comfortable', 'compact'] %}
+                <button type="button" class="cos-button" data-appearance-target="densityButton" data-action="click->appearance#setDensity" data-density="{{ density }}" aria-pressed="false">{{ ('catalog.' ~ density)|trans }}</button>
+            {% endfor %}
+        </div>
+        {% if not fixtureMode|default(false) %}
+            <form class="cos-action-bar" method="post" data-turbo="false" action="{{ path('cos_web_locale_switch') }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('cos_locale_switch') }}">
+                <label for="quality-locale" class="cos-field__label">{{ 'catalog.language'|trans }}</label>
+                <select id="quality-locale" class="cos-select" name="locale">
+                    <option value="uk" {% if app.request.locale == 'uk' %}selected{% endif %}>Українська</option>
+                    <option value="en" {% if app.request.locale == 'en' %}selected{% endif %}>English</option>
+                </select>
+                <button class="cos-button" type="submit">{{ 'grid.apply'|trans }}</button>
+            </form>
+        {% endif %}
+    </section>
+
+    {% include 'experience/_cuw_quality_states.html.twig' only %}
+
+    {% set ref = 'DEMO-RECONCILIATION-2026-000001-A1234567890-B1234567890-C1234567890' %}
+    <section id="cuw-quality-entity" class="cos-ui-catalog__section" aria-labelledby="quality-entity-title">
+        <h2 id="quality-entity-title">{{ 'catalog.entity'|trans }}</h2>
+        <div class="cos-section-grid">
+            <twig:CosEntityCard
+                :title="'catalog.entity_title'|trans"
+                :subtitle="'catalog.entity_subtitle'|trans"
+                :statusLabel="'state.reconciliation_required.title'|trans"
+                statusTone="warning"
+                :meta="[{label:'catalog.reference'|trans, value:ref}]"
+            />
+            <section class="cos-card">
+                <h3 class="cos-card__title">{{ 'catalog.goal'|trans }}</h3>
+                <twig:CosMetric :label="'catalog.goal'|trans" value="7 / 10" />
+                <twig:CosProgress :label="'catalog.goal'|trans" :value="7" :max="10" />
+                <twig:CosOutcomeState state="completed_unverified" />
+            </section>
+            <section class="cos-card">
+                <h3 class="cos-card__title">{{ 'catalog.timeline'|trans }}</h3>
+                <twig:CosTimeline :label="'catalog.timeline'|trans" :items="[
+                    {time:'10:00', title:'catalog.event'|trans, tone:'info'},
+                    {time:'10:15', title:'catalog.event2'|trans, tone:'warning'}
+                ]" />
+                <twig:CosAgentEvidence :evidence="qualityEvidence" />
+            </section>
+        </div>
+    </section>
+
+    <section id="cuw-quality-modes" class="cos-ui-catalog__section" aria-labelledby="quality-modes-title">
+        <h2 id="quality-modes-title">{{ 'catalog.modes'|trans }}</h2>
+        <twig:CosTabs id="quality-modes" :label="'catalog.modes'|trans" :items="[
+            {key:'result',label:'catalog.result'|trans},
+            {key:'process',label:'catalog.process'|trans},
+            {key:'expert',label:'catalog.expert'|trans}
+        ]">
+            {% for mode in ['result','process','expert'] %}
+                <div id="quality-modes-panel-{{ mode }}" role="tabpanel" aria-labelledby="quality-modes-tab-{{ mode }}"
+                     data-tabs-target="panel" data-tab-key="{{ mode }}" tabindex="0" {% if mode != 'result' %}hidden{% endif %}>
+                    <div class="cos-card" data-quality-reference="{{ ref }}">
+                        <p class="cos-card__eyebrow">{{ ('catalog.' ~ mode)|trans }}</p>
+                        <p class="cos-card__copy">{{ ref }}</p>
+                        <twig:CosOutcomeState state="external_outcome_unknown" />
+                        {% if mode != 'result' %}<twig:CosProgress :label="'catalog.goal'|trans" :value="7" :max="10" />{% endif %}
+                        {% if mode == 'expert' %}<twig:CosAgentEvidence :evidence="qualityEvidence" />{% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </twig:CosTabs>
+    </section>
+
+    <section id="cuw-quality-form" class="cos-ui-catalog__section" aria-labelledby="quality-form-title">
+        <h2 id="quality-form-title">{{ 'catalog.form'|trans }}</h2>
+        <div class="cos-section-grid">
+            <section class="cos-card">
+                <twig:CosInput id="quality-amount" name="quality_amount" :label="'catalog.input'|trans" inputmode="decimal" :help="'catalog.input_help'|trans" value="-1" :errors="['catalog.input_error'|trans]" required />
+                <twig:CosButton :label="'catalog.disabled'|trans" disabled />
+                <twig:CosButton :label="'catalog.loading'|trans" :loadingLabel="'catalog.loading'|trans" loading />
+            </section>
+            <section class="cos-card">
+                <twig:CosConfirm id="quality-confirm" :title="'catalog.approval_title'|trans" :message="'catalog.approval_copy'|trans" :triggerLabel="'catalog.review'|trans" :cancelLabel="'catalog.cancel'|trans" :confirmLabel="'catalog.confirm'|trans" stepUp />
+                <twig:CosModal id="quality-modal" :title="'catalog.form'|trans" :triggerLabel="'catalog.open_modal'|trans" :closeLabel="'catalog.close'|trans">
+                    <twig:CosInput id="quality-modal-amount" name="quality_modal_amount" :label="'catalog.input'|trans" inputmode="decimal" />
+                </twig:CosModal>
+                <twig:CosDrawer id="quality-drawer" :title="'catalog.entity'|trans" :triggerLabel="'catalog.open_detail'|trans" :closeLabel="'catalog.close'|trans">
+                    <twig:CosOutcomeState state="waiting_approval" />
+                    <twig:CosAgentEvidence :evidence="qualityEvidence" />
+                </twig:CosDrawer>
+            </section>
+        </div>
+    </section>
+
+    <section id="cuw-quality-grid" class="cos-ui-catalog__section" aria-labelledby="quality-grid-title">
+        <h2 id="quality-grid-title">{{ 'catalog.data'|trans }}</h2>
+        <twig:CosDataGrid id="quality-grid" :label="'catalog.data'|trans"
+            :baseUrl="path('cos_web_design_system_catalog', {quality:1})"
+            :query="dataGridDemo.query" :page="dataGridDemo.page"
+            :columns="dataGridDemo.columns" :filters="dataGridDemo.filters" :savedViews="dataGridDemo.savedViews"
+            :state="dataGridDemo.state" selectable />
+        <twig:CosDataGrid id="quality-denied-grid" :label="'state.permission_denied.title'|trans"
+            :query="dataGridDemo.query" :page="dataGridDemo.page"
+            :columns="dataGridDemo.columns" :state="constant('App\\Web\\Experience\\Data\\DataGridState::Denied')" selectable />
+    </section>
+</main>
+{% endblock %}

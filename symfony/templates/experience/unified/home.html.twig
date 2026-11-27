@@ -1,4 +1,8 @@
 {% extends 'experience/workspace_shell.html.twig' %}
+{% block stylesheets %}
+    {{ parent() }}
+    {% include 'experience/adaptive/_styles.html.twig' %}
+{% endblock %}
 {% block title %}Робочі простори | COS{% endblock %}
 {% block workspace_content %}
 <section class="cos-uw cos-page__stack" data-cos-unified-home data-workspace-id="unified.home">
@@ -8,7 +12,9 @@
     <p class="cos-card__copy">{{ 'uw.home.active_org'|trans }} <strong>{{ shell.tenantLabel }}</strong>. {{ 'uw.home.no_org_switch'|trans }}</p>
     <div class="cos-uw__row">
       <a class="cos-button cos-button--primary" href="/workspace/unified/actions">{{ 'uw.home.commands'|trans }}</a>
-      <a class="cos-button cos-button--ghost" href="/cos/control-center">{{ 'uw.home.operations'|trans }}</a>
+      <a class="cos-button cos-button--ghost" href="{{ path('cos_ux05_operations') }}">{{ 'uw.home.operations'|trans }}</a>
+      <a class="cos-button cos-button--ghost" href="{{ path('cos_federation_goals_index') }}">{{ 'uw.home.goals'|trans }}</a>
+      <a class="cos-button cos-button--ghost" href="{{ path('cos_web_ai_panel',{view:'workspace'}) }}">{{ 'uw.home.ai_workspace'|trans }}</a>
       <div class="cos-uw__appearance" data-controller="appearance"
            data-appearance-theme-value="light" data-appearance-density-value="comfortable"
            role="group" aria-label="{{ 'uw.home.appearance'|trans }}">
@@ -19,6 +25,7 @@
       </div>
     </div>
   </header>
+  {% include 'experience/adaptive/_controls.html.twig' %}
   <section class="cos-card" aria-labelledby="cos-uw-search">
     <h2 id="cos-uw-search" class="cos-card__title">{{ 'uw.home.find'|trans }}</h2>
     <form role="search" method="get" action="{{ path('cos_unified_home') }}" class="cos-uw__search">
@@ -40,12 +47,13 @@
   </section>
   <section aria-labelledby="cos-uw-business">
     <h2 id="cos-uw-business" class="cos-card__title">{{ 'uw.home.contexts'|trans }}</h2>
+    {% include 'experience/adaptive/_toggle.html.twig' with {sectionId:'home.identifiers',sectionLabel:'uw.adaptive.identifiers'} %}
     <div class="cos-uw__grid" data-cos-provider-workspaces>
       {% for workspace in workspaces %}
         <article class="cos-card" data-cos-provider-workspace="{{ workspace.id }}">
           <p class="cos-card__eyebrow">{{ 'uw.home.registered'|trans }}</p>
           <h3 class="cos-card__title">{{ workspace.label|trans }}</h3>
-          <p class="cos-card__copy">{{ workspace.id }}</p>
+          {% if 'home.identifiers' in adaptive.composition.visibleSections %}<p class="cos-card__copy" data-cos-expert-ids>{{ workspace.id }}</p>{% endif %}
           <a class="cos-button cos-button--ghost" href="{{ path('cos_unified_business_workspace',{workspaceId:workspace.id}) }}">{{ 'uw.home.open'|trans }}</a>
         </article>
       {% else %}

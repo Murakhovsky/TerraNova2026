@@ -35,6 +35,36 @@ final readonly class MysqlSalesOrderRepository implements SalesOrderRepositoryIn
         foreach(['subtotal','discount','tax','shipping','total'] as $key)$result[$key]=(string)$row[$key];
         return $result; // Attribution observations are not a user-visible customer profile.
     }
+    public function workspacePage(string $org,?array $owners,string $query,int $offset,int $limit):array
+    {
+        if($org===''||($owners!==null&&($owners===[]||count($owners)>1000||array_filter($owners,static fn($id)=>!is_int($id)||$id<1)!==[]))||mb_strlen($query)>120||$offset<0||$offset>200000||$limit<1||$limit>101)
+            throw new \DomainException('Invalid native order page.');
+        $sql='SELECT o.order_id,o.owner_user_id,o.deal_id,o.status,o.channel,o.currency,o.total,o.placed_at
+            FROM sales_orders o LEFT JOIN tn_client_cases d ON d.organization_id=o.organization_id
+                AND BINARY d.organization_id=BINARY o.organization_id AND d.id=o.deal_id
+            WHERE o.organization_id=? AND BINARY o.organization_id=BINARY ?
+                AND (o.deal_id IS NULL OR d.id IS NOT NULL)';
+        $args=[$org,$org];
+        if($owners!==null){
+            $slots=implode(',',array_fill(0,count($owners),'?'));
+            $sql.=' AND o.owner_user_id IN ('.$slots.') AND (o.deal_id IS NULL OR d.assigned_user_id IN ('.$slots.'))';
+            $args=[...$args,...$owners,...$owners];
+        }
+        if($query!==''){
+            $needle='%'.strtr($query,['!'=>'!!','%'=>'!%','_'=>'!_']).'%';
+            $sql.=" AND (o.order_id LIKE ? ESCAPE '!' OR o.status LIKE ? ESCAPE '!' OR o.channel LIKE ? ESCAPE '!')";
+            array_push($args,$needle,$needle,$needle);
+        }
+        $stmt=$this->connection->prepare($sql.' ORDER BY o.placed_at DESC,o.order_id DESC LIMIT '.$limit.' OFFSET '.$offset);
+        $stmt->execute($args);
+        return array_map(static fn(array $row):array=>[
+            'order_id'=>$row['order_id'],'owner_id'=>(int)$row['owner_user_id'],
+            'deal_id'=>$row['deal_id']===null?null:(int)$row['deal_id'],'status'=>$row['status'],
+            'channel'=>$row['channel'],'currency'=>$row['currency'],'total'=>(string)$row['total'],
+            'placed_at'=>str_replace(' ','T',$row['placed_at']).'Z',
+        ],$stmt->fetchAll(PDO::FETCH_ASSOC));
+    }
+
     public function placement(string $organizationId,string $orderId):?array
     {
         if ($organizationId===''||preg_match('/^[a-f0-9]{32}$/D',$orderId)!==1) return null;

@@ -2,16 +2,16 @@
 title: Маркетинг як окремий домен COS
 description: Планування маркетингових кампаній і безпечне читання Meta Ads без рекламних мутацій.
 status: draft
-updated: 2026-11-24
+updated: 2026-11-27
 kind: domain
-version: 0.2.3
+version: 0.2.4
 ---
 
 # Огляд домену Marketing
 
 Marketing — окремий bounded context, що володіє рекламними планами, внутрішніми кампаніями, їхніми версіями, аудиторіями, креативами та спостереженнями рекламних провайдерів.
 
-**Стан:** D2, реалізовано M0–M3, основний M4 та дорадчі компоненти M5. Незалежне приймання на staging, реальні джерела і фінансові результати не підтверджено. Домен вимкнений за замовчуванням.
+**Стан:** D2, реалізовано M0–M3, основний M4 та дорадчі компоненти M5. Незалежне приймання на staging, реальні джерела і фінансові результати не підтверджено. Домен вимкнений за замовчуванням. UX-06 додає опціональний worker-only Hermes Runs API із нативною кореляцією та контрольованою зупинкою. LIVE-приймання ще не виконано.
 
 ## Розподіл відповідальності
 
@@ -109,7 +109,7 @@ STARTED та UNCERTAIN без рішення recovery блокують нові 
 
 ## M2c.5e.1: Конфігурація та гранична вартість зовнішнього аналітика
 
-`COS_MARKETING_HERMES_PROFILES_JSON` — deployment-only tenant map, за замовчуванням порожня. Один окремий profile URL та opaque Vault reference на tenant, evidence refs для ізоляції й provider hard cost cap, expiry (до 30 днів), 1–100 turns/UTC day, positive USD ceiling до 10.0000 за turn. Зміна будь-якого поля змінює configuration hash. Evidence refs є operator attestations, не автоматичним доказом remote safety. Немає UI setter або довільних URL із request.
+`COS_MARKETING_HERMES_PROFILES_JSON` — deployment-only tenant map, за замовчуванням порожня. Один окремий profile URL та opaque Vault reference на tenant, evidence refs для ізоляції й provider hard cost cap, expiry (до 30 днів), 1–100 turns/UTC day, positive USD ceiling до 10.0000 за turn. Зміна будь-якого поля змінює configuration hash. Evidence refs є operator attestations, не автоматичним доказом remote safety. Немає UI setter або довільних URL із request. Для AI Workspace UX-06 schema додатково підтримує deployment-only `token_budget` із точними цілими `max_prompt_tokens`, `max_completion_tokens`, `max_total_tokens` і `control_evidence_ref`, які включаються в configuration hash. Старі профілі сумісні для попереднього Marketing flow, але UX-06 не делегує без цього контракту. Очищена квитанція Hermes `usage` перевіряється за лімітами при записі advice, невідома чи надлімітна відповідь лишається UNCERTAIN без retry. Це не proof live hard cap.
 
 `KernelBudgetedHermesAnalystRuntime` використовує існуючий `LlmGovernanceRepositoryInterface`: explicit USD budget required, native atomic reservation та settlement ДО remote call. До загального LLM ledger записується консервативний approved ceiling із `cost_source=AUTHORIZED_CEILING`, без вигаданих tokens/actual cost. Це budget consumption estimate, не інвойс, не Finance Expense і не виміряна вартість. Невизначений результат не повертає allowance. Помилка резервування або persistence не допускає виклик. Кореляція прив'язана до durable run receipt. Реальний hard cost cap має бути забезпечений зовнішньою конфігурацією Hermes/provider і прийнятий незалежно.
 
@@ -127,7 +127,7 @@ Campaign Workspace дозволяє **propose** one-step Goal/Plan за наяв
 
 ## M2c.6b: Операторська перевірка реального профілю
 
-Команда `cos:marketing:hermes-preflight <organization> [--probe]` виконує локальні перевірки module, operator configuration expiry, canonical rollout, explicit USD budget, Vault credential. Лише з `--probe` надсилається один authenticated HTTPS GET на `/p/<profile>/v1/toolsets`. Немає POST, генерації, запису бюджету, зміни бізнес-стану або автоматичного приймання. Спільний ProfileProbe використовується також перед реальною генерацією. Реєстр відхиляє спільний URL/credential reference між tenant та default profile; перевірка не доводить відмінність фактичних секретів, memory, skills, filesystem або egress isolation. Не допускається трактувати JSON object як empty toolset list.
+Команда `cos:marketing:hermes-preflight <organization> [--probe] [--run-controls]` виконує локальні перевірки module, operator configuration expiry, canonical rollout, explicit USD budget, Vault credential. Лише з `--probe` надсилається authenticated HTTPS GET на `/p/<profile>/v1/toolsets`. Опціональний `--run-controls` (тільки разом із `--probe`) додатково читає `/v1/capabilities`, не запускає і не зупиняє turns; повідомлені run controls не є дозволом на stop. Немає POST, генерації, запису бюджету, зміни бізнес-стану або автоматичного приймання. Спільний ProfileProbe використовується також перед реальною генерацією. Реєстр відхиляє спільний URL/credential reference між tenant та default profile; перевірка не доводить відмінність фактичних секретів, memory, skills, filesystem або egress isolation. Не допускається трактувати JSON object як empty toolset list.
 
 Перед live acceptance оператор має підготувати окремий staging tenant та named Hermes profile, обмежити egress і memory/skills/tools, підтвердити hard provider cap та окремий API key. Не відкривати існуючу внутрішню staging network автоматично; доступ дозволяти тільки контрольованим каналом до Hermes. Передати `COS_MARKETING_HERMES_PROFILES_JSON` і referenced Vault secret через захищену конфігурацію PHP/worker, не через git або CLI arguments. Виконати local та remote preflight, потім створити синтетичну Campaign/Creative у Workspace, незалежно погодити Plan і Action, виконати canonical Workflow один раз, звірити native receipt, Kernel ceiling, provider usage та незалежний Goal outcome; окремий менеджер перевіряє advice. Невизначена відповідь не повторюється. Навіть успішний preflight не є live generation acceptance або дозволом release. Реальний staging запуск не здійснено.
 

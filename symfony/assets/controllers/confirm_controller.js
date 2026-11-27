@@ -11,6 +11,13 @@ export default class extends Controller {
         this.validate();
     }
 
+    reset() {
+        if (this.hasStepUpInputTarget) {
+            this.stepUpInputTarget.value = '';
+        }
+        this.validate();
+    }
+
     validate() {
         if (!this.hasConfirmButtonTarget) {
             return;

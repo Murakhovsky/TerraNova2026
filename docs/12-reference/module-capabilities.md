@@ -28,7 +28,7 @@ generated: true
 | `finance` | Finance | `0.2.3` | `0.2.3` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Finance/module.php` |
 | `growth` | Growth | `0.50.0` | `0.50.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Growth/module.php` |
 | `hr` | HR | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/HR/module.php` |
-| `marketing` | Marketing | `0.2.3` | `0.2.3` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Marketing/module.php` |
+| `marketing` | Marketing | `0.2.4` | `0.2.4` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Marketing/module.php` |
 | `procurement` | Procurement | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Procurement/module.php` |
 | `product_management` | Product Management | `0.1.0` | `0.18.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/ProductManagement/module.php` |
 | `property` | Property | `1.0.0` | `1.0.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Property/module.php` |
@@ -173,6 +173,7 @@ Manifest capabilities не задекларовані.
 - `finance.budget.envelope.draft.create`;
 - `finance.budget.envelope.freeze`;
 - `finance.budget.envelope.get`;
+- `finance.budget.envelope.list`;
 - `finance.budget.reservation.list`;
 - `finance.budget.reservation.release`;
 - `finance.budget.reservation.reserve`;
@@ -309,7 +310,7 @@ Manifest capabilities не задекларовані.
 - обробники jobs: —;
 - внески API routes: —;
 - постачальники конфігурації: —;
-- міграції: `app/migrations/20261119_000152_marketing_foundation.sql`, `app/migrations/20261119_000154_marketing_planning_m2.sql`, `app/migrations/20261124_000162_marketing_audience_adsets.sql`, `app/migrations/20261124_000163_marketing_analyst_execution.sql`, `app/migrations/20261124_000164_marketing_analyst_decisions.sql`, `app/migrations/20261124_000165_marketing_paid_launch_plans.sql`, `app/migrations/20261124_000167_marketing_paid_operation_journal.sql`, `app/migrations/20261124_000192_marketing_m4_attribution_intents.sql`, `app/migrations/20261124_000193_marketing_media_analytics.sql`, `app/migrations/20261126_009020_marketing_attribution_schedules.sql`, `app/migrations/20261126_009021_marketing_experiment_protocols.sql`, `app/migrations/20261126_009022_marketing_optimization_receipts.sql`, `app/migrations/20261126_009023_marketing_optimization_schedules.sql`.
+- міграції: `app/migrations/20261119_000152_marketing_foundation.sql`, `app/migrations/20261119_000154_marketing_planning_m2.sql`, `app/migrations/20261124_000162_marketing_audience_adsets.sql`, `app/migrations/20261124_000163_marketing_analyst_execution.sql`, `app/migrations/20261124_000164_marketing_analyst_decisions.sql`, `app/migrations/20261124_000165_marketing_paid_launch_plans.sql`, `app/migrations/20261124_000167_marketing_paid_operation_journal.sql`, `app/migrations/20261124_000192_marketing_m4_attribution_intents.sql`, `app/migrations/20261124_000193_marketing_media_analytics.sql`, `app/migrations/20261126_009020_marketing_attribution_schedules.sql`, `app/migrations/20261126_009021_marketing_experiment_protocols.sql`, `app/migrations/20261126_009022_marketing_optimization_receipts.sql`, `app/migrations/20261126_009023_marketing_optimization_schedules.sql`, `app/migrations/20261127_009060_marketing_analyst_remote_run.sql`.
 
 ### Задекларовані capabilities
 
@@ -665,6 +666,7 @@ Manifest capabilities не задекларовані.
 - `sales.order.lifecycle.read`;
 - `sales.order.lifecycle.release`;
 - `sales.order.lifecycle.return`;
+- `sales.order.list`;
 - `sales.order.read`;
 - `sales.order.source.page.read`;
 - `sales.order.source.pending.read`;

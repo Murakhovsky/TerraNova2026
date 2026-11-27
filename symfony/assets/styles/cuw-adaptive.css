@@ -1,0 +1,5 @@
+.cos-adaptive-controls{min-width:0;overflow-wrap:anywhere}
+.cos-adaptive-controls form{display:flex;flex-wrap:wrap;align-items:center;gap:var(--cos-space-2)}
+.cos-adaptive-controls button,.cos-adaptive-toggle button{min-height:var(--cos-touch-target-min);white-space:normal;max-width:100%}
+.cos-adaptive-toggle{margin-block:var(--cos-space-2)}
+[data-cos-expert-ids]{overflow-wrap:anywhere}

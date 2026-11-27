@@ -1,0 +1,26 @@
+# UX-04 preference-only POST handlers; canonical read routes remain unchanged.
+cos_adaptive_property_bulk_preferences:
+  path: /workspace/property/bulk
+  controller: App\Web\Property\PropertyBulkWorkspaceController::index
+  methods: [POST]
+
+cos_adaptive_home_preferences:
+  path: /workspace/unified
+  controller: App\Web\Experience\Unified\UnifiedWorkspaceController::index
+  methods: [POST]
+
+cos_adaptive_actions_preferences:
+  path: /workspace/unified/actions
+  controller: App\Web\Experience\Unified\UnifiedCapabilityController::index
+  methods: [POST]
+
+cos_adaptive_property_preferences:
+  path: /workspace/unified/property
+  controller: App\Web\Experience\Unified\UnifiedCapabilityController::property
+  methods: [POST]
+
+cos_adaptive_business_preferences:
+  path: /workspace/unified/business/{workspaceId}
+  controller: App\Web\Experience\Unified\UnifiedBusinessWorkspaceController::show
+  methods: [POST]
+  requirements: { workspaceId: '[a-z][a-z0-9_.-]{0,96}' }

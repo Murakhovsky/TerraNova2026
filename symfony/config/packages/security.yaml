@@ -5,7 +5,7 @@ security:
 
   firewalls:
     cos_api:
-      pattern: '^/(?:api/v1|api/engineering|api/spatial|account|cabinet|sales|growth|workspace|product-management|client-case|capital-markets|cos/(?:architecture|control-center|action|approval)|admin|property/(?:manage|listing|submissions|submission|presentationShare)|diagnostics|spatial|dev)(?:/|$)'
+      pattern: '^/(?:api/v1|api/engineering|api/spatial|account|cabinet|sales|growth|workspace|product-management|marketing|client-case|capital-markets|cos/(?:architecture|control-center|action|approval)|admin|property/(?:manage|listing|submissions|submission|presentationShare)|diagnostics|spatial|dev)(?:/|$)'
       stateless: true
       provider: cos_users
       custom_authenticators:
@@ -19,6 +19,7 @@ security:
     - { path: '^/api/v1/capability-intents/sales-business/review(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
     - { path: '^/api/v1/capability-intents/product-business$', roles: PUBLIC_ACCESS, methods: [POST] }
     - { path: '^/product-management(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
+    - { path: '^/marketing(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
     - { path: '^/api/v1/health$', roles: PUBLIC_ACCESS }
     - { path: '^/api/v1/public/properties/favourites$', roles: PUBLIC_ACCESS, methods: [GET, HEAD, POST] }
     - { path: '^/api/v1/public/properties(?:/|$)', roles: PUBLIC_ACCESS, methods: [GET, HEAD] }

@@ -22,9 +22,21 @@ final readonly class StructuredAgentResultFactory
                 'confidence' => $run->confidence,
             ], static fn (mixed $value): bool => $value !== null && $value !== '');
 
+        if (is_string($output['summary'] ?? null) && trim($output['summary']) !== '') {
+            $summary['summary'] = trim($output['summary']);
+        }
+
         $recommendations = [];
+        foreach ($this->list($output['recommendations'] ?? []) as $recommendation) {
+            $text = $this->string(is_array($recommendation)
+                ? ($recommendation['text'] ?? $recommendation['recommendation'] ?? $recommendation['type'] ?? null)
+                : $recommendation);
+            if ($text !== null) {
+                $recommendations[] = new AgentRecommendation($text, null, null);
+            }
+        }
         $rawActions = $output['proposed_actions'] ?? $output['actions'] ?? [];
-        if (is_array($rawActions)) {
+        if (is_array($rawActions) && array_is_list($rawActions)) {
             foreach ($rawActions as $action) {
                 if (!is_array($action)) {
                     continue;
@@ -38,6 +50,7 @@ final readonly class StructuredAgentResultFactory
                     targetType: $this->string($action['target_type'] ?? null),
                     targetId: $this->string($action['target_id'] ?? null),
                     parameters: is_array($action['parameters'] ?? null) ? $action['parameters'] : [],
+                    kind: 'proposal',
                 );
             }
         }

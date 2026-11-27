@@ -1,0 +1,32 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+{% block title %}{{ 'Create budget draft'|trans({}, 'cuw_business')|trans }} | COS{% endblock %}
+{% block workspace_content %}
+<section class="cos-uw cos-page__stack" data-cos-budget-draft>
+  <article class="cos-card">
+    <h1 class="cos-card__title">{{ 'Create budget draft'|trans({}, 'cuw_business')|trans }}</h1>
+    <p class="cos-card__copy">{{ 'Only an internal draft is created; no budget is activated, reserved or spent.'|trans({}, 'cuw_business')|trans }}</p>
+    {% if receipt %}
+      <p role="status" data-cos-budget-draft-verified="{{ receipt.id }}">{{ 'Draft verified by independent Finance readback.'|trans({}, 'cuw_business')|trans }}</p>
+      <twig:CosEntitySummary :items="[{label:'Reference'|trans({}, 'cuw_business')|trans,value:receipt.id},{label:'State'|trans({}, 'cuw_business')|trans,value:'DRAFT'},{label:'Revision'|trans({}, 'cuw_business')|trans,value:receipt.revision ~ ''},{label:'Trace'|trans({}, 'cuw_business')|trans,value:receipt.trace}]" label="{{ 'Receipt'|trans({}, 'cuw_business')|trans }}" />
+      <a class="cos-button cos-button--primary" href="{{ receipt.path }}">{{ 'Open budget'|trans({}, 'cuw_business')|trans }}</a>
+    {% else %}
+      {% if error %}<p class="cos-alert" role="alert">{{ error|trans({}, 'cuw_business')|trans }}</p>{% endif %}
+      {% if retryAllowed %}
+      <form method="post" action="{{ path('cos_cuw_finance_budget_create') }}" class="cos-page__stack" data-turbo="false" data-cos-budget-draft-form>
+        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+        <input type="hidden" name="idempotency_key" value="{{ idempotencyKey }}">
+        <label>{{ 'Budget name'|trans({}, 'cuw_business')|trans }} <input class="cos-input" name="name" minlength="3" maxlength="190" value="{{ form.name }}" required></label>
+        <label>{{ 'Marketing campaign reference'|trans({}, 'cuw_business')|trans }} <input class="cos-input" name="source_ref" pattern="mkt-[a-f0-9]{24}" maxlength="28" value="{{ form.source_ref }}" required></label>
+        <label>{{ 'Currency'|trans({}, 'cuw_business')|trans }} <input class="cos-input" name="currency" pattern="[A-Z]{3}" maxlength="3" placeholder="EUR" value="{{ form.currency }}" required></label>
+        <label>{{ 'Period start'|trans({}, 'cuw_business')|trans }} <input class="cos-input" type="date" name="period_start" value="{{ form.period_start }}" required></label>
+        <label>{{ 'Period end'|trans({}, 'cuw_business')|trans }} <input class="cos-input" type="date" name="period_end" value="{{ form.period_end }}" required></label>
+        <label>{{ 'Limit (minor units)'|trans({}, 'cuw_business')|trans }} <input class="cos-input" type="number" name="limit_minor" min="1" max="1000000000000" step="1" value="{{ form.limit_minor }}" required></label>
+        <p class="cos-card__copy">{{ 'Enter the integer amount in minor currency units (for example, 10000 EUR cents = 100 EUR).'|trans({}, 'cuw_business')|trans }}</p>
+        <button class="cos-button cos-button--primary" type="submit">{{ 'Create budget draft'|trans({}, 'cuw_business')|trans }}</button>
+      </form>
+      {% endif %}
+    {% endif %}
+    <a class="cos-button cos-button--ghost" href="{{ back }}">{{ 'Budget envelopes'|trans({}, 'cuw_business')|trans }}</a>
+  </article>
+</section>
+{% endblock %}

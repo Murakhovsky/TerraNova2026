@@ -15,14 +15,18 @@ final readonly class HermesAnalystOperatorPreflight
         private LlmGovernanceRepositoryInterface $governance,private ActiveModuleResolver $modules){}
 
     /** @return array<string,mixed> */
-    public function inspect(string $org,bool $remote=false):array
+    public function inspect(string $org,bool $remote=false,bool $runControls=false):array
     {
         $report=['organization_id'=>$org,'status'=>'BLOCKED','stage'=>'TENANT_MODULE','configuration_hash'=>null,
             'remote_probe_requested'=>$remote,'remote_probe_passed'=>false,'toolsets_reported'=>null,
             'monthly_budget_usd'=>null,'monthly_consumed_usd'=>null,'per_run_ceiling_usd'=>null,
             'read_only'=>true,'generation_requested'=>false,'provider_cost_cap_verified'=>false,
+            'token_limits'=>null,'provider_token_cap_verified'=>false,
+            'run_controls_probe_requested'=>$runControls,'run_controls_probe_passed'=>false,'run_controls'=>null,
+            'remote_cancel_available'=>false,
             'isolation_verified'=>false,'release_authorized'=>false];
         try{
+            if($runControls&&!$remote)return $report;
             if(!preg_match('/^[A-Za-z0-9_.:-]{1,40}$/D',$org)||!$this->modules->isEnabled($org,'marketing'))return $report;
             $report['stage']='CONFIGURATION';
             $profile=$this->profiles->forTenant($org);
@@ -30,6 +34,7 @@ final readonly class HermesAnalystOperatorPreflight
             $profile->assertAccepted($org);
             $report['configuration_hash']=$profile->configurationHash;
             $report['per_run_ceiling_usd']=$profile->maxCostUsd;
+            $report['token_limits']=$profile->tokenBudget?->limits();
             $report['stage']='CANONICAL_ROLLOUT';
             $rollout=getenv('COS_FEDERATION_CANONICAL_ORGANIZATION');
             if(!is_string($rollout)||$rollout===''||!hash_equals($org,$rollout))return $report;
@@ -50,6 +55,13 @@ final readonly class HermesAnalystOperatorPreflight
             $facts=$this->probe->inspect($profile->connection,$token);
             $report['toolsets_reported']=$facts['toolsets_reported'];
             $report['remote_probe_passed']=true;
+            if($runControls){
+                $report['stage']='REMOTE_RUN_CONTROLS_DISCOVERY';
+                // Feature advertisement is not admission or an execution
+                // handle. The sync Chat Completions path cannot use stop.
+                $report['run_controls']=$this->probe->inspectRunControls($profile->connection,$token);
+                $report['run_controls_probe_passed']=true;
+            }
             $report['status']='REMOTE_PREFLIGHT_PASSED_NOT_ACCEPTED';$report['stage']='INDEPENDENT_ACCEPTANCE_REQUIRED';
             return $report;
         }catch(Throwable){

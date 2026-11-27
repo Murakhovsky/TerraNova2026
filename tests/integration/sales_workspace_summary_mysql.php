@@ -62,7 +62,7 @@ try{
         }
     };
     $receipts=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesMutationReceiptRepository($db);
-    $orderService=new \Domains\Sales\Application\Service\SalesOrderService($orderRepo,$receipts,$guard,$entityScope,$references);
+    $orderService=new \Domains\Sales\Application\Service\SalesOrderService($orderRepo,$receipts,$guard,$entityScope,$references,null,new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesTeamScope($db,$scope,new MysqlSalesAccessControl($db)));
     // Actual Shopify source + HMAC inbox + PDO, with a provider-only mock transport.
     $shop='order-'.$token.'.myshopify.com';
     putenv('SHOPIFY_SHOP_DOMAIN='.$shop);putenv('SHOPIFY_CLIENT_ID=order-fixture');putenv('SHOPIFY_CLIENT_SECRET=order-fixture-secret');
@@ -197,6 +197,7 @@ try{
         new \App\Infrastructure\Capability\SalesWorkspaceTeamSummaryAdapter($teamSummary),
         new \App\Infrastructure\Capability\SalesOrderCreateAdapter($orderService),
         new \App\Infrastructure\Capability\SalesOrderReadAdapter($orderService),
+        new \App\Infrastructure\Capability\SalesOrderListAdapter($orderService),
         new \App\Infrastructure\Capability\SalesOrderSourceReconcileAdapter($reconcile),
         new \App\Infrastructure\Capability\SalesOrderSourcePageAdapter($reconcile),
         new \App\Infrastructure\Capability\SalesOrderSourcePendingAdapter($reconcile),
@@ -429,6 +430,23 @@ try{
     $check($readOrder($manager)['order']===$createdOrder['order'],'Order readback differs.');
     $reject(fn()=>$readOrder($actor($org,$other)));
     $reject(fn()=>$readOrder($actor('foreign-'.$token,$owner)));
+    $listOrders=static fn($who,array $input)=>$gateway->invoke($who,'sales.order.list',$input,'trusted_read','','order-list-test');
+    $ownPage=$listOrders($manager,['scope'=>'auto','q'=>$orderId,'limit'=>1]);
+    $check($ownPage['scope']==='self'&&array_column($ownPage['items'],'order_id')===[$orderId]&&!$ownPage['has_more']
+        &&$ownPage['items'][0]['total']==='930.00','Native scoped order list missing.');
+    $check($listOrders($manager,['scope'=>'self','q'=>$orderId,'offset'=>1])['items']===[],'Order offset ignored.');
+    $check($listOrders($actor($org,$other),['scope'=>'auto','q'=>$orderId])['items']===[],'Order list disclosed another owner.');
+    $reject(fn()=>$listOrders($manager,['scope'=>'tenant']));
+    $reject(fn()=>$listOrders($manager,['scope'=>'owner','owner_id'=>$other]));
+    $db->prepare('UPDATE sales_teams SET status="ACTIVE" WHERE organization_id=? AND id=?')->execute([$org,$teamId]);
+    $check($listOrders($manager,['scope'=>'auto','q'=>$orderId])['scope']==='team','Active team population missing.');
+    $db->prepare('UPDATE sales_teams SET status="DISABLED" WHERE organization_id=? AND id=?')->execute([$org,$teamId]);
+    $check($listOrders($manager,['scope'=>'auto','q'=>$orderId])['scope']==='self','Revoked team scope persisted.');
+    $reject(fn()=>$listOrders($actor('foreign-'.$token,$owner),['scope'=>'auto','q'=>$orderId]));
+    $grant->execute([$org,$owner,'sales.director.view',(string)$owner]);
+    $directorPage=$listOrders($manager,['scope'=>'auto','q'=>$orderId]);
+    $check($directorPage['scope']==='tenant'&&array_column($directorPage['items'],'order_id')===[$orderId],'Director scope not honored.');
+    $db->prepare('DELETE FROM sales_user_capabilities WHERE organization_id=? AND user_id=? AND capability="sales.director.view"')->execute([$org,$owner]);
     $reject(fn()=>$gateway->invoke($manager,'sales.order.create',$orderInput,'trusted_read','no-write-'.$token,'order-test'));
     $q=$db->prepare('SELECT payload FROM sales_order_evidence WHERE organization_id=? AND order_id=?');$q->execute([$org,$orderId]);$events=$q->fetchAll(PDO::FETCH_COLUMN);
     $fact=json_decode($events[0],true,512,JSON_THROW_ON_ERROR);

@@ -1,0 +1,22 @@
+# A contracted surface, not a production or UI-readiness certification.
+id: finance.budget.draft
+route: { name: cos_cuw_finance_budget_draft, path: "/workspace/unified/business/finance.budget/new", methods: [GET, HEAD] }
+surface: workspace
+domain: Finance
+capability: finance.budget.envelope.draft.create
+owner: Finance Domain
+priority: P0
+status: CONTRACTED
+personas: [manager, administrator]
+product:
+  primary_goal: "Створити внутрішню чернетку бюджету для доступної кампанії та отримати перевірену квитанцію."
+  page_purpose: "Локальна форма Finance; кошти, активація, резервування й зовнішні платежі не виконуються."
+archetype: form_editor
+patterns:
+  required: [PageHeader, FormSection, StickyActions]
+  optional: [ErrorState, PermissionState]
+primary_action: finance.budget.draft.create
+states: [normal, error, permission_denied]
+responsive: { desktop: canonical, tablet: canonical, mobile: single_column_form }
+qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }

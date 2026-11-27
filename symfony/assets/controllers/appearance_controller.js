@@ -47,7 +47,7 @@ export default class extends Controller {
         if (style === 'base') {
             root.dataset.cosTheme = this.normalizeTheme(this.themeValue);
             delete root.dataset.cosStyleLab;
-        } else if (style === 'light' || style === 'dark') {
+        } else if (style === 'light' || style === 'dark' || style === 'system') {
             root.dataset.cosTheme = style;
             delete root.dataset.cosStyleLab;
         } else {
@@ -78,7 +78,7 @@ export default class extends Controller {
     }
 
     normalizeStyle(style) {
-        return ['base', 'light', 'dark', 'origin-a', 'origin-b', 'origin-c', 'glass'].includes(style)
+        return ['base', 'light', 'dark', 'system', 'origin-a', 'origin-b', 'origin-c', 'glass'].includes(style)
             ? style
             : 'base';
     }

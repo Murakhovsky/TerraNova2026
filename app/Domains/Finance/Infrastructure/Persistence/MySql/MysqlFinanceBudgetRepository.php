@@ -56,6 +56,23 @@ final readonly class MysqlFinanceBudgetRepository implements FinanceBudgetReposi
         return is_array($record)?self::projection($record):null;
     }
 
+    public function workspacePage(string $org,string $query,int $offset,int $limit):array
+    {
+        if($org===''||mb_strlen($query)>120||$offset<0||$offset>200000||$limit<1||$limit>101)
+            throw new DomainException('Invalid budget page.');
+        $sql='SELECT id,name,currency,period_start,period_end,limit_minor,reserved_minor,committed_minor,state,revision
+            FROM cos_finance_budget_envelopes WHERE organization_id=? AND BINARY organization_id=BINARY ?';
+        $args=[$org,$org];
+        if($query!==''){
+            $needle='%'.strtr($query,['!'=>'!!','%'=>'!%','_'=>'!_']).'%';
+            $sql.=" AND (name LIKE ? ESCAPE '!' OR id LIKE ? ESCAPE '!' OR state LIKE ? ESCAPE '!')";
+            array_push($args,$needle,$needle,$needle);
+        }
+        $stmt=$this->connection->prepare($sql.' ORDER BY updated_at DESC,id DESC LIMIT '.$limit.' OFFSET '.$offset);
+        $stmt->execute($args);
+        return array_map(self::projection(...),$stmt->fetchAll(PDO::FETCH_ASSOC));
+    }
+
     public function reservations(string $org,string $id):array
     {
         // Do not treat an unknown/cross-tenant envelope as an empty collection.

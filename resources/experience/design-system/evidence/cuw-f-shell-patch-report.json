@@ -1,0 +1,173 @@
+{
+  "ok": true,
+  "scope": "synthetic Twig fixtures",
+  "shellAcceptance": true,
+  "shellFindings": [
+    {
+      "profile": "desktop-light-en",
+      "overlaps": [],
+      "axe": []
+    },
+    {
+      "profile": "desktop-dark-uk",
+      "overlaps": [],
+      "axe": []
+    },
+    {
+      "profile": "desktop-system-dark-en",
+      "overlaps": [],
+      "axe": []
+    },
+    {
+      "profile": "desktop-system-light-uk",
+      "overlaps": [],
+      "axe": []
+    },
+    {
+      "profile": "mobile-light-uk",
+      "overlaps": [],
+      "axe": []
+    },
+    {
+      "profile": "mobile-dark-en",
+      "overlaps": [],
+      "axe": []
+    },
+    {
+      "profile": "mobile-system-dark-uk",
+      "overlaps": [],
+      "axe": []
+    },
+    {
+      "profile": "mobile-system-light-en",
+      "overlaps": [],
+      "axe": []
+    }
+  ],
+  "browser": "156.0.8078.79",
+  "budgets": {
+    "domNodes": 2500,
+    "jsBytes": 1536000,
+    "cssBytes": 1048576,
+    "decodedJsBytes": 3145728,
+    "transferBytes": 4194304,
+    "resources": 180,
+    "ttfbMs": 1000,
+    "navigationMs": 3500
+  },
+  "results": [
+    {
+      "profile": "desktop-light-en",
+      "metrics": {
+        "domNodes": 760,
+        "resources": 167,
+        "transferBytes": 728756,
+        "jsBytes": 623857,
+        "decodedJsBytes": 2082171,
+        "cssBytes": 94841,
+        "ttfbMs": 10,
+        "navigationMs": 214
+      },
+      "passed": true
+    },
+    {
+      "profile": "desktop-dark-uk",
+      "metrics": {
+        "domNodes": 760,
+        "resources": 167,
+        "transferBytes": 729758,
+        "jsBytes": 623857,
+        "decodedJsBytes": 2082171,
+        "cssBytes": 94841,
+        "ttfbMs": 3,
+        "navigationMs": 160
+      },
+      "passed": true
+    },
+    {
+      "profile": "desktop-system-dark-en",
+      "metrics": {
+        "domNodes": 760,
+        "resources": 167,
+        "transferBytes": 728756,
+        "jsBytes": 623857,
+        "decodedJsBytes": 2082171,
+        "cssBytes": 94841,
+        "ttfbMs": 3,
+        "navigationMs": 159
+      },
+      "passed": true
+    },
+    {
+      "profile": "desktop-system-light-uk",
+      "metrics": {
+        "domNodes": 760,
+        "resources": 167,
+        "transferBytes": 729758,
+        "jsBytes": 623857,
+        "decodedJsBytes": 2082171,
+        "cssBytes": 94841,
+        "ttfbMs": 3,
+        "navigationMs": 151
+      },
+      "passed": true
+    },
+    {
+      "profile": "mobile-light-uk",
+      "metrics": {
+        "domNodes": 760,
+        "resources": 167,
+        "transferBytes": 729758,
+        "jsBytes": 623857,
+        "decodedJsBytes": 2082171,
+        "cssBytes": 94841,
+        "ttfbMs": 2,
+        "navigationMs": 156
+      },
+      "passed": true
+    },
+    {
+      "profile": "mobile-dark-en",
+      "metrics": {
+        "domNodes": 760,
+        "resources": 167,
+        "transferBytes": 728756,
+        "jsBytes": 623857,
+        "decodedJsBytes": 2082171,
+        "cssBytes": 94841,
+        "ttfbMs": 3,
+        "navigationMs": 160
+      },
+      "passed": true
+    },
+    {
+      "profile": "mobile-system-dark-uk",
+      "metrics": {
+        "domNodes": 760,
+        "resources": 167,
+        "transferBytes": 729758,
+        "jsBytes": 623857,
+        "decodedJsBytes": 2082171,
+        "cssBytes": 94841,
+        "ttfbMs": 2,
+        "navigationMs": 150
+      },
+      "passed": true
+    },
+    {
+      "profile": "mobile-system-light-en",
+      "metrics": {
+        "domNodes": 760,
+        "resources": 167,
+        "transferBytes": 728756,
+        "jsBytes": 623857,
+        "decodedJsBytes": 2082171,
+        "cssBytes": 94841,
+        "ttfbMs": 2,
+        "navigationMs": 149
+      },
+      "passed": true
+    }
+  ],
+  "failures": []
+}

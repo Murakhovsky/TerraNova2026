@@ -22,7 +22,7 @@
             <span>{{ run.run.provider }} / {{ run.run.model }}</span>
         {% endif %}
         {% if run.run.inputTokens is not null or run.run.outputTokens is not null %}
-            <span>{{ run.run.inputTokens ?? 0 }} in / {{ run.run.outputTokens ?? 0 }} out</span>
+            <span>{{ run.run.inputTokens ?? "unknown" }} in / {{ run.run.outputTokens ?? "unknown" }} out</span>
         {% endif %}
         {% if run.run.costAmount is not null %}
             <span>{{ run.run.costAmount }} {{ run.run.costCurrency ?? '' }}</span>
@@ -30,9 +30,10 @@
     </div>
 
     {% if run.run.error %}
-        <div class="cos-agent-warning" role="alert">{{ run.run.error }}</div>
+        <div class="cos-agent-warning" role="alert">Agent run failed. Inspect the authorized runtime journal; no automatic retry.</div>
     {% endif %}
 
+    <p class="cos-agent-action__note">Agent findings and evidence are not a verified business outcome.</p>
     <twig:CosAgentResult :result="run.result" />
 
     {% if run.actions is not empty %}

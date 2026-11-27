@@ -1,9 +1,15 @@
-{% extends 'experience/portal_shell.html.twig' %}
+{% extends 'experience/workspace_shell.html.twig' %}
 
 {% block title %}Цілі COS | Company Operating System{% endblock %}
 
-{% block portal_content %}
-<section class="cos-page__stack" data-cos-federation-goals data-experience-mode="{{ mode }}">
+{% block workspace_content %}
+{% set metrics = metrics|default({}) %}
+{% set capabilityLabels = capabilityLabels|default({}) %}
+{% set planningTargets = planningTargets|default({deals:{},universes:{}}) %}
+{% set goalTitles = goalTitles|default({}) %}
+{% set outcomeLabels = {'satisfied':'Ціль досягнуто','partial':'Частково досягнуто','unsatisfied':'Ціль не досягнуто','unverifiable':'Результат не підтверджено'} %}
+{% set stateLabels = {'draft':'Чернетка','proposed':'Очікує погодження','approved':'Погоджений','created':'Створено','running':'Виконується','waiting':'Очікує рішення','ambiguous':'Невизначений стан','completed':'Дії завершено','failed':'Помилка','cancelled':'Скасовано','pending':'Очікується','claimed':'Обробляється','awaiting_action':'Очікує виконання дії','awaiting_human_approval':'Очікує погодження','awaiting_domain_evidence':'Очікує підтвердження','manual_reconciliation_required':'Потрібна ручна перевірка'} %}
+<section class="cos-page__stack" data-cos-federation-goals data-workspace-id="cos.goals" data-experience-mode="{{ mode }}">
     <header class="cos-card">
         <p class="cos-card__eyebrow">COS / Goal to Outcome</p>
         <h1 class="cos-card__title">Ваші бізнес-цілі</h1>
@@ -33,7 +39,7 @@
         'evidence_pending':'Очікується підтвердження результату від відповідального домену. Повторний Action не надсилається.'
     } %}
     {% set blockers = {
-        'rollout_disabled':'Запуск заблоковано: для цієї організації не активовано COS_FEDERATION_CANONICAL_ORGANIZATION. Налаштувати може адміністратор; старий виконавець не використовується.',
+        'rollout_disabled':'Запуск заблоковано: для цієї організації не активовано канонічне виконання. Налаштувати може адміністратор; старий виконавець не використовується.',
         'already_started':'Цей план уже має виконання. Повторний запуск заборонений, перевірте існуючий Run.',
         'spec_frozen':'Ціль уже має плани. Змінювати дозволені дії після створення плану не можна.',
         'not_found':'Ціль, план або запуск відсутній у вашій організації чи став недоступним.',
@@ -62,44 +68,69 @@
         <div class="cos-alert cos-alert--success" role="status">Чернетку цілі збережено.</div>
     {% endif %}
     {% if error %}
-        <div class="cos-alert" role="alert">Перевірте опис цілі, код показника та числове значення.</div>
+        <div class="cos-alert" role="alert">Перевірте опис, обраний показник, цільове значення та дату. Для Golden 50 потрібна ціль 50.</div>
     {% endif %}
 
     <section class="cos-card" aria-labelledby="goal-new-title">
         <p class="cos-card__eyebrow">Нова ціль</p>
         <h2 id="goal-new-title" class="cos-card__title">Якого результату потрібно досягти?</h2>
+        <details {% if goals is empty or error %}open{% endif %}>
+        <summary class="cos-button cos-button--ghost">Сформулювати нову ціль</summary>
         <form method="post" action="{{ path('cos_federation_goals_create') }}" class="cos-page__stack">
             <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+            <input type="hidden" name="draft_key" value="{{ draftKey|default('') }}">
             <label class="cos-field"><span>Опишіть бізнес-результат</span>
                 <textarea class="cos-input" name="desired_result" rows="3" maxlength="1200" required
                     placeholder="Наприклад: отримати п'ять нових кваліфікованих клієнтів за місяць"></textarea>
             </label>
+            <fieldset class="cos-page__stack" data-goal-metric-picker aria-describedby="goal-metric-help">
+                <legend>Оберіть, як виміряти досягнення цілі</legend>
+                <p id="goal-metric-help" class="cos-card__copy">Показники нижче відповідають наявним джерелам COS. Оберіть один; пропозиція плану та погодження відбуваються окремо.</p>
+                <div class="cos-section-grid">
+                    {% for metric in metrics %}
+                        <article class="cos-card" data-goal-metric="{{ metric.id }}">
+                            <label class="cos-field">
+                                <span><input type="radio" name="criterion" value="{{ metric.id }}" required> <strong>{{ metric.label }}</strong></span>
+                            </label>
+                            <p class="cos-card__copy">{{ metric.definition }} Одиниця: {{ metric.unit }}.</p>
+                            <p class="cos-card__copy">Джерело: {{ metric.source }}. Розрахунок: кількість, щонайменше цільове значення.</p>
+                            {% if metric.readiness == 'observed' %}
+                                <p class="cos-card__copy" data-metric-baseline><strong>Базовий рівень: {{ metric.baseline }} {{ metric.unit }}</strong> за попередні 30 днів ({{ metric.window_start }} — {{ metric.window_end }}). Прочитано при відкритті сторінки, наявне джерело evidence.</p>
+                            {% elseif metric.readiness == 'run_required' %}
+                                <p class="cos-card__copy" role="status">Базовий рівень невідомий: потрібен конкретний завершений запуск та перевірені дії.</p>
+                            {% elseif metric.readiness == 'aggregate_required' %}
+                                <p class="cos-card__copy" role="status">Базовий рівень невідомий: потрібні перевірені факти міждоменного плану. Фіксована ціль: {{ metric.fixed_target }}.</p>
+                            {% else %}
+                                <p class="cos-card__copy" role="status">Базовий рівень невідомий: джерело відсутнє, неактивне або не пройшло перевірку.</p>
+                            {% endif %}
+                            <p class="cos-card__copy">{{ metric.plan_ready ? 'Шаблон дій доступний для перевірки, не дозвіл на запуск.' : 'Планування недоступне: можна зберегти лише ціль.' }}</p>
+                            {% if mode == 'expert' %}
+                                <details><summary>Контракт показника та evidence</summary>
+                                    <p><code>{{ metric.id }}</code></p>
+                                    {% if metric.source_reference %}<p><code>{{ metric.source_reference }}</code></p>{% endif %}
+                                    {% for reference in metric.evidence %}<p><code>{{ reference }}</code></p>{% endfor %}
+                                </details>
+                            {% endif %}
+                        </article>
+                    {% else %}
+                        <p role="status">Каталог показників недоступний.</p>
+                    {% endfor %}
+                </div>
+            </fieldset>
             <div class="cos-section-grid">
-                <label class="cos-field"><span>Показник (машинний код)</span>
-                    <input class="cos-input" name="criterion" value="sales.won_deals" list="federation-supported-outcomes" pattern="[a-z][a-z0-9_.-]*" maxlength="64" required>
-                    <datalist id="federation-supported-outcomes">
-                        <option value="federation.verified_proposals">Federation: 50 перевірених пропозицій, прив’язаних до Sales Leads</option>
-                        <option value="sales.won_deals">Sales: виграні угоди</option>
-                        <option value="sales.closed_deals">Sales: закриті угоди</option>
-                        <option value="sales.local_tasks_created">Sales: створені завдання в локальній CRM</option>
-                        <option value="growth.inbound_responses_recorded">Growth: отримані відповіді контактів</option>
-                        <option value="growth.run_linked_inbound_responses">Growth: відповіді, пов'язані з перевіреними діями Run</option>
-                        <option value="capital_markets.research_results_validated">Research: валідовані результати досліджень</option>
-                        <option value="documents.signatures_recorded">Documents: зареєстровані підписи</option>
-                        <option value="capital_markets.run_linked_validated_results">Research: результат конкретного Run (потребує Action handler)</option>
-                        <option value="documents.run_linked_signatures">Documents: підпис конкретного Run (потребує Action handler)</option>
-                    </datalist>
+                <label class="cos-field"><span>Цільове значення (щонайменше)</span>
+                    <input class="cos-input" type="number" name="target" min="1" max="1000000" required>
                 </label>
-                <label class="cos-field"><span>Цільове значення</span>
-                    <input class="cos-input" type="number" name="target" min="1" max="1000000" value="5" required>
+                <label class="cos-field"><span>Бажана дата досягнення (Київ)</span>
+                    <input class="cos-input" type="date" name="deadline" min="{{ today|default('') }}" required>
                 </label>
             </div>
-            <p class="cos-card__copy">Для простого старту виберіть <code>sales.local_tasks_created</code> і, наприклад, ціль 1. Після збереження можна побудувати план із 1–3 завдань для реальних угод Sales. Заплановані завдання не гарантують виграної угоди.</p>
-            <p class="cos-card__copy">Для еталонного сценарію Package A виберіть <code>federation.verified_proposals</code> та значення <strong>50</strong>. Лише цей профіль Goal отримує п’ять дозволених Growth/Sales/Documents Action у плані. Кожен план і кожна дія потребують окремого погодження; жодне виконання не запускається при створенні Goal.</p>
-            <p class="cos-card__copy">Автоматично підтверджуються <code>sales.won_deals</code>, <code>sales.closed_deals</code> і <code>sales.local_tasks_created</code>, якщо Sales активний. Додатково підтримуються <code>growth.inbound_responses_recorded</code>, <code>capital_markets.research_results_validated</code> і <code>documents.signatures_recorded</code>. Run-linked метрики Research і Documents наразі непідтверджені, поки не активовано перевірені Action handlers. Інші коди без довіреного джерела також залишаються непідтвердженими.</p>
-            <button class="cos-button cos-button--primary" type="submit">Зберегти чернетку Goal</button>
+            <p class="cos-card__copy">Дата — бажаний горизонт планування. Канонічна оцінка зараховує лише вимірювання за власним вікном виконання, а не автоматично за цим календарним строком. Базовий рівень є історичним порівнянням, не прогресом цілі.</p>
+            <p class="cos-card__copy">Для першого сценарію оберіть створені завдання CRM із ціллю 1–3. Після збереження можна сформувати план для реальних угод. Завдання не гарантують виграшу угод.</p>
+            <button class="cos-button cos-button--primary" type="submit" {% if metrics is empty %}disabled{% endif %}>Зберегти чернетку цілі</button>
         </form>
         <p class="cos-card__copy">Збереження не запускає агентів і не створює зовнішніх операцій.</p>
+        </details>
     </section>
 
     <section class="cos-page__section" aria-labelledby="goal-list-title">
@@ -107,14 +138,24 @@
         <div class="cos-page__stack">
         {% for goal in goals %}
             <article class="cos-card" data-goal-id="{{ goal.id }}">
-                <p class="cos-card__eyebrow">{{ goal.state == 'draft' ? 'Чернетка' : goal.state }}</p>
+                <p class="cos-card__eyebrow">{{ stateLabels[goal.state]|default('Потребує перевірки') }}</p>
                 <h3 class="cos-card__title">{{ goal.desired_result }}</h3>
                 <p class="cos-card__copy">
                     {% for criterion in goal.criteria %}
-                        {{ criterion.id }}: {{ criterion.operator == 'at_least' ? 'щонайменше' : criterion.operator }} {{ criterion.expected }}{% if not loop.last %}; {% endif %}
+                        {{ metrics[criterion.id].label|default('Показник без опису') }}: {{ {'at_least':'щонайменше','at_most':'не більше','equals':'дорівнює'}[criterion.operator]|default('ціль') }} {{ criterion.expected }} {{ metrics[criterion.id].unit|default('') }}{% if mode == 'expert' %} (<code>{{ criterion.id }}</code>){% endif %}{% if not loop.last %}; {% endif %}
                     {% endfor %}
                 </p>
 
+                <p class="cos-card__copy">Бажаний строк: {{ goal.deadline|default('Не визначено (попередня специфікація)') }}.</p>
+                {% for criterion in goal.criteria %}
+                    {% set metric = metrics[criterion.id]|default(null) %}
+                    {% if not metric or metric.readiness != 'observed' %}
+                        <p class="cos-card__copy" role="status">Історичний базовий рівень недоступний або потребує конкретного запуску.</p>
+                    {% else %}
+                        <p class="cos-card__copy">Історичний базовий рівень: {{ metric.baseline }} {{ metric.unit }} (попередні 30 днів, не результат цілі).</p>
+                    {% endif %}
+                {% endfor %}
+                {% if mode == 'expert' and goal.criteria[0].id|default('') == 'federation.verified_proposals' %}
                 <p class="cos-card__copy">
                     <a href="{{ path('cos_federation_goal_aggregate', {goalId: goal.id}) }}"
                        data-goal-native-aggregate-link
@@ -122,16 +163,21 @@
                     <small>Лише читання. Не означає автоматичного підтвердження бізнес-цілі.</small>
                 </p>
 
+                {% endif %}
                 {% set criterionId = goal.criteria[0].id|default('') %}
+                {% if actorId is not defined or goal.owner == actorId %}
                 <details class="cos-page__stack" data-goal-plan-builder>
                     <summary class="cos-button cos-button--primary">Побудувати план</summary>
-                    {% if criterionId == 'federation.verified_proposals' and goal.criteria[0].expected|default(0) == 50 %}
+                    {% if criterionId == 'federation.verified_proposals' and goal.criteria[0].expected|default(0) == 50 and planningTargets.universes is not empty %}
                         <p class="cos-card__copy">Еталонний Golden 50. Спочатку побудуємо один Discovery-крок із реального Growth Universe, а не 50 фіктивних лідів.</p>
                         <form method="post" action="{{ path('cos_federation_goals_build_plan', {goalId:goal.id}) }}" class="cos-page__stack">
                             <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                             <input type="hidden" name="scenario" value="golden-discovery">
-                            <label class="cos-field"><span>ID активного Sales Growth Universe</span>
-                                <input class="cos-input" name="universe_id" maxlength="80" required placeholder="ID реального Growth Universe"></label>
+                            <label class="cos-field"><span>Джерело пошуку потенційних клієнтів</span>
+                                <select class="cos-input" name="universe_id" required>
+                                    <option value="">Оберіть активне джерело</option>
+                                    {% for id, name in planningTargets.universes %}<option value="{{ id }}">{{ name }}</option>{% endfor %}
+                                </select></label>
                             <div class="cos-section-grid">
                                 <label class="cos-field"><span>Слот збору (1–10)</span>
                                     <input class="cos-input" type="number" min="1" max="10" name="slot" value="1" required></label>
@@ -140,7 +186,7 @@
                             </div>
                             <button class="cos-button cos-button--primary" type="submit">Зберегти Discovery-план</button>
                         </form>
-                    {% elseif criterionId in ['sales.local_tasks_created','sales.won_deals','sales.closed_deals'] %}
+                    {% elseif criterionId in ['sales.local_tasks_created','sales.won_deals','sales.closed_deals'] and planningTargets.deals is not empty %}
                         <p class="cos-card__copy">Малий сценарій: 1–3 послідовні створення завдань для наявних угод у CRM. Без запуску до погоджень.</p>
                         <form method="post" action="{{ path('cos_federation_goals_build_plan', {goalId:goal.id}) }}" class="cos-page__stack">
                             <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
@@ -154,8 +200,11 @@
                             {% for i in 1..3 %}
                                 <fieldset class="cos-card">
                                     <legend>Дія {{ i }}{% if i > 1 %} (лише якщо обрано {{ i }} чи більше){% endif %}</legend>
-                                    <label class="cos-field"><span>ID існуючої угоди Sales</span>
-                                        <input class="cos-input" name="deal_{{ i }}" maxlength="100" placeholder="deal-123" {% if i == 1 %}required{% endif %}></label>
+                                    <label class="cos-field"><span>Угода Sales</span>
+                                        <select class="cos-input" name="deal_{{ i }}" {% if i == 1 %}required{% endif %}>
+                                            <option value="">Оберіть угоду</option>
+                                            {% for id, name in planningTargets.deals %}<option value="{{ id }}">{{ name }}</option>{% endfor %}
+                                        </select></label>
                                     <label class="cos-field"><span>Назва завдання</span>
                                         <input class="cos-input" name="title_{{ i }}" maxlength="220" placeholder="Зателефонувати клієнту" {% if i == 1 %}required{% endif %}></label>
                                     <label class="cos-field"><span>Термін, хвилин від створення</span>
@@ -165,20 +214,28 @@
                             <button class="cos-button cos-button--primary" type="submit">Зберегти план на погодження</button>
                         </form>
                     {% else %}
-                        <p class="cos-card__copy" role="status">Для цього показника поки немає перевіреного шаблону дій. Ціль збережена, але виконання заблоковано. Доступні малі сценарії Sales та еталонний Golden 50.</p>
+                        <p class="cos-card__copy" role="status">Шаблон дій або потрібні бізнес-записи недоступні. Ціль збережена; перевірте активацію домену, доступ до угод чи джерела Growth. Виконання заблоковано.</p>
                     {% endif %}
                 </details>
+                {% else %}
+                    <p class="cos-card__copy">План може змінити лише власник цілі.</p>
+                {% endif %}
                 {% for plan in plansByGoal[goal.id]|default([]) %}
                     <section class="cos-card" data-goal-plan="{{ plan.plan_id }}">
                         <h4 class="cos-card__title">План №{{ plan.plan_version }} · {{ plan.steps|length }} операцій</h4>
-                        <p class="cos-card__copy">Статус: <strong>{{ plan.state == 'approved' ? 'Погоджений' : (plan.state == 'proposed' ? 'Очікує погодження' : plan.state) }}</strong></p>
+                        <p class="cos-card__copy">Статус: <strong>{{ stateLabels[plan.state]|default('Потребує перевірки') }}</strong></p>
                         <ol class="cos-card__copy">
                             {% for step in plan.steps %}
-                                <li>{{ step.capability }}{% if step.title %}: {{ step.title }}{% endif %}{% if step.target %} · {{ step.target }}{% endif %}</li>
+                                <li>{{ capabilityLabels[step.capability]|default(step.capability|replace({'.':' ','_':' '})|capitalize) }}{% if step.title %}: {{ step.title }}{% endif %}
+                                    {% if step.target %} · {{ planningTargets.deals[step.target]|default(planningTargets.universes[step.target]|default('Обраний бізнес-запис')) }}{% endif %}
+                                    {% if step.side_effect|default('unknown') != 'none' %}<strong> · Потрібна перевірка ризику та погодження</strong>{% endif %}
+                                    {% if mode == 'expert' %}<code>{{ step.capability }} {{ step.version|default('') }} · {{ step.id }}</code>{% if step.target %} · <code>{{ step.target }}</code>{% endif %}{% endif %}
+                                    {% if mode in ['process','expert'] and step.depends_on|default([]) is not empty %}<small> · після завершення {{ step.depends_on|length }} попередніх кроків{% if mode == 'expert' %} ({{ step.depends_on|join(', ') }}){% endif %}</small>{% endif %}
+                                </li>
                             {% endfor %}
                         </ol>
                         {% if plan.approval %}
-                            <p class="cos-card__copy">Approval Action: {{ plan.approval.status }}{% if mode == 'expert' %} <code>{{ plan.approval.id }}</code>{% endif %}.
+                            <p class="cos-card__copy">Погодження: {{ {'PENDING_APPROVAL':'Очікує рішення','QUEUED':'У черзі','COMPLETED':'Квитанція отримана','FAILED':'Помилка','REJECTED':'Відхилено'}[plan.approval.status]|default('Потребує перевірки') }}{% if mode == 'expert' %} <code>{{ plan.approval.id }}</code>{% endif %}.
                                 {% if plan.approval.status == 'PENDING_APPROVAL' %}
                                     Очікує рішення іншого уповноваженого користувача.
                                 {% elseif plan.approval.status == 'QUEUED' %}
@@ -186,34 +243,38 @@
                                 {% endif %}
                             </p>
                         {% endif %}
-                        {% if plan.state == 'proposed' and not plan.approval %}
+                        {% if plan.state == 'proposed' and not plan.approval and (actorId is not defined or goal.owner == actorId) %}
                             <form method="post" action="{{ path('cos_federation_goals_request_approval',{planId:plan.plan_id}) }}">
                                 <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                                 <button class="cos-button cos-button--primary" type="submit">Запросити незалежне погодження</button>
                             </form>
-                        {% elseif plan.state == 'approved' and not plan.run_id and not plan.legacy_run_id %}
-                            {% if canonicalRolloutEnabled %}
+                        {% elseif plan.state == 'approved' and not plan.run_id and not plan.legacy_run_id and (actorId is not defined or goal.owner == actorId) %}
+                            {% if canonicalRolloutEnabled and plan.approval.status|default('') == 'COMPLETED' %}
                                 <form method="post" action="{{ path('cos_federation_goals_start_plan',{planId:plan.plan_id}) }}">
                                     <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                                     <button class="cos-button cos-button--primary" type="submit">Запустити через Platform Workflow</button>
                                 </form>
                             {% else %}
-                                <p class="cos-card__copy" role="status">Запуск заблоковано: Platform Workflow не активований для цієї організації (COS_FEDERATION_CANONICAL_ORGANIZATION).</p>
+                                <p class="cos-card__copy" role="status">Запуск заблоковано: потрібна завершена квитанція незалежного погодження та активація Platform Workflow.</p>
                             {% endif %}
                         {% elseif plan.run_id %}
-                            <p class="cos-card__copy">Виконується в Platform Workflow. Run: <code>{{ plan.run_id }}</code>.</p>
+                            <p class="cos-card__copy">План має запуск у Platform Workflow. {% if mode == 'expert' %}<code>{{ plan.run_id }}</code>{% endif %}</p>
                         {% elseif plan.legacy_run_id %}
                             <p class="cos-card__copy">Історичний Federation Run; повторний запуск заборонено.</p>
                         {% endif %}
                     </section>
                 {% endfor %}
+                {% if plansByGoal[goal.id]|default([]) is empty %}
+                    <p class="cos-card__copy"><strong>Наступний крок:</strong> перевірити доступний шаблон та існуючі плани перед погодженням.</p>
+                {% endif %}
                 {% for linkedRun in runsByGoal[goal.id]|default([]) %}
                     <div class="cos-card__copy" data-goal-progress="{{ linkedRun.run_id }}">
-                        <strong>Виконання:</strong> {{ linkedRun.completed_steps }}/{{ linkedRun.total_steps }} кроків завершено ({{ linkedRun.state }}).
+                        <strong>Виконання:</strong> {{ linkedRun.progress_error ? 'Невідомий прогрес' : (linkedRun.completed_steps ~ '/' ~ linkedRun.total_steps ~ ' кроків завершено') }} ({{ stateLabels[linkedRun.state]|default('Потребує перевірки') }}).
+                        {% if linkedRun.progress_error %}<span role="alert">Стан виконання недоступний, завершення не підтверджено.</span>{% endif %}
                         {% if linkedRun.outcome %}
-                            Бізнес-результат: {{ linkedRun.outcome.result }}.
+                            Бізнес-результат: {{ outcomeLabels[linkedRun.outcome.result]|default('Потребує перевірки') }}.
                             {% for measure in linkedRun.outcome.criteria %}
-                                {{ measure.criterion_id }}: {{ measure.observed is not null ? measure.observed : 'не виміряно' }} / {{ measure.expected }}.
+                                {{ metrics[measure.criterion_id].label|default('Показник без опису') }}: {{ measure.result != 'unverifiable' and measure.observed is not null ? measure.observed : 'не виміряно' }} / {{ measure.expected }}.
                             {% endfor %}
                         {% else %}
                             Бізнес-результат ще не підтверджено.
@@ -221,16 +282,16 @@
                         {% if mode in ['process','expert'] %}
                             <ul>
                             {% for step in linkedRun.steps %}
-                                <li>{{ step.capability_id }}: {{ step.state }}{% if mode == 'expert' and step.receipt %} (квитанція: <code>{{ step.receipt }}</code>){% endif %}</li>
+                                <li>{{ capabilityLabels[step.capability_id]|default(step.capability_id|replace({'.':' ','_':' '})|capitalize) }}: {{ stateLabels[step.state]|default('Потребує перевірки') }}{% if mode == 'expert' %} (<code>{{ step.capability_id }}</code>){% endif %}{% if mode == 'expert' and step.receipt %} (квитанція: <code>{{ step.receipt }}</code>){% endif %}</li>
                             {% endfor %}
                             </ul>
                         {% endif %}
-                        {% if linkedRun.canonical and linkedRun.state in ['created','running'] %}
+                        {% if linkedRun.canonical and not linkedRun.progress_error and linkedRun.approval.status|default('') == 'COMPLETED' and linkedRun.state in ['created','running'] %}
                             <form method="post" action="{{ path('cos_federation_goals_advance_run',{runId:linkedRun.run_id}) }}">
                                 <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                                 <button type="submit" class="cos-button cos-button--ghost">Продовжити виконання</button>
                             </form>
-                        {% elseif linkedRun.state in ['waiting','ambiguous'] %}
+                        {% elseif linkedRun.state in ['waiting','ambiguous','awaiting_human_approval','awaiting_action','awaiting_domain_evidence','manual_reconciliation_required'] %}
                             <strong>Потрібна перевірка погоджень або квитанцій. Повторні Action не запускаються автоматично.</strong>
                         {% endif %}
                     </div>
@@ -268,11 +329,11 @@
         <div class="cos-page__stack">
         {% for run in runs|default([]) %}
             <article class="cos-card" data-run-id="{{ run.run_id }}" data-recovery-mode="{{ mode }}">
-                <p class="cos-card__eyebrow">Run: {{ run.state }}</p>
+                <p class="cos-card__eyebrow">Run: {{ stateLabels[run.state]|default('Потребує перевірки') }}</p>
                 {% if run.created_at_kyiv is defined %}
                     <p class="cos-card__copy">Початок: {{ run.created_at_kyiv }} (Київ)</p>
                 {% endif %}
-                <h3 class="cos-card__title">Ціль {{ run.goal_id }}</h3>
+                <h3 class="cos-card__title">{{ goalTitles[run.goal_id]|default('Виконання бізнес-цілі') }}{% if mode == 'expert' %} <code>{{ run.goal_id }}</code>{% endif %}</h3>
                 <div class="cos-page__stack" data-goal-outcome-summary>
                     {% if run.outcome is defined and run.outcome %}
                         {% set outcomeLabels = {
@@ -299,13 +360,19 @@
                         <p class="cos-card__copy">Оцінено: {{ run.outcome.recorded_at_kyiv|default(run.outcome.recorded_at ~ ' UTC') }} (Київ).
                             Перевірено {{ run.outcome.criteria|filter(c => c.result != 'unverifiable')|length }}
                             із {{ run.outcome.criteria|length }} критеріїв.</p>
+                        {% if mode == 'result' %}
+                            {% for criterion in run.outcome.criteria %}
+                                <p class="cos-card__copy">{{ metrics[criterion.criterion_id].label|default('Показник без опису') }}:
+                                    {{ criterion.result != 'unverifiable' and criterion.observed is not null ? criterion.observed : 'Не виміряно' }} / {{ criterion.expected }} {{ metrics[criterion.criterion_id].unit|default('') }}.</p>
+                            {% endfor %}
+                        {% endif %}
                         {% if mode in ['process', 'expert'] %}
                             <div class="cos-page__stack" data-goal-outcome-process>
                                 {% for criterion in run.outcome.criteria %}
                                     <p class="cos-card__copy">
-                                        <strong>{{ criterion.criterion_id }}</strong>:
-                                        {{ criterion.observed is not null ? criterion.observed : 'Немає вимірювання' }}
-                                        (ціль: {{ criterion.expected }}), стан: {{ criterion.result }}.
+                                        <strong>{{ metrics[criterion.criterion_id].label|default('Показник без опису') }}</strong>{% if mode == 'expert' %} (<code>{{ criterion.criterion_id }}</code>){% endif %}:
+                                        {{ criterion.result != 'unverifiable' and criterion.observed is not null ? criterion.observed : 'Немає вимірювання' }}
+                                        (ціль: {{ criterion.expected }}), стан: {{ outcomeLabels[criterion.result]|default('Потребує перевірки') }}.
                                         {% if criterion.result != 'unverifiable' %}
                                             <span data-goal-criterion-attribution>
                                                 {{ criterion.attribution|default('temporal_only') == 'run_linked_action'
@@ -361,13 +428,13 @@
                     {% endif %}
                 </div>
                 <p class="cos-card__copy" data-goal-run-progress>
-                    <strong>Прогрес:</strong> {{ run.completed_steps }}/{{ run.total_steps }} завершених кроків.
+                    <strong>Прогрес:</strong> {{ run.progress_error|default(false) ? 'Невідомо' : (run.completed_steps|default(0) ~ '/' ~ run.total_steps|default(0) ~ ' завершених кроків') }}.
                     {% if run.canonical %}Джерело: Platform Workflow.{% else %}Історичний Federation Run.{% endif %}
                 </p>
                 {% if run.progress_error %}
                     <p class="cos-card__copy" role="alert">Стан кроків не вдалося перевірити. Виконання не слід вважати завершеним.</p>
                 {% endif %}
-                {% if run.canonical and run.state in ['created','running'] %}
+                {% if run.canonical and not run.progress_error|default(false) and run.approval.status|default('') == 'COMPLETED' and run.state in ['created','running'] %}
                     <form method="post" action="{{ path('cos_federation_goals_advance_run',{runId:run.run_id}) }}">
                         <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                         <button class="cos-button cos-button--ghost" type="submit">Продовжити Platform Workflow</button>
@@ -383,7 +450,7 @@
                         <div class="cos-page__stack" data-goal-recovery-process>
                         {% for step in run.recovery.steps %}
                             <p class="cos-card__copy">
-                                Крок <strong>{{ step.step_id }}</strong>: {{ step.recovery_state }}
+                                Крок {{ loop.index }}: {{ step.attention_required ? 'Потребує перевірки' : 'Перевірка завершення' }}{% if mode == 'expert' %} <code>{{ step.step_id }}: {{ step.recovery_state }}</code>{% endif %}
                                 {% if step.attention_required %}(потребує ручної перевірки){% endif %}
                                 {% if mode == 'expert' and step.action_id %}
                                     <code data-goal-recovery-expert>Action {{ step.action_id }}</code>
@@ -400,7 +467,7 @@
                     {% endif %}
                 {% elseif not run.canonical %}
                     <p class="cos-card__copy">Діагностика історичного виконання недоступна. Зверніться до адміністратора.</p>
-                {% elseif run.state in ['waiting','ambiguous'] %}
+                {% elseif run.state in ['waiting','ambiguous','awaiting_human_approval','awaiting_action','awaiting_domain_evidence','manual_reconciliation_required'] %}
                     <p class="cos-card__copy">Workflow очікує погодження Action, зовнішньої квитанції або ручного reconciliation. Автоматичний повтор заблокований.</p>
                 {% endif %}
                 {% if mode == 'expert' %}

@@ -1,0 +1,252 @@
+diff --git a/symfony/config/routes/ux05_operations.yaml b/symfony/config/routes/ux05_operations.yaml
+index b9ce9e2..2d9e2c7 100644
+--- a/symfony/config/routes/ux05_operations.yaml
++++ b/symfony/config/routes/ux05_operations.yaml
+@@ -2,7 +2,7 @@
+ cos_ux05_operations:
+   path: /workspace/operations
+   controller: App\Web\Operations\OperationsCenterController::index
+-  methods: [GET, HEAD]
++  methods: [GET, HEAD, POST]
+
+ cos_ux05_operations_decide:
+   path: /workspace/operations/approval/{id}/decide
+diff --git a/symfony/src/Web/Operations/OperationsCenterController.php b/symfony/src/Web/Operations/OperationsCenterController.php
+index 8e8755b..edfe228 100644
+--- a/symfony/src/Web/Operations/OperationsCenterController.php
++++ b/symfony/src/Web/Operations/OperationsCenterController.php
+@@ -4,10 +4,10 @@ declare(strict_types=1);
+ namespace App\Web\Operations;
+
+ use App\Application\Operations\Command\OperationsMutationCommand;
+-use App\Persistence\Federation\FederationExperiencePreferenceStore;
+ use App\Persistence\Federation\FederationGoalStore;
+ use App\Security\SessionCsrfValidator;
+ use App\Web\Experience\Adaptive\ExperienceMode;
++use App\Web\Experience\Adaptive\AdaptivePagePresentation;
+ use App\Web\Experience\Extension\EntityLinkResolver;
+ use App\Web\Experience\Extension\Model\WebExtensionContext;
+ use App\Web\Experience\Model\EntityRef;
+@@ -38,7 +38,7 @@ final readonly class OperationsCenterController
+         private WorkspaceShellFactory $shells,
+         private EntityLinkResolver $links,
+         private RealtimeTopicFactory $topics,
+-        private FederationExperiencePreferenceStore $preferences,
++        private AdaptivePagePresentation $adaptive,
+         private SessionCsrfValidator $csrf,
+         private CommandBusInterface $commands,
+         private Environment $twig,
+@@ -52,10 +52,6 @@ final readonly class OperationsCenterController
+         $actor = $this->manager();
+         if ($actor instanceof Response) return $actor;
+         $context = self::context($actor);
+-        $mode = ExperienceMode::Result;
+-        try { $mode = $this->preferences->workspace($actor, 'cos.operations')['mode']; }
+-        catch (Throwable) {} // mode is not a security source
+-        $mode = ExperienceMode::tryFrom((string)$request->query->get('mode', '')) ?? $mode;
+         $source = (string)$request->query->get('source', '');
+         if (!in_array($source, OperationsSnapshot::SOURCES, true)) $source = '';
+         $correlation = substr((string)$request->query->get('correlation', ''), 0, 190);
+@@ -98,6 +94,40 @@ final readonly class OperationsCenterController
+                 if (!$snapshot['detailUnavailable']) $recoveryControls = $this->recoveryUI->available($actor,$context,$detail['id']); }
+             catch (Throwable) { $recoveryUnavailable = true; }
+         }
++        // UX-04 receives only trusted server-read status and already authorized actions.
++        // Mode/expansion POST changes preferences only, never an operation.
++        $signals = [];
++        foreach ($detail === null ? $snapshot['rows'] : [$detail] as $row) {
++            $signal = match ($row['status']) {
++                OperationStatus::WaitingApproval => 'approval_required',
++                OperationStatus::Blocked => 'blocked',
++                OperationStatus::Failed => 'failed',
++                OperationStatus::Running, OperationStatus::Queued => 'running',
++                OperationStatus::Verified => 'result_available',
++                OperationStatus::Unknown => 'external_outcome_unknown',
++                OperationStatus::Reconciliation, OperationStatus::Unverified => 'manual_review',
++                default => null,
++            };
++            if ($signal !== null) $signals[] = $signal;
++        }
++        if ($snapshot['unavailable'] !== [] || $snapshot['detailUnavailable'] || $outcomeUnavailable || $recoveryUnavailable) $signals[] = 'stale_data';
++        if ($detail !== null && $detail['risk'] !== null && in_array(strtolower((string)$detail['risk']), ['high','critical'], true)) $signals[] = 'risk_attention';
++        if ($detail !== null && $detail['status'] === OperationStatus::WaitingApproval && $actions === []) $signals[] = 'permission_unavailable';
++        $signals = array_values(array_unique($signals));
++        $sections = $detail === null ? [] : [
++            AdaptivePagePresentation::section('operations.history', $detail['source'] === 'import' ? ExperienceMode::Result : ExperienceMode::Process,
++                ['approval_required','blocked','failed','running','risk_attention','manual_review','stale_data','external_outcome_unknown','permission_unavailable']),
++            AdaptivePagePresentation::section('operations.provenance', ExperienceMode::Expert),
++        ];
++        $scope = $detail['key'] ?? '';
++        if (strlen($scope)>190) $scope = 'operation:'.hash('sha256',$scope);
++        $adaptive = $this->adaptive->prepare($request, $actor, 'cos.operations', $sections, $signals,
++            [...$actions, ...array_column($recoveryControls,'action')], $scope, operationClass: 'action');
++        if ($adaptive instanceof Response) return $adaptive;
++        $allowed = array_column([...$adaptive['composition']->primaryActions, ...$adaptive['composition']->secondaryActions], 'id');
++        $actions = array_values(array_filter($actions, static fn($a):bool=>in_array($a->id,$allowed,true)));
++        $recoveryControls = array_values(array_filter($recoveryControls, static fn(array $a):bool=>in_array($a['action']->id,$allowed,true)));
++        $mode = $adaptive['mode'];
+         $entityUrl = null;
+         if ($detail !== null && $detail['entity'] !== null) {
+             try {
+@@ -109,7 +139,7 @@ final readonly class OperationsCenterController
+         return new Response($this->twig->render('experience/operations/index.html.twig', [
+             'shell'=>$this->shells->create($actor, $context, 'Operations Center', [new ShellBreadcrumb('Operations Center')],
+                 aiAvailable: false, connectionState: ShellConnectionState::Stale),
+-            'snapshot'=>$snapshot, 'mode'=>$mode->value, 'statusFilter'=>$statusFilter?->value ?? '',
++            'snapshot'=>$snapshot, 'mode'=>$mode, 'adaptive'=>$adaptive, 'statusFilter'=>$statusFilter?->value ?? '',
+             'statuses'=>OperationStatus::cases(), 'source'=>$source, 'sources'=>OperationsSnapshot::SOURCES,
+             'entity'=>$entity?->key() ?? '', 'correlation'=>$correlation, 'selected'=>$selected,
+             'cursor'=>$cursorValue, 'itemAfter'=>$itemAfterValue, 'outcome'=>$outcome, 'outcomeUnavailable'=>$outcomeUnavailable,
+diff --git a/symfony/templates/experience/operations/index.html.twig b/symfony/templates/experience/operations/index.html.twig
+index 1f323c1..c56243e 100644
+--- a/symfony/templates/experience/operations/index.html.twig
++++ b/symfony/templates/experience/operations/index.html.twig
+@@ -1,6 +1,7 @@
+ {% extends 'experience/workspace_shell.html.twig' %}
+ {% block title %}Operations Center | COS{% endblock %}
+ {% block workspace_content %}
++{% include 'experience/adaptive/_styles.html.twig' %}
+ <section class="cos-page__stack" data-controller="operations-snapshot"
+     data-action="online@window->operations-snapshot#online offline@window->operations-snapshot#offline cos:realtime-update->operations-snapshot#signal turbo:frame-load->operations-snapshot#loaded turbo:fetch-request-error->operations-snapshot#failed turbo:frame-missing->operations-snapshot#failed">
+     <header class="cos-card">
+@@ -11,8 +12,8 @@
+         <nav class="cos-uw__row" aria-label="Розділи">
+             <a class="cos-button cos-button--ghost" href="{{ path('cos_web_activity_center') }}" data-turbo-frame="_top">Activity</a>
+             <a class="cos-button cos-button--ghost" href="{{ path('cos_federation_goals_index') }}">Goals</a>
+-            <a class="cos-button cos-button--ghost" href="{{ path('cos_ux05_operations',{source:'approval',status:'waiting_approval',mode:mode}) }}">Approvals</a>
+-            <a class="cos-button cos-button--ghost" href="{{ path('cos_ux05_operations',{source:'workflow',mode:mode}) }}">Workflow Monitor</a>
++            <a class="cos-button cos-button--ghost" href="{{ path('cos_ux05_operations',{source:'approval',status:'waiting_approval'}) }}">Approvals</a>
++            <a class="cos-button cos-button--ghost" href="{{ path('cos_ux05_operations',{source:'workflow'}) }}">Workflow Monitor</a>
+             <a class="cos-button cos-button--ghost" href="{{ path('cos_workflow_recovery_worklist') }}">Recovery worklist (read-only)</a>
+             {% if admin %}<a class="cos-button cos-button--ghost" href="{{ path('cos_web_cos_control_center') }}">Audit / Control Center</a>{% endif %}
+         </nav>
+@@ -30,10 +31,6 @@
+                 <option value="">Усі статуси</option>
+                 {% for status in statuses %}<option value="{{ status.value }}" {% if statusFilter == status.value %}selected{% endif %}>{{ status.label() }}</option>{% endfor %}
+             </select>
+-            <label for="ops-mode">Режим</label>
+-            <select id="ops-mode" name="mode" class="cos-input">
+-                {% for option in ['result','process','expert'] %}<option value="{{ option }}" {% if mode == option %}selected{% endif %}>{{ option|capitalize }}</option>{% endfor %}
+-            </select>
+         </div>
+         <div class="cos-uw__row">
+             <label for="ops-entity">Сутність</label>
+@@ -41,7 +38,7 @@
+             <label for="ops-correlation">Кореляція</label>
+             <input class="cos-input" id="ops-correlation" name="correlation" value="{{ correlation }}" maxlength="190">
+             <button class="cos-button cos-button--primary">Застосувати</button>
+-            <a class="cos-button cos-button--ghost" href="{{ path('cos_ux05_operations',{mode:mode}) }}">Скинути</a>
++            <a class="cos-button cos-button--ghost" href="{{ path('cos_ux05_operations') }}">Скинути</a>
+         </div>
+     </form>
+
+diff --git a/symfony/templates/experience/operations/snapshot.html.twig b/symfony/templates/experience/operations/snapshot.html.twig
+index a59b38e..d45ff14 100644
+--- a/symfony/templates/experience/operations/snapshot.html.twig
++++ b/symfony/templates/experience/operations/snapshot.html.twig
+@@ -1,4 +1,5 @@
+ <div class="cos-page__stack" data-operations-snapshot-content data-partial="{{ snapshot.unavailable is not empty or snapshot.detailUnavailable or outcomeUnavailable or recoveryUnavailable ? 'true' : 'false' }}">
++    {% include 'experience/adaptive/_controls.html.twig' %}
+     <p><small>Оновлено: <time datetime="{{ snapshot.updated|date('c') }}">{{ snapshot.updated|date('Y-m-d H:i:s T') }}</time>.
+       До 50 записів на джерело, за незмінним часом створення. Кореляція шукається у всій історії; статуси відбираються у всій історії за станами джерел і уточнюються канонічними доказами; контекст асинхронної черги перевіряється на поточній сторінці. Деталі за ідентифікатором читаються незалежно.</small></p>
+     {% if snapshot.unavailable %}
+@@ -9,7 +10,7 @@
+     {% elseif selected and not snapshot.detail %}
+         <div class="cos-alert cos-alert--warning" role="alert">Операцію не знайдено в поточному контексті.</div>
+     {% endif %}
+-    {% set filters = {mode:mode,source:source,entity:entity,correlation:correlation,status:statusFilter,cursor:cursor} %}
++    {% set filters = {source:source,entity:entity,correlation:correlation,status:statusFilter,cursor:cursor} %}
+     {% if snapshot.detail %}
+       {% set item = snapshot.detail %}
+       <article class="cos-card cos-page__stack" aria-labelledby="ops-detail-title" data-ux05-detail="{{ item.key }}">
+@@ -47,11 +48,11 @@
+         {% if item.canRetry %}<p>Черга повідомляє про можливість ручного повтору; спочатку перевірте помилку та зовнішній ефект.</p>{% endif %}
+         <div class="cos-uw__row">
+           {% if entityUrl %}<a class="cos-button cos-button--ghost" href="{{ entityUrl }}" data-turbo-frame="_top">Відкрити сутність</a>{% endif %}
+-          {% if item.entity %}<a href="{{ path('cos_ux05_operations',{mode:mode,entity:item.entity.key()}) }}" data-turbo-frame="_top">Операції сутності</a>{% endif %}
+-          {% if item.correlation %}<a href="{{ path('cos_ux05_operations',{mode:mode,correlation:item.correlation}) }}" data-turbo-frame="_top">Пов’язані виконання</a>{% endif %}
+-          {% if item.actionId and item.source in ['approval','import'] %}<a href="{{ path('cos_ux05_operations',{mode:mode,operation:'action:'~item.actionId}) }}" data-turbo-frame="_top">Action</a>{% endif %}
+-          {% if item.linkedRun %}<a href="{{ path('cos_ux05_operations',{mode:mode,operation:'workflow:'~item.linkedRun}) }}" data-turbo-frame="_top">Пов’язаний Workflow</a>{% endif %}
+-          {% if item.goal %}<a href="{{ path('cos_ux05_operations',{mode:mode,entity:'goal:'~item.goal}) }}" data-turbo-frame="_top">Виконання Goal</a><a href="{{ path('cos_federation_goals_index') }}" data-turbo-frame="_top">Перевірка результату в Goals</a>{% endif %}
++          {% if item.entity %}<a href="{{ path('cos_ux05_operations',{entity:item.entity.key()}) }}" data-turbo-frame="_top">Операції сутності</a>{% endif %}
++          {% if item.correlation %}<a href="{{ path('cos_ux05_operations',{correlation:item.correlation}) }}" data-turbo-frame="_top">Пов’язані виконання</a>{% endif %}
++          {% if item.actionId and item.source in ['approval','import'] %}<a href="{{ path('cos_ux05_operations',{operation:'action:'~item.actionId}) }}" data-turbo-frame="_top">Action</a>{% endif %}
++          {% if item.linkedRun %}<a href="{{ path('cos_ux05_operations',{operation:'workflow:'~item.linkedRun}) }}" data-turbo-frame="_top">Пов’язаний Workflow</a>{% endif %}
++          {% if item.goal %}<a href="{{ path('cos_ux05_operations',{entity:'goal:'~item.goal}) }}" data-turbo-frame="_top">Виконання Goal</a><a href="{{ path('cos_federation_goals_index') }}" data-turbo-frame="_top">Перевірка результату в Goals</a>{% endif %}
+           {% if item.source == 'import' %}<a href="{{ path('cos_product_management_import_batch',{id:item.id}) }}" data-turbo-frame="_top">Повний звіт імпорту</a>{% endif %}
+           {% if item.source == 'async' %}<a href="{{ path('cos_web_activity_center',{operation:item.id}) }}" data-turbo-frame="_top">Деталі черги</a>{% endif %}
+           {% if item.source == 'workflow' %}
+@@ -123,8 +124,10 @@
+             <p>Дія недоступна: немає дозволеного UIAction або потрібна додаткова авторизація.</p>
+           {% endfor %}
+         {% endif %}
+-        <details {% if mode != 'result' or item.status.needsAttention() or item.source == 'import' %}open{% endif %}>
+-          <summary>Кроки, квитанції та історія</summary>
++        {% include 'experience/adaptive/_toggle.html.twig' with {sectionId:'operations.history',sectionLabel:'Кроки, квитанції та історія'} %}
++        {% if 'operations.history' in adaptive.composition.visibleSections %}
++        <section aria-label="Кроки, квитанції та історія">
++          <h3>Кроки, квитанції та історія</h3>
+           {% if item.receipt %}<p>Квитанція спроби: {{ item.receiptStatus }} · спроба {{ item.attempt }}. Це не доказ бізнес-ефекту.</p>{% endif %}
+           {% for step in item.items %}<div class="cos-card">
+             <strong>{{ step.title }}</strong> · {{ step.native }}
+@@ -134,7 +137,7 @@
+               <p>Спроба {{ step.attempt }} · Revision {{ step.revision }} · Effect {{ step.effect }}</p>
+             {% endif %}
+             {% if step.started is defined %}<p>{{ step.started }}{% if step.finished %} — {{ step.finished }}{% endif %}</p>{% endif %}
+-            {% if step.operation is defined and step.operation %}<p><a href="{{ path('cos_ux05_operations',{mode:mode,operation:step.operation}) }}" data-turbo-frame="_top">Деталі Action</a></p>{% endif %}
++            {% if step.operation is defined and step.operation %}<p><a href="{{ path('cos_ux05_operations',{operation:step.operation}) }}" data-turbo-frame="_top">Деталі Action</a></p>{% endif %}
+             {% if step.error is defined and step.error %}<p role="alert">Код помилки: {{ step.error }}</p>{% endif %}
+             {% if step.hasError is defined and step.hasError %}<p role="status">Джерело зафіксувало помилку спроби.</p>{% endif %}
+             {% if step.product is defined and step.product %}<p class="text-break">Product: {{ step.product }}{% if step.productLink %} · <a href="{{ path('cos_product_management_product',{id:step.product}) }}" data-turbo-frame="_top">Відкрити товар</a>{% endif %}</p>{% endif %}
+@@ -148,9 +151,12 @@
+               {% if item.nextItemAfter is not null %}<a class="cos-button cos-button--ghost" href="{{ path('cos_ux05_operations',filters|merge({operation:item.key,item_after:item.nextItemAfter})) }}" data-turbo-frame="_top">Наступні позиції</a>{% endif %}
+             </nav>
+           {% endif %}
+-        </details>
+-        <details {% if mode == 'expert' %}open{% endif %}>
+-          <summary>Походження та ідентифікатори</summary>
++        </section>
++        {% endif %}
++        {% include 'experience/adaptive/_toggle.html.twig' with {sectionId:'operations.provenance',sectionLabel:'Походження та ідентифікатори'} %}
++        {% if 'operations.provenance' in adaptive.composition.visibleSections %}
++        <section aria-label="Походження та ідентифікатори">
++          <h3>Походження та ідентифікатори</h3>
+           <dl class="text-break">
+             <dt>Джерело</dt><dd>{{ item.source }} · {{ item.native }}</dd>
+             <dt>Операція</dt><dd>{{ item.id }}</dd>
+@@ -162,7 +168,8 @@
+             {% if item.started %}<dt>Почато</dt><dd>{{ item.started }}</dd>{% endif %}
+             <dt>Оновлено</dt><dd>{{ item.updated }}</dd>
+           </dl>
+-        </details>
++        </section>
++        {% endif %}
+       </article>
+     {% endif %}
+     <section class="cos-page__stack" aria-label="Операції">
+diff --git a/tests/browser/cuw_ux05_operations.mjs b/tests/browser/cuw_ux05_operations.mjs
+index 85019e9..985b333 100644
+--- a/tests/browser/cuw_ux05_operations.mjs
++++ b/tests/browser/cuw_ux05_operations.mjs
+@@ -3,7 +3,7 @@ import { chromium } from 'playwright-core';
+ import { mkdir } from 'node:fs/promises';
+
+ // Staging-only read acceptance. Requires two tenant fixtures and a non-manager.
+-// No approval, retry or provider mutation is performed.
++// No approval, retry or provider mutation is performed; UX-04 preferences only.
+ const required = [
+     'UX05_E2E_BASE_URL', 'UX05_E2E_MANAGER_EMAIL', 'UX05_E2E_MANAGER_PASSWORD',
+     'UX05_E2E_MEMBER_EMAIL', 'UX05_E2E_MEMBER_PASSWORD', 'UX05_E2E_OWN_OPERATION',
+@@ -30,8 +30,11 @@ try {
+     const own = process.env.UX05_E2E_OWN_OPERATION, foreign = process.env.UX05_E2E_FOREIGN_OPERATION;
+     const states = [];
+     for (const mode of ['result','process','expert']) {
+-        const result = await page.goto(url(operation(own)+'&mode='+mode));
++        const result = await page.goto(url(operation(own)));
+         assert.equal(result.status(),200);
++        await page.locator('#cos-adaptive-mode-'+mode).click();
++        await page.waitForURL(u=>u.hash==='#cos-adaptive-mode-'+mode);
++        assert.equal(await page.locator('[data-cos-adaptive]').getAttribute('data-experience-mode'),mode);
+         assert.equal(await page.locator('[data-ux05-detail]').getAttribute('data-ux05-detail'),own);
+         states.push(await page.locator('[data-ux05-detail] [data-operation-status]').getAttribute('data-operation-status'));
+         const width = await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,viewport:innerWidth}));
