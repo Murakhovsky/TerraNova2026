@@ -1,0 +1,103 @@
+<div class="cos-page__stack" data-operations-snapshot-content data-partial="{{ snapshot.unavailable is not empty or snapshot.detailUnavailable ? 'true' : 'false' }}">
+    <p><small>Оновлено: <time datetime="{{ snapshot.updated|date('c') }}">{{ snapshot.updated|date('Y-m-d H:i:s T') }}</time>.
+      До 50 останніх записів кожного джерела; фільтри застосовані до цього вікна. Деталі за прямим ідентифікатором читаються незалежно.</small></p>
+    {% if snapshot.unavailable %}
+        <div class="cos-alert cos-alert--warning" role="alert">Деякі джерела недоступні: {{ snapshot.unavailable|join(', ') }}. Відсутність записів не означає відсутність роботи.</div>
+    {% endif %}
+    {% if snapshot.detailUnavailable %}
+        <div class="cos-alert cos-alert--warning" role="alert">Деталі операції тимчасово недоступні.</div>
+    {% elseif selected and not snapshot.detail %}
+        <div class="cos-alert cos-alert--warning" role="alert">Операцію не знайдено в поточному контексті.</div>
+    {% endif %}
+    {% set filters = {mode:mode,source:source,entity:entity,correlation:correlation,status:statusFilter} %}
+    {% if snapshot.detail %}
+      {% set item = snapshot.detail %}
+      <article class="cos-card cos-page__stack" aria-labelledby="ops-detail-title">
+        <h2 id="ops-detail-title">{{ item.title }}</h2>
+        <p role="status" data-operation-status="{{ item.status.value }}"><strong>{{ item.status.label() }}</strong></p>
+        {% if item.status.needsAttention() %}
+          <p class="cos-alert cos-alert--warning" role="alert">
+          {% if item.status.value == 'waiting_approval' %}Потрібне рішення уповноваженого користувача; це ще не виконання.
+          {% elseif item.status.value in ['external_outcome_unknown','reconciliation_required'] %}Не повторюйте виконання до звіряння канонічних квитанцій.
+          {% elseif item.status.value == 'completed_unverified' %}Є стан завершення джерела, але немає незалежного підтвердження бізнес-результату.
+          {% elseif item.status.value == 'failed' %}Виконання завершилось помилкою. Перевірте джерело і стан зовнішнього ефекту до повтору.
+          {% else %}Потрібна перевірка причини очікування або блокування.{% endif %}
+          </p>
+        {% elseif item.status.value == 'completed_verified' %}
+          <p>Незалежна перевірка всіх Workflow-квитанцій успішна. Досягнення бізнес-цілі перевіряється окремо в Goals.</p>
+        {% endif %}
+        {% if item.risk %}<p>Ризик: <strong>{{ item.risk }}</strong></p>{% endif %}
+        {% if item.progress is not null %}
+          <label for="ops-detail-progress">Прогрес джерела: {{ item.progress }}%{% if item.total > 0 %} ({{ item.done }}/{{ item.total }}){% endif %}</label>
+          <progress id="ops-detail-progress" value="{{ item.progress }}" max="100" class="w-100">{{ item.progress }}%</progress>
+        {% else %}<p>Прогрес джерела невідомий.</p>{% endif %}
+        {% if item.retryScheduled %}<p>Повтор заплановано канонічною чергою.</p>{% endif %}
+        {% if item.canRetry %}<p>Черга повідомляє про можливість ручного повтору; спочатку перевірте помилку та зовнішній ефект.</p>{% endif %}
+        <div class="cos-uw__row">
+          {% if entityUrl %}<a class="cos-button cos-button--ghost" href="{{ entityUrl }}" data-turbo-frame="_top">Відкрити сутність</a>{% endif %}
+          {% if item.entity %}<a href="{{ path('cos_ux05_operations',{mode:mode,entity:item.entity.key()}) }}" data-turbo-frame="_top">Операції сутності</a>{% endif %}
+          {% if item.correlation %}<a href="{{ path('cos_ux05_operations',{mode:mode,correlation:item.correlation}) }}" data-turbo-frame="_top">Пов’язані виконання</a>{% endif %}
+          {% if item.actionId and item.source == 'approval' %}<a href="{{ path('cos_ux05_operations',{mode:mode,operation:'action:'~item.actionId}) }}" data-turbo-frame="_top">Action</a>{% endif %}
+          {% if item.goal %}<a href="{{ path('cos_federation_goals_index') }}" data-turbo-frame="_top">Перевірка результату в Goals</a>{% endif %}
+          {% if item.source == 'import' %}<a href="{{ path('cos_product_management_import_batch',{id:item.id}) }}" data-turbo-frame="_top">Повний звіт імпорту</a>{% endif %}
+          {% if item.source == 'async' %}<a href="{{ path('cos_web_activity_center',{operation:item.id}) }}" data-turbo-frame="_top">Деталі черги</a>{% endif %}
+          {% if item.source == 'workflow' and item.status.value in ['external_outcome_unknown','reconciliation_required','failed','blocked','completed_unverified'] %}
+            <a href="{{ path('cos_workflow_recovery_inspect',{runId:item.id,revision:item.revision}) }}" data-turbo-frame="_top">Канонічна діагностика recovery (read-only)</a>
+          {% endif %}
+        </div>
+        {% if item.source == 'approval' and item.status.value == 'waiting_approval' %}
+          {% for action in actions %}
+            <form method="post" action="{{ path('cos_ux05_operations_decide',{id:item.id}) }}" data-turbo-frame="_top" class="cos-page__stack">
+              <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+              <input type="hidden" name="ui_action" value="{{ action.id }}">
+              {% set confirmation = action.confirmationContract() %}
+              {% if confirmation %}
+                <label><input type="checkbox" required name="confirmed" value="1"> {{ confirmation.message }}</label>
+              {% endif %}
+              <button type="submit" class="cos-button cos-button--primary">{{ action.label }}</button>
+            </form>
+          {% else %}
+            <p>Дія недоступна: немає дозволеного UIAction або потрібна додаткова авторизація.</p>
+          {% endfor %}
+        {% endif %}
+        <details {% if mode != 'result' or item.status.needsAttention() %}open{% endif %}>
+          <summary>Кроки, квитанції та історія</summary>
+          {% if item.receipt %}<p>Квитанція спроби: {{ item.receiptStatus }} · спроба {{ item.attempt }}. Це не доказ бізнес-ефекту.</p>{% endif %}
+          {% for step in item.items %}<div class="cos-card">
+            <strong>{{ step.title }}</strong> · {{ step.native }}
+            {% if step.error is defined and step.error %}<p role="alert">Код помилки: {{ step.error }}</p>{% endif %}
+            {% if step.receipt %}<p>Посилання на квитанцію: <code class="text-break">{{ step.receipt }}</code></p>{% endif %}
+          </div>{% else %}<p>Додаткові кроки відсутні або не надаються джерелом.</p>{% endfor %}
+          {% if item.source == 'import' and item.total > 100 %}<p>Перші 100 рядків. Повний звіт доступний у джерелі.</p>{% endif %}
+        </details>
+        <details {% if mode == 'expert' %}open{% endif %}>
+          <summary>Походження та ідентифікатори</summary>
+          <dl class="text-break">
+            <dt>Джерело</dt><dd>{{ item.source }} · {{ item.native }}</dd>
+            <dt>Операція</dt><dd>{{ item.id }}</dd>
+            {% if item.actor %}<dt>Ініціатор</dt><dd>{{ item.actor }}</dd>{% endif %}
+            {% if item.correlation %}<dt>Кореляція</dt><dd>{{ item.correlation }}</dd>{% endif %}
+            {% if item.plan %}<dt>Plan</dt><dd>{{ item.plan }}</dd>{% endif %}
+            {% if item.goal %}<dt>Goal</dt><dd>{{ item.goal }}</dd>{% endif %}
+            {% if item.created %}<dt>Створено</dt><dd>{{ item.created }}</dd>{% endif %}
+            {% if item.started %}<dt>Почато</dt><dd>{{ item.started }}</dd>{% endif %}
+            <dt>Оновлено</dt><dd>{{ item.updated }}</dd>
+          </dl>
+        </details>
+      </article>
+    {% endif %}
+    <section class="cos-page__stack" aria-label="Операції">
+      {% for item in snapshot.rows %}
+        <article class="cos-card" data-operation-status="{{ item.status.value }}">
+          <div class="cos-uw__row"><strong>{{ item.title }}</strong><small>{{ item.source|capitalize }}</small></div>
+          <p><strong>{{ item.status.label() }}</strong>{% if item.risk %} · Ризик {{ item.risk }}{% endif %}</p>
+          {% if item.progress is not null %}<p>Прогрес {{ item.progress }}%</p>{% endif %}
+          {% if mode != 'result' %}<p>{{ item.updated }}{% if item.actor %} · {{ item.actor }}{% endif %}</p>{% endif %}
+          {% if mode == 'expert' %}<p class="text-break">{{ item.native }} · {{ item.id }}{% if item.correlation %} · {{ item.correlation }}{% endif %}</p>{% endif %}
+          <a class="cos-button cos-button--ghost" href="{{ path('cos_ux05_operations',filters|merge({operation:item.key})) }}" data-turbo-frame="_top">Деталі</a>
+        </article>
+      {% else %}
+        {% if snapshot.unavailable is empty %}<p>У поточному вікні немає операцій за цими фільтрами.</p>{% endif %}
+      {% endfor %}
+    </section>
+</div>
