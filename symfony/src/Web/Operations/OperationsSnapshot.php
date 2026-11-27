@@ -212,6 +212,8 @@ final readonly class OperationsSnapshot
             return array_map(static fn($s): array => [
                 'title'=>$s->stepId.' · '.$s->capabilityId, 'native'=>$s->state,
                 'receipt'=>$s->resultReference, 'attempt'=>$s->attempts, 'revision'=>$s->revision,
+                'operation'=>is_string($s->resultReference) && preg_match('/^action:[a-f0-9]{32}$/D',$s->resultReference)
+                    ? $s->resultReference : null,
                 'dependencies'=>$graph[$s->stepId],
                 'blockers'=>array_values(array_filter($graph[$s->stepId],
                     static fn(string $dependency): bool => ($states[$dependency] ?? '') !== 'completed')),
@@ -232,7 +234,7 @@ final readonly class OperationsSnapshot
         }
         if ($kind === 'import') {
             return array_map(static fn(array $r): array => ['title'=>($r['row_no'].' · '.($r['sku'] ?? '')), 'native'=>$r['status'],
-                'receipt'=>$r['receipt_key'], 'error'=>$r['error_code'], 'product'=>$r['product_id']], $this->canonical->importItems($org, $id));
+                'receipt'=>$r['receipt_key'], 'error'=>$r['error_code'], 'product'=>$r['product_id'], 'productLink'=>is_string($r['product_id']) && preg_match('/^[a-f0-9]{32}$/D',$r['product_id'])], $this->canonical->importItems($org, $id));
         }
         return [];
     }

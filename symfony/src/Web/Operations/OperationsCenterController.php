@@ -44,6 +44,7 @@ final readonly class OperationsCenterController
         private Environment $twig,
         private FederationGoalStore $goals,
         private OperationsRecoveryRead $recovery,
+        private OperationsRecoveryUI $recoveryUI,
     ) {}
 
     public function index(Request $request): Response
@@ -85,9 +86,10 @@ final readonly class OperationsCenterController
                 }
             } catch (Throwable) { $outcomeUnavailable = true; }
         }
-        $recovery = null; $recoveryUnavailable = false;
+        $recovery = null; $recoveryUnavailable = false; $recoveryControls = [];
         if ($detail !== null && $detail['source'] === 'workflow' && $detail['status']->needsAttention()) {
-            try { $recovery = $this->recovery->inspect($actor, $detail); }
+            try { $recovery = $this->recovery->inspect($actor, $detail);
+                if (!$snapshot['detailUnavailable']) $recoveryControls = $this->recoveryUI->available($actor,$context,$detail['id']); }
             catch (Throwable) { $recoveryUnavailable = true; }
         }
         $entityUrl = null;
@@ -106,7 +108,7 @@ final readonly class OperationsCenterController
             'entity'=>$entity?->key() ?? '', 'correlation'=>$correlation, 'selected'=>$selected,
             'cursor'=>$cursorValue, 'outcome'=>$outcome, 'outcomeUnavailable'=>$outcomeUnavailable,
             'actions'=>$actions, 'entityUrl'=>$entityUrl,
-            'recovery'=>$recovery, 'recoveryUnavailable'=>$recoveryUnavailable,
+            'recovery'=>$recovery, 'recoveryUnavailable'=>$recoveryUnavailable, 'recoveryControls'=>$recoveryControls,
             'topic'=>$this->topics->organization($actor->organizationId()->value()),
             'csrfToken'=>$this->csrf->token($request), 'admin'=>$actor->isAdmin() && $actor->allows(TenantPermissions::ADMIN),
         ]), 200, ['Cache-Control'=>'no-store, private','X-Robots-Tag'=>'noindex, nofollow','Content-Type'=>'text/html; charset=UTF-8']);

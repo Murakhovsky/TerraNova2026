@@ -165,3 +165,95 @@ Local executable checks:
 
 No D3/D4/D5 or Issue closure claimed. No remote publication or deployment
 included in this iteration.
+
+## Iteration 3 — fenced recovery UIAction contribution and complete status candidate filtering
+
+This supersedes the earlier statement that UX-05 contains only read-only
+recovery diagnostics. The independent branch now includes the actual
+**request → second-manager approval → apply** SSR forms, resolver-gated POST
+adapter, and exact canonical recovery candidate reads. These controls are
+intentionally **unavailable until registered by the integrator**; neither
+Twig nor the POST controller can synthesize/enable an unregistered descriptor.
+
+- `RecoveryCandidateRead` checks the current Run revision and fingerprint of
+  the immutable graph; reads only its relevant waiting, ambiguous, or expired
+  claimed Steps. A live claim is never offered. Native step binding/effect is
+  checked; current pending decisions are looked up independently of history
+  pagination. A read-only reset is offered only to a pinned `read:` binding,
+  side-effect level none, no persisted receipt and no native Action key.
+  Kernel Agent/Tool recovery exposes verified receipt completion only.
+- `RecoveryActionPlan` makes an ID from exact Run revision, Step revision,
+  resource and resolution. Request forms collect independent receipt and
+  rationale; approved/apply forms show canonical recorded rationale and
+  receipt. The requester never sees their own approval button. Unsupported
+  quarantine/cancel, generic Action/Agent job replay, and critical mutations
+  requiring step-up stay unavailable. This layer is presentation filtering,
+  not a new admission Policy: the canonical writer rechecks all eligibility,
+  grants, two-person approval, graph, CAS, evidence and prior receipts.
+- `OperationsRecoveryActionProvider` contributes exact resource descriptors
+  through `ActionProviderInterface`, context `workspace/operations`, entity
+  `operations.workflow:<run-id>`, permission `cos.tenant.manage`, placement
+  `workspace.secondary`. `OperationsRecoveryUI` intersects with the actual
+  `UIActionResolver` output and rereads current canonical facts. Unregistered,
+  stale, disabled or step-up descriptors do not yield a button or a POST grant.
+- The isolated POST route
+  `/workspace/operations/workflow/{runId}/recovery` checks authenticated manager,
+  access/manage, CSRF, explicit confirmation, exact current descriptor and
+  resource; delegates to existing `DoctrineWorkflowRecoveryManager` or
+  `DoctrineKernelExecutionRecoveryManager`. Same actor and fenced request
+  has a stable request ID; duplicate/stale POSTs do not create a new decision.
+  Native owner remains sole authority; a failed/unconfirmed POST has no
+  optimistic business success. Successful POST redirects back to canonical
+  readback. A read-only reset may resume the original approved Workflow through
+  its existing scheduler; it is not direct external replay.
+- All six sources now preselect native status candidates before keyset
+  pagination. Actual projected status still controls UI; verified/unverified
+  completed Workflow deliberately share the same SQL candidates before
+  independent receipt attestation. Async EntityRef still uses the existing
+  typed projection and is checked per page. Receipt links to canonical Action
+  and native Product are available in step/import detail, not as proof by fiat.
+
+### Required shared integration (in parent integrator PR only)
+
+Register `App\Web\Operations\OperationsRecoveryActionProvider` (service ID
+`operationsRecoveryActionProvider`) with the shared UIActionRegistry, consistently
+with `ActionProviderInterface` / `UIActionResolver`. It is already autoconfigured
+as a web extension provider by existing Symfony tags. Because Operations is
+global, integrate it as a **platform-global** contribution (e.g. shared registry
+additional platform providers), NOT merely as a Federation module extension
+which disappears for tenants with Federation disabled. The existing generic
+module contribution mechanism is exercised by a contract-mocked unit test;
+actual global registration and DI lint belong to the integrator. Preserve
+existing UIAction uniqueness, permission resolution and context checking.
+Add the shared Shell Operations navigation to the isolated GET route.
+Critical approval requires a genuine server-backed step-up authorization
+contract; generic queue replay requires explicit safe owner classification.
+Neither is invented in UX-05.
+
+### Acceptance artifacts added in this iteration
+
+- `php tests/unit/cuw_ux05_recovery_actions.php`: tests stable/stale revisions,
+  independent approval, duplicate/request lifecycle, receipt/mode denial,
+  and real shared resolver using a contract-mocked registered/unregistered
+  provider, permission and tenant negatives (not executed here).
+- `php tests/unit/cuw_ux05_status_predicate.php`: tests predicate bindings and,
+  where PDO SQLite is provided, SQL fixture cases covering statuses, expired
+  approvals, Workflow uncertainty and job retry. Actual MySQL integration
+  still required. Independently extracted SQL literals passed 14 SQLite cases
+  locally; this is not PHP or MySQL execution evidence.
+- `node tests/browser/cuw_ux05_recovery.mjs`: opt-in staged mutation fixture
+  with two distinct authenticated managers, exact pre-existing Run and Step,
+  and independently verifiable receipt. Requires `UX05_E2E_STAGING=1`,
+  `UX05_E2E_MUTATION_SAFE=1`, corresponding `UX05_E2E_*` credentials and
+  fixture identifiers as specified in the script. Checks CSRF, confirmation,
+  one canonical petition, self-approval denial, independent decision, apply,
+  canonical request readback and duplicate POSTs. No production provider
+  execution authorized. Not executed without a disposable staging fixture.
+- JavaScript syntax and realtime simulation passed; route YAML parsed and
+  template route/block consistency checked; git diff whitespace passed.
+  PHP, Composer, MySQL/DI/Twig runtime and browser acceptance unavailable here.
+
+Remaining: shared global UIAction + navigation wiring, critical step-up,
+explicit safe queue retry classification, full domain outcome coverage,
+integrated CI and staging evidence at exact SHA. No merge/deploy or Issue
+closure claimed.

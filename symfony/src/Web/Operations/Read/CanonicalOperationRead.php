@@ -72,9 +72,9 @@ final readonly class CanonicalOperationRead implements OperationListReadInterfac
                     AND a.target_type=\'product_import_batch\' AND a.target_id=b.batch_id
                 LEFT JOIN cos_workflow_runs w ON w.organization_id=b.organization_id AND w.source_plan_id=b.plan_id
                 WHERE b.organization_id=:org'.$where('b.batch_id'),
-            'agent' => 'SELECT id,created_at,correlation_id,subject_type AS target_type,subject_id AS target_id FROM cos_agent_runs
+            'agent' => 'SELECT id,created_at,correlation_id,status AS native_status,subject_type AS target_type,subject_id AS target_id FROM cos_agent_runs
                 WHERE organization_id=:org'.$where('id'),
-            'async' => 'SELECT id,created_at,correlation_id FROM cos_jobs
+            'async' => 'SELECT id,created_at,correlation_id,status AS native_status FROM cos_jobs
                 WHERE organization_id=:org'.$where('id'),
             default => throw new \InvalidArgumentException('Unsupported operation source.'),
         };
@@ -95,18 +95,12 @@ final readonly class CanonicalOperationRead implements OperationListReadInterfac
             }
             $params['entity_id'] = $entity->id;
         }
-        // Prioritize actionable approvals across the full history, not just a recent slice.
-        // Other status predicates remain post-projection because verification and retry
-        // semantics are not implied by the source flag.
-        if ($status === \App\Web\Operations\OperationStatus::WaitingApproval) {
-            if ($source === 'approval') {
-                $sql .= " AND history.native_status='PENDING' AND history.action_status='PENDING_APPROVAL'
-                          AND (history.expires_at IS NULL OR history.expires_at>UTC_TIMESTAMP(6))";
-            } elseif ($source === 'action') {
-                $sql .= " AND history.native_status='PENDING_APPROVAL'";
-            } else {
-                return [];
-            }
+        // Native candidate filtering precedes keyset pagination. Receipt attestation
+        // and typed normalization still determine the final status in OperationsSnapshot.
+        if ($status !== null) {
+            $predicate=OperationStatusPredicate::forSource($source,$status);
+            $sql .= ' AND '.$predicate['sql'];
+            $params['projected_status']=$predicate['value'];
         }
         if ($before !== null && $id === null) {
             $sql .= ' AND (history.created_at < :before_date OR (history.created_at = :same_date AND history.id < :before_id))';

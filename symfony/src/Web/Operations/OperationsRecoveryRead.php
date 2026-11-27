@@ -45,6 +45,9 @@ final readonly class OperationsRecoveryRead
         $requests = array_map(static fn(array $r): array => [
             'id'=>$r['request_id'], 'step'=>$r['step_id'], 'resolution'=>$r['resolution'],
             'status'=>$r['status'], 'requested'=>$r['requested_at'],
+            'runRevision'=>(int)$r['run_revision'], 'stepRevision'=>(int)$r['step_revision'],
+            'requestedBy'=>(string)$r['requested_by'], 'approvedBy'=>(string)($r['approved_by'] ?? ''),
+            'receipt'=>$r['receipt_reference'], 'reason'=>$r['reason'],
             'approved'=>$r['approved_at'], 'applied'=>$r['applied_at'],
         ], $this->workflows->requestsForRun($command,50));
         return ['disposition'=>$disposition, 'reason'=>$reason, 'unknown'=>$unknown, 'requests'=>$requests];
