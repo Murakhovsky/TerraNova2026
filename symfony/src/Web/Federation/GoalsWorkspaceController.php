@@ -279,7 +279,11 @@ final readonly class GoalsWorkspaceController
                 $existing = $this->goals->specification($tenant, $goal->goalId);
                 if ($existing === null || $existing->ownerId !== $goal->ownerId
                     || $existing->desiredResult !== $goal->desiredResult
-                    || $existing->criteria !== $goal->criteria || $existing->deadline !== $goal->deadline) {
+                    || count($existing->criteria) !== 1
+                    || ($existing->criteria[0]['id'] ?? null) !== $criterion
+                    || ($existing->criteria[0]['operator'] ?? null) !== 'at_least'
+                    || ($existing->criteria[0]['expected'] ?? null) !== $target
+                    || $existing->deadline !== $goal->deadline) {
                     return new RedirectResponse('/workspace/goals?error=invalid_input', 303);
                 }
             }

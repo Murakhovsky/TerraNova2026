@@ -780,10 +780,14 @@ try {
   await page.setViewportSize({ width: 390, height: 844 });
   const modeForm = page.locator('form[action="/workspace/goals/mode"]');
   await Promise.all([
-    page.waitForURL(url => url.pathname === '/workspace/goals'),
+    page.waitForResponse(r => new URL(r.url()).pathname === '/workspace/goals/mode'
+      && r.request().method() === 'POST'),
+    page.waitForResponse(r => new URL(r.url()).pathname === '/workspace/goals'
+      && r.request().method() === 'GET'),
     modeForm.locator('button[value="result"]').click(),
   ]);
   await page.waitForLoadState('networkidle');
+  await page.locator('[data-cos-federation-goals][data-experience-mode="result"]').waitFor({state:'visible'});
   const draftForm = page.locator('form[action="/workspace/goals/create"]');
   await draftForm.locator('xpath=ancestor::details/summary').click();
   const picker = draftForm.locator('[data-goal-metric-picker]');
