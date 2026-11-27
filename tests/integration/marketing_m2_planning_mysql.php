@@ -32,6 +32,15 @@ $campaign=$campaigns->createDraft($orgA,'101',(new MarketingDraftPolicy())->vali
     'brief'=>'No Meta writes or paid delivery',
 ]),'campaign-m2-01');
 $campaignId=$campaign['id'];
+$campaign2=$campaigns->createDraft($orgA,'101',(new MarketingDraftPolicy())->validate([
+    'name'=>'Marketing M2 creative second','business_objective'=>'Human planning only',
+    'product_refs'=>['prod-future-1'],'brief'=>'No external write',
+]),'campaign-m2-02');
+$firstPage=$campaigns->search($orgA,'Marketing M2 creative',1,0);
+$nextPage=$campaigns->search($orgA,'Marketing M2 creative',1,1);
+$assert(count($firstPage)===1&&count($nextPage)===1&&$firstPage[0]['id']!==$nextPage[0]['id']
+    &&$campaigns->search($orgA,'Marketing M2 creative',1,2)===[],'Campaign native pagination failed.');
+$assert($campaigns->search($orgB,'Marketing M2 creative',20,0)===[]&&$campaigns->search($orgA,'%',20,0)===[],'Campaign tenant or literal search fence failed.');
 $creativeData=$policy->creative([
     'headline'=>'Eco materials local offer',
     'primary_text'=>'This draft is not an advertisement until verified.',

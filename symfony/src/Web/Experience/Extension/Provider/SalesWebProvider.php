@@ -277,10 +277,22 @@ final class SalesWebProvider implements NavigationProviderInterface, SearchProvi
     public function records(WebExtensionContext $context,string $workspaceId,string $query,int $page):array
     {
         if (!$this->supportsRecords($workspaceId)) throw new \InvalidArgumentException('Unsupported workspace.');
-        $notice='Order lookup requires the exact COS order reference. No unrestricted order-list Query is registered.';
-        if (!preg_match('/^[a-f0-9]{32}$/D',$query)) return ['items'=>[],'has_more'=>false,'notice'=>$notice];
-        $detail=$this->record($context,$workspaceId,new EntityRef('sales.order',$query));
-        return ['items'=>$detail===null?[]:[$detail['hit']],'has_more'=>false,'notice'=>$notice];
+        if(preg_match('/^[a-f0-9]{32}$/D',$query)){
+            $detail=$this->record($context,$workspaceId,new EntityRef('sales.order',$query));
+            return ['items'=>$detail===null?[]:[$detail['hit']],'has_more'=>false,'notice'=>null];
+        }
+        $data=$this->read->query($context,'sales.order.list',['q'=>$query,'scope'=>'auto','offset'=>($page-1)*20,'limit'=>20]);
+        $hits=[];
+        foreach($data['items']??[] as $row){
+            $id=(string)($row['order_id']??'');
+            if(!preg_match('/^[a-f0-9]{32}$/D',$id))continue;
+            $ref=new EntityRef('sales.order',$id);
+            $hits[]=WorkspaceCapabilityRead::hit($ref->type,$id,'Order '.$id,
+                WorkspaceCapabilityRead::workspacePath($workspaceId,$ref),
+                $row['status'].' · '.$row['channel'].' · '.$row['total'].' '.$row['currency']);
+        }
+        return ['items'=>$hits,'has_more'=>(bool)($data['has_more']??false),
+            'notice'=>match($data['scope']??''){'self'=>'Own orders with accessible linked deals. Directors can see the tenant-wide list.','team'=>'Orders of authorized active team members.',default=>null}];
     }
 
     public function record(WebExtensionContext $context,string $workspaceId,EntityRef $entity):?array

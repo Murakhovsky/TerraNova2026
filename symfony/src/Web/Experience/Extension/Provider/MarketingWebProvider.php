@@ -81,16 +81,15 @@ final readonly class MarketingWebProvider implements NavigationProviderInterface
             $detail=$this->record($context,$workspaceId,new EntityRef('marketing.campaign',$query));
             return ['items'=>$detail===null?[]:[$detail['hit']],'has_more'=>false,'notice'=>null];
         }
-        // Marketing search does not currently expose an offset/cursor contract.
-        $data=$this->read->query($context,'marketing.campaign.search',['q'=>$query,'limit'=>50]);
+        $data=$this->read->query($context,'marketing.campaign.search',['q'=>$query,'limit'=>21,'offset'=>($page-1)*20]);
         $hits=[];
-        foreach ($data['items']??[] as $row) {
+        foreach (array_slice($data['items']??[],0,20) as $row) {
             $id=(string)($row['id']??'');
             if (!preg_match('/^mkt-[a-f0-9]{24}$/D',$id)) continue;
             $hits[]=WorkspaceCapabilityRead::hit('marketing.campaign',$id,(string)$row['name'],
                 '/marketing/campaigns/'.$id,(string)$row['status']);
         }
-        return ['items'=>$hits,'has_more'=>false,'notice'=>count($hits)>=50?'Showing up to 50 campaigns. Narrow your search for other records.':null];
+        return ['items'=>$hits,'has_more'=>count($data['items']??[])>20,'notice'=>null];
     }
 
     public function record(WebExtensionContext $context,string $workspaceId,EntityRef $entity):?array

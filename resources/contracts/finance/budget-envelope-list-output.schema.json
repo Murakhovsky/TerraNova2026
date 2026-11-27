@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "items",
+    "has_more"
+  ],
+  "properties": {
+    "items": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "currency",
+          "period_start",
+          "period_end",
+          "state",
+          "limit_minor",
+          "reserved_minor",
+          "committed_minor",
+          "available_minor",
+          "revision"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^finb-[a-f0-9]{24}$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "period_start": {
+            "type": "string"
+          },
+          "period_end": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "limit_minor": {
+            "type": "integer"
+          },
+          "reserved_minor": {
+            "type": "integer"
+          },
+          "committed_minor": {
+            "type": "integer"
+          },
+          "available_minor": {
+            "type": "integer"
+          },
+          "revision": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "has_more": {
+      "type": "boolean"
+    }
+  }
+}

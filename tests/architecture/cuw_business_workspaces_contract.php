@@ -19,7 +19,7 @@ foreach (['Finance','Marketing','ProductManagement','Property','Sales'] as $doma
     $services=$manifest['contributions']['extension_services'];
     if(empty($services['web.workspace'])||empty($services['web.entity_links']))throw new RuntimeException('Unregistered provider '.$domain);
     $provider=$get('symfony/src/Web/Experience/Extension/Provider/'.$domain.'WebProvider.php');
-    foreach (['EntityLinkProviderInterface','BusinessRecordProvider','WorkspaceCapabilityRead','function record('] as $part) {
+    foreach (['WorkspaceProviderInterface','EntityLinkProviderInterface','BusinessRecordProvider','WorkspaceCapabilityRead','function record('] as $part) {
         if(!str_contains($provider,$part))throw new RuntimeException('Missing provider contract '.$domain.': '.$part);
     }
     foreach (['PDO','Doctrine\\','SELECT ','INSERT ','/api/v1/'] as $bad) {

@@ -124,6 +124,7 @@ domain_id: sales
         "sales.governed.order.lifecycle.return",
         "sales.order.create",
         "sales.order.read",
+        "sales.order.list",
         "sales.order.source.reconcile",
         "sales.order.source.page.read",
         "sales.order.source.pending.read",

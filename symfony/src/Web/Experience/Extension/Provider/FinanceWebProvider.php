@@ -7,6 +7,7 @@ use App\Web\Experience\Extension\Contract\CommandProviderInterface;
 use App\Web\Experience\Extension\Contract\EntityLinkProviderInterface;
 use App\Web\Experience\Extension\Contract\NavigationProviderInterface;
 use App\Web\Experience\Extension\Contract\SearchProviderInterface;
+use App\Web\Experience\Extension\Contract\WorkspaceProviderInterface;
 use App\Web\Experience\Extension\Model\EntityLink;
 use App\Web\Experience\Extension\Model\NavigationContribution;
 use App\Web\Experience\Extension\Model\SearchResult;
@@ -20,7 +21,7 @@ use App\Web\Experience\Unified\Business\WorkspaceCapabilityRead;
 use DomainException;
 
 /** Finance web surface is a read projection. Monetary writes remain approved Actions. */
-final readonly class FinanceWebProvider implements NavigationProviderInterface, SearchProviderInterface, CommandProviderInterface, BusinessRecordProvider, EntityLinkProviderInterface
+final readonly class FinanceWebProvider implements NavigationProviderInterface, SearchProviderInterface, CommandProviderInterface, WorkspaceProviderInterface, BusinessRecordProvider, EntityLinkProviderInterface
 {
     public function __construct(private SearchResultMatcher $matcher,private WorkspaceCapabilityRead $read) {}
 
@@ -76,16 +77,21 @@ final readonly class FinanceWebProvider implements NavigationProviderInterface, 
 
     public function records(WebExtensionContext $context,string $workspaceId,string $query,int $page):array
     {
-        $type=match($workspaceId){
-            'finance.budget'=>'finance.budget',
-            'finance.payments'=>'finance.order_payment',
-            default=>throw new \InvalidArgumentException('Unsupported workspace.'),
-        };
-        $pattern=$type==='finance.budget'?'/^finb-[a-f0-9]{24}$/D':'/^[a-f0-9]{32}$/D';
-        $notice=$type==='finance.budget'?'Enter an exact budget envelope reference. Finance does not expose an envelope-list Query.':'Enter an exact COS order reference. Payment operations are read by order, not by provider.';
-        if (!preg_match($pattern,$query)) return ['items'=>[],'has_more'=>false,'notice'=>$notice];
-        $detail=$this->record($context,$workspaceId,new EntityRef($type,$query));
-        return ['items'=>$detail===null?[]:[$detail['hit']],'has_more'=>false,'notice'=>$notice];
+        if(!$this->supportsRecords($workspaceId))throw new \InvalidArgumentException('Unsupported workspace.');
+        $budget=$workspaceId==='finance.budget';
+        $data=$budget?$this->read->query($context,'finance.budget.envelope.list',['q'=>$query,'offset'=>($page-1)*20,'limit'=>20])
+            :$this->read->query($context,'sales.order.list',['q'=>$query,'scope'=>'auto','offset'=>($page-1)*20,'limit'=>20]);
+        $hits=[];
+        foreach($data['items']??[] as $row){
+            $id=(string)($budget?($row['id']??''):($row['order_id']??''));
+            if(!preg_match($budget?'/^finb-[a-f0-9]{24}$/D':'/^[a-f0-9]{32}$/D',$id))continue;
+            $ref=new EntityRef($budget?'finance.budget':'finance.order_payment',$id);
+            $hits[]=WorkspaceCapabilityRead::hit($ref->type,$id,
+                $budget?(string)$row['name']:'Order '.$id,WorkspaceCapabilityRead::workspacePath($workspaceId,$ref),
+                $budget?$row['state'].' · '.$row['currency']:$row['status'].' · '.$row['channel']);
+        }
+        return ['items'=>$hits,'has_more'=>(bool)($data['has_more']??false),
+            'notice'=>$budget?null:'This is an authorized Sales order list; payment evidence is read separately.'];
     }
 
     public function record(WebExtensionContext $context,string $workspaceId,EntityRef $entity):?array

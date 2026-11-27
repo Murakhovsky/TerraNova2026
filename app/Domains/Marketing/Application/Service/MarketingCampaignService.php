@@ -39,11 +39,11 @@ final readonly class MarketingCampaignService
     }
 
     /** @return list<array<string,mixed>> */
-    public function search(TenantContext $actor, string $query = '', int $limit = 50): array
+    public function search(TenantContext $actor, string $query = '', int $limit = 50, int $offset = 0): array
     {
         $this->assertAccess($actor);
-        if (mb_strlen($query) > 180 || $limit < 1 || $limit > 100) throw new DomainException('Invalid search scope.');
-        return $this->campaigns->search($actor->organizationId()->value(), $query, $limit);
+        if (mb_strlen($query) > 180 || $limit < 1 || $limit > 100 || $offset < 0 || $offset > 200000) throw new DomainException('Invalid search scope.');
+        return $this->campaigns->search($actor->organizationId()->value(), $query, $limit, $offset);
     }
 
     private function assertAccess(TenantContext $actor): void

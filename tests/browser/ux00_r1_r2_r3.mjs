@@ -934,6 +934,90 @@ try {
     await reviewerCtx.close();
   }
 
+  // CUW-E: activate the three optional domains only in this disposable CI
+  // database, exercise the actual Domain APIs and UI, and restore overrides.
+  const optionalModules = ['finance','marketing','product_management'];
+  const previousModules = new Map();
+  for (const module of optionalModules) {
+    const state = sqlExecute("SELECT enabled FROM cos_organization_modules WHERE organization_id='default' AND module_id='"+module+"'");
+    assert(['','0','1'].includes(state),'Unexpected module override');
+    previousModules.set(module,state);
+    sqlExecute("INSERT INTO cos_organization_modules(organization_id,module_id,enabled) VALUES ('default','"+module+"',1) ON DUPLICATE KEY UPDATE enabled=1");
+  }
+  try {
+    await page.setViewportSize({width:1440,height:1000});
+    const product = await invoke(admin,'product_management.product.create',
+      {name:'CUW E Product '+uid,sku:'CUWE-'+uid,type:'stock'},csrf,'cuwe-product-'+uid);
+    const productId=product.data?.product_id;
+    assert(product.ok&&/^[a-f0-9]{32}$/.test(productId||''),'CUW-E native product draft missing');
+    const campaign = await invoke(admin,'marketing.campaign.create',
+      {name:'CUW E Campaign '+uid,business_objective:'CI local read projection',brief:'No provider execution',product_refs:[productId]},
+      csrf,'cuwe-campaign-'+uid);
+    const campaignId=campaign.data?.id;
+    assert(campaign.ok&&/^mkt-[a-f0-9]{24}$/.test(campaignId||''),'CUW-E native campaign draft missing');
+    const budget = await invoke(admin,'finance.budget.envelope.draft.create',
+      {name:'CUW E Budget '+uid,source_domain:'marketing',source_ref:campaignId,currency:'EUR',
+        period_start:'2026-11-01',period_end:'2026-12-31',limit_minor:10000},
+      csrf,'cuwe-budget-'+uid);
+    const budgetId=budget.data?.id;
+    assert(budget.ok&&/^finb-[a-f0-9]{24}$/.test(budgetId||''),'CUW-E native budget draft missing');
+    const order=await invoke(admin,'sales.order.create',
+      {currency:'EUR',lines:[{sku:'CUWE-'+uid,title:'CI native order',quantity:1,unit_price:'12.00'}],total:'12.00'},
+      csrf,'cuwe-order-'+uid);
+    const orderId=order.data?.order?.order_id;
+    assert(order.ok&&/^[a-f0-9]{32}$/.test(orderId||''),'CUW-E native order draft missing');
+    const samples=[
+      ['pm.catalog','product_management.product',productId,'CUWE-'+uid],
+      ['marketing.campaigns','marketing.campaign',campaignId,'CUW E Campaign '+uid],
+      ['finance.budget','finance.budget',budgetId,'CUW E Budget '+uid],
+      ['sales.order','sales.order',orderId,orderId],
+      ['finance.payments','finance.order_payment',orderId,orderId]
+    ];
+    for(const [workspace,type,id,query] of samples){
+      const locator='[data-entity-ref="'+type+':'+id+'"]';
+      const search=await page.goto(abs('/workspace/unified/business/'+workspace+'?q='+encodeURIComponent(query)),{waitUntil:'domcontentloaded'});
+      assert(search?.status()===200&&await page.locator(locator).count()===1,'CUW-E native list unavailable: '+workspace);
+      const selected=await page.goto(abs('/workspace/unified/business/'+workspace+'?q='+encodeURIComponent(query)+'&selected='+encodeURIComponent(type+':'+id)),{waitUntil:'domcontentloaded'});
+      assert(selected?.status()===200&&await page.locator('[data-cos-selected-entity="'+type+':'+id+'"] [data-cos-business-summary] .cos-entity-summary__item').count()>0,
+        'CUW-E exact detail unavailable: '+workspace);
+      await page.setViewportSize({width:390,height:844});
+      const overflow=await page.evaluate(()=>Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-document.documentElement.clientWidth);
+      assert(overflow<=2,'CUW-E mobile overflow for '+workspace+': '+overflow);
+      await page.screenshot({path:evidenceDir+'/cuw-e-'+workspace.replace('.','-')+'-mobile.png',animations:'disabled'});
+      await page.setViewportSize({width:1440,height:1000});
+      add('CUWE.native_list_detail_mobile.'+workspace,{entity_id:id,document_overflow:overflow});
+    }
+    // Explicit human confirmation, not payment, stock/fulfillment or provider execution.
+    await page.goto(abs('/workspace/unified/business/sales.order?q='+orderId+'&selected=sales.order:'+orderId),{waitUntil:'domcontentloaded'});
+    const confirmForm=page.locator('form[data-cos-order-confirm]');
+    assert(await confirmForm.count()===1,'CUW-E controlled Sales order command form missing');
+    const post={
+      csrf_token:await confirmForm.locator('input[name="csrf_token"]').inputValue(),
+      order_id:orderId,expected_revision:await confirmForm.locator('input[name="expected_revision"]').inputValue(),
+      idempotency_key:await confirmForm.locator('input[name="idempotency_key"]').inputValue(),confirm:'yes'
+    };
+    const confirmationUrl=abs('/workspace/unified/business/sales.order/confirm');
+    const bad=await admin.request.post(confirmationUrl,{form:{...post,csrf_token:'bad'},maxRedirects:0});
+    assert(bad.status()===403,'CUW-E order confirmation accepted invalid CSRF');
+    await confirmForm.locator('input[name="confirm"]').check();
+    await Promise.all([page.waitForURL(url=>url.pathname.endsWith('/sales.order/confirm')),confirmForm.locator('button[type="submit"]').click()]);
+    assert(await page.locator('[data-cos-order-confirmed]').count()===1,'CUW-E confirmation independent receipt unavailable');
+    const verified=await invoke(admin,'sales.order.lifecycle.read',{order_id:orderId},csrf);
+    assert(verified.data?.status==='confirmed'&&verified.data?.revision===2&&verified.data?.fulfilled_quantity===0,'CUW-E confirmation did not preserve native lifecycle/fulfillment');
+    const replay=await admin.request.post(confirmationUrl,{form:post,maxRedirects:0});
+    assert(replay.status()===200,'CUW-E duplicate confirmation did not reconcile original receipt');
+    const stale=await admin.request.post(confirmationUrl,{form:{...post,idempotency_key:'cuw-'+(orderId==='f'.repeat(32)?'e':'f').repeat(32)},maxRedirects:0});
+    assert(stale.status()===503,'CUW-E stale revision unexpectedly accepted');
+    const after=await invoke(admin,'sales.order.lifecycle.read',{order_id:orderId},csrf);
+    assert(after.data?.revision===2&&after.data?.fulfilled_quantity===0,'CUW-E replay/stale confirmation changed native order');
+    add('CUWE.sales_order_human_command_and_receipt',{order_id:orderId,revision:2,csrf:'denied',replay:'verified',stale:'unverified'});
+  } finally {
+    for(const [module,state] of previousModules){
+      if(state==='')sqlExecute("DELETE FROM cos_organization_modules WHERE organization_id='default' AND module_id='"+module+"'");
+      else sqlExecute("UPDATE cos_organization_modules SET enabled="+state+" WHERE organization_id='default' AND module_id='"+module+"'");
+    }
+  }
+
   const report = { schema: 1, suite: 'COS UX-00 R1/R2/R3 browser acceptance',
     environment: 'GitHub Actions disposable localhost MySQL', run_id: uid,
     tenant_scope: 'Authenticated default tenant vs foreign-tenant native fixtures; multi-org login not offered by this deployment',

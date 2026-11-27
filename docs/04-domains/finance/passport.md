@@ -21,6 +21,7 @@ domain_id: finance
       "capability_ids": [
         "finance.budget.envelope.draft.create",
         "finance.budget.envelope.get",
+        "finance.budget.envelope.list",
         "finance.budget.reservation.list",
         "finance.budget.envelope.activate",
         "finance.budget.reservation.reserve",

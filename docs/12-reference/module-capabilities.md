@@ -173,6 +173,7 @@ Manifest capabilities не задекларовані.
 - `finance.budget.envelope.draft.create`;
 - `finance.budget.envelope.freeze`;
 - `finance.budget.envelope.get`;
+- `finance.budget.envelope.list`;
 - `finance.budget.reservation.list`;
 - `finance.budget.reservation.release`;
 - `finance.budget.reservation.reserve`;
@@ -665,6 +666,7 @@ Manifest capabilities не задекларовані.
 - `sales.order.lifecycle.read`;
 - `sales.order.lifecycle.release`;
 - `sales.order.lifecycle.return`;
+- `sales.order.list`;
 - `sales.order.read`;
 - `sales.order.source.page.read`;
 - `sales.order.source.pending.read`;

@@ -6,7 +6,7 @@
 {% endfor %}
 {% for action in workspace.primaryActions %}
   {% if action.id == 'sales.order.confirm' %}
-    <h2 class="cos-card__title">{{ action.label|trans }}</h2>
+    <h2 class="cos-card__title">{{ action.label|trans({}, 'cuw_business')|trans }}</h2>
     {% if action.enabled and status == 'placed' and revision and csrfToken and idempotencyKey %}
       <form method="post" action="{{ path('cos_cuw_sales_order_confirm') }}" class="cos-uw__search" data-cos-order-confirm>
         <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
@@ -15,12 +15,12 @@
         <input type="hidden" name="idempotency_key" value="{{ idempotencyKey }}">
         <label>
           <input type="checkbox" name="confirm" value="yes" required>
-          {{ 'Confirm the native Sales order only; no payment or fulfillment is executed.'|trans }}
+          {{ 'Confirm the native Sales order only; no payment or fulfillment is executed.'|trans({}, 'cuw_business')|trans }}
         </label>
-        <button class="cos-button cos-button--primary" type="submit">{{ 'Confirm order'|trans }}</button>
+        <button class="cos-button cos-button--primary" type="submit">{{ 'Confirm order'|trans({}, 'cuw_business')|trans }}</button>
       </form>
     {% else %}
-      <p class="cos-card__copy" role="status">{{ action.disabledReason|default('Only a currently placed order can be confirmed.')|trans }}</p>
+      <p class="cos-card__copy" role="status">{{ action.disabledReason|default('Only a currently placed order can be confirmed.')|trans({}, 'cuw_business')|trans }}</p>
     {% endif %}
   {% endif %}
 {% endfor %}

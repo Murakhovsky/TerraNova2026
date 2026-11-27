@@ -58,6 +58,7 @@ finance,finance.budget.envelope.activate,TYPED_SOURCE,UNVERIFIED,UNVERIFIED,UNVE
 finance,finance.budget.envelope.draft.create,TYPED_SOURCE,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,,command:finance.budget.envelope.draft.create
 finance,finance.budget.envelope.freeze,TYPED_SOURCE,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,,action:finance.budget.envelope.freeze
 finance,finance.budget.envelope.get,TYPED_SOURCE,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,/workspace/unified/business/finance.budget,query:finance.budget.envelope.get
+finance,finance.budget.envelope.list,TYPED_SOURCE,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,/workspace/unified/business/finance.budget,query:finance.budget.envelope.list
 finance,finance.budget.reservation.list,TYPED_SOURCE,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,/workspace/unified/business/finance.budget,query:finance.budget.reservation.list
 finance,finance.budget.reservation.release,TYPED_SOURCE,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,,action:finance.budget.reservation.release
 finance,finance.budget.reservation.reserve,TYPED_SOURCE,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,,action:finance.budget.reservation.reserve
@@ -444,6 +445,7 @@ sales,sales.order.lifecycle.fulfill,TYPED_SOURCE,UNVERIFIED,UNVERIFIED,UNVERIFIE
 sales,sales.order.lifecycle.read,TYPED_SOURCE,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,/workspace/unified/business/sales.order,query:sales.order.lifecycle.read
 sales,sales.order.lifecycle.release,TYPED_SOURCE,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,,command:sales.order.lifecycle.release
 sales,sales.order.lifecycle.return,TYPED_SOURCE,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,,command:sales.order.lifecycle.return
+sales,sales.order.list,TYPED_SOURCE,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,/workspace/unified/business/sales.order,query:sales.order.list
 sales,sales.order.read,TYPED_SOURCE,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,/workspace/unified/business/sales.order,query:sales.order.read
 sales,sales.order.source.page.read,TYPED_SOURCE,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,,query:sales.order.source.page.read
 sales,sales.order.source.pending.read,TYPED_SOURCE,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,UNVERIFIED,,query:sales.order.source.pending.read

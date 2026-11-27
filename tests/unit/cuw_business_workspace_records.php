@@ -63,6 +63,8 @@ $fixtures=[
     'query:product_management.product.get'=>['found'=>true,'product'=>['product_id'=>$id,'name'=>'Product A','status'=>'active','product_type'=>'stock','variants'=>[['sku'=>'A-1','status'=>'active','uom'=>'pcs','secret'=>'never expose']]]],
     'query:marketing.campaign.search'=>['items'=>[['id'=>$campaign,'name'=>'Campaign A','status'=>'DRAFT']]],
     'query:marketing.campaign.get'=>['campaign'=>['id'=>$campaign,'name'=>'Campaign A','status'=>'DRAFT','revision'=>2]],
+    'query:finance.budget.envelope.list'=>['items'=>[['id'=>$budget,'name'=>'Budget A','state'=>'ACTIVE','currency'=>'EUR']],'has_more'=>true],
+    'query:sales.order.list'=>['items'=>[['order_id'=>$id,'status'=>'placed','channel'=>'native','total'=>'12.00','currency'=>'EUR']],'has_more'=>false,'scope'=>'self'],
     'query:finance.budget.envelope.get'=>['envelope'=>['id'=>$budget,'name'=>'Budget A','state'=>'ACTIVE','currency'=>'EUR','limit_minor'=>1000,'available_minor'=>800]],
     'query:finance.budget.reservation.list'=>['items'=>[['id'=>'reservation','state'=>'HELD','amount_minor'=>200]]],
     'query:sales.order.read'=>['order'=>['order_id'=>$id,'status'=>'placed']],
@@ -89,6 +91,7 @@ $read=new WorkspaceCapabilityRead($gateway,$tenants);
 $pm=new ProductManagementWebProvider(new SearchResultMatcher(),$read);
 $marketing=new MarketingWebProvider(new SearchResultMatcher(),$read);
 $finance=new FinanceWebProvider(new SearchResultMatcher(),$read);
+if(!$finance instanceof \App\Web\Experience\Extension\Contract\WorkspaceProviderInterface)throw new RuntimeException('Finance workspace must implement the registered Workspace contract.');
 $check=static function(bool $ok,string $why):void{if(!$ok)throw new RuntimeException($why);};
 $denied=static function(callable $run):void{
     try{$run();}catch(DomainException){return;}
@@ -101,9 +104,14 @@ $detail=$pm->record($ctx,'pm.catalog',$entity);
 $check($detail['hit']->entity->key()===$entity->key()&&!str_contains(json_encode($detail,JSON_THROW_ON_ERROR),'secret'),'Typed, bounded Product detail missing.');
 $check($pm->record($ctx,'pm.catalog',new EntityRef('marketing.campaign',$campaign))===null,'Cross-type detail escaped.');
 $check($pm->record($ctx,'pm.catalog',new EntityRef('product_management.product',str_repeat('f',32)))===null,'Mismatched native readback escaped.');
-$check(count($marketing->records($ctx,'marketing.campaigns','',1)['items'])===1,'Campaign list missing.');
+$check(count($marketing->records($ctx,'marketing.campaigns','',2)['items'])===1
+    &&$adapters['query:marketing.campaign.search']->last['offset']===20,'Campaign list pagination missing.');
 $check($marketing->record($ctx,'marketing.campaigns',new EntityRef('marketing.campaign',$campaign))['facts']!==[],'Campaign detail missing.');
-$check($finance->records($ctx,'finance.budget','',1)['notice']!==null,'Missing exact-reference limitation.');
+$budgetPage=$finance->records($ctx,'finance.budget','',2);
+$check(count($budgetPage['items'])===1&&$budgetPage['has_more']&&$adapters['query:finance.budget.envelope.list']->last['offset']===20,'Budget list missing.');
+$paymentsPage=$finance->records($ctx,'finance.payments','',1);
+$check(count($paymentsPage['items'])===1&&$paymentsPage['items'][0]->entity->key()==='finance.order_payment:'.$id
+    &&$adapters['query:sales.order.list']->last['scope']==='auto','Finance payment list bypassed Sales scope.');
 $check($finance->record($ctx,'finance.budget',new EntityRef('finance.budget',$budget))['tables'][0]['rows'][0][2]==='200','Budget reservation evidence missing.');
 $money=$finance->record($ctx,'finance.payments',new EntityRef('finance.order_payment',$id));
 $check(str_contains($money['facts'][0]['value'],'no confirmed collection')&&in_array('pending_registration',$money['tables'][0]['rows'][0],true),'Pending receipt confused with confirmed money.');
@@ -113,6 +121,10 @@ $denied(static fn()=>$pm->record(new WebExtensionContext('tenant-b','manager'),'
 $tenants->actor=$actor('tenant-a','viewer');
 $denied(static fn()=>$pm->records(new WebExtensionContext('tenant-a','viewer'),'pm.catalog','',1));
 $tenants->actor=$actor('tenant-a');
+$state->disabled=['finance'];
+$denied(static fn()=>$finance->records($ctx,'finance.budget','',1));
+$state->disabled=['sales'];
+$denied(static fn()=>$finance->records($ctx,'finance.payments','',1));
 $state->disabled=['product_management'];
 $denied(static fn()=>$pm->records($ctx,'pm.catalog','',1));
 $state->disabled=[];

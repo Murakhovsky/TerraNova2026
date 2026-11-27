@@ -12,6 +12,6 @@ final readonly class MarketingCampaignSearchAdapter implements CapabilityInvocat
     public function binding():string{return 'query:marketing.campaign.search';}
     public function invoke(TenantContext $actor,array $input,string $key,string $correlationId):mixed
     {
-        return ['items'=>$this->marketing->search($actor,(string)($input['q']??''),(int)($input['limit']??50))];
+        return ['items'=>$this->marketing->search($actor,(string)($input['q']??''),(int)($input['limit']??50),(int)($input['offset']??0))];
     }
 }
