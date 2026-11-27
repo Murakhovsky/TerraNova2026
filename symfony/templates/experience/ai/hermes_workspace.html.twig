@@ -13,7 +13,11 @@
         {% else %}
             <div><dt>{{ 'Exact token receipt checks'|trans }}</dt><dd>{{ 'Not configured for this legacy profile'|trans }}</dd></div>
         {% endif %}
-        <div><dt>{{ 'Remote cancellation'|trans }}</dt><dd>{{ 'Unavailable'|trans }}</dd></div>
+        <div><dt>{{ 'Remote cancellation'|trans }}</dt><dd>{{ 'Unavailable'|trans }} (manual)</dd></div>
+        {% if binding.runtime.runs_mode_configured %}
+            <div><dt>Hermes Runs API</dt><dd>{{ 'Configured; not live verified'|trans }} · 5 s / request · 6 polls</dd></div>
+            <p>{{ 'The approved worker requests a bounded stop on deadline or tool approval wait. Acknowledgement is not cancellation.'|trans }}</p>
+        {% endif %}
         {% if binding.runtime.max_cost_usd is not null %}
             <div><dt>{{ 'Reserved cost ceiling'|trans }}</dt><dd>{{ binding.runtime.max_cost_usd }} USD / {{ 'turn'|trans }}</dd></div>
             <div><dt>{{ 'Daily turn limit'|trans }}</dt><dd>{{ binding.runtime.daily_run_limit }}</dd></div>
@@ -94,6 +98,10 @@
                     <div><strong>{{ run.state }}</strong> · <code>{{ run.id }}</code></div>
                     <small>{{ 'Native run / remote correlation ID'|trans }} · {{ 'Requested by'|trans }} {{ run.requested_by }}</small>
                     <p>{{ run.created_at }} · {{ 'Context'|trans }} <code>{{ run.context_hash }}</code></p>
+                    {% if run.remote_submission_started_at|default(null) %}
+                        <p>Hermes Runs API · <code>{{ run.remote_run_id|default('—') }}</code> · {{ run.remote_status|default('UNKNOWN') }}</p>
+                        {% if run.remote_stop_requested_at|default(null) %}<p>{{ 'Stop requested'|trans }}: {{ run.remote_stop_requested_at }} · {{ 'Remote terminal state must be observed independently'|trans }}.</p>{% endif %}
+                    {% endif %}
                     {% if run.advice %}
                         <p><strong>{{ run.advice.recommendation }}</strong></p>
                         <p>{{ run.advice.rationale }}</p>

@@ -141,6 +141,7 @@ try {
         'enabled'=>true,'profile_ref'=>'mkt-e2e','profile_url'=>'https://hermes.example.com/p/mkt-e2e',
         'credential_ref'=>'env://TEST_HERMES_SECRET','daily_run_limit'=>2,'cost_control_ref'=>'fixture-provider-cap',
         'isolation_evidence_ref'=>'fixture-isolation','accepted_until'=>gmdate('Y-m-d\\TH:i:s\\Z',time()+86400),'max_cost_usd'=>'0.2500',
+        'runs_control_evidence_ref'=>'fixture-run-controls',
         'token_budget'=>['max_prompt_tokens'=>800,'max_completion_tokens'=>400,'max_total_tokens'=>1000,
             'control_evidence_ref'=>'fixture-token-cap']
     ];
@@ -152,6 +153,10 @@ try {
         public int $posts=0;
         public int $reads=0;
         public bool $invalidControls=false;
+        public bool $stopScenario=false;
+        public bool $stopped=false;
+        public bool $stopNeverSettles=false;
+        public string $content='';
         public function __construct(private \Infrastructure\Llm\MysqlLlmGovernanceRepository $budget,private string $org){}
         public function get(string $url,string $token):array{
             if($token!=='fixture-token')throw new RuntimeException('Unexpected fixture credential.');
@@ -162,22 +167,38 @@ try {
                         'run_submission'=>true,'run_status'=>true,'run_stop'=>$this->invalidControls?'true':true],
                     'private_extra'=>'must-not-persist'];
             }
+            if($url==='https://hermes.example.com/p/mkt-e2e/v1/runs/run_marketing_e2e'){
+                ++$this->reads;
+                return ['object'=>'hermes.run','run_id'=>'run_marketing_e2e','status'=>'completed','output'=>$this->content,
+                    'usage'=>['input_tokens'=>800,'output_tokens'=>200,'total_tokens'=>1000,'private_extra'=>'must-not-persist']];
+            }
+            if(in_array($url,['https://hermes.example.com/p/mkt-e2e/v1/runs/run_marketing_stop','https://hermes.example.com/p/mkt-e2e/v1/runs/run_marketing_stopping'],true)){
+                ++$this->reads;
+                return ['object'=>'hermes.run','run_id'=>basename($url),'status'=>$this->stopped?($this->stopNeverSettles?'stopping':'cancelled'):'waiting_for_approval'];
+            }
             if($url!=='https://hermes.example.com/p/mkt-e2e/v1/toolsets')throw new RuntimeException('Unexpected fixture profile.');
             ++$this->reads;return [];
         }
         public function post(string $url,string $token,string $key,array $payload):array{
-            if($url!=='https://hermes.example.com/p/mkt-e2e/v1/chat/completions'||$token!=='fixture-token'
-                ||!preg_match('/^cos-mkt-[a-f0-9]{64}$/D',$key)||abs($this->budget->monthlySpend($this->org,'USD')-0.25)>0.000001){
+            if($token!=='fixture-token'||!preg_match('/^cos-mkt-[a-f0-9]{64}$/D',$key)
+                ||abs($this->budget->monthlySpend($this->org,'USD')-0.25)>0.000001){
                 throw new RuntimeException('External turn lacked authenticated profile or budget admission.');
             }
             ++$this->posts;
-            $facts=json_decode($payload['messages'][1]['content'],true,32,JSON_THROW_ON_ERROR);
-            if(str_contains($payload['messages'][1]['content'],'destination_url')||str_contains($payload['messages'][1]['content'],'fixture-token')){
+            if($this->stopScenario&&in_array($url,['https://hermes.example.com/p/mkt-e2e/v1/runs/run_marketing_stop/stop','https://hermes.example.com/p/mkt-e2e/v1/runs/run_marketing_stopping/stop'],true)){
+                if($payload!==[])throw new RuntimeException('Unexpected stop body.');
+                $this->stopped=true;
+                return ['status'=>'stopping'];
+            }
+            if($url!=='https://hermes.example.com/p/mkt-e2e/v1/runs')throw new RuntimeException('Unexpected run submission.');
+            if($this->stopScenario)return ['run_id'=>$this->stopNeverSettles?'run_marketing_stopping':'run_marketing_stop','status'=>'started'];
+            $facts=json_decode($payload['input'],true,32,JSON_THROW_ON_ERROR);
+            if(str_contains($payload['input'],'destination_url')||str_contains($payload['input'],'fixture-token')){
                 throw new RuntimeException('Unnecessary data sent to runtime.');
             }
-            return ['id'=>'chatcmpl-marketing-e2e','usage'=>['prompt_tokens'=>800,'completion_tokens'=>200,'total_tokens'=>1000,'private_extra'=>'must-not-persist'],'choices'=>[['finish_reason'=>'stop','message'=>['role'=>'assistant',
-                'content'=>json_encode(['context_hash'=>$facts['context_hash'],'recommendation'=>'Test a shorter headline',
-                    'rationale'=>'Planning hypothesis without verified performance evidence','evidence_aliases'=>['creative']],JSON_THROW_ON_ERROR)]]]];
+            $this->content=json_encode(['context_hash'=>$facts['context_hash'],'recommendation'=>'Test a shorter headline',
+                'rationale'=>'Planning hypothesis without verified performance evidence','evidence_aliases'=>['creative']],JSON_THROW_ON_ERROR);
+            return ['run_id'=>'run_marketing_e2e','status'=>'started'];
         }
     };
     $identityResolver=new class($org,$owner) implements \Kernel\Identity\Contract\IdentityResolverInterface {
@@ -358,7 +379,7 @@ try {
         'UX06 token ceiling change did not invalidate approval.');
     $invalid=$profileData;$invalid['token_budget']['max_total_tokens']='1000';
     $deny(fn()=>new \Domains\Marketing\Infrastructure\Hermes\HermesAnalystRuntimeConfiguration($org,$invalid),'UX06 accepted a non-integer token ceiling.');
-    $legacy=$profileData;unset($legacy['token_budget']);
+    $legacy=$profileData;unset($legacy['token_budget'],$legacy['runs_control_evidence_ref']);
     $legacyProfiles=new \Domains\Marketing\Infrastructure\Hermes\HermesAnalystConfigurationRegistry(json_encode([$org=>$legacy],JSON_THROW_ON_ERROR));
     $legacyReadiness=new HermesAnalystReadinessService($legacyProfiles,$budget,$modules);
     $legacyUx=(new HermesWorkspaceAdapter($legacyReadiness,$campaignService,$uxPlanning,$reviewService,$modules))->inspect($actor,$uxContext);
@@ -443,7 +464,9 @@ try {
     $native=$runs->listRuns($org,$campaignId);
     $assert(count($native)===1&&$native[0]['state']==='SUCCEEDED'&&$native[0]['advice']['runtime']==='HERMES_AGENT'
         &&!$native[0]['paid_activation_approved']&&!$native[0]['finance_cost_confirmed']
-        &&$transport->posts===1&&$transport->reads===1,'Approved Action did not persist exactly one advisory receipt.');
+        &&$native[0]['remote_run_id']==='run_marketing_e2e'&&$native[0]['remote_status']==='completed'
+        &&$native[0]['remote_submission_started_at']!==null&&$native[0]['remote_stop_requested_at']===null
+        &&$transport->posts===1&&$transport->reads===3,'Approved Action did not persist exactly one advisory receipt.');
     $assert(abs($budget->monthlySpend($org,'USD')-0.25)<0.000001,'Kernel budget receipt absent.');
     $assert($bridge->advance($actor,$runId,$planApproval)['state']==='step_completed',
         'native Marketing Action receipt failed canonical Step attestation');
@@ -473,7 +496,7 @@ try {
         &&count($uxAfter->binding['runs'])===1&&$uxAfter->binding['runs'][0]['id']===$native[0]['id']
         &&$uxAfter->binding['runs'][0]['context_hash']===$native[0]['context_hash']
         &&$uxAfter->binding['runs'][0]['decision']==='ACCEPT'
-        &&$uxAfter->binding['runs'][0]['advice']['runtime_response_id']==='chatcmpl-marketing-e2e'
+        &&$uxAfter->binding['runs'][0]['advice']['runtime_response_id']==='run_marketing_e2e'
         &&$uxAfter->binding['runs'][0]['advice']['token_usage']['prompt_tokens']===800
         &&$uxAfter->binding['runs'][0]['advice']['token_usage']['completion_tokens']===200
         &&$uxAfter->binding['runs'][0]['advice']['token_usage']['total_tokens']===1000
@@ -485,7 +508,7 @@ try {
         &&!$uxAfterOutage->binding['runtime']['plan_available'],'UX06 lost verified owner evidence or claimed execution authority.');
     $assert(!str_contains(json_encode($uxAfter->binding,JSON_THROW_ON_ERROR),'fixture-token')
         &&!str_contains(json_encode($uxAfter->binding,JSON_THROW_ON_ERROR),'must-not-persist')
-        &&$transport->reads===1&&$transport->posts===1,'UX06 readback leaked a credential or retried the remote call.');
+        &&$transport->reads===3&&$transport->posts===1,'UX06 readback leaked a credential or retried the remote call.');
     echo "UX06 Hermes scoped inspection, fail-closed outage, native evidence and independent Action outcome PASS.\n";
     // Native receipt tamper is deliberately introduced only in this disposable fixture.
     $db->executeStatement('UPDATE marketing_analyst_runs SET context_hash=:fake WHERE organization_id=:org AND id=:id',
@@ -493,6 +516,49 @@ try {
     $deny(fn()=>$outcome->observeRun($actor,$runId,MarketingAnalystPlanProposalService::CRITERION,new DateTimeImmutable('-1 day'),new DateTimeImmutable('+1 day')),
         'Forged native context was counted as a trusted outcome.');
     $assert($transport->posts===1,'Readback or review caused another remote turn.');
+    // Separate disposable journal fixture: a pending tool request is never approved;
+    // it stops the exact assigned handle. Even observed cancellation yields UNCERTAIN.
+    $claim=$runs->claim($org,'mkt-remote-stop-'.$token,[
+        'request_hash'=>hash('sha256','stop-fixture-'.$token),'requested_by'=>$owner,'profile_ref'=>'mkt-e2e',
+        'cost_control_ref'=>'fixture-provider-cap','campaign_id'=>$campaignId,'context_hash'=>$native[0]['context_hash'],
+        'source_pins'=>$native[0]['source_pins']],2);
+    $assert($claim['claimed'],'Stop fixture could not claim native journal.');
+    $localId=$claim['run']['id'];
+    $client=new \Domains\Marketing\Infrastructure\Hermes\HermesAnalystRunsClient($transport,$runs);
+    $transport->stopScenario=true;
+    $wireKey='cos-mkt-'.hash('sha256','stop-fixture-'.$token);
+    $runFixture=fn()=>$client->execute('https://hermes.example.com/p/mkt-e2e/v1','fixture-token',$wireKey,$org,
+        $localId,$owner,'mkt-e2e',$native[0]['context_hash'],'No tools','{}');
+    $deny(fn()=>$client->execute('https://hermes.example.com/p/mkt-e2e/v1','fixture-token',$wireKey,'foreign-'.$org,
+        $localId,$owner,'mkt-e2e',$native[0]['context_hash'],'No tools','{}'),'Foreign remote admission succeeded.');
+    $assert($transport->posts===1,'Foreign worker contacted Hermes.');
+    $deny($runFixture,'Cancelled remote run returned successful advice.');
+    $stopped=$runs->get($org,$localId);
+    $assert($stopped['remote_run_id']==='run_marketing_stop'&&$stopped['remote_status']==='cancelled'
+        &&$stopped['remote_stop_requested_at']!==null&&$transport->posts===3,'Stop correlation or terminal observation missing.');
+    $deny($runFixture,'Remote start marker allowed replay.');
+    $assert($transport->posts===3,'Remote replay called Hermes.');
+    $uncertain=$runs->finish($org,$localId,null);
+    $assert($uncertain['state']==='UNCERTAIN'&&$uncertain['advice']===null,'Cancelled tool wait was counted as advice.');
+    $pdo->prepare('UPDATE marketing_analyst_runs SET created_at=UTC_TIMESTAMP(6)-INTERVAL 16 MINUTE WHERE organization_id=? AND id=?')->execute([$org,$localId]);
+    $runs->decide($org,$localId,$campaignId,$reviewer,'mkt-stop-recovery-'.$token,
+        ['decision'=>'RECOVERED_UNCERTAIN','reason'=>'Fixture worker and remote cancellation observed','evidence_ref'=>'fixture-stop-observed'],static fn()=>null);
+    $claim=$runs->claim($org,'mkt-stopping-'.$token,[
+        'request_hash'=>hash('sha256','stopping-fixture-'.$token),'requested_by'=>$owner,'profile_ref'=>'mkt-e2e',
+        'cost_control_ref'=>'fixture-provider-cap','campaign_id'=>$campaignId,'context_hash'=>$native[0]['context_hash'],
+        'source_pins'=>$native[0]['source_pins']],3);
+    $transport->stopped=false;$transport->stopNeverSettles=true;
+    $localId=$claim['run']['id'];
+    $deny(fn()=>$client->execute('https://hermes.example.com/p/mkt-e2e/v1','fixture-token',
+        'cos-mkt-'.hash('sha256','stopping-'.$token),$org,$localId,$owner,'mkt-e2e',$native[0]['context_hash'],'No tools','{}'),
+        'Stopping acknowledgement was treated as completed.');
+    $uncertain=$runs->finish($org,$localId,null);
+    $assert($uncertain['remote_status']==='stopping'&&$uncertain['remote_stop_requested_at']!==null
+        &&$uncertain['state']==='UNCERTAIN'&&$uncertain['advice']===null&&$transport->posts===5,
+        'Unsettled stop acknowledgement was treated as terminal or replayed.');
+
+    echo "UX06 Runs durable handle, exact token usage, tool wait stop and replay denial PASS.\n";
+
     echo "Marketing approved Goal/Plan/Action/Outcome native MySQL E2E with Hermes fixture PASS.\\n";
 
     // Bounded native sweep through the same canonical Plan/Workflow/Action/Outcome path.

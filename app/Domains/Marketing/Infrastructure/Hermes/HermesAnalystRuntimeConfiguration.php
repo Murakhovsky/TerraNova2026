@@ -19,6 +19,7 @@ final readonly class HermesAnalystRuntimeConfiguration
     public string $configurationHash;
     public float $maxCostUsd;
     public ?MarketingAnalystTokenBudget $tokenBudget;
+    public ?string $runsControlEvidenceRef;
 
     /** @param array<string,mixed> $raw */
     public function __construct(string $org,array $raw)
@@ -28,7 +29,8 @@ final readonly class HermesAnalystRuntimeConfiguration
             'isolation_evidence_ref','max_cost_usd','profile_ref','profile_url'];
         // Preserve independently approved legacy profiles; a newly declared token
         // contract is strictly validated and included in the immutable hash.
-        if($keys!==$required&&$keys!==[...$required,'token_budget']){
+        if($keys!==$required&&$keys!==[...$required,'token_budget']
+            &&$keys!==[...$required,'runs_control_evidence_ref','token_budget']){
             throw new DomainException('Invalid Hermes operator configuration keys.');
         }
         foreach(['profile_ref','profile_url','credential_ref','cost_control_ref','isolation_evidence_ref','accepted_until','max_cost_usd'] as $k){
@@ -50,6 +52,11 @@ final readonly class HermesAnalystRuntimeConfiguration
         $this->maxCostUsd=(float)$raw['max_cost_usd'];
         $this->tokenBudget=array_key_exists('token_budget',$raw)
             ? MarketingAnalystTokenBudget::fromConfiguration($raw['token_budget']) : null;
+        $runsRef=$raw['runs_control_evidence_ref']??null;
+        if(array_key_exists('runs_control_evidence_ref',$raw)&&(!is_string($runsRef)
+            ||!preg_match('/^[A-Za-z0-9_.:-]{8,190}$/D',$runsRef)||$this->tokenBudget===null))
+            throw new DomainException('Invalid accepted Hermes Runs control evidence.');
+        $this->runsControlEvidenceRef=$runsRef;
         if($this->tokenBudget!==null)$raw['token_budget']=$this->tokenBudget->configuration();
         $this->admission=new MarketingAnalystAdmissionPolicy($org,$raw['profile_ref'],$raw['daily_run_limit'],
             $raw['cost_control_ref'],$raw['enabled']);

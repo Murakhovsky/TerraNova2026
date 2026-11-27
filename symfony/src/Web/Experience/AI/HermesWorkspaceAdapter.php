@@ -43,7 +43,7 @@ final readonly class HermesWorkspaceAdapter implements AgentRuntimeAdapterInterf
             'runtime' => ['status' => 'UNAVAILABLE', 'max_cost_usd' => null,
                 'daily_run_limit' => null, 'plan_available' => false, 'live_verified' => false,
                 'tool_limit' => 0, 'retry_limit' => 0, 'request_timeout_seconds' => 45,
-                'token_budget_verified' => false, 'token_limits' => null, 'configuration_hash' => null, 'remote_cancel_available' => false],
+                'token_budget_verified' => false, 'token_limits' => null, 'configuration_hash' => null, 'remote_cancel_available' => false, 'runs_mode_configured' => false],
             'choices' => [], 'campaign' => null, 'creatives' => [], 'adsets' => [], 'runs' => [],
             'choices_available' => false, 'planning_available' => false, 'journal_available' => false,
         ];
@@ -77,6 +77,9 @@ final readonly class HermesWorkspaceAdapter implements AgentRuntimeAdapterInterf
             $binding['runtime']['daily_run_limit'] = $status['daily_run_limit'];
             $binding['runtime']['token_limits'] = $status['token_limits'];
             $binding['runtime']['configuration_hash'] = $status['configuration_hash'];
+            $binding['runtime']['runs_mode_configured'] = $status['runs_mode_configured'];
+            // The two discovery requests remain bounded to 45s; Runs requests individually to 5s.
+            // No direct user stop capability is granted by a deployment declaration.
             // Older Marketing profiles still work in their owner flow, but the
             // new AI Workspace requires a declared exact token contract.
             $binding['runtime']['plan_available'] = $status['plan_available'] === true

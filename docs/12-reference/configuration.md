@@ -22,7 +22,7 @@ generated: true
 | `finance` | `0.2.3` | — | 17 |
 | `growth` | `0.50.0` | — | 92 |
 | `hr` | `0.1.0` | — | 0 |
-| `marketing` | `0.2.3` | — | 65 |
+| `marketing` | `0.2.4` | — | 65 |
 | `procurement` | `0.1.0` | — | 0 |
 | `product_management` | `0.1.0` | — | 98 |
 | `property` | `1.0.0` | `propertyModuleConfigurationProvisioner` | 25 |

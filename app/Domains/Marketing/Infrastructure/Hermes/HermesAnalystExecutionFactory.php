@@ -4,6 +4,7 @@ namespace Domains\Marketing\Infrastructure\Hermes;
 
 use DomainException;
 use Domains\Marketing\Application\Contract\MarketingAnalystRunStore;
+use Domains\Marketing\Application\Contract\MarketingAnalystRemoteRunJournal;
 use Domains\Marketing\Application\Service\MarketingAnalystContextService;
 use Domains\Marketing\Application\Service\MarketingAnalystExecutionService;
 use Domains\Marketing\Domain\MarketingAnalystRecommendationPolicy;
@@ -26,7 +27,12 @@ final readonly class HermesAnalystExecutionFactory
         }
         $configuration->assertAccepted($org);
         $policy=new MarketingAnalystRecommendationPolicy();
-        $adapter=new HermesMarketingAnalystAdapter($this->contexts,$configuration->connection,$this->vault,$this->transport,$policy,$configuration->tokenBudget);
+        $runsClient=null;
+        if($configuration->runsControlEvidenceRef!==null){
+            if(!$this->runs instanceof MarketingAnalystRemoteRunJournal)throw new DomainException('Durable Hermes Runs journal unavailable.');
+            $runsClient=new HermesAnalystRunsClient($this->transport,$this->runs);
+        }
+        $adapter=new HermesMarketingAnalystAdapter($this->contexts,$configuration->connection,$this->vault,$this->transport,$policy,$configuration->tokenBudget,$runsClient);
         $runtime=new KernelBudgetedHermesAnalystRuntime($adapter,$configuration,$this->governance);
         return new MarketingAnalystExecutionService($this->contexts,$runtime,$this->runs,$configuration->admission,$policy,$this->modules,$configuration->tokenBudget);
     }
