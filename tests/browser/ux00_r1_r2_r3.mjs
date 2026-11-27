@@ -807,16 +807,19 @@ try {
   const deniedDraft = await admin.request.post(abs('/workspace/goals/create'), {
     form:{...payload, csrf_token:'invalid'}, maxRedirects:0,
   });
-  assert(deniedDraft.status() === 400, 'UX07: draft creation accepted invalid CSRF');
+  assert([400,403].includes(deniedDraft.status()), 'UX07: draft creation did not reject invalid CSRF: HTTP '+deniedDraft.status()
+    +' '+(await deniedDraft.text()).slice(0,200));
   const unknownMetric = await admin.request.post(abs('/workspace/goals/create'), {
     form:{...payload, criterion:'fake.metric'}, maxRedirects:0,
   });
   assert(unknownMetric.status() === 303 && (unknownMetric.headers()['location'] || '').includes('error=invalid_input'),
     'UX07: arbitrary metric accepted');
+  const negativeDraftCount = Number(sqlExecute("SELECT COUNT(*) FROM cos_federation_goal_specs WHERE organization_id='default' AND JSON_UNQUOTE(JSON_EXTRACT(specification,'$.desired_result'))='UX07 CRM tasks "+uid+"'"));
+  assert(negativeDraftCount===0,'UX07: denied draft mutated business state');
   await page.screenshot({path:evidenceDir+'/goals-metric-picker-mobile.png', fullPage:true, animations:'disabled'});
   const goalScan = await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21a','wcag21aa']).analyze();
   assert(goalScan.violations.filter(v=>['critical','serious'].includes(v.impact)).length===0,
-    'UX07: critical/serious accessibility violation');
+    'UX07: critical/serious accessibility violation '+JSON.stringify(goalScan.violations.filter(v=>['critical','serious'].includes(v.impact)).map(v=>({id:v.id,nodes:v.nodes.slice(0,4).map(n=>({target:n.target,reason:n.failureSummary}))}))));
   const actionsBeforeDraft = Number(sqlExecute("SELECT COUNT(*) FROM cos_actions WHERE organization_id='default'"));
   const runsBeforeDraft = Number(sqlExecute("SELECT COUNT(*) FROM cos_workflow_runs WHERE organization_id='default'"));
   const saved = await admin.request.post(abs('/workspace/goals/create'), {form:payload,maxRedirects:0});
