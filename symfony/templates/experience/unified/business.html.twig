@@ -17,6 +17,9 @@
       <a class="cos-button cos-button--ghost" href="{{ workspace.definition.path }}">{{ 'uw.business.domain'|trans }}</a>
       {% endif %}
       <a class="cos-button cos-button--ghost" href="{{ path('cos_unified_actions') }}">{{ 'uw.nav.operations'|trans }}</a>
+      <a class="cos-button cos-button--ghost" href="{{ path('cos_ux05_operations') }}">{{ 'uw.home.operations'|trans }}</a>
+      <a class="cos-button cos-button--ghost" href="{{ path('cos_federation_goals_index') }}">{{ 'uw.home.goals'|trans }}</a>
+      <a class="cos-button cos-button--ghost" href="{{ path('cos_web_ai_panel',{view:'workspace',workspace:workspace.definition.id}) }}">{{ 'uw.business.ai_workspace'|trans }}</a>
     </div>
   </header>
   {% include 'experience/adaptive/_controls.html.twig' %}
@@ -296,7 +299,7 @@
       <section class="cos-card" role="status">
         <h2 class="cos-card__title">{{ 'uw.business.process_ai'|trans }}</h2>
         <p class="cos-card__copy">{{ 'uw.business.ai_unverified'|trans }}</p>
-        <a class="cos-button cos-button--ghost" href="/cos/control-center">{{ 'uw.business.go_operations'|trans }}</a>
+        <a class="cos-button cos-button--ghost" href="{{ path('cos_ux05_operations') }}">{{ 'uw.business.go_operations'|trans }}</a>
       </section>
 {% endif %}
     </aside>
