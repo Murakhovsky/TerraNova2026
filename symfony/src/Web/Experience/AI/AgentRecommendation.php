@@ -12,6 +12,7 @@ final readonly class AgentRecommendation
         public ?string $targetType,
         public ?string $targetId,
         public array $parameters = [],
+        public string $kind = 'recommendation',
     ) {
     }
 }

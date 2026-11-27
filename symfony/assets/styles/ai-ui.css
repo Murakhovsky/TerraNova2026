@@ -230,3 +230,31 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* UX-06: full-page and panel use the same server-rendered content. */
+.cos-ai-workspace {
+  min-width: 0;
+  max-width: 78rem;
+  margin-inline: auto;
+}
+.cos-ai-workspace .cos-ai-panel__body {
+  height: auto;
+  overflow: visible;
+}
+.cos-ai-workspace .cos-ai-panel__header {
+  position: static;
+}
+.cos-ai-panel__body .cos-ai-context-card,
+.cos-ai-panel__body .cos-agent-run {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.cos-ai-panel__header {
+  flex-wrap: wrap;
+}
+.cos-ai-panel__body .cos-agent-evidence pre,
+.cos-ai-panel__body .cos-agent-recommendation pre {
+  max-width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

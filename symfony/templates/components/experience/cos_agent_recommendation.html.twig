@@ -1,5 +1,5 @@
 <article class="cos-agent-recommendation">
-    <div class="cos-agent-recommendation__label">Recommendation</div>
+    <div class="cos-agent-recommendation__label">{{ recommendation.kind == 'proposal' ? 'Proposed action (unverified)' : 'Recommendation' }}</div>
     <strong>{{ recommendation.type }}</strong>
     {% if recommendation.targetType and recommendation.targetId %}
         <small>{{ recommendation.targetType }}:{{ recommendation.targetId }}</small>
