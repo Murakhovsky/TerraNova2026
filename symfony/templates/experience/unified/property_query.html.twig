@@ -7,6 +7,7 @@
     <h1 class="cos-card__title">{{ 'uw.property.title'|trans }}</h1>
     <a class="cos-button cos-button--ghost" href="{{ path('cos_unified_actions') }}">{{ 'uw.nav.operations'|trans }}</a>
   </header>
+  {% include 'experience/adaptive/_controls.html.twig' %}
   <form method="get" action="{{ path('cos_unified_property_query') }}" class="cos-card cos-uw__search" role="search">
     <label for="cos-uw-search-property">{{ 'uw.property.label'|trans }}</label>
     <div class="cos-uw__row">
@@ -20,7 +21,10 @@
     {% if data and data.property is defined and data.property %}
       <article class="cos-card" data-cos-native-property="{{ data.property.asset_id|default('') }}">
         <h2 class="cos-card__title">{{ 'uw.property.verified'|trans }}</h2>
-        <p class="cos-card__copy">Asset: <code>{{ data.property.asset_id|default('') }}</code></p>
+{% include 'experience/adaptive/_toggle.html.twig' with {sectionId:'property.identifier',sectionLabel:'uw.adaptive.identifiers'} %}
+{% if 'property.identifier' in adaptive.composition.visibleSections %}
+        <p data-cos-expert-ids class="cos-card__copy">Asset: <code>{{ data.property.asset_id|default('') }}</code></p>
+{% endif %}
         <p class="cos-card__copy">{{ 'uw.property.type'|trans }} {{ data.property.type_code|default('uw.property.unknown'|trans) }}</p>
         <p class="cos-card__copy">{{ 'uw.property.address'|trans }} {{ data.property.formatted_address|default('uw.property.not_set'|trans) }}</p>
       </article>
@@ -36,7 +40,7 @@
         {% set asset=item.property|default({}) %}
         {% if asset.asset_id|default('') %}
           <a class="cos-uw__result" href="{{ path('cos_unified_property_query', { reference: asset.asset_id }) }}">
-            <strong>{{ asset.asset_id }}</strong>
+            <strong>{{ asset.formatted_address|default(asset.asset_id) ?: asset.asset_id }}</strong>
             <small>{{ asset.type_code|default('Property Asset') }}</small>
           </a>
         {% endif %}

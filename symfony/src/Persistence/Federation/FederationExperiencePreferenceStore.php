@@ -110,11 +110,12 @@ final readonly class FederationExperiencePreferenceStore
         if (!$row) {
             return ['mode' => $this->defaultMode($user), 'expanded_sections' => []];
         }
-        $state = json_decode((string) $row['state_json'], true, 512, JSON_THROW_ON_ERROR);
+        $state = json_decode((string) $row['state_json'], true);
         $expanded = is_array($state['expanded_sections'] ?? null) ? $state['expanded_sections'] : [];
         return [
             'mode' => ExperienceMode::tryFrom((string) $row['selected_mode']) ?? ExperienceMode::Result,
-            'expanded_sections' => array_values(array_filter($expanded, 'is_string')),
+            'expanded_sections' => array_slice(array_values(array_unique(array_filter($expanded,
+                static fn ($id): bool => is_string($id) && preg_match('/^[a-z][a-z0-9_.-]{0,189}$/D', $id) === 1))), 0, 64),
         ];
     }
 

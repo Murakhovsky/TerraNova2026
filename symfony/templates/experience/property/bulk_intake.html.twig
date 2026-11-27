@@ -8,6 +8,7 @@
     <p class="cos-card__copy">Завантаження → перевірка дублікатів → погодження Plan → Platform Workflow → Property → незалежна перевірка. Публікація оголошень не виконується.</p>
     <a class="cos-button cos-button--ghost" href="/workspace/goals">Мої цілі</a>
   </header>
+  {% include 'experience/adaptive/_controls.html.twig' %}
 
   {% if not batch %}
     <section class="cos-card">
@@ -21,6 +22,8 @@
         <p class="cos-card__copy">Назви колонок: <code>type_code,city,address,area_total</code>. Підтримуються роздільники кома, крапка з комою або табуляція.</p>
         <button type="submit" class="cos-button cos-button--primary">Перевірити CSV-пакет</button>
       </form>
+{% include 'experience/adaptive/_toggle.html.twig' with {sectionId:'bulk.json_input',sectionLabel:'uw.adaptive.json_input'} %}
+{% if 'bulk.json_input' in adaptive.composition.visibleSections %}
       <h3>Або JSON</h3>
       <form method="post" action="{{ path('cos_property_bulk_stage') }}" class="cos-page__stack">
         <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
@@ -30,19 +33,27 @@
         </label>
         <button type="submit" class="cos-button cos-button--primary">Перевірити і підготувати пакет</button>
       </form>
+{% endif %}
     </section>
   {% else %}
     <section class="cos-card" data-property-bulk-operation="{{ batch.batch_id }}">
       {% set verifiedItems = batch.items|filter(item => item.status == 'verified' and item.native_asset_id)|length %}
       <p class="cos-card__eyebrow">{{ batch.state }}</p>
-      <h2 class="cos-card__title">2. Перевірка пакета {{ batch.batch_id }}</h2>
-      <p class="cos-card__copy">Об'єктів: {{ batch.count }}. Знімок: <code>{{ batch.digest }}</code>.</p>
+      <h2 class="cos-card__title">2. Перевірка пакета</h2>
+      <p class="cos-card__copy">Об'єктів: {{ batch.count }}.</p>
+      {% include 'experience/adaptive/_toggle.html.twig' with {sectionId:'bulk.identifiers',sectionLabel:'uw.adaptive.identifiers'} %}
+{% if 'bulk.identifiers' in adaptive.composition.visibleSections %}
+      <p data-cos-expert-ids class="cos-card__copy">Пакет <code>{{ batch.batch_id }}</code> · Знімок <code>{{ batch.digest }}</code>.</p>
+{% endif %}
       <p class="cos-card__copy" role="status" data-property-bulk-progress="{{ verifiedItems }}/{{ batch.count }}">
         <strong>Підтверджено {{ verifiedItems }} із {{ batch.count }} об'єктів.</strong>
         Підготовка та погодження Plan не вважаються виконанням.
       </p>
       <a class="cos-button cos-button--ghost" data-property-bulk-deep-link
          href="/workspace/property/bulk?batch={{ batch.batch_id|url_encode }}">Постійне посилання на пакет</a>
+      {% if adaptive.mode != 'result' %}
+        <p class="cos-card__copy" data-cos-bulk-process>{{ 'uw.adaptive.bulk_process'|trans }} · {{ batch.state }}</p>
+      {% endif %}
       {% for item in batch.items %}
         <div class="cos-card" data-property-bulk-item="{{ item.index }}" data-property-bulk-item-state="{{ item.status }}">
           <strong>#{{ item.index + 1 }} · {{ item.input.type_code }} · {{ item.input.city }}</strong>
@@ -67,7 +78,9 @@
         </form>
       {% endif %}
       {% if batch.goal_id and batch.plan_id %}
-        <p class="cos-card__copy">Goal: <code>{{ batch.goal_id }}</code> · Plan: <code>{{ batch.plan_id }}</code>.</p>
+        {% if 'bulk.identifiers' in adaptive.composition.visibleSections %}
+          <p class="cos-card__copy">Goal: <code>{{ batch.goal_id }}</code> · Plan: <code>{{ batch.plan_id }}</code>.</p>
+        {% endif %}
         <p class="cos-card__copy">Наступний крок: запитати незалежне погодження Plan у Goals, потім погодження Action та запуск через Platform Workflow. Сама підготовка пакета нічого не виконує.</p>
         <a class="cos-button cos-button--primary" href="/workspace/goals">Погодити й виконати в Goals</a>
       {% endif %}

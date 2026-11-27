@@ -2,6 +2,8 @@
 declare(strict_types=1);
 namespace App\Web\Experience\Unified;
 
+use App\Web\Experience\Adaptive\AdaptivePagePresentation;
+use App\Web\Experience\Adaptive\ExperienceMode;
 use App\Web\Experience\Extension\WebExtensionCatalog;
 use App\Application\Experience\Relations\Contract\RelatedEntityReadInterface;
 use App\Application\Experience\Business\Contract\BusinessEntitySummaryReadInterface;
@@ -39,6 +41,7 @@ final readonly class UnifiedBusinessWorkspaceController {
         private WorkspaceShellFactory $shells,
         private SessionCsrfValidator $csrf,
         private Environment $twig,
+        private AdaptivePagePresentation $adaptive,
     ) {}
     public function show(Request $request,string $workspaceId): Response {
         $tenant=$this->tenants->current();
@@ -171,13 +174,43 @@ final readonly class UnifiedBusinessWorkspaceController {
             $activityAvailable=false;
             error_log('cos.unified.business.activity_unavailable '.$e->getMessage());
         }
+        $triggers=[];
+        if (!$searchAvailable || !$summaryAvailable || !$relatedAvailable || !$activityAvailable) $triggers[]='failed';
+        if ($selectedKey!=='' && $selected===null) $triggers[]='permission_unavailable';
+        foreach ($activity as $event) {
+            // Provider-owned lifecycle status; do not infer business success from a job.
+            if (in_array($event->status,['failed','blocked','running','approval_required','manual_review',
+                'risk_attention','stale_data','external_outcome_unknown','permission_unavailable'],true)) {
+                $triggers[]=$event->status;
+            }
+        }
+        foreach ([...$workspace->primaryActions,...$workspace->secondaryActions] as $action) {
+            if (!$action->enabled) $triggers[]='permission_unavailable';
+            if ($action->enabled && $action->isDangerous()) $triggers[]='risk_attention';
+        }
+        $sections=[
+            AdaptivePagePresentation::section('business.activity',ExperienceMode::Process,
+                ['failed','blocked','running','approval_required','manual_review','risk_attention','stale_data','external_outcome_unknown','permission_unavailable']),
+            AdaptivePagePresentation::section('business.process',ExperienceMode::Process),
+            AdaptivePagePresentation::section('business.actions',ExperienceMode::Process,['risk_attention','approval_required']),
+        ];
+        if ($selected instanceof EntityRef) {
+            $sections[]=AdaptivePagePresentation::section('business.identifier',ExperienceMode::Expert);
+            $sections[]=AdaptivePagePresentation::section('business.related',ExperienceMode::Process,['failed']);
+        }
+        $adaptive=$this->adaptive->prepare($request,$tenant,'unified.business.'.$workspaceId,
+            $sections,array_values(array_unique($triggers)),[
+                ...$workspace->primaryActions,...$workspace->secondaryActions,
+                ...$workspace->mobilePrimaryActions,...$workspace->mobileMenuActions,
+            ],$selected?->key() ?? '');
+        if ($adaptive instanceof Response) return $adaptive;
         $savedViews=$this->loadSavedViews($request,$tenant,$workspaceId);
         $shell=$this->shells->create($tenant,$context,$workspace->definition->label,[
             new ShellBreadcrumb('Робочі простори','/workspace/unified'),
             new ShellBreadcrumb($workspace->definition->label),
         ],aiAvailable:false,connectionState:ShellConnectionState::Stale);
         return new Response($this->twig->render('experience/unified/business.html.twig',[
-            'shell'=>$shell,'workspace'=>$workspace,'workspaces'=>$catalog->workspaces(),
+            'adaptive'=>$adaptive,'shell'=>$shell,'workspace'=>$workspace,'workspaces'=>$catalog->workspaces(),
             'query'=>$query,'view'=>$view,'sort'=>$sort,'results'=>$results,
             'searchAvailable'=>$searchAvailable,
             'selected'=>$selected,'selectedHit'=>$selectedHit,'selectedUrl'=>$selectedUrl,

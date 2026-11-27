@@ -1,0 +1,21 @@
+<section class="cos-card cos-adaptive-controls" data-cos-adaptive data-experience-mode="{{ adaptive.mode }}"
+         aria-label="{{ 'uw.adaptive.label'|trans }}">
+  <form action="{{ adaptive.url }}" method="post" class="cos-uw__row" data-turbo="false" data-cos-adaptive-mode>
+    <input type="hidden" name="csrf_token" value="{{ adaptive.csrf }}">
+    <strong>{{ 'uw.adaptive.label'|trans }}</strong>
+    {% for mode in ['result','process','expert'] %}
+      <button type="submit" class="cos-button {{ adaptive.mode == mode ? 'cos-button--primary' : 'cos-button--ghost' }}"
+              name="mode" value="{{ mode }}" aria-pressed="{{ adaptive.mode == mode ? 'true' : 'false' }}"
+              {% if not adaptive.available %}disabled{% endif %}>{{ ('uw.adaptive.mode.'~mode)|trans }}</button>
+    {% endfor %}
+  </form>
+  <p class="cos-card__copy">{{ ('uw.adaptive.description.'~adaptive.mode)|trans }}</p>
+  {% if not adaptive.available %}
+    <p class="cos-alert" role="status">{{ 'uw.adaptive.preference_unavailable'|trans }}</p>
+  {% endif %}
+  {% for signal in adaptive.triggers %}
+    {% if signal != 'result_available' %}
+      <p class="cos-alert" role="status" data-cos-adaptive-trigger="{{ signal }}">{{ ('uw.adaptive.trigger.'~signal)|trans }}</p>
+    {% endif %}
+  {% endfor %}
+</section>

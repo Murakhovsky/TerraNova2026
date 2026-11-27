@@ -265,7 +265,7 @@ cos_automation_intents_adopt:
 cos_property_bulk_workspace:
   path: /workspace/property/bulk
   controller: App\Web\Property\PropertyBulkWorkspaceController::index
-  methods: [GET]
+  methods: [GET, HEAD, POST]
 
 cos_property_bulk_stage:
   path: /workspace/property/bulk/stage
@@ -4073,22 +4073,22 @@ cos_marketing_actions:
 cos_unified_home:
   path: /workspace/unified
   controller: App\Web\Experience\Unified\UnifiedWorkspaceController::index
-  methods: [GET, HEAD]
+  methods: [GET, HEAD, POST]
 
 cos_unified_actions:
   path: /workspace/unified/actions
   controller: App\Web\Experience\Unified\UnifiedCapabilityController::index
-  methods: [GET, HEAD]
+  methods: [GET, HEAD, POST]
 
 cos_unified_property_query:
   path: /workspace/unified/property
   controller: App\Web\Experience\Unified\UnifiedCapabilityController::property
-  methods: [GET, HEAD]
+  methods: [GET, HEAD, POST]
 
 cos_unified_business_workspace:
   path: /workspace/unified/business/{workspaceId}
   controller: App\Web\Experience\Unified\UnifiedBusinessWorkspaceController::show
-  methods: [GET, HEAD]
+  methods: [GET, HEAD, POST]
   requirements: { workspaceId: '[a-z][a-z0-9_.-]{0,96}' }
 
 cos_unified_saved_view:

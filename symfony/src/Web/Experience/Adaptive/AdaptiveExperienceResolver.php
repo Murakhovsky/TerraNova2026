@@ -23,18 +23,27 @@ final readonly class AdaptiveExperienceResolver
         $reasons = [];
         foreach ($context->sections as $section) {
             $id = $section['id'];
-            $capability = $section['capability'] ?? null;
-            if ($capability !== null && !in_array($capability, $context->availableCapabilities, true)) {
+            $semantic = $section['semantic'] ?? null;
+            $capabilities = array_filter([$section['capability'] ?? null, $semantic?->capabilityId]);
+            $unavailable = array_diff($capabilities, $context->availableCapabilities);
+            if ($unavailable !== []) {
                 $reasons[$id] = 'capability_unavailable';
                 continue;
             }
             if (($section['critical'] ?? false) === true) {
                 $visible[] = $id;
                 $reasons[$id] = 'critical_condition';
+            } elseif ($semantic?->disclosureRule === 'always') {
+                $visible[] = $id;
+                $reasons[$id] = 'always';
+            } elseif ($semantic !== null && array_intersect($semantic->contextualTriggers, $context->triggers) !== []) {
+                $visible[] = $id;
+                $reasons[$id] = 'contextual_trigger';
             } elseif (in_array($id, $context->expandedSections, true)) {
                 $visible[] = $id;
                 $reasons[$id] = 'explicit_expansion';
-            } elseif ($section['level'] <= $context->mode->defaultLevel()) {
+            } elseif (($semantic === null || $semantic->disclosureRule === 'mode_default')
+                && ($semantic?->recommendedMode->defaultLevel() ?? $section['level']) <= $context->mode->defaultLevel()) {
                 $visible[] = $id;
                 $reasons[$id] = 'mode_default';
             } else {
@@ -67,12 +76,18 @@ final readonly class AdaptiveExperienceResolver
             $actions[$action->id] = $action; // Deduplicate mobile + desktop placements by canonical identity.
         }
         $actions = array_values($actions);
-        usort($actions, static fn (UIAction $a, UIAction $b): int => $a->priority <=> $b->priority ?: strcmp($a->id, $b->id));
+        $decisionRank = static fn (UIAction $a): int => in_array($a->intent, [UIActionIntent::Approve, UIActionIntent::Reject], true) ? 0 : 1;
+        usort($actions, static fn (UIAction $a, UIAction $b): int => $decisionRank($a) <=> $decisionRank($b)
+            ?: $a->priority <=> $b->priority ?: strcmp($a->id, $b->id));
         $count = match ($context->mode) {
             ExperienceMode::Result => 2,
             ExperienceMode::Process => 4,
             ExperienceMode::Expert => count($actions),
         };
+
+        // All resolved decision controls remain primary, even if there are more
+        // than the normal mode's preferred number of actions.
+        $count = max($count, count(array_filter($actions, static fn (UIAction $a): bool => $decisionRank($a) === 0)));
 
         return new ExperienceComposition(
             $context->mode,

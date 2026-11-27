@@ -8,6 +8,7 @@
     <p class="cos-card__copy">{{ 'uw.actions.intro'|trans }}</p>
     <a class="cos-button cos-button--ghost" href="{{ path('cos_unified_home') }}">{{ 'uw.nav.workspaces'|trans }}</a>
   </header>
+  {% include 'experience/adaptive/_controls.html.twig' %}
   {% if notice %}
     <div class="cos-alert" role="alert">
       {% if notice == 'invalid' %}{{ 'uw.actions.invalid'|trans }}
@@ -15,13 +16,16 @@
       {% else %}{{ 'uw.actions.unavailable'|trans }}{% endif %}
     </div>
   {% endif %}
+  {% include 'experience/adaptive/_toggle.html.twig' with {sectionId:'actions.details',sectionLabel:'uw.adaptive.identifiers'} %}
   <section class="cos-uw__grid" aria-label="{{ 'uw.actions.catalog'|trans }}" data-cos-operation-catalog>
   {% for op in operations %}
     <article class="cos-card" data-cos-operation-id="{{ op.id }}" data-cos-operation-ready="{{ op.ui_ready ? 'yes' : 'no' }}">
-      <p class="cos-card__eyebrow">{{ op.kind }} · {{ op.status }}</p>
+      {% if 'actions.details' in adaptive.composition.visibleSections %}
+        <p class="cos-card__eyebrow" data-cos-expert-ids>{{ op.id }} · {{ op.status }} · {{ op.risk }}</p>
+      {% endif %}
       <h2 class="cos-card__title">{{ op.label|trans }}</h2>
-      <p class="cos-card__copy">{{ op.reason|trans }}</p>
-      {% if op.needs_approval %}<p class="cos-card__copy">{{ 'uw.actions.approval'|trans }}</p>{% endif %}
+      {% if not op.ui_ready or adaptive.mode != 'result' %}<p class="cos-card__copy">{{ op.reason|trans }}</p>{% endif %}
+      {% if op.needs_approval %}<p class="cos-alert" role="status">{{ 'uw.actions.approval'|trans }}</p>{% endif %}
       {% if op.href %}
         <a class="cos-button cos-button--ghost" href="{{ op.href }}">{{ 'uw.common.open'|trans }}</a>
       {% else %}
@@ -32,6 +36,7 @@
     <p class="cos-card">{{ 'uw.actions.empty'|trans }}</p>
   {% endfor %}
   </section>
+  {% if createAvailable %}
   <section id="cos-uw-create" class="cos-card" aria-labelledby="cos-uw-create-label">
     <p class="cos-card__eyebrow">{{ 'uw.actions.human'|trans }}</p>
     <h2 id="cos-uw-create-label" class="cos-card__title">{{ 'uw.actions.create_title'|trans }}</h2>
@@ -53,5 +58,8 @@
       <button class="cos-button cos-button--primary" type="submit">{{ 'uw.actions.submit'|trans }}</button>
     </form>
   </section>
+  {% else %}
+    <p class="cos-alert" role="status">{{ 'uw.actions.unavailable'|trans }}</p>
+  {% endif %}
 </section>
 {% endblock %}

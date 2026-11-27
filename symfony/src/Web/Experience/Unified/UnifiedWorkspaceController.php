@@ -2,6 +2,8 @@
 declare(strict_types=1);
 namespace App\Web\Experience\Unified;
 
+use App\Web\Experience\Adaptive\AdaptivePagePresentation;
+use App\Web\Experience\Adaptive\ExperienceMode;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Extension\WebExtensionCatalog;
 use App\Web\Experience\Search\GlobalSearchService;
@@ -23,6 +25,7 @@ final readonly class UnifiedWorkspaceController {
         private GlobalSearchService $search,
         private WorkspaceShellFactory $shells,
         private Environment $twig,
+        private AdaptivePagePresentation $adaptive,
     ) {}
     public function index(Request $request): Response {
         $tenant = $this->tenants->current();
@@ -38,13 +41,17 @@ final readonly class UnifiedWorkspaceController {
         if (mb_strlen($query)>120) $query=mb_substr($query,0,120);
         $workspaces=$this->extensions->forContext($context)->workspaces();
         $matches=$query==='' ? [] : $this->search->search($context,$query,24)->items;
+        $adaptive=$this->adaptive->prepare($request,$tenant,'unified.home',[
+            AdaptivePagePresentation::section('home.identifiers',ExperienceMode::Expert),
+        ]);
+        if ($adaptive instanceof Response) return $adaptive;
         $shell=$this->shells->create($tenant,$context,'Мої робочі простори',
             [new ShellBreadcrumb('Робочі простори')],
             aiAvailable: false,
             connectionState: ShellConnectionState::Stale,
         );
         return new Response($this->twig->render('experience/unified/home.html.twig',[
-            'shell'=>$shell,'workspaces'=>$workspaces,'query'=>$query,'matches'=>$matches,
+            'adaptive'=>$adaptive,'shell'=>$shell,'workspaces'=>$workspaces,'query'=>$query,'matches'=>$matches,
         ]),200,[
             'Content-Type'=>'text/html; charset=UTF-8',
             'Cache-Control'=>'no-store, private','X-Robots-Tag'=>'noindex, nofollow',

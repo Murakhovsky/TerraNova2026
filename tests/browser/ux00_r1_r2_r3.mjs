@@ -314,6 +314,10 @@ try {
           q:assetId,view:'cards',sort:'relevance'},
         maxRedirects:0,
       });
+    const deniedAdaptive=await restrictedCtx.request.post(abs('/workspace/unified'),{
+      form:{csrf_token:buyerToken,mode:'expert'},maxRedirects:0,
+    });
+    assert(deniedAdaptive.status()===403,'UX04: buyer preference write escaped Workspace authorization');
     assert(deniedUx03.status()===403 && deniedSavedView.status()===403,
       'UX03: buyer role escaped Business Workspace or saved-view ACL');
     assert(Number(sqlExecute(
@@ -400,13 +404,55 @@ try {
     { waitUntil: 'networkidle' });
   assert(queryPage?.status() === 200, 'UX02: typed Property search page unavailable');
   assert(await page.locator('[data-cos-property-results]').count() === 1
-      && (await page.locator('[data-cos-property-results]').innerText()).includes(assetId),
+      && await page.locator('[data-cos-property-results] a[href*="reference=' + assetId + '"]').count() === 1,
       'UX02: actual typed Property Query item missing');
   const detailPage = await page.goto(abs('/workspace/unified/property?reference=' + assetId),
     { waitUntil: 'networkidle' });
   assert(detailPage?.status() === 200
       && await page.locator('[data-cos-native-property="' + assetId + '"]').count() === 1,
       'UX02: tenant-bound native Property Get readback absent');
+  // UX-04: canonical readback must survive mode changes, reload and a
+  // persisted per-section expansion; no Property mutation or implicit Run.
+  const ux04Detail='/workspace/unified/property?reference='+assetId;
+  const modeForm=page.locator('[data-cos-adaptive-mode]');
+  const invalidMode=await admin.request.post(abs(ux04Detail),{
+    form:{csrf_token:csrf,mode:'administrator'},maxRedirects:0,
+  });
+  const invalidCsrf=await admin.request.post(abs(ux04Detail),{
+    form:{csrf_token:'invalid',mode:'expert'},maxRedirects:0,
+  });
+  const spoofedSection=await admin.request.post(abs(ux04Detail),{
+    form:{csrf_token:csrf,section:'ux.private',expand:'1'},maxRedirects:0,
+  });
+  const forgedIdentity=await admin.request.post(abs(ux04Detail),{
+    form:{csrf_token:csrf,mode:'expert',organization_id:'foreign-tenant',user_id:'other'},maxRedirects:0,
+  });
+  assert(invalidMode.status()===422 && invalidCsrf.status()===403 && spoofedSection.status()===422
+      && forgedIdentity.status()===422,
+    'UX04: invalid mode, CSRF or unauthorized section accepted');
+  for (const mode of ['result','process','expert','result']) {
+    await modeForm.locator('button[name="mode"][value="'+mode+'"]').click();
+    await page.waitForLoadState('networkidle');
+    assert(await page.locator('[data-cos-adaptive][data-experience-mode="'+mode+'"]').count()===1,
+      'UX04: mode was not persisted');
+    assert(await page.locator('[data-cos-native-property="'+assetId+'"]').count()===1 && sqlCount(assetId)===1,
+      'UX04: mode changed canonical entity or wrote Property');
+    assert((await page.locator('[data-cos-expert-ids]').count()>0)===(mode==='expert'),
+      'UX04: query diagnostic disclosure incorrect');
+  }
+  const expand=page.locator('[data-cos-section-toggle="property.identifier"]');
+  await expand.click();
+  await page.waitForLoadState('networkidle');
+  await page.reload({waitUntil:'networkidle'});
+  assert(await page.locator('[data-cos-adaptive][data-experience-mode="result"]').count()===1
+    && await page.locator('[data-cos-expert-ids]').count()===1,
+    'UX04: explicit expansion did not persist independently of mode');
+  await expand.click();
+  await page.waitForLoadState('networkidle');
+  assert(await page.locator('[data-cos-expert-ids]').count()===0,
+    'UX04: expansion collapse failed');
+  add('UX04.query_modes_preference_expansion_security',{asset_id:assetId,native_rows:1});
+
   const actionPage = await page.goto(abs('/workspace/unified/actions'), { waitUntil: 'networkidle' });
   assert(actionPage?.status() === 200
       && await page.locator('form[action="/workspace/capabilities/property/create"]').count() === 1,
@@ -416,6 +462,16 @@ try {
 
   // R2 through the Unified form and the EXISTING canonical human Command,
   // with genuine native Domain readback and same idempotency key replay.
+  for (const mode of ['process','expert','result']) {
+    await page.locator('[data-cos-adaptive-mode] button[value="'+mode+'"]').click();
+    await page.waitForLoadState('networkidle');
+    assert(await page.locator('[data-cos-adaptive][data-experience-mode="'+mode+'"]').count()===1
+      && await page.locator('form[action="/workspace/capabilities/property/create"]').count()===1,
+      'UX04: presentation mode changed authorized human action availability');
+    assert(await page.locator('[data-cos-adaptive-trigger="approval_required"]').isVisible(),
+      'UX04: approval gate disappeared in '+mode);
+    await page.screenshot({path:evidenceDir+'/ux04-actions-'+mode+'.png',fullPage:true,animations:'disabled'});
+  }
   const unifiedForm = page.locator('form[action="/workspace/capabilities/property/create"]');
   const unifiedKey = await unifiedForm.locator('input[name="idempotency_key"]').inputValue();
   const unifiedAddress = 'UX02 human form '+uid;
@@ -778,6 +834,26 @@ try {
   const pendingPage = await page.goto(abs('/workspace/property/bulk?batch=' + batchId),
     { waitUntil: 'networkidle' });
   assert(pendingPage?.status() === 200, 'R3: deep-linked batch is not readable');
+  for (const mode of ['result','process','expert','result']) {
+    await page.locator('[data-cos-adaptive-mode] button[value="'+mode+'"]').click();
+    await page.waitForLoadState('networkidle');
+    assert(await page.locator('[data-cos-adaptive][data-experience-mode="'+mode+'"]').count()===1
+      && await page.locator('[data-property-bulk-operation="'+batchId+'"]').count()===1
+      && await page.locator('[data-cos-adaptive-trigger="approval_required"]').isVisible()
+      && await page.locator('[data-cos-adaptive-trigger="external_outcome_unknown"]').isVisible(),
+      'UX04: pending batch lost identity or critical approval/outcome in '+mode);
+    assert((await page.locator('[data-cos-expert-ids]').count()>0)===(mode==='expert')
+      && (await page.locator('[data-cos-bulk-process]').count()>0)===(mode!=='result'),
+      'UX04: batch diagnostic/process disclosure incorrect');
+    await page.screenshot({path:evidenceDir+'/ux04-bulk-'+mode+'.png',fullPage:true,animations:'disabled'});
+  }
+  const readAfterUx04=await json(await admin.request.get(abs('/api/v1/property/bulk/'+batchId)),'UX04 batch parity');
+  assert(readAfterUx04.state==='planned' && readAfterUx04.plan_id===planId
+    && readAfterUx04.items.every(item=>item.native_asset_id===null)
+    && Number(sqlExecute(planActionsSql))===initialActions
+    && Number(sqlExecute(planRunsSql))===initialRuns,
+    'UX04: preference changes mutated batch, Action, or Run');
+  add('UX04.bulk_modes_critical_visibility_no_execution',{batch_id:batchId,plan_id:planId});
   const operation = page.locator('[data-property-bulk-operation="' + batchId + '"]');
   await operation.waitFor({ state: 'visible', timeout: 15000 });
   assert(await operation.locator('[data-property-bulk-progress="0/2"]').count() === 1,
