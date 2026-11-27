@@ -16,6 +16,6 @@ interface AgentRuntimeAdapterInterface
 {
     public function supports(UIContext $context): bool;
 
-    /** @return array<string,mixed> Safe, actor-scoped presentation data only. */
-    public function inspect(TenantContext $actor, UIContext $context): array;
+    /** Safe, actor-scoped presentation data only. */
+    public function inspect(TenantContext $actor, UIContext $context): AgentRuntimeInspection;
 }

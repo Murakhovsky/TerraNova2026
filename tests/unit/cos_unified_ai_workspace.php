@@ -11,6 +11,7 @@ spl_autoload_register(static function (string $class) use ($root): void {
 });
 
 use App\Web\Experience\AI\AgentRuntimeAdapterInterface;
+use App\Web\Experience\AI\AgentRuntimeInspection;
 use App\Web\Experience\AI\AgentWorkspaceAccess;
 use App\Web\Experience\AI\AgentWorkspaceRuntime;
 use App\Web\Experience\AI\AgentWorkspaceScope;
@@ -85,9 +86,9 @@ $unsupported = new UIContext('sales.deal',$deal,[],[],[],[]);
 $adapter = new class implements AgentRuntimeAdapterInterface {
     public int $reads = 0;
     public function supports(UIContext $context): bool {return $context->workspace==='marketing.campaigns';}
-    public function inspect(TenantContext $actor, UIContext $context): array {
+    public function inspect(TenantContext $actor, UIContext $context): AgentRuntimeInspection {
         ++$this->reads;
-        return ['runtime'=>['status'=>'SIMULATED','plan_available'=>false], 'campaign'=>null];
+        return new AgentRuntimeInspection(true, 'fixture', ['runtime'=>['status'=>'UNAVAILABLE','plan_available'=>false]]);
     }
 };
 $runtime = new AgentWorkspaceRuntime([$adapter]);
@@ -95,8 +96,17 @@ $expect($runtime->inspect($manager,$unsupported)===null && $adapter->reads===0,'
 $blocked(static fn()=>$runtime->inspect($member,$context),'Member admitted to adapter');
 $blocked(static fn()=>(new AgentWorkspaceRuntime([$adapter,$adapter]))->inspect($manager,$context),'Ambiguous adapter was selected');
 $expect($adapter->reads===0,'Denied or ambiguous request invoked runtime');
-$expect($runtime->inspect($manager,$context)['runtime']['plan_available']===false && $adapter->reads===1,
+$expect($runtime->inspect($manager,$context)->binding['runtime']['plan_available']===false && $adapter->reads===1,
     'Unavailable simulation became executable');
+$expect($runtime->inspect($manager,$context)->scopeResolved, 'Unavailable runtime lost verified ownership');
+$deniedAdapter = new class implements AgentRuntimeAdapterInterface {
+    public function supports(UIContext $context): bool {return true;}
+    public function inspect(TenantContext $actor, UIContext $context): AgentRuntimeInspection {
+        return new AgentRuntimeInspection(false, 'fixture', []);
+    }
+};
+$expect(!(new AgentWorkspaceRuntime([$deniedAdapter]))->inspect($manager,$context)->scopeResolved,
+    'Unresolved owner scope was upgraded by runtime dispatch');
 $expect((new AgentWorkspaceRuntime([]))->inspect($manager,$context)===null,'Absent adapter does not degrade safely');
 
 // Exact zero-tool contract of the actual existing Hermes boundary.

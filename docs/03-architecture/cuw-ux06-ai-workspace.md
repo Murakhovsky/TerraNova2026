@@ -1,65 +1,69 @@
 ---
-title: CUW UX-06 — AI Workspace first governed vertical
-description: Scoped AI Workspace, runtime adapter discovery and Marketing Hermes delegation.
+title: CUW UX-06 — перший керований сценарій AI Workspace
+description: Робочий простір AI з обмеженим контекстом, адаптером Runtime і делегуванням аналізу Hermes для Marketing.
 status: draft
 updated: 2026-11-27
 kind: architecture
 ---
 
-# CUW-C / UX-06 / #521
+# CUW-C / UX-06 / #521 — робочий простір AI
 
-Baseline: `10fc649df6aafdca432ec329ebd737f6a4abd1ec` (Wave 2 parent #518).
-Normative: COS Unified Workspace Master Spec §§11, 19, 20, 21. This is an isolated implementation, not D3/D4/D5 or LIVE Hermes acceptance.
+Базова версія: `10fc649df6aafdca432ec329ebd737f6a4abd1ec` (Wave 2, батьківська задача #518).
+Норматив: COS Unified Workspace Master Spec §§11, 19, 20, 21. Це ізольована реалізація, а не приймання D3/D4/D5 чи LIVE Hermes.
 
-## Reuse / adapt / new
+## Повторне використання, адаптація та нові компоненти
 
-| Area | Decision |
+| Компонент | Рішення |
 | --- | --- |
-| Shell, UIContext, AgentRunReadModel, UIActionResolver | Reuse, no shared Shell/DI/routes changes |
-| AI panel | Extend the existing GET route with `view=workspace`; same server-rendered body, stable DOM/frame identifiers |
-| Runtime-neutral experience adapter | New tagged interface; fail closed on ambiguity; inspect only, no transport or mutation |
-| First Hermes binding | Marketing Campaign owner services: scoped campaign read, readiness, pinned creative/adset list, native run journal |
-| Submission | Existing protected POST `/marketing/campaigns/{id}/analyst-plans`; existing CSRF, stable form idempotency, role and module checks |
-| Workflow and Action | Existing Federation Plan, independent Plan and Action approval, approved worker, native run claim and outcome provider |
-| Actions from Agent outputs | Existing UIActionResolver projections; no buttons generated from untrusted JSON; link to real Control Center |
-| Engineering agents | Separate profile, credentials and administration; no business UI access to those tools |
+| Shell, UIContext, AgentRunReadModel, UIActionResolver | Повторне використання без змін спільних Shell, DI та маршрутів |
+| Панель AI | Розширення GET-маршруту параметром `view=workspace`; той самий серверний шаблон і стабільні ідентифікатори DOM/frame |
+| Незалежний від Runtime адаптер | Новий тегований інтерфейс і типізований результат `AgentRuntimeInspection`; за неоднозначності вибір блокується; лише читання |
+| Перший Hermes-адаптер | Сервіси власника Marketing: перевірка контексту Campaign, готовність, закріплені ревізії Creative/AdSet, нативний журнал |
+| Подання пропозиції | Чинний захищений POST `/marketing/campaigns/{id}/analyst-plans`; CSRF, стабільний ключ ідемпотентності, перевірки ролі та модуля |
+| Workflow та Action | Чинний Federation Plan, незалежне погодження Plan і Action, авторизований worker, нативний запис виконання та перевірка результату |
+| Дії з результатів Agent | Чинні проєкції UIActionResolver; без кнопок, згенерованих з недовіреного JSON; посилання на справжній Control Center |
+| Engineering agents | Окремі профіль, облікові дані та адміністрування; бізнес-інтерфейс не отримує доступ до цих інструментів |
 
-The current canonical read model has tenant-level run access rather than per-user ACLs; AI history is therefore manager/admin + ACCESS and MANAGE only. Tenant, role, entity type, subject ID and native Action run ID are checked. Invalid explicit scope is not downgraded to organization history. For a collection with no declared entity type, only the explicit Marketing campaign binding allows an entity; unsupported runtime contexts are read-only. A missing adapter is not an error or permission to invoke an alternative provider.
+Поточна канонічна модель читання має доступ на рівні організації, а не користувацькі ACL. Тому історія AI доступна лише manager/admin з ACCESS і MANAGE. Перевіряються організація, роль, тип та ID сутності й нативний ID AgentRun для Action. Невалідний явний контекст не розширюється до історії організації. Для колекції без визначеного типу сутності лише явна прив'язка Marketing Campaign дозволяє контекст сутності. Непідтримувані контексти Runtime залишаються доступними лише для читання. Відсутність адаптера не надає дозволу викликати іншого провайдера.
 
-## R4 first vertical
+## Перший сценарій R4
 
-1. Open global AI panel; choose Open AI Workspace.
-2. Select Marketing Campaigns and a tenant-owned campaign.
-3. Inspect readiness, remote tool allowance (zero), daily turn allowance, cost ceiling and the per-HTTP-call timeout.
-4. If the owner service exposes plan availability, choose pinned Creative / optional AdSet and propose an analysis Plan. This is **not** a remote request.
-5. Continue in Goals for independent Plan approval and separately authorized Action. The existing worker owns the only remote invocation path.
-6. Inspect native Hermes journal, cited source aliases, source revisions and provider response ID in the AI workspace. Native run ID is its remote correlation. Advice is unreviewed until an independent owner review.
-7. Open owner journal for review or uncertain recovery. Open Goals to inspect the independently attested Action receipt and verified run-linked outcome, if present. No paid activation is authorized by advice.
+1. Відкрити глобальну панель AI та обрати AI Workspace.
+2. Обрати Marketing Campaigns та кампанію своєї організації.
+3. Перевірити готовність, ліміт віддалених інструментів (нуль), добовий ліміт запусків, бюджет і тайм-аут HTTP.
+4. Якщо власник дозволяє створення Plan, обрати закріплену Creative / необов'язкову AdSet та запропонувати аналіз. Це **не** виклик Runtime.
+5. Продовжити у Goals: незалежне погодження Plan і окремо авторизована Action. Чинний worker володіє єдиним шляхом віддаленого виклику.
+6. Переглянути нативний журнал Hermes, псевдоніми джерел, їх ревізії та ID відповіді провайдера. ID нативного запуску є віддаленою кореляцією. Поради потребують незалежного рішення власника.
+7. Відкрити журнал власника для перевірки або відновлення невизначеного результату. У Goals переглянути незалежно підтверджену квитанцію Action і верифікований результат запуску, якщо наявні. Порада не дозволяє платну активацію.
 
-Generic Agent runs display structured result, recommendations, untrusted proposed actions, evidence and actual Action/Approval projections. The existing `cos:workspace-action` event has no production consumer on this baseline; the UI now links to the canonical operations surface rather than claiming those buttons execute. Lifecycle completion and native provider response IDs are not independent proof of business outcome.
+Загальні запуски Agent відображають структурований результат, рекомендації, недовірені пропозиції дій, докази та справжні проєкції Action/Approval. Подія `cos:workspace-action` не має виробничого споживача у базовій версії; UI посилається на канонічну операційну поверхню замість удаваного виконання. Завершення життєвого циклу й ID відповіді провайдера не є незалежним доказом бізнес-результату.
 
-## Limits and failure semantics
+## Обмеження та обробка збоїв
 
-The existing approved Marketing execution adapter enforces scope rebuilding, tenant configuration and isolation acceptance, zero enabled remote tools, a bounded HTTP body, 45 seconds per HTTP request, daily turn allowance and conservative Kernel cost reservation. No automatic retry after external ambiguity; native journal supports independent recovery, not reversal of cost. Provider-side exact token usage/budget and remote cancellation have not been accepted. Do not claim a configured profile is LIVE or introduce an unapproved generic provider call. Operator/credential gates remain mandatory. Manual workflows and Control Center remain available during runtime outage.
+Чинний авторизований адаптер Marketing забезпечує повторну побудову контексту, конфігурацію організації та приймання ізоляції, нуль дозволених віддалених інструментів, обмежений розмір HTTP body, 45 секунд на HTTP-запит, добовий ліміт і консервативне резервування вартості в Kernel. Автоматичний повтор після невизначеного зовнішнього результату заборонений; нативний журнал підтримує незалежне відновлення, а не скасування витрат. Ліміт токенів провайдера та віддалене скасування не прийняті й явно позначені як непідтверджені/недоступні. Налаштований профіль не означає LIVE; операторські вимоги й облікові дані залишаються обов'язковими.
 
-No second run/approval/outcome store, direct browser execution, dynamic tool/secret grant, raw HTML or Kernel modification.
+Адаптер спочатку перевіряє активний модуль і належність сутності організації. Неуспішна перевірка приховує історію. Після підтвердження контексту готовність Runtime, планування та журнал читаються незалежно. Збій будь-якого з цих джерел блокує нове делегування, але не приховує доступні докази. Невідомий стан журналу не відображається як порожній журнал. Ручна робота та Control Center залишаються доступними.
 
-## Acceptance and verification
+Немає другого сховища запусків, погоджень чи результатів, прямого виконання з браузера, динамічної видачі інструментів/секретів, довіреного HTML або змін Kernel.
 
-| AC | Covered by this change | Remaining gate |
+## Критерії приймання та перевірка
+
+| AC | Покриття змін | Залишкова перевірка |
 | --- | --- | --- |
-| AC-04 / AC-09 | Existing protected Plan form and governed operation links; structured output separated from executable Action | Browser/real canonical approval replay |
-| AC-10 | Missing/unsupported adapter, failed reads and unknown outcomes degrade without remote call | Runtime outage acceptance |
-| AC-11 | Manager/permission, tenant, workspace and subject negatives; owner Campaign read | Combined-tree role/tenant E2E |
-| AC-16 | Correlation and native journal fields; link to canonical outcome verifier | Independently attested Action receipt in staging |
-| AC-12 / AC-13 | SSR same body, labelled controls, native focus/keyboard, responsive wrapping | Desktop/mobile browser screenshots and a11y QA |
+| AC-04 / AC-09 | Захищена форма Plan і посилання на канонічні операції; структурована пропозиція відокремлена від виконуваної Action | Справжнє канонічне погодження в браузері |
+| AC-10 | Відсутність адаптера, збої джерел та невідомі результати не спричиняють віддаленого виклику | Приймання збою Runtime |
+| AC-11 | Негативні перевірки ролі, дозволів, організації, Workspace та сутності; читання кампанії власника | E2E ролей та організацій у зведеній версії |
+| AC-16 | Кореляція й нативний журнал; посилання на канонічну перевірку результату | Незалежно підтверджена Action у staging |
+| AC-12 / AC-13 | Серверне відображення, підписані поля, фокус/клавіатура, адаптивне перенесення | Знімки desktop/mobile і перевірка доступності |
 
-Automated verification entry points:
+Точки запуску автоматизованої перевірки:
+
 - `php tests/architecture/cos_unified_workspace_ux06_contract.php`
 - `php tests/unit/cos_unified_ai_workspace.php`
-- Existing runtime workflow: `tests/integration/marketing_analyst_approved_goal_e2e_mysql.php` (mock/isolated provider; not LIVE).
-- Existing `cos:web:ai-ui:smoke` (synthetic run and actual Action projection).
+- Чинний Runtime-тест: `tests/integration/marketing_analyst_approved_goal_e2e_mysql.php` (ізольований провайдер, не LIVE) додатково перевіряє адаптер UX-06, належність контексту, недоступність Runtime/журналу, нативний доказ і відсутність повторного зовнішнього виклику.
+- Чинна команда `cos:web:ai-ui:smoke` (синтетичний запуск і справжня проєкція Action).
+- `node tests/browser/ux06_ai_workspace.mjs` — окреме приймання лише для читання. Потрібні `UX06_E2E_FIXTURE_SAFE=1`, `UX06_E2E_BASE_URL=http://127.0.0.1:8081`, `UX06_E2E_EMAIL`, `UX06_E2E_PASSWORD`, `UX06_E2E_RESTRICTED_EMAIL`, `UX06_E2E_RESTRICTED_PASSWORD`, `UX06_E2E_CAMPAIGN_ID` та `UX06_E2E_FOREIGN_CAMPAIGN_ID` із двох ізольованих організацій. Звіти axe і знімки desktop/mobile зберігаються в `tmp/ux06-ai-workspace`. Інтегратор підключає цей тест до спільного CI після підготовки fixtures.
 
-Local environment has no PHP, Composer or Docker; do not claim those tests were executed here. CI and runtime acceptance must prove them on the submitted branch, followed by combined-tree review. Exact provider token budget, remote cancel, multi-domain generic delegation and independent live receipt remain open. No production deployment, remote invocation or activation is introduced by this PR.
+Локальне середовище не містить PHP, Composer або Docker; ці перевірки не запускалися локально. Необхідні CI і Runtime-приймання гілки та перевірка зведеної версії. Точний ліміт токенів, віддалене скасування, загальне міждоменне делегування й незалежна LIVE-квитанція ще відкриті. PR не додає виробничого розгортання, віддаленого виклику чи активації.
 
-Rollback: revert this isolated PR; no schema/storage migration. Existing Marketing, Control Center, Goals and AI panel route remain.
+Відкат: скасувати цей ізольований PR; міграцій схеми немає. Чинні Marketing, Control Center, Goals і маршрут панелі AI зберігаються.

@@ -65,9 +65,9 @@
                 <p>{{ 'These are COS UI descriptors, not permissions granted to the remote agent.'|trans }}</p>
             </details>
         </section>
-        {% if runtime|default(null) %}
+        {% if runtime|default(null) and runtime.presentation == 'hermes_marketing' %}
             {% include 'experience/ai/hermes_workspace.html.twig' with {
-                binding: runtime, standalone: standalone, csrfToken: csrfToken|default(''),
+                binding: runtime.binding, standalone: standalone, csrfToken: csrfToken|default(''),
                 planningKey: planningKey|default('')
             } only %}
         {% else %}

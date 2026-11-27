@@ -12,11 +12,11 @@ $panel = $get($twig.'ai_panel_frame.html.twig');
 $hermes = $get($twig.'hermes_workspace.html.twig');
 
 foreach (['AgentWorkspaceAccess::allows','AgentWorkspaceScope::permitsEntity','AgentWorkspaceScope::permitsRun',
-    'recentForSubject','recentForOrganization','no-store, private','WorkspaceShellFactory','SessionCsrfValidator'] as $marker) {
+    'scopeResolved','recentForSubject','recentForOrganization','no-store, private','WorkspaceShellFactory','SessionCsrfValidator'] as $marker) {
     if (!str_contains($controller,$marker)) throw new RuntimeException('UX06 controller missing: '.$marker);
 }
 foreach (['HermesAnalystReadinessService','MarketingCampaignService','MarketingAnalystReviewService',
-    'AgentRuntimeAdapterInterface','live_verified','tool_limit','retry_limit','UNAVAILABLE'] as $marker) {
+    'AgentRuntimeAdapterInterface','live_verified','tool_limit','retry_limit','UNAVAILABLE','journal_available','planning_available','token_budget_verified','remote_cancel_available','ActiveModuleResolver'] as $marker) {
     if (!str_contains($adapter,$marker)) throw new RuntimeException('UX06 owner adapter missing: '.$marker);
 }
 foreach (['PDO','Doctrine\\','curl_','->post(','->execute(','->recommend(','CredentialVault','new ActionProposal','->propose('] as $forbidden) {
@@ -27,7 +27,10 @@ foreach (['PDO','Doctrine\\','curl_','->post(','->execute(','->recommend(','Cred
 foreach (['AutowireIterator','Ambiguous Agent runtime binding','AgentWorkspaceAccess::allows'] as $marker) {
     if (!str_contains($runtime,$marker)) throw new RuntimeException('UX06 runtime dispatch missing: '.$marker);
 }
-foreach (['/analyst-plans','csrf_token','idempotency_key','Independent Plan and Action approvals','No automatic retry'] as $marker) {
+if (str_contains($controller, "['campaign']") || !str_contains($panel, "runtime.presentation == 'hermes_marketing'")) {
+    throw new RuntimeException('UX06 runtime-neutral controller or server-owned presentation selection regressed');
+}
+foreach (['/analyst-plans','csrf_token','idempotency_key','Independent Plan and Action approvals','No automatic retry','Native journal unavailable','Exact provider token budget','Remote cancellation'] as $marker) {
     if (!str_contains($hermes,$marker)) throw new RuntimeException('UX06 guarded delegation missing: '.$marker);
 }
 foreach ([$panel,$hermes,$get($twig.'workspace.html.twig'),$get('symfony/templates/components/experience/cos_agent_action.html.twig')] as $source) {

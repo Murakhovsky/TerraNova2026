@@ -16,8 +16,7 @@ final readonly class AgentWorkspaceRuntime
         private iterable $adapters,
     ) {}
 
-    /** @return array<string,mixed>|null */
-    public function inspect(TenantContext $actor, UIContext $context): ?array
+    public function inspect(TenantContext $actor, UIContext $context): ?AgentRuntimeInspection
     {
         if (!AgentWorkspaceAccess::allows($actor)) {
             throw new DomainException('Agent runtime scope denied.');

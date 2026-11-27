@@ -92,8 +92,8 @@ final readonly class AIPanelController
                     capabilities: ['agent.result.read', 'agent.action.inspect', 'ui.action.propose'],
                 );
                 $runtime = $this->runtime->inspect($tenant, $uiContext);
-                // Only an owner-resolved campaign may be used for the first Hermes binding.
-                if ($runtime !== null && $entity !== null && $runtime['campaign'] === null) {
+                // The adapter must resolve ownership before generic subject history is read.
+                if ($runtime !== null && $entity !== null && !$runtime->scopeResolved) {
                     throw new InvalidArgumentException('Agent subject scope unavailable.');
                 }
             }

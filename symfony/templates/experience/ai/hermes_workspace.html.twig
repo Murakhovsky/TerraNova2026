@@ -5,6 +5,8 @@
         <div><dt>{{ 'Remote tools'|trans }}</dt><dd>{{ binding.runtime.tool_limit }} — {{ 'advisory only'|trans }}</dd></div>
         <div><dt>{{ 'Timeout per HTTP request'|trans }}</dt><dd>{{ binding.runtime.request_timeout_seconds }} s</dd></div>
         <div><dt>{{ 'Automatic retries'|trans }}</dt><dd>{{ binding.runtime.retry_limit }}</dd></div>
+        <div><dt>{{ 'Exact provider token budget'|trans }}</dt><dd>{{ 'Not verified'|trans }}</dd></div>
+        <div><dt>{{ 'Remote cancellation'|trans }}</dt><dd>{{ 'Unavailable'|trans }}</dd></div>
         {% if binding.runtime.max_cost_usd is not null %}
             <div><dt>{{ 'Reserved cost ceiling'|trans }}</dt><dd>{{ binding.runtime.max_cost_usd }} USD / {{ 'turn'|trans }}</dd></div>
             <div><dt>{{ 'Daily turn limit'|trans }}</dt><dd>{{ binding.runtime.daily_run_limit }}</dd></div>
@@ -12,7 +14,10 @@
     </dl>
     <p>{{ 'Budget allowance is not an invoice. Provider token limits and live isolation require operator acceptance.'|trans }}</p>
     {% if binding.campaign is null %}
-        {% if binding.choices is not empty %}
+        {% if not binding.choices_available %}
+            <p role="status">{{ 'Campaign list unavailable. Use Marketing manually.'|trans }}</p>
+            <a href="/marketing/campaigns" data-turbo-frame="_top">{{ 'Open Marketing'|trans }}</a>
+        {% elseif binding.choices is not empty %}
             <form method="get" action="{{ path('cos_web_ai_panel') }}" class="cos-pattern-stack"
                   {% if not standalone %}data-turbo-frame="cos-ai-panel-frame"{% endif %}>
                 <input type="hidden" name="workspace" value="marketing.campaigns">
@@ -35,7 +40,10 @@
         <section class="cos-panel">
             <h4>{{ binding.campaign.name }} · r{{ binding.campaign.revision }}</h4>
             <p>{{ 'Task: analyze the selected campaign and creative. Only pinned business facts and evidence aliases may be sent by the approved worker.'|trans }}</p>
-            {% if binding.runtime.plan_available and binding.campaign.status == 'DRAFT' and binding.creatives is not empty and csrfToken is not empty %}
+            {% if not binding.planning_available %}
+                <p role="status">{{ 'Planning data unavailable. Delegation is blocked.'|trans }}</p>
+            {% endif %}
+            {% if binding.runtime.plan_available and binding.planning_available and binding.journal_available and binding.campaign.status == 'DRAFT' and binding.creatives is not empty and csrfToken is not empty %}
                 <form method="post" action="/marketing/campaigns/{{ binding.campaign.id|url_encode }}/analyst-plans"
                       data-turbo-frame="_top" class="cos-pattern-stack">
                     <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
@@ -67,6 +75,9 @@
         </section>
         <section aria-labelledby="cos-hermes-journal">
             <h4 id="cos-hermes-journal">{{ 'Hermes native run journal'|trans }}</h4>
+            {% if not binding.journal_available %}
+                <p role="status">{{ 'Native journal unavailable. Its state is unknown, not empty. Delegation is blocked.'|trans }}</p>
+            {% else %}
             {% for run in binding.runs %}
                 <article class="cos-agent-run">
                     <div><strong>{{ run.state }}</strong> · <code>{{ run.id }}</code></div>
@@ -83,11 +94,13 @@
                         <ul>{% for pin in run.source_pins %}<li>{{ pin.alias }}: {{ pin.record_id }} · r{{ pin.revision }}</li>{% endfor %}</ul>
                     </details>
                     {% if run.failure_code %}<p role="alert">{{ run.failure_code }}. {{ 'No automatic retry. Reconcile unknown outcomes.'|trans }}</p>{% endif %}
+                    <p>{{ 'Finance cost confirmed'|trans }}: {{ 'No'|trans }} · {{ 'Paid activation authorized'|trans }}: {{ 'No'|trans }}</p>
                     {% if run.decision %}<p>{{ 'Independent review'|trans }}: {{ run.decision }} · {{ run.decision_at }}</p>{% endif %}
                 </article>
             {% else %}
                 <p>{{ 'No native Hermes runs for this campaign.'|trans }}</p>
             {% endfor %}
+            {% endif %}
             <a class="cos-button cos-button--ghost" href="/marketing/campaigns/{{ binding.campaign.id|url_encode }}" data-turbo-frame="_top">{{ 'Open owner journal for review or reconciliation'|trans }}</a>
             <a class="cos-button cos-button--ghost" href="/workspace/goals" data-turbo-frame="_top">{{ 'Inspect Plan, approvals and verified outcomes'|trans }}</a>
         </section>

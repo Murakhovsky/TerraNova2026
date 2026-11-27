@@ -18,6 +18,10 @@ use App\Persistence\Federation\FederationTrustedOutcomeEvidenceResolver;
 use App\Persistence\Marketing\MarketingAnalystPlanProposalService;
 use App\Persistence\Marketing\MarketingAnalystRunOutcomeProvider;
 use App\Infrastructure\Marketing\HermesAnalystReadinessService;
+use App\Web\Experience\AI\AgentWorkspaceRuntime;
+use App\Web\Experience\AI\HermesWorkspaceAdapter;
+use App\Web\Experience\AI\UIContext;
+use App\Web\Experience\Model\EntityRef;
 use App\Persistence\Workflow\DoctrineWorkflowActionClaimAdmission;
 use App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier;
 use App\Persistence\Workflow\DoctrineWorkflowActionWorkerAdmission;
@@ -253,6 +257,66 @@ try {
     ]),'mkt-creative-'.$token);
     $campaignId=$campaign['id'];$creativeId=$creative['id'];
     $assert($readiness->status($actor)['plan_available']&&!$readiness->status($actor)['live_verified'],'Readiness overclaims live verification.');
+    // UX-06: exercise the actual Web adapter on the same isolated owner services;
+    // inspection must never resolve credentials, reserve cost or create a Plan.
+    $uxPlanning=new \Domains\Marketing\Application\Service\MarketingPlanningService($planning,$planningPolicy);
+    $reviewService=new \Domains\Marketing\Application\Service\MarketingAnalystReviewService($runs,$contexts,$campaignService,$planningPolicy,$modules);
+    $uxAdapter=new HermesWorkspaceAdapter($readiness,$campaignService,$uxPlanning,$reviewService,$modules);
+    $uxRuntime=new AgentWorkspaceRuntime([$uxAdapter]);
+    $uxContext=new UIContext('marketing.campaigns',new EntityRef('marketing_campaign',$campaignId),[],[],[],[]);
+    $uxCollection=new UIContext('marketing.campaigns',null,[],[],[],[]);
+    $uxChoices=$uxRuntime->inspect($actor,$uxCollection);
+    $assert($uxChoices->scopeResolved&&$uxChoices->binding['choices_available']
+        &&in_array($campaignId,array_column($uxChoices->binding['choices'],'id'),true),'UX06 owner campaign selection unavailable.');
+    $uxBefore=$uxRuntime->inspect($actor,$uxContext);
+    $assert($uxBefore->scopeResolved&&$uxBefore->presentation==='hermes_marketing'
+        &&$uxBefore->binding['runtime']['plan_available']&&$uxBefore->binding['planning_available']
+        &&$uxBefore->binding['journal_available']&&$uxBefore->binding['runs']===[]
+        &&$uxBefore->binding['runtime']['tool_limit']===0&&$uxBefore->binding['runtime']['retry_limit']===0
+        &&$uxBefore->binding['runtime']['request_timeout_seconds']===45
+        &&!$uxBefore->binding['runtime']['token_budget_verified']&&!$uxBefore->binding['runtime']['remote_cancel_available'],
+        'UX06 readiness or capability boundary did not reflect the owner contract.');
+    $foreignActor=new TenantContext(UserId::fromString($owner),OrganizationId::fromString('foreign-'.$token),
+        OrganizationRole::fromString('manager'),[Permission::fromString(TenantPermissions::ACCESS),Permission::fromString(TenantPermissions::MANAGE)]);
+    $foreignScope=$uxRuntime->inspect($foreignActor,$uxContext);
+    $assert(!$foreignScope->scopeResolved&&$foreignScope->binding['campaign']===null
+        &&$foreignScope->binding['runs']===[]&&!$foreignScope->binding['runtime']['plan_available'],'UX06 leaked a foreign campaign.');
+    $restrictedActor=new TenantContext(UserId::fromString($owner),OrganizationId::fromString($org),
+        OrganizationRole::fromString('member'),[Permission::fromString(TenantPermissions::ACCESS)]);
+    $deny(fn()=>$uxRuntime->inspect($restrictedActor,$uxContext),'UX06 exposed tenant history to a member.');
+    // Simulate a failed governance/readiness read without weakening module or ownership checks.
+    $offlineBudget=new class implements \Kernel\Llm\LlmGovernanceRepositoryInterface {
+        public function monthlyBudget(string $organizationId,string $currency):?float{throw new RuntimeException('private fixture outage');}
+        public function monthlySpend(string $organizationId,string $currency):float{throw new LogicException('Unexpected spend read');}
+        public function reserveBudget(string $organizationId,float $maxCostAmount,string $currency):\Kernel\Llm\LlmBudgetReservation{throw new LogicException('Unexpected reserve');}
+        public function settleBudget(\Kernel\Llm\LlmBudgetReservation $reservation,\Kernel\Llm\LlmUsageRecord $usage):void{throw new LogicException('Unexpected settlement');}
+        public function releaseBudget(\Kernel\Llm\LlmBudgetReservation $reservation):void{throw new LogicException('Unexpected release');}
+        public function synchronizedBudget(string $organizationId,string $currency,callable $operation):mixed{throw new LogicException('Unexpected synchronization');}
+        public function record(\Kernel\Llm\LlmUsageRecord $usage):void{throw new LogicException('Unexpected usage');}
+    };
+    $offlineUx=new HermesWorkspaceAdapter(new HermesAnalystReadinessService($profiles,$offlineBudget,$modules),
+        $campaignService,$uxPlanning,$reviewService,$modules);
+    $offline=$offlineUx->inspect($actor,$uxContext);
+    $assert($offline->scopeResolved&&$offline->binding['runtime']['status']==='UNAVAILABLE'
+        &&!$offline->binding['runtime']['plan_available']&&$offline->binding['journal_available']
+        &&$offline->binding['campaign']['id']===$campaignId
+        &&!str_contains(json_encode($offline->binding,JSON_THROW_ON_ERROR),'private fixture outage'),
+        'UX06 readiness outage hid owner context or leaked error details.');
+    $offlineJournal=new class implements \Domains\Marketing\Application\Contract\MarketingAnalystRunStore {
+        public function listRuns(string $org,string $campaignId,int $limit=50,int $offset=0):array{throw new RuntimeException('private journal outage');}
+        public function get(string $org,string $id):?array{throw new LogicException('Unexpected journal get');}
+        public function decide(string $org,string $id,string $campaignId,string $actor,string $key,array $decision,callable $validateFresh):array{throw new LogicException('Unexpected decision');}
+        public function byKey(string $org,string $key):?array{throw new LogicException('Unexpected replay');}
+        public function claim(string $org,string $key,array $claim,int $dailyLimit):array{throw new LogicException('Unexpected claim');}
+        public function finish(string $org,string $id,?array $advice):array{throw new LogicException('Unexpected finish');}
+    };
+    $offlineReview=new \Domains\Marketing\Application\Service\MarketingAnalystReviewService($offlineJournal,$contexts,$campaignService,$planningPolicy,$modules);
+    $journalUnavailable=(new HermesWorkspaceAdapter($readiness,$campaignService,$uxPlanning,$offlineReview,$modules))->inspect($actor,$uxContext);
+    $assert($journalUnavailable->scopeResolved&&!$journalUnavailable->binding['journal_available']
+        &&!$journalUnavailable->binding['runtime']['plan_available']&&$journalUnavailable->binding['planning_available'],
+        'UX06 unknown journal state was mistaken for an empty journal or enabled delegation.');
+    $assert($transport->reads===0&&$transport->posts===0&&$budget->monthlySpend($org,'USD')===0.0,
+        'UX06 inspection called Hermes or reserved a budget.');
     $proposal=$planner->propose($actor,$campaignId,1,$creativeId,1,null,null,'mkt-goal-key-'.$token);
     $assert($proposal['state']==='proposed','Canonical Marketing Plan was not created.');
     $replay=$planner->propose($actor,$campaignId,1,$creativeId,1,null,null,'mkt-goal-key-'.$token);
@@ -341,12 +405,27 @@ try {
     $assert((int)$db->fetchOne('SELECT COUNT(*) FROM cos_federation_runs
         WHERE organization_id=:org',['org'=>$org])===0,
         'legacy executor duplicated canonical Run');
-    $reviewService=new \Domains\Marketing\Application\Service\MarketingAnalystReviewService($runs,$contexts,$campaignService,$planningPolicy,$modules);
     $deny(fn()=>$reviewService->review($actor,$campaignId,$native[0]['id'],'ACCEPT','Self approval denied','mkt-self-'.$token),'Requester reviewed own advice.');
     $reviewActor=new TenantContext(UserId::fromString($reviewer),OrganizationId::fromString($org),OrganizationRole::fromString('manager'),
         [Permission::fromString(TenantPermissions::ACCESS),Permission::fromString(TenantPermissions::MANAGE)]);
     $decision=$reviewService->review($reviewActor,$campaignId,$native[0]['id'],'ACCEPT','Useful planning advice','mkt-review-'.$token);
     $assert($decision['decision']==='ACCEPT'&&!$decision['paid_activation_approved'],'Human review granted advertising authority.');
+    // The read-only UX now shows the exact native evidence and independent review;
+    // the trusted outcome above remains independently verified, not asserted by the UI.
+    $uxAfter=$uxRuntime->inspect($actor,$uxContext);
+    $uxAfterOutage=$offlineUx->inspect($actor,$uxContext);
+    $assert($uxAfter->scopeResolved&&$uxAfter->binding['journal_available']
+        &&count($uxAfter->binding['runs'])===1&&$uxAfter->binding['runs'][0]['id']===$native[0]['id']
+        &&$uxAfter->binding['runs'][0]['context_hash']===$native[0]['context_hash']
+        &&$uxAfter->binding['runs'][0]['decision']==='ACCEPT'
+        &&$uxAfter->binding['runs'][0]['advice']['runtime_response_id']==='chatcmpl-marketing-e2e'
+        &&!$uxAfter->binding['runs'][0]['paid_activation_approved']
+        &&!$uxAfter->binding['runs'][0]['finance_cost_confirmed']
+        &&$uxAfterOutage->binding['journal_available']&&count($uxAfterOutage->binding['runs'])===1
+        &&!$uxAfterOutage->binding['runtime']['plan_available'],'UX06 lost verified owner evidence or claimed execution authority.');
+    $assert(!str_contains(json_encode($uxAfter->binding,JSON_THROW_ON_ERROR),'fixture-token')
+        &&$transport->reads===1&&$transport->posts===1,'UX06 readback leaked a credential or retried the remote call.');
+    echo "UX06 Hermes scoped inspection, fail-closed outage, native evidence and independent Action outcome PASS.\n";
     // Native receipt tamper is deliberately introduced only in this disposable fixture.
     $db->executeStatement('UPDATE marketing_analyst_runs SET context_hash=:fake WHERE organization_id=:org AND id=:id',
         ['fake'=>str_repeat('0',64),'org'=>$org,'id'=>$native[0]['id']]);
