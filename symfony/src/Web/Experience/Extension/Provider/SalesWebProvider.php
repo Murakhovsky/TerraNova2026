@@ -10,6 +10,10 @@ use App\Web\Experience\Action\UIActionDangerLevel;
 use App\Web\Experience\Action\UIActionIntent;
 use App\Web\Experience\Action\UIActionPlacement;
 use App\Web\Experience\Extension\Contract\ActionProviderInterface;
+use App\Web\Experience\Extension\Contract\EntityLinkProviderInterface;
+use App\Web\Experience\Extension\Model\EntityLink;
+use App\Web\Experience\Unified\Business\BusinessRecordProvider;
+use App\Web\Experience\Unified\Business\WorkspaceCapabilityRead;
 use App\Web\Experience\Extension\Contract\CommandProviderInterface;
 use App\Web\Experience\Extension\Contract\NavigationProviderInterface;
 use App\Web\Experience\Extension\Contract\SearchProviderInterface;
@@ -26,11 +30,12 @@ use App\Web\Experience\Shell\ShellCommandItem;
 use App\Web\Experience\Workspace\WorkspaceSlot;
 use App\Application\Experience\Search\Contract\SalesEntitySearchInterface;
 
-final class SalesWebProvider implements NavigationProviderInterface, SearchProviderInterface, CommandProviderInterface, WorkspaceProviderInterface, WorkspaceExtensionProviderInterface, ActionProviderInterface
+final class SalesWebProvider implements NavigationProviderInterface, SearchProviderInterface, CommandProviderInterface, WorkspaceProviderInterface, WorkspaceExtensionProviderInterface, ActionProviderInterface, BusinessRecordProvider, EntityLinkProviderInterface
 {
     public function __construct(
         private readonly SearchResultMatcher $matcher,
         private readonly SalesEntitySearchInterface $entitySearch,
+        private readonly WorkspaceCapabilityRead $read,
     ) {
     }
 
@@ -49,6 +54,7 @@ final class SalesWebProvider implements NavigationProviderInterface, SearchProvi
             new NavigationContribution('leads', 'Leads', '/sales/leads', priority: 40, parentKey: 'sales'),
             new NavigationContribution('deals', 'Deals', '/sales/deals', priority: 50, parentKey: 'sales'),
             new NavigationContribution('director', 'Director', '/sales/director', priority: 60, parentKey: 'sales'),
+            new NavigationContribution('sales-orders','Orders',WorkspaceCapabilityRead::workspacePath('sales.order'),priority:55,parentKey:'sales'),
             new NavigationContribution('clients', 'Clients', '/client-case/inbox', 'CL', 30),
             new NavigationContribution('inbox', 'Inbox', '/client-case/inbox', priority: 10, parentKey: 'clients'),
             new NavigationContribution('cases', 'Cases', '/client-case', priority: 20, parentKey: 'clients'),
@@ -76,6 +82,7 @@ final class SalesWebProvider implements NavigationProviderInterface, SearchProvi
             new SearchResult('sales.search.pipeline', 'Sales Pipeline', '/sales/pipeline', 'workspace', 'Pipeline'),
             new SearchResult('sales.search.leads', 'Lead Workspace', '/sales/leads', 'workspace', 'Sales leads'),
             new SearchResult('sales.search.deals', 'Deal Workspace', '/sales/deals', 'workspace', 'Sales deals'),
+            new SearchResult('sales.search.orders','Orders',WorkspaceCapabilityRead::workspacePath('sales.order'),'workspace','Order lookup'),
             new SearchResult('sales.search.clients', 'Client Inbox', '/client-case/inbox', 'workspace', 'Clients'),
             new SearchResult('sales.search.director', 'Sales Director', '/sales/director', 'workspace', 'Sales analytics'),
         ], $query, $limit);
@@ -85,6 +92,14 @@ final class SalesWebProvider implements NavigationProviderInterface, SearchProvi
             return $navigation;
         }
 
+        if (preg_match('/^[a-f0-9]{32}$/D',$query)) {
+            try {
+                $order=$this->record($context,'sales.order',new EntityRef('sales.order',$query));
+                if ($order!==null) return array_slice([$order['hit'],...$navigation],0,$limit);
+            } catch (\Throwable) {
+                // Inaccessible and nonexistent orders are indistinguishable.
+            }
+        }
         $entities = array_map(
             static fn ($hit): SearchResult => new SearchResult(
                 id: $hit->id,
@@ -122,6 +137,18 @@ final class SalesWebProvider implements NavigationProviderInterface, SearchProvi
     {
         if ($entity === null) {
             return [];
+        }
+
+        if ($entity->type==='sales.order'&&preg_match('/^[a-f0-9]{32}$/D',$entity->id)) {
+            $available=$this->read->offersHumanCommand($context,'sales.order.lifecycle.confirm');
+            return [new UIAction(
+                id:'sales.order.confirm',label:'Confirm order',intent:UIActionIntent::Execute,
+                permission:'sales.workspace.use',enabled:$available,
+                disabledReason:$available?null:'Canonical human command binding unavailable.',
+                confirmation:UIActionConfirmation::simple('Confirm the native Sales order only; no payment or fulfillment is executed.','Confirm order'),
+                command:'sales.order.lifecycle.confirm',dangerLevel:UIActionDangerLevel::Caution->value,
+                placements:[UIActionPlacement::WORKSPACE_PRIMARY,UIActionPlacement::MOBILE_PRIMARY],
+            )];
         }
 
         if (in_array($entity->type, ['deal', 'sales.deal'], true)) {
@@ -206,6 +233,9 @@ final class SalesWebProvider implements NavigationProviderInterface, SearchProvi
 
     public function extensions(WebExtensionContext $context, string $workspaceId): array
     {
+        if ($workspaceId==='sales.order') {
+            return [new WorkspaceExtension($workspaceId,WorkspaceSlot::Sidebar,'experience/unified/business/sales_order_command.html.twig',10)];
+        }
         if (!in_array($workspaceId, ['sales.lead', 'sales.deal', 'sales.client_case'], true)) {
             return [];
         }
@@ -237,7 +267,44 @@ final class SalesWebProvider implements NavigationProviderInterface, SearchProvi
         return [
             new WorkspaceDefinition('sales.lead', 'Lead Workspace', '/sales/leads', 'sales.lead', 10),
             new WorkspaceDefinition('sales.deal', 'Deal Workspace', '/sales/deals', 'sales.deal', 20),
+            new WorkspaceDefinition('sales.order','Orders',WorkspaceCapabilityRead::workspacePath('sales.order'),'sales.order',25),
             new WorkspaceDefinition('sales.client_case', 'Client Case Workspace', '/client-case', 'sales.deal', 30),
         ];
     }
+
+    public function supportsRecords(string $workspaceId):bool { return $workspaceId==='sales.order'; }
+
+    public function records(WebExtensionContext $context,string $workspaceId,string $query,int $page):array
+    {
+        if (!$this->supportsRecords($workspaceId)) throw new \InvalidArgumentException('Unsupported workspace.');
+        $notice='Order lookup requires the exact COS order reference. No unrestricted order-list Query is registered.';
+        if (!preg_match('/^[a-f0-9]{32}$/D',$query)) return ['items'=>[],'has_more'=>false,'notice'=>$notice];
+        $detail=$this->record($context,$workspaceId,new EntityRef('sales.order',$query));
+        return ['items'=>$detail===null?[]:[$detail['hit']],'has_more'=>false,'notice'=>$notice];
+    }
+
+    public function record(WebExtensionContext $context,string $workspaceId,EntityRef $entity):?array
+    {
+        if (!$this->supportsRecords($workspaceId)||$entity->type!=='sales.order'||!preg_match('/^[a-f0-9]{32}$/D',$entity->id)) return null;
+        $data=$this->read->query($context,'sales.order.read',['order_id'=>$entity->id]);
+        $row=$data['order']??null;
+        if (!is_array($row)||($row['order_id']??null)!==$entity->id) return null;
+        $tables=[WorkspaceCapabilityRead::table('Order lines',['sku'=>'SKU','quantity'=>'Quantity','unit_price'=>'Unit price'],$row['lines']??[],'First 50 lines.')];
+        $financial=$data['financial_evidence']??null;
+        $facts=WorkspaceCapabilityRead::facts($row,['status'=>'Status','channel'=>'Source','currency'=>'Currency','total'=>'Order total','revision'=>'Revision','placed_at'=>'Placed']);
+        if (is_array($financial)) $facts=[...$facts,...WorkspaceCapabilityRead::facts($financial,['net_collected_amount'=>'Reconciled net collected','outstanding_amount'=>'Outstanding','evidence_reference'=>'Finance evidence'])];
+        else $facts[]=['label'=>'Finance evidence','value'=>'Not available; payment not confirmed.'];
+        return [
+            'hit'=>WorkspaceCapabilityRead::hit($entity->type,$entity->id,'Order '.$entity->id,WorkspaceCapabilityRead::workspacePath($workspaceId,$entity),(string)$row['status']),
+            'facts'=>$facts,'tables'=>$tables,
+        ];
+    }
+
+    public function link(WebExtensionContext $context,EntityRef $entity):?EntityLink
+    {
+        if ($entity->type==='sales.order'&&preg_match('/^[a-f0-9]{32}$/D',$entity->id)) return new EntityLink('Order',WorkspaceCapabilityRead::workspacePath('sales.order',$entity));
+        if ($entity->type==='sales.deal'&&preg_match('/^[1-9][0-9]{0,9}$/D',$entity->id)) return new EntityLink('Deal','/sales/deals/'.$entity->id);
+        return null;
+    }
+
 }

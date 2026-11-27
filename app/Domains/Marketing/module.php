@@ -25,6 +25,7 @@ $manifest = [
             'web.search' => ['marketingNavigationContributor'],
             'web.commands' => ['marketingNavigationContributor'],
             'web.workspace' => ['marketingNavigationContributor'],
+            'web.entity_links' => ['marketingNavigationContributor'],
         ],
         'cross_domain_contracts' => [
             [

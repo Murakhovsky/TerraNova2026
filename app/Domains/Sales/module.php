@@ -29,6 +29,7 @@ return [
             'web.search' => ['salesNavigationContributor'],
             'web.commands' => ['salesNavigationContributor'],
             'web.workspace' => ['salesNavigationContributor'],
+            'web.entity_links' => ['salesNavigationContributor'],
             'web.workspace.extensions' => ['salesNavigationContributor'],
             'web.actions' => ['salesNavigationContributor'],
         ],

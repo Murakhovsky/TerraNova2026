@@ -10,6 +10,8 @@ use App\Web\Experience\Extension\Model\SearchResult;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Model\EntityRef;
 use App\Web\Experience\Workspace\WorkspaceCompositionResolver;
+use App\Web\Experience\Unified\Business\BusinessRecordProvider;
+use App\Web\Experience\Extension\Contract\SearchProviderInterface;
 use App\Web\Experience\Shell\ShellBreadcrumb;
 use App\Web\Experience\Shell\ShellConnectionState;
 use App\Web\Experience\Shell\WorkspaceShellFactory;
@@ -70,39 +72,92 @@ final readonly class UnifiedBusinessWorkspaceController {
         $selected=null;
         $selectedHit=null;
         $entityType=$workspace->definition->entityType;
-        if ($query!=='') {
-            // Global aggregation already enforces active modules and tenant scope.
-            // Only SearchResult entities for the registered Workspace are allowed.
-            try {
-                $hits=$catalog->search($query,50);
-            } catch (Throwable $e) {
-                $searchAvailable=false;
+        $page=max(1,min(10000,$request->query->getInt('page',1)));
+        $hasMore=false;
+        $readNotice=null;
+        $tables=[];
+        $selectedFacts=[];
+        $summaryAvailable=true;
+
+        // Use only the registered active provider that owns this Workspace;
+        // unrelated Domain search failures must not hide a valid business list.
+        $owner=null;
+        foreach ($catalog->providers()->workspaces() as $provider) {
+            foreach ($provider->workspaces($context) as $definition) {
+                if ($definition->id!==$workspaceId) continue;
+                if ($owner!==null) return new Response('Ambiguous business context.',503);
+                $owner=$provider;
+            }
+        }
+        $nativeRecords=$owner instanceof BusinessRecordProvider && $owner->supportsRecords($workspaceId);
+        try {
+            if ($nativeRecords) {
+                $recordPage=$owner->records($context,$workspaceId,$query,$page);
+                $hits=$recordPage['items'];
+                $hasMore=$recordPage['has_more'] && $page<10000;
+                $readNotice=$recordPage['notice'];
+            } elseif ($query!=='' && $owner instanceof SearchProviderInterface && $entityType!==null) {
+                $hits=$owner->search($context,$query,50);
+            } else {
                 $hits=[];
-                error_log('cos.unified.business.search_unavailable '.$e->getMessage());
             }
             foreach ($hits as $hit) {
                 if (!$hit instanceof SearchResult || $hit->entity===null
                     || $hit->entity->type!==$entityType
-                    || !str_starts_with($hit->path,'/')
-                    || str_starts_with($hit->path,'//')) continue;
+                    || !$this->safePath($hit->path)) continue;
                 $results[]=$hit;
             }
             if ($sort==='label') {
                 usort($results,static fn(SearchResult $a,SearchResult $b):int
-                    => strcmp(mb_strtolower($a->label),mb_strtolower($b->label)));
+                    => [mb_strtolower($a->label),$a->id] <=> [mb_strtolower($b->label),$b->id]);
             }
-            foreach ($results as $hit) {
-                if ($selectedKey!=='' && $hit->entity->key()===$selectedKey) {
-                    $selected=$hit->entity;
-                    $selectedHit=$hit;
-                    break;
-                }
-            }
+        } catch (Throwable $e) {
+            $searchAvailable=false;
+            $results=[];
+            error_log('cos.unified.business.search_unavailable '.$e::class);
         }
-        // A browser-supplied EntityRef never enters Workspace composition
-        // without positive tenant-bound Query readback from the same provider.
-        if ($selected instanceof EntityRef) {
-            $workspace=$this->composition->resolve($tenant,$context,$workspaceId,$selected);
+
+        // An independent exact readback is required for a typed provider.
+        // Legacy providers retain positive search-result selection.
+        if ($selectedKey!=='') {
+            try {
+                if ($nativeRecords) {
+                    $reference=EntityRef::fromKey($selectedKey);
+                    if ($reference->type===$entityType) {
+                        $detail=$owner->record($context,$workspaceId,$reference);
+                        $hit=$detail['hit']??null;
+                        if ($hit instanceof SearchResult && $hit->entity?->key()===$selectedKey && $this->safePath($hit->path)) {
+                            $selected=$hit->entity;
+                            $selectedHit=$hit;
+                            $selectedFacts=$detail['facts'];
+                            $tables=$detail['tables'];
+                        }
+                    }
+                } else {
+                    foreach ($results as $hit) {
+                        if ($hit->entity->key()===$selectedKey) {
+                            $selected=$hit->entity;
+                            $selectedHit=$hit;
+                            break;
+                        }
+                    }
+                }
+                if ($selected instanceof EntityRef) {
+                    $workspace=$this->composition->resolve($tenant,$context,$workspaceId,$selected);
+                    if (!$nativeRecords) $selectedFacts=$this->summaryRead->facts(
+                        $tenant->organizationId()->value(),$selected->type,$selected->id,
+                    );
+                }
+            } catch (Throwable $e) {
+                // Do not render data or actions for an unavailable/denied read.
+                $selected=null;
+                $selectedHit=null;
+                $selectedFacts=[];
+                $tables=[];
+                $summaryAvailable=false;
+                $workspace=$this->composition->resolve($tenant,$context,$workspaceId);
+                error_log('cos.unified.business.detail_unavailable '.$e::class);
+            }
         }
 
         $selectedUrl=null;
@@ -110,24 +165,9 @@ final readonly class UnifiedBusinessWorkspaceController {
             try {
                 $canonical=$this->links->resolve($context,$selected);
                 $candidate=$canonical?->path ?? $selectedHit->path;
-                if (str_starts_with($candidate,'/') && !str_starts_with($candidate,'//')
-                    && preg_match('/[\\x00-\\x1F\\x7F]/',$candidate)!==1) {
-                    $selectedUrl=$candidate;
-                }
+                if ($this->safePath($candidate)) $selectedUrl=$candidate;
             } catch (LogicException) {
                 // Ambiguous links are never fabricated or followed.
-            }
-        }
-        $selectedFacts=[];
-        $summaryAvailable=true;
-        if ($selected instanceof EntityRef) {
-            try {
-                $selectedFacts=$this->summaryRead->facts(
-                    $tenant->organizationId()->value(),$selected->type,$selected->id,
-                );
-            } catch (Throwable $e) {
-                $summaryAvailable=false;
-                error_log('cos.unified.business.summary_unavailable '.$e->getMessage());
             }
         }
         $related=[];
@@ -140,12 +180,7 @@ final readonly class UnifiedBusinessWorkspaceController {
                     $canonical=$this->links->resolve(
                         $context, new EntityRef($relatedRef->type, $relatedRef->id),
                     );
-                    // Property's existing typed Get screen is the verified
-                    // internal fallback until its Domain EntityLink provider is wired.
                     $path=$canonical?->path;
-                    if ($path===null && $relatedRef->type==='property.asset') {
-                        $path='/workspace/unified/property?reference='.rawurlencode($relatedRef->id);
-                    }
                     if ($path!==null && (!str_starts_with($path,'/')
                         || str_starts_with($path,'//')
                         || preg_match('/[\\x00-\\x1F\\x7F]/',$path)===1)) $path=null;
@@ -160,7 +195,7 @@ final readonly class UnifiedBusinessWorkspaceController {
                 }
             } catch (Throwable $e) {
                 $relatedAvailable=false;
-                error_log('cos.unified.business.related_unavailable '.$e->getMessage());
+                error_log('cos.unified.business.related_unavailable '.$e::class);
             }
         }
         $activity=[];
@@ -169,7 +204,7 @@ final readonly class UnifiedBusinessWorkspaceController {
             $activity=$catalog->activity(10);
         } catch (Throwable $e) {
             $activityAvailable=false;
-            error_log('cos.unified.business.activity_unavailable '.$e->getMessage());
+            error_log('cos.unified.business.activity_unavailable '.$e::class);
         }
         $savedViews=$this->loadSavedViews($request,$tenant,$workspaceId);
         $shell=$this->shells->create($tenant,$context,$workspace->definition->label,[
@@ -179,6 +214,7 @@ final readonly class UnifiedBusinessWorkspaceController {
         return new Response($this->twig->render('experience/unified/business.html.twig',[
             'shell'=>$shell,'workspace'=>$workspace,'workspaces'=>$catalog->workspaces(),
             'query'=>$query,'view'=>$view,'sort'=>$sort,'results'=>$results,
+            'nativeRecords'=>$nativeRecords,'page'=>$page,'hasMore'=>$hasMore,'readNotice'=>$readNotice,'detailTables'=>$tables,
             'searchAvailable'=>$searchAvailable,
             'selected'=>$selected,'selectedHit'=>$selectedHit,'selectedUrl'=>$selectedUrl,
             'activity'=>$activity,'activityAvailable'=>$activityAvailable,
@@ -186,6 +222,7 @@ final readonly class UnifiedBusinessWorkspaceController {
             'selectedFacts'=>$selectedFacts,'summaryAvailable'=>$summaryAvailable,
             'selectionDenied'=>$selectedKey!=='' && $selected===null,
             'savedViews'=>$savedViews,'csrfToken'=>$this->csrf->token($request),
+            'idempotencyKey'=>'cuw-'.bin2hex(random_bytes(16)),
         ]),200,[
             'Content-Type'=>'text/html; charset=UTF-8',
             'Cache-Control'=>'no-store, private','X-Robots-Tag'=>'noindex, nofollow',
@@ -246,6 +283,11 @@ final readonly class UnifiedBusinessWorkspaceController {
             '/workspace/unified/business/'.rawurlencode($workspaceId).'?saved=1',
             Response::HTTP_SEE_OTHER,
         );
+    }
+
+    private function safePath(string $path):bool {
+        return str_starts_with($path,'/') && !str_starts_with($path,'//')
+            && !str_contains($path,'\\') && preg_match('/[\x00-\x1F\x7F]/',$path)!==1;
     }
 
     /** @return list<array{id:string,name:string,q:string,sort:string,view:string}> */

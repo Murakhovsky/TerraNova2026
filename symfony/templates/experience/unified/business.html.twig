@@ -9,7 +9,9 @@
     <p class="cos-card__copy">{{ 'uw.business.summary'|trans }}</p>
     <div class="cos-uw__row">
       <a class="cos-button cos-button--ghost" href="{{ path('cos_unified_home') }}">{{ 'uw.business.contexts'|trans }}</a>
+      {% if workspace.definition.path != path('cos_unified_business_workspace',{workspaceId:workspace.definition.id}) %}
       <a class="cos-button cos-button--ghost" href="{{ workspace.definition.path }}">{{ 'uw.business.domain'|trans }}</a>
+      {% endif %}
       <a class="cos-button cos-button--ghost" href="{{ path('cos_unified_actions') }}">{{ 'uw.nav.operations'|trans }}</a>
     </div>
   </header>
@@ -23,6 +25,10 @@
     <div class="cos-page__stack">
       <section class="cos-card" aria-labelledby="cos-uw-business-search">
         <h2 id="cos-uw-business-search" class="cos-card__title">{{ 'uw.business.records'|trans }}</h2>
+        {% if not workspace.definition.entityType %}
+          <p class="cos-card__copy">{{ 'Use the native domain workspace for these records and commands.'|trans }}</p>
+          <a class="cos-button cos-button--primary" href="{{ workspace.definition.path }}">{{ 'uw.business.domain'|trans }}</a>
+        {% else %}
         <form method="get" action="{{ path('cos_unified_business_workspace',{workspaceId:workspace.definition.id}) }}"
               role="search" class="cos-uw__search">
           <label for="cos-uw-business-q">{{ 'uw.business.filter_label'|trans }}</label>
@@ -72,14 +78,36 @@
             <button class="cos-button cos-button--ghost" type="submit">{{ 'uw.business.save'|trans }}</button>
           </form>
         {% endif %}
-        {% if query is empty %}
-          <p class="cos-card__copy">{{ 'uw.business.empty_query'|trans }}</p>
-        {% elseif not searchAvailable %}
+        {% if readNotice %}<p class="cos-card__copy" role="status">{{ readNotice|trans }}</p>{% endif %}
+        {% if not searchAvailable %}
           <p class="cos-alert" role="alert">{{ 'uw.business.read_error'|trans }}</p>
+        {% elseif query is empty and not nativeRecords %}
+          <p class="cos-card__copy">{{ 'uw.business.empty_query'|trans }}</p>
         {% else %}
           <p class="cos-card__copy" role="status" data-cos-result-count>
             {{ 'uw.business.result_count'|trans }} {{ results|length }}
           </p>
+          {% if view == 'list' and results is not empty %}
+            <div class="table-responsive" data-cos-business-results role="region" aria-label="{{ 'uw.business.records'|trans }}" tabindex="0">
+              <table class="table">
+                <thead><tr><th scope="col">{{ 'uw.business.name'|trans }}</th><th scope="col">{{ 'Details'|trans }}</th><th scope="col">{{ 'uw.business.actions'|trans }}</th></tr></thead>
+                <tbody>
+                {% for hit in results %}
+                  <tr data-entity-ref="{{ hit.entity.key() }}">
+                    <th scope="row">{{ hit.label }}</th>
+                    <td>{{ hit.subtitle ?: hit.entity.key() }}</td>
+                    <td><div class="cos-uw__row">
+                      <a class="cos-button cos-button--ghost" href="{{ path('cos_unified_business_workspace',{
+                        workspaceId:workspace.definition.id,q:query,sort:sort,view:view,page:page,selected:hit.entity.key()
+                      }) }}">{{ 'uw.business.entity_context'|trans }}</a>
+                      <a class="cos-button cos-button--ghost" href="{{ hit.path }}">{{ 'uw.business.open_entity'|trans }}</a>
+                    </div></td>
+                  </tr>
+                {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
           <div class="cos-uw__entities {{ view == 'cards' ? 'cos-uw__entities--cards' : '' }}" data-cos-business-results>
           {% for hit in results %}
             <article class="cos-uw__entity" data-entity-ref="{{ hit.entity.key() }}">
@@ -87,7 +115,7 @@
               <p class="cos-card__copy">{{ hit.subtitle ?: hit.entity.key() }}</p>
               <div class="cos-uw__row">
                 <a class="cos-button cos-button--ghost" href="{{ path('cos_unified_business_workspace',{
-                    workspaceId:workspace.definition.id,q:query,sort:sort,view:view,selected:hit.entity.key()
+                    workspaceId:workspace.definition.id,q:query,sort:sort,view:view,page:page,selected:hit.entity.key()
                 }) }}">{{ 'uw.business.entity_context'|trans }}</a>
                 <a class="cos-button cos-button--ghost" href="{{ hit.path }}">{{ 'uw.business.open_entity'|trans }}</a>
               </div>
@@ -96,6 +124,19 @@
             <div class="cos-card" role="status">{{ 'uw.business.no_results'|trans }}</div>
           {% endfor %}
           </div>
+          {% endif %}
+          {% if nativeRecords and (page > 1 or hasMore) %}
+            <nav class="cos-uw__row" aria-label="{{ 'Pagination'|trans }}">
+              {% if page > 1 %}
+                <a class="cos-button cos-button--ghost" href="{{ path('cos_unified_business_workspace',{workspaceId:workspace.definition.id,q:query,sort:sort,view:view,page:page-1}) }}">{{ 'Previous page'|trans }}</a>
+              {% endif %}
+              <span>{{ 'Page'|trans }} {{ page }}</span>
+              {% if hasMore %}
+                <a class="cos-button cos-button--ghost" href="{{ path('cos_unified_business_workspace',{workspaceId:workspace.definition.id,q:query,sort:sort,view:view,page:page+1}) }}">{{ 'Next page'|trans }}</a>
+              {% endif %}
+            </nav>
+          {% endif %}
+        {% endif %}
         {% endif %}
       </section>
       {% if selectionDenied %}
@@ -119,8 +160,26 @@
             {% endif %}
           </div>
           <p class="cos-card__copy">{{ 'uw.business.identifier'|trans }} <code>{{ selected.key() }}</code></p>
-          {% if selectedUrl %}<a class="cos-button cos-button--primary" href="{{ selectedUrl }}">{{ 'uw.business.open_canonical'|trans }}</a>{% endif %}
+          {% if selectedUrl and not (selectedUrl starts with (path('cos_unified_business_workspace',{workspaceId:workspace.definition.id}) ~ '?')) %}
+            <a class="cos-button cos-button--primary" href="{{ selectedUrl }}">{{ 'uw.business.open_canonical'|trans }}</a>
+          {% endif %}
         </section>
+        {% for table in detailTables %}
+          <section class="cos-card" aria-labelledby="cos-uw-detail-table-{{ loop.index }}">
+            <h2 class="cos-card__title" id="cos-uw-detail-table-{{ loop.index }}">{{ table.title|trans }}</h2>
+            {% if table.notice %}<p class="cos-card__copy">{{ table.notice|trans }}</p>{% endif %}
+            {% if table.rows is empty %}
+              <p class="cos-card__copy" role="status">{{ 'uw.business.no_results'|trans }}</p>
+            {% else %}
+              <div class="table-responsive" data-cos-native-detail-table role="region" aria-label="{{ table.title|trans }}" tabindex="0">
+                <table class="table">
+                  <thead><tr>{% for column in table.columns %}<th scope="col">{{ column|trans }}</th>{% endfor %}</tr></thead>
+                  <tbody>{% for values in table.rows %}<tr>{% for value in values %}<td>{{ value }}</td>{% endfor %}</tr>{% endfor %}</tbody>
+                </table>
+              </div>
+            {% endif %}
+          </section>
+        {% endfor %}
       {% endif %}
       {% if selected %}
       <section class="cos-card" aria-labelledby="cos-uw-business-related" data-cos-related-entities>
@@ -166,20 +225,30 @@
     <aside class="cos-page__stack" aria-label="{{ 'uw.business.context_actions'|trans }}">
       <section class="cos-card">
         <h2 class="cos-card__title">{{ 'uw.business.actions'|trans }}</h2>
-        {% for action in workspace.primaryActions %}
+        {% set actionIds=[] %}
+        {% for action in workspace.primaryActions|merge(workspace.secondaryActions) %}
+          {% if action.id not in actionIds %}
+          {% set actionIds=actionIds|merge([action.id]) %}
           <div class="cos-uw__action">
             <strong>{{ action.label|trans }}</strong>
             <small>{{ action.enabled ? ('uw.business.open_domain_action'|trans) : (action.disabledReason|trans) }}</small>
           </div>
+          {% endif %}
         {% else %}
           <p class="cos-card__copy">{{ 'uw.business.no_actions'|trans }}</p>
         {% endfor %}
-        <a class="cos-button cos-button--ghost" href="{{ workspace.definition.path }}">Domain Workspace</a>
+        {% if selectedUrl and not (selectedUrl starts with (path('cos_unified_business_workspace',{workspaceId:workspace.definition.id}) ~ '?')) %}
+          <a class="cos-button cos-button--primary" href="{{ selectedUrl }}">{{ 'uw.business.open_canonical'|trans }}</a>
+        {% elseif workspace.definition.path != path('cos_unified_business_workspace',{workspaceId:workspace.definition.id}) %}
+          <a class="cos-button cos-button--ghost" href="{{ workspace.definition.path }}">{{ 'uw.business.domain'|trans }}</a>
+        {% else %}
+          <p class="cos-card__copy" role="status">{{ 'No direct command form is available here. Governed changes require approved execution.'|trans }}</p>
+        {% endif %}
       </section>
       {% if workspace.hasSlot('sidebar') %}
         <section class="cos-card" aria-label="{{ 'uw.business.side_extensions'|trans }}">
           {% for ext in workspace.extensions('sidebar') %}
-            {% set extContext=ext.props|merge({'workspace':workspace}) %}
+            {% set extContext=ext.props|merge({'workspace':workspace,'selectedFacts':selectedFacts,'csrfToken':csrfToken,'idempotencyKey':idempotencyKey}) %}
             {% include ext.template with extContext only %}
           {% endfor %}
         </section>

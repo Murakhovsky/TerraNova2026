@@ -21,6 +21,7 @@ return [
             'web.search' => ['propertyNavigationContributor'],
             'web.commands' => ['propertyNavigationContributor'],
             'web.workspace' => ['propertyNavigationContributor'],
+            'web.entity_links' => ['propertyNavigationContributor'],
         ],
         'cross_domain_contracts' => [
             [

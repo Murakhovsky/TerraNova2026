@@ -16,7 +16,13 @@ return [
         'job_handler_services' => [],
         'api_route_contributor_services' => [],
         'configuration_provisioner_services' => [],
-        'extension_services' => [],
+        'extension_services' => [
+            'web.navigation' => ['financeNavigationContributor'],
+            'web.search' => ['financeNavigationContributor'],
+            'web.commands' => ['financeNavigationContributor'],
+            'web.workspace' => ['financeNavigationContributor'],
+            'web.entity_links' => ['financeNavigationContributor'],
+        ],
         'cross_domain_contracts' => [
             [
                 'contract'=>'Domains\\Sales\\Application\\Contract\\SalesCommerceOrderEvidencePort',

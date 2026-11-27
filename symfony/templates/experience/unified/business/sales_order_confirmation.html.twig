@@ -1,0 +1,18 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+{% block title %}{{ 'Order confirmation'|trans }} | COS{% endblock %}
+{% block workspace_content %}
+<section class="cos-uw cos-page__stack" data-cos-order-confirmation>
+  <article class="cos-card">
+    <h1 class="cos-card__title">{{ 'Order confirmation'|trans }}</h1>
+    <p class="cos-card__copy">{{ orderId }}</p>
+    {% if outcome == 'verified' and receipt %}
+      <p role="status" data-cos-order-confirmed>{{ 'Native order confirmation verified by an independent readback.'|trans }}</p>
+      <twig:CosEntitySummary :items="[{label:'Status'|trans,value:receipt.status},{label:'Revision'|trans,value:receipt.revision ~ ''},{label:'Trace'|trans,value:receipt.trace}]" label="{{ 'Receipt'|trans }}" />
+    {% else %}
+      <p class="cos-alert" role="alert">{{ 'Confirmation outcome is unverified. Read the order and reconcile the original receipt before retrying.'|trans }}</p>
+    {% endif %}
+    <p class="cos-card__copy">{{ 'This operation does not confirm payment, shipment or external provider execution.'|trans }}</p>
+    <a class="cos-button cos-button--primary" href="{{ back }}">{{ 'Open order'|trans }}</a>
+  </article>
+</section>
+{% endblock %}
