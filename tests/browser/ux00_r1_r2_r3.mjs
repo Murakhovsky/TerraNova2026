@@ -371,6 +371,7 @@ try {
   await paletteTrigger.focus();
   await page.keyboard.press('Control+k');
   const palette=page.locator('#cos-command-palette');
+  await page.waitForFunction(()=>document.querySelector('.cos-command__input')===document.activeElement);
   assert(!(await palette.isHidden())
     && await page.locator('.cos-command__input').evaluate(
       el => el === document.activeElement),
@@ -964,7 +965,8 @@ try {
     assert(productCreate.status()===303&&productId,'CUW-E native Product form failed');
     const product=await invoke(admin,'product_management.product.get',{product_id:productId},csrf);
     assert(product.data?.product?.product_id===productId,'CUW-E native product independent readback failed');
-    await page.goto(abs('/marketing/campaigns'),{waitUntil:'domcontentloaded'});
+    const nativeMarketing=await page.goto(abs('/marketing/campaigns'),{waitUntil:'domcontentloaded'});
+    assert(nativeMarketing?.status()===200&&new URL(page.url()).pathname==='/marketing/campaigns','CUW-E native Marketing authentication/route unavailable');
     const campaignForm=page.locator('form[method="post"][action="/marketing/campaigns"]');
     assert(await campaignForm.count()===1,'CUW-E native Marketing create form unavailable');
     const campaignCreate=await admin.request.post(abs('/marketing/campaigns'),{form:{
@@ -1060,12 +1062,24 @@ try {
     const confirmationUrl=abs('/workspace/unified/business/sales.order/confirm');
     const bad=await admin.request.post(confirmationUrl,{form:{...post,csrf_token:'bad'},maxRedirects:0});
     assert(bad.status()===403,'CUW-E order confirmation accepted invalid CSRF');
+    const guest=await browser.newContext();
+    try {
+      const anonymousMarketing=await guest.request.get(abs('/marketing/campaigns'),{maxRedirects:0});
+      assert(anonymousMarketing.status()===302&&(anonymousMarketing.headers()['location']||'').includes('/auth/login'),
+        'CUW-E unauthenticated Marketing route escaped firewall');
+    } finally {await guest.close();}
     const buyer=await browser.newContext({storageState:restrictedStorage});
     try {
       for(const [workspace,type,id] of samples){
         const forbidden=await buyer.request.get(abs('/workspace/unified/business/'+workspace+'?selected='+encodeURIComponent(type+':'+id)),{maxRedirects:0});
         assert(forbidden.status()===403,'CUW-E buyer accessed active workspace '+workspace);
       }
+      const buyerMarketing=await buyer.request.get(abs('/marketing/campaigns'),{maxRedirects:0});
+      assert(buyerMarketing.status()===403,'CUW-E buyer escaped native Marketing gate');
+      const deniedCampaign=await buyer.request.post(abs('/marketing/campaigns'),{form:{
+        csrf_token:restrictedCsrf,idempotency_key:'cuwe-buyer-'+uid,name:'Blocked buyer '+uid,business_objective:'Forbidden'
+      },maxRedirects:0});
+      assert(deniedCampaign.status()===403,'CUW-E buyer created native Marketing campaign');
       const deniedBudget=await buyer.request.post(abs(budgetPath),{form:{...budgetPost,csrf_token:restrictedCsrf,idempotency_key:'cuw-'+'d'.repeat(32)},maxRedirects:0});
       const deniedOrder=await buyer.request.post(confirmationUrl,{form:{...post,csrf_token:restrictedCsrf},maxRedirects:0});
       assert(deniedBudget.status()===403&&deniedOrder.status()===403,'CUW-E buyer executed a controlled command');

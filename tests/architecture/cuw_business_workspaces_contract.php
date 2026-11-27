@@ -37,4 +37,10 @@ if(!str_contains($financeRoute,'methods: [GET, HEAD]')||!str_contains($financeRo
     ||!str_contains($financePage,'cos_cuw_finance_budget_draft')||!str_contains($financePage,'status: CONTRACTED')) {
     throw new RuntimeException('Finance requires separate contracted GET and governed POST.');
 }
+$security=$get('symfony/config/packages/security.yaml');
+$auth=$get('symfony/src/Security/SessionAuthenticator.php');
+if(!str_contains($security,'|marketing|')||!str_contains($security,"path: '^/marketing(?:/|$)', roles: IS_AUTHENTICATED_FULLY")
+    ||!str_contains($auth,"str_starts_with(\$path,'/marketing/')")) {
+    throw new RuntimeException('Native Marketing URL must use canonical SessionAuthenticator and manager gate.');
+}
 echo "CUW-E registered providers and canonical human command boundary PASS.\n";
