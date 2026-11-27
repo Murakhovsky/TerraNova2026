@@ -58,6 +58,12 @@ jobs:
         run: python3 -m py_compile bin/ci/step_timings.py
       - name: Current contracts and unit behavior
         run: bash bin/verify fast
+      - name: UX-05 operations lifecycle, recovery and status predicates
+        run: |
+          php tests/unit/cuw_ux05_operation_status.php
+          php tests/unit/cuw_ux05_operation_snapshot.php
+          php tests/unit/cuw_ux05_recovery_actions.php
+          php tests/unit/cuw_ux05_status_predicate.php
       - name: UX-03 verified Business Entity Summary
         run: php tests/unit/cos_unified_entity_summary.php
       - name: UX-03 verified Sales to Property relationships

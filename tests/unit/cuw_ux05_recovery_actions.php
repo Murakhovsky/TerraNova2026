@@ -25,6 +25,9 @@ use Kernel\Module\Contract\ModuleStateRepositoryInterface;
 use Kernel\Identity\Model\OrganizationRole;
 use Kernel\Shared\Domain\{OrganizationId,UserId};
 use Kernel\Tenant\Model\{Permission,TenantContext,TenantPermissions};
+use Kernel\Tenant\Contract\TenantContextProviderInterface;
+use App\Web\Experience\Shell\CoreCommandCatalog;
+use App\Web\Experience\Extension\ProviderBackedShellNavigation;
 
 function check(bool $ok,string $message):void {
     if (!$ok) throw new RuntimeException($message);
@@ -75,11 +78,11 @@ $async=new class implements AsyncOperationReadModelInterface {
     public function recentForOrganization(string $organizationId,int $limit=50):array{return [];}
     public function find(string $organizationId,string $operationId):?AsyncOperationProjection{return null;}
 };
-$buildResolver=static function(bool $registered)use($provider,$states,$runtime,$async):UIActionResolver{
+$buildResolver=static function(bool $registered,bool $platform=false)use($provider,$states,$runtime,$async):UIActionResolver{
     $contributions=new ModuleContributions(extensionServices:$registered?[ModuleExtensionPoint::WEB_ACTIONS=>[$provider->serviceId()]]:[]);
     $catalog=new ModuleCatalog([new ModuleDefinition(new ModuleManifest('ops_fixture','Operations fixture','1.0.0',enabledByDefault:true),$contributions)]);
     $registry=new WebExtensionProviderRegistry(new ModuleExtensionRegistry($catalog),new ActiveModuleResolver($catalog,$states),[$provider]);
-    return new UIActionResolver(new UIActionRegistry(new WebExtensionCatalog($registry,new AsyncOperationWebProvider($async)),new RuntimeUIActionProvider($runtime)),
+    return new UIActionResolver(new UIActionRegistry(new WebExtensionCatalog($registry,new AsyncOperationWebProvider($async)),new RuntimeUIActionProvider($runtime),$platform?[$provider]:[]),
         new UIActionPermissionResolver([new TenantUIActionPermissionChecker()]));
 };
 $actor=static fn(string $org,array $permissions):TenantContext=>new TenantContext(UserId::fromString('2'),OrganizationId::fromString($org),
@@ -95,4 +98,33 @@ $denied=$resolver->resolve($actor('tenant-a',[TenantPermissions::ACCESS]),$conte
 check(count($denied)===1 && !$denied[0]->enabled,'Missing manage permission did not deny action.');
 check($resolver->resolve($actor('tenant-b',[TenantPermissions::ACCESS,TenantPermissions::MANAGE]),
     new WebExtensionContext('tenant-b','manager','workspace','operations','operations'),$entity,UIActionPlacement::WORKSPACE_SECONDARY)===[],'Foreign descriptor leaked.');
-echo "UX-05 recovery action fences, independent approval and resolver registration/permission contract passed.\n";
+// Global provider must work even with no domain manifest contribution.
+$global=$buildResolver(false,true)->resolve($allowed,$context,$entity,UIActionPlacement::WORKSPACE_SECONDARY);
+check(count($global)===1 && $global[0]->enabled,'Platform registration depends on a domain module.');
+$globalDenied=$buildResolver(false,true)->resolve($actor('tenant-a',[TenantPermissions::ACCESS]),$context,$entity,UIActionPlacement::WORKSPACE_SECONDARY);
+check(count($globalDenied)===1 && !$globalDenied[0]->enabled,'Global registration bypassed permissions.');
+$duplicateRejected=false;
+try { $buildResolver(true,true)->resolve($allowed,$context,$entity,UIActionPlacement::WORKSPACE_SECONDARY); }
+catch (LogicException) { $duplicateRejected=true; }
+check($duplicateRejected,'Duplicate module/platform contribution was not rejected.');
+
+$tenantProvider=new class($allowed) implements TenantContextProviderInterface {
+    public function __construct(public ?TenantContext $actor){}
+    public function current():?TenantContext { return $this->actor; }
+};
+$commands=new CoreCommandCatalog($tenantProvider);
+$emptyCatalog=new ModuleCatalog([]);
+$webRegistry=new WebExtensionProviderRegistry(new ModuleExtensionRegistry($emptyCatalog),new ActiveModuleResolver($emptyCatalog,$states),[]);
+$navigation=new ProviderBackedShellNavigation(new WebExtensionCatalog($webRegistry,new AsyncOperationWebProvider($async)),$commands);
+$hasNavigation=static fn(WebExtensionContext $c):bool=>in_array('operations',array_column($navigation->compose($c)['primary'],'key'),true);
+$hasCommand=static fn(WebExtensionContext $c):bool=>in_array('core.operations',array_column($commands->commands($c),'id'),true);
+check($hasNavigation($context) && $hasCommand($context),'Operations not discoverable independently of modules.');
+check(!$hasNavigation(new WebExtensionContext('tenant-b','manager')) && !$hasCommand(new WebExtensionContext('tenant-b','manager')),'Foreign tenant navigation leaked.');
+$tenantProvider->actor=$actor('tenant-a',[TenantPermissions::ACCESS]);
+check(!$hasNavigation($context) && !$hasCommand($context),'Manage permission absent but navigation exposed.');
+$tenantProvider->actor=new TenantContext(UserId::fromString('2'),OrganizationId::fromString('tenant-a'),OrganizationRole::fromString('member'),[Permission::fromString(TenantPermissions::ACCESS)]);
+$member=new WebExtensionContext('tenant-a','member');
+check(!$hasNavigation($member) && !$hasCommand($member),'Member navigation leaked.');
+$tenantProvider->actor=null;
+check(!$hasNavigation($context) && !$hasCommand($context),'Unauthenticated navigation leaked.');
+echo "UX-05 recovery action fences, independent approval, platform registration, tenant-safe navigation and resolver permission contract passed.\n";

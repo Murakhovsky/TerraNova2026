@@ -31,7 +31,7 @@
   width: 2rem;
   height: 2rem;
   border-radius: var(--cos-radius-sm);
-  color: var(--cos-foundation-white);
+  color: var(--cos-color-on-primary);
   background: var(--cos-color-primary-strong);
   font-size: var(--cos-font-sm);
   font-weight: 800;
@@ -257,7 +257,7 @@
   min-width: 1.15rem;
   height: 1.15rem;
   padding: 0 0.25rem;
-  color: var(--cos-foundation-white);
+  color: var(--cos-color-on-primary);
   background: var(--cos-color-primary-strong);
   border: 2px solid var(--cos-color-surface);
   border-radius: var(--cos-radius-pill);
@@ -311,7 +311,7 @@
   place-items: center;
   width: 2rem;
   height: 2rem;
-  color: var(--cos-foundation-white);
+  color: var(--cos-color-on-primary);
   background: var(--cos-color-primary-strong);
   border-radius: var(--cos-radius-pill);
   font-size: var(--cos-font-xs);
@@ -641,4 +641,27 @@ turbo-frame[aria-busy="true"] .cos-command__list {
     max-width: 3.75rem;
     padding-inline: 0.25rem;
   }
+}
+
+/* CUW-F integration: avoid clipped/overlapping mobile topbar controls. */
+@media (max-width: 650px) {
+  .cos-shell__topbar {
+    grid-template-columns: minmax(var(--cos-touch-target-min), 1fr) auto;
+    gap: var(--cos-space-2);
+    padding-block: var(--cos-space-2);
+  }
+  .cos-shell__actions {
+    min-width: 0;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .cos-shell__locale-select {
+    min-height: var(--cos-touch-target-min);
+  }
+  .cos-shell__activity-label { display: inline; }
+  .cos-shell__sidebar:not(.is-mobile-open) { visibility: hidden; }
+}
+@media (max-width: 500px) {
+  .cos-shell__topbar { grid-template-columns: auto minmax(0, 1fr); }
+  .cos-shell__title-block { display: none; }
 }

@@ -101,6 +101,7 @@
                     type="button"
                     aria-haspopup="dialog"
                     aria-controls="cos-command-palette"
+                    aria-label="{{ 'shell.search_workspace'|trans }}"
                     data-action="click->workspace-shell#openPalette"
                 >
                     <span>{{ 'shell.search_workspace'|trans }}</span>
@@ -110,7 +111,7 @@
                 <form class="cos-shell__locale-form" method="post" action="{{ path('cos_web_locale_switch') }}" data-turbo="false" data-action="change->workspace-shell#submitLocale">
                     <input type="hidden" name="_token" value="{{ csrf_token('cos_locale_switch') }}">
                     <input type="hidden" name="csrf_token" value="{{ app.request.session.get('cos_csrf_token') }}">
-                    <label class="cos-visually-hidden" for="cos-shell-locale">{{ 'shell.language'|trans }}</label>
+                    <label class="visually-hidden" for="cos-shell-locale">{{ 'shell.language'|trans }}</label>
                     <select id="cos-shell-locale" class="cos-shell__locale-select" name="locale" aria-label="{{ 'shell.language'|trans }}">
                         <option value="uk"{% if app.request.locale == 'uk' %} selected{% endif %}>УКР</option>
                         <option value="en"{% if app.request.locale == 'en' %} selected{% endif %}>English</option>
@@ -170,7 +171,7 @@
                     >{{ shell.activityCount > 99 ? '99+' : shell.activityCount }}</span>
                 </button>
 
-                <a class="cos-shell__profile" href="/cabinet">
+                <a class="cos-shell__profile" href="/cabinet" aria-label="{{ shell.userLabel }}">
                     <span class="cos-shell__profile-mark" aria-hidden="true">{{ shell.userInitials }}</span>
                     <span class="cos-shell__profile-copy">
                         <strong>{{ shell.userLabel }}</strong>

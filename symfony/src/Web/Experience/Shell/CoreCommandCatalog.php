@@ -4,7 +4,22 @@ declare(strict_types=1);
 
 namespace App\Web\Experience\Shell;
 
+use Kernel\Tenant\Contract\TenantContextProviderInterface;
+use Kernel\Tenant\Model\TenantPermissions;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
+
+    public function __construct(private ?TenantContextProviderInterface $tenants = null) {}
+
+    public function canOpenOperations(WebExtensionContext $context): bool
+    {
+        $actor = $this->tenants?->current();
+        return $actor !== null
+            && $actor->organizationId()->value() === $context->organizationId
+            && $actor->role()->value() === $context->role
+            && $actor->isManager()
+            && $actor->allows(TenantPermissions::ACCESS)
+            && $actor->allows(TenantPermissions::MANAGE);
+    }
 
 final readonly class CoreCommandCatalog
 {
@@ -18,6 +33,10 @@ final readonly class CoreCommandCatalog
             new ShellCommandItem('core.analytics', 'Open Analytics', '/admin/analytics', 'command', 'Core'),
             new ShellCommandItem('core.administration', 'Open Administration', '/admin/content', 'command', 'Core'),
         ];
+        if ($this->canOpenOperations($context)) {
+            $commands[] = new ShellCommandItem('core.operations', 'Центр виконання / Operations Center', '/workspace/operations', 'navigation', 'COS');
+        }
+
 
         if (in_array($context->role, ['manager', 'admin'], true)) {
             $commands[] = new ShellCommandItem(
