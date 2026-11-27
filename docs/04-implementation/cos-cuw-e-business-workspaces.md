@@ -1,37 +1,39 @@
 ---
-title: CUW-E Business Workspaces expansion
+title: Розширення бізнес-просторів CUW-E
+description: Реалізація UX-03 для п'яти доменів COS, межі готовності та порядок приймання.
 status: implementing
+updated: 2026-11-27
 kind: implementation
 ---
 
-# CUW-E / UX-03 expansion (#523)
+# Розширення бізнес-просторів CUW-E / UX-03 (#523)
 
-Baseline pinned by parent #518: `10fc649df6aafdca432ec329ebd737f6a4abd1ec`.
-This is source implementation, **not** D3/D4/D5 acceptance or production release.
+Зафіксована в батьківській задачі #518 база: `10fc649df6aafdca432ec329ebd737f6a4abd1ec`.
+Це реалізація коду, а не сертифікація D3/D4/D5 чи виробничий реліз.
 
-## Reuse / adapt / new
+## Повторне використання, адаптація та нові компоненти
 
-- Reuse canonical Shell, ModuleExtensionRegistry and active module snapshot, WebExtensionCatalog, WorkspaceCompositionResolver, EntityRef, EntityLinkResolver, UIActionResolver, Gateway and existing native Domain forms.
-- Adapt the Business Workspace feature controller: isolate record search to the owning active provider, preserve legacy native pages, independently re-read selected typed entities, show explicit error/empty/unknown, bounded pagination and tables.
-- Add optional feature-local BusinessRecordProvider projection on existing registry providers; no new registry, Domain state, command bus, or authorization source. Finance provider is autodiscovered through existing WebExtensionProviderInterface tag. No shared services.yaml / routes.yaml / canonical Shell edit. Sales order POST uses a feature-owned route resource and existing Symfony import.
-- Sales native confirmation is one narrowly typed Command via UIActionResolver + existing Gateway + Domain receipt/idempotency. No payment/provider write, stock allocation, shipment, worker activation, or automatic release.
+- Використано canonical Shell, ModuleExtensionRegistry, знімок активних модулів, WebExtensionCatalog, WorkspaceCompositionResolver, EntityRef, EntityLinkResolver, UIActionResolver, Gateway та наявні доменні форми.
+- Адаптовано контролер Business Workspace: пошук ізольовано за активним провайдером-власником, збережено наявні сторінки, додано незалежне читання сутності та стани помилки, порожнього або невідомого результату, обмежену пагінацію й таблиці.
+- Додано опціональний інтерфейс проєкції BusinessRecordProvider для існуючих провайдерів; без нового registry, сховища бізнес-стану, шини команд чи джерела авторизації. Finance провайдер виявляється через наявний тег WebExtensionProviderInterface. Спільні services.yaml, routes.yaml та canonical Shell не змінено. POST підтвердження Sales Order використовує окремий ресурс маршрутів і чинний імпорт Symfony.
+- Підтвердження замовлення Sales — вузька типізована команда через UIActionResolver, Gateway, доменний механізм квитанцій та ідемпотентності. Без оплати, зовнішнього запису, резервування чи відвантаження, запуску worker або автоматичного релізу.
 
-## Scope and gaps
+## Покриття доменів і обмеження
 
-| Domain | Shared record/detail coverage | Existing native surfaces | Explicit limitations |
+| Домен | Спільні списки й деталі | Наявні доменні сторінки | Обмеження |
 |---|---|---|---|
-| Sales | Lead/deal existing query/summary; order exact native read, lines, payment evidence and controlled confirmation | Sales workspace, lead follow-up, deal and client-case pages | Order aggregate enumeration has no canonical list Query; no automatic external fulfillment; confirmation needs test witness |
-| Product Management | Catalog/SKU search, native pagination, exact Product and variants | Product edit, pricing/attributes, warehouse, imports, analytics, Shopify proposal | Deep stock/import/Shopify functions remain native domain pages; no direct external Shopify mutation |
-| Marketing | Campaign search and exact detail | Campaign draft, Meta accounts, performance/evidence, action queue | Search max 50, no offset in current contract; paid/Meta mutations remain governed |
-| Finance | Exact budget envelope, reservations, order payment operation and documentary evidence | Existing approved Finance capability/actions | No envelope enumeration or unrestricted payment list; no payment/reconcile financial mutation without approval; missing evidence is unknown, pending is not confirmed money |
-| Property | Asset search with server pagination, exact Asset, inventory/listing facts | Inventory/listing/moderation/map, canonical create/bulk | No duplicate property state; bulk/external execution remains governed |
+| Sales | Наявний пошук і зведення лідів та угод; точне читання замовлення, позиції, фінансові докази та підтвердження | Продажі, follow-up, угоди й клієнтські кейси | Немає канонічного загального запиту переліку замовлень; без автоматичного зовнішнього виконання; потрібен тест підтвердження |
+| Product Management | Каталог, SKU, серверна пагінація, точне читання товару та варіантів | Редагування, ціни, атрибути, склад, імпорт, аналітика, пропозиція Shopify | Розширені функції залишаються на доменних сторінках; без прямих зовнішніх записів Shopify |
+| Marketing | Пошук кампаній і точні деталі | Чернетки, Meta Accounts, аналітика, докази, черга дій | Пошук до 50 записів, контракт без offset; платні та зовнішні зміни залишаються керованими |
+| Finance | Точне читання бюджету, резервувань, платіжних операцій і документальних доказів | Наявні погоджувані capabilities/actions Finance | Немає загального переліку бюджетів чи платежів; фінансові зміни лише з погодженням; відсутні докази означають невідомий стан, pending — не підтверджені кошти |
+| Property | Пошук активів із серверною пагінацією, точне читання Asset, факти Inventory/Listing | Інвентар, оголошення, модерація, мапа, створення та масовий імпорт | Без дублювання стану об'єкта; масове та зовнішнє виконання залишається керованим |
 
-CapitalMarkets, Diagnostic, Growth: existing registered navigation/search/workspace provider preserved, no rewrite. Non-entity native workspace links are explicit rather than empty fake record lists.
+CapitalMarkets, Diagnostic, Growth: наявні Navigation/Search/Workspace провайдери збережено. Контекст, що не має сутності, веде на доменну сторінку замість фіктивного списку.
 
-## Verification and handoff
+## Перевірка та передача інтегратору
 
-- Static census: [cos-cuw-e-experience-coverage.csv](./cos-cuw-e-experience-coverage.csv) from the pinned generated manifest reference, explicit source binding matches only; six distinct runtime/presentation states remain UNVERIFIED. Re-run `php bin/ci/cuw-business-coverage.php` with root Composer dependencies for authoritative typed/declarative census on the final integrated tree. The script reads the canonical catalog, not an alternative registry. No runtime readiness is inferred.
-- Fast CI automatically discovers `tests/unit/cuw_business_workspace_records.php` and `tests/architecture/cuw_business_workspaces_contract.php`. These are fixture/contract tests, not native DB evidence.
-- Required acceptance: exact SHA DI and Twig/routes compilation; authentic two-tenant and role negatives; native Product/SKU, Marketing campaigns, Finance budget/payment operation, Sales order and Property reads; Sales confirmed-order receipt and same-key replay, stale revision/CSRF denial; existing Property creation and native Product/Marketing commands, non-mutating mobile viewport and keyboard, UK/EN review, screenshots. All tests involving a native mutation must run only in isolated test tenants and not on production.
-- Existing AC-03/04/05/11/12/15/18 are targeted, not certified. Runtime/Frontend/Documentation CI and integrated-tree acceptance are required. For translations shared by other streams, integrator should move the new literal English labels into the common UK/EN catalog. Existing translated `uw.*` keys are preserved.
-- Rollback: revert this feature branch; no schema migration, external write activation, or changes to old URLs.
+- Статичний реєстр: [cos-cuw-e-experience-coverage.csv](./cos-cuw-e-experience-coverage.csv) з актуального згенерованого довідника manifest, зіставлення лише явно знайдених source bindings; окремі runtime-статуси залишаються UNVERIFIED. Команда `php bin/ci/cuw-business-coverage.php` із кореневими залежностями Composer формує точний зріз типізованих та декларативних контрактів інтегрованого дерева з canonical catalog, а не альтернативного registry.
+- Fast CI автоматично знаходить `tests/unit/cuw_business_workspace_records.php` і `tests/architecture/cuw_business_workspaces_contract.php`. Це тести фікстур і контрактів, не докази реальної бази даних.
+- Умови приймання: компіляція DI, Twig і маршрутів на точному SHA; негативні тести двох tenant і ролей; реальні Product/SKU, Marketing, Finance, Sales Order і Property запити; квитанція підтвердження замовлення, повтор ключа, відмова застарілої ревізії/CSRF; наявне створення Property та команди Product/Marketing; мобільний і клавіатурний сценарії, UK/EN, знімки. Мутації тестувати виключно в ізольованих тестових tenant.
+- AC-03/04/05/11/12/15/18 — цілі, не сертифіковані. Необхідні Runtime/Frontend/Documentation CI та приймання інтегрованого дерева. Нові англомовні підписи інтегратор має додати до спільних UK/EN перекладів. Існуючі ключі `uw.*` збережено.
+- Відкат: скасування змін гілки; без міграцій схеми, активування зовнішніх записів або видалення старих URL.
